@@ -149,7 +149,6 @@ namespace TextMeshDOTS
         {
             CalliString target;
             int m_currentByteIndex;
-            int m_currentCharIndex;
             Unicode.Rune current;
 
             /// <summary>
@@ -160,7 +159,6 @@ namespace TextMeshDOTS
             {
                 target = source;
                 m_currentByteIndex = 0;
-                m_currentCharIndex = 0;
                 current = default;
             }
 
@@ -176,13 +174,16 @@ namespace TextMeshDOTS
             /// </summary>
             /// <returns>True if <see cref="Current"/> is valid to read after the call.</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool GotoByteIndex(int bytePosition)
+            public bool GotoIndex(int bytePosition)
             {
                 if (bytePosition >= target.Length)
                     return false;
 
                 m_currentByteIndex = bytePosition;
-
+                unsafe
+                {
+                    Unicode.Utf8ToUcs(out current, target.GetUnsafeReadOnlyPtr(), ref m_currentByteIndex, target.Length);
+                }
                 return true;
             }
 
@@ -199,7 +200,6 @@ namespace TextMeshDOTS
                 unsafe
                 {
                     Unicode.Utf8ToUcs(out current, target.GetUnsafeReadOnlyPtr(), ref m_currentByteIndex, target.Length);
-                    m_currentCharIndex += 1;
                 }
 
                 return true;
@@ -241,11 +241,6 @@ namespace TextMeshDOTS
             /// </summary>
             /// <value>The current character byte index.</value>
             public int CurrentByteIndex => m_currentByteIndex;
-            /// <summary>
-            /// The index of the current character in chars.
-            /// </summary>
-            /// <value>The current character char index</value>
-            public int CurrentCharIndex => m_currentCharIndex;
         }
 
         /// <summary>

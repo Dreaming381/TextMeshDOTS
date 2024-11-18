@@ -8,8 +8,7 @@ namespace TextMeshDOTS
     public struct FontBlob
     {
         public FixedString128Bytes                name;
-        public BlobHashMap<int, GlyphBlob>        characters;
-        public BlobHashMap<long, AdjustmentPair>  adjustmentPairs;
+        public BlobHashMap<int, GlyphBlob>        glyphs;
         public float                              baseLine;
         public float                              ascentLine;
         public float                              descentLine;
@@ -46,31 +45,9 @@ namespace TextMeshDOTS
 
     public struct GlyphBlob
     {
-        public int          unicode;
+        public int          glyphIndex;
         public GlyphMetrics glyphMetrics;
         public GlyphRect    glyphRect;
         public float        glyphScale;
-    }
-
-    public struct AdjustmentPair
-    {
-        public FontFeatureLookupFlags fontFeatureLookupFlags;
-        public GlyphAdjustment        firstAdjustment;
-        public GlyphAdjustment        secondAdjustment;
-    }
-    public struct GlyphAdjustment
-    {
-        public float xPlacement;
-        public float yPlacement;
-        public float xAdvance;
-        public float yAdvance;
-        public static GlyphAdjustment operator +(GlyphAdjustment a, GlyphAdjustment b)
-        => new GlyphAdjustment
-        {
-            xPlacement = a.xPlacement + b.xPlacement,
-            yPlacement = a.yPlacement + b.yPlacement,
-            xAdvance = a.xAdvance + b.xAdvance,
-            yAdvance = a.yAdvance + b.yAdvance,
-        };
-    }
+    }    
 }

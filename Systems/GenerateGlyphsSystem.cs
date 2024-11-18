@@ -4,6 +4,10 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using HarfBuzz;
+using Font = HarfBuzz.Font;
+using Buffer = HarfBuzz.Buffer;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace TextMeshDOTS
 {
@@ -13,12 +17,22 @@ namespace TextMeshDOTS
     public partial struct GenerateGlyphsSystemNew : ISystem
     {
         EntityQuery m_query;
+        Blob blobRegular;
+        Face faceRegular;
+        Font font;
+
 
         bool m_skipChangeFilter;
 
-        [BurstCompile]
+        //[BurstCompile]
         public void OnCreate(ref SystemState state)
         {
+            //blobRegular = new Blob("Assets\\Resources\\LiberationSans.ttf");
+            //blobRegular = new Blob("Assets\\Resources\\GaramondPremrPro.otf");
+            blobRegular = new Blob("Assets\\Resources\\NotoSansDisplay-Regular.ttf");
+            faceRegular = new Face(blobRegular.ptr, 0);
+            font = new Font(faceRegular.ptr);
+
             m_query = SystemAPI.QueryBuilder()
                       .WithAll<FontBlobReference>()
                       .WithAllRW<RenderGlyph>()
@@ -28,12 +42,21 @@ namespace TextMeshDOTS
                       .Build();
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
         }
+        [BurstCompile]
+        public void OnDestroy(ref SystemState state)
+        {
+            blobRegular.Dispose();
+            faceRegular.Dispose();
+            font.Dispose();
+        }
+
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             state.Dependency = new Job
             {
+                HBfont = font,
                 additionalEntitiesHandle    = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 calliByteHandle             = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 fontBlobReferenceHandle     = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
@@ -51,6 +74,7 @@ namespace TextMeshDOTS
         [BurstCompile]
         public partial struct Job : IJobChunk
         {
+            [NativeDisableUnsafePtrRestriction] public Font HBfont;
             public BufferTypeHandle<RenderGlyph>                  renderGlyphHandle;
             public BufferTypeHandle<GlyphMappingElement>          glyphMappingElementHandle;
             public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
@@ -70,11 +94,11 @@ namespace TextMeshDOTS
             [BurstCompile]
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
             {
-                if (!(chunk.DidChange(ref glyphMappingMaskHandle, lastSystemVersion) ||
-                      chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
-                      chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
-                      chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
-                    return;
+                //if (!(chunk.DidChange(ref glyphMappingMaskHandle, lastSystemVersion) ||
+                //      chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
+                //      chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
+                //      chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
+                //    return;
 
                 var calliBytesBuffers      = chunk.GetBufferAccessor(ref calliByteHandle);
                 var renderGlyphBuffers     = chunk.GetBufferAccessor(ref renderGlyphHandle);
@@ -110,7 +134,8 @@ namespace TextMeshDOTS
                         fontMaterialSet.Initialize(fontBlobReference.blob);
                     }
 
-                    GlyphGeneration.CreateRenderGlyphs(ref renderGlyphs,
+                    GlyphGeneration.CreateRenderGlyphs(HBfont,
+                                                       ref renderGlyphs,
                                                        ref m_glyphMappingWriter,
                                                        ref fontMaterialSet,
                                                        ref textConfigurationStack,
