@@ -29,7 +29,7 @@ namespace TextMeshDOTS
             componentTypeStaging[2] = ComponentType.ReadWrite<FontBlobReference>();
             componentTypeStaging[3] = ComponentType.ReadWrite<TextBaseConfiguration>();
             componentTypeStaging[4] = ComponentType.ReadWrite<TextRenderControl>();
-            componentTypeStaging[5] = ComponentType.ReadWrite<CalliByte>();
+            componentTypeStaging[5] = ComponentType.ReadWrite<CalliByteRaw>();
             componentTypeStaging[6] = ComponentType.ReadWrite<RenderGlyph>();
             componentTypeStaging[7] = ComponentType.ReadWrite<TextShaderIndex>();
             componentTypeStaging[8] = ComponentType.ReadWrite<WorldToLocal_Tag>();
@@ -49,7 +49,7 @@ namespace TextMeshDOTS
             componentTypeStaging[2] = ComponentType.ReadWrite<FontBlobReference>();
             componentTypeStaging[3] = ComponentType.ReadWrite<TextBaseConfiguration>();
             componentTypeStaging[4] = ComponentType.ReadWrite<TextRenderControl>();
-            componentTypeStaging[5] = ComponentType.ReadWrite<CalliByte>();
+            componentTypeStaging[5] = ComponentType.ReadWrite<CalliByteRaw>();
             componentTypeStaging[6] = ComponentType.ReadWrite<RenderGlyph>();
             componentTypeStaging[7] = ComponentType.ReadWrite<RenderGlyphMask>();
             componentTypeStaging[8] = ComponentType.ReadWrite<TextShaderIndex>();

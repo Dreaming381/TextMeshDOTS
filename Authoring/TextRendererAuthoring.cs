@@ -1,3 +1,4 @@
+using HarfBuzz;
 using System.Collections.Generic;
 using TextMeshDOTS.Rendering;
 using TextMeshDOTS.Rendering.Authoring;
@@ -10,6 +11,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
+using Font = HarfBuzz.Font;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -26,9 +28,8 @@ namespace TextMeshDOTS.Authoring
         public HorizontalAlignmentOptions horizontalAlignment = HorizontalAlignmentOptions.Left;
         public VerticalAlignmentOptions   verticalAlignment   = VerticalAlignmentOptions.TopAscent;
         public bool                       isOrthographic      = false;
-        public bool                       enableKerning       = true;
         public FontStyles                 fontStyle           = FontStyles.Normal;
-        public FontWeight                 fontWeight          = FontWeight.Regular;
+        public TextFontWeight             fontWeight          = TextFontWeight.Regular;
         [Tooltip("Additional word spacing in font units where a value of 1 equals 1/100em.")]
         public float wordSpacing = 0;
         [Tooltip("Additional line spacing in font units where a value of 1 equals 1/100em.")]
@@ -66,50 +67,9 @@ namespace TextMeshDOTS.Authoring
 
             //Fonts
             var font = authoring.fonts[0];
-            Glyph glyph;
-            //font.TryAddGlyphInternal(66, out glyph);
-            //font.TryAddGlyphInternal(67, out glyph);
-            //font.TryAddGlyphInternal(123, out glyph);
-            //font.TryAddGlyphInternal(195, out glyph);
-            //font.TryAddGlyphInternal(196, out glyph);
-            //font.TryAddGlyphInternal(197, out glyph);
-            //font.TryAddGlyphInternal(198, out glyph);
-            //font.TryAddGlyphInternal(199, out glyph);
-            //font.TryAddGlyphInternal(200, out glyph);
-            //font.TryAddGlyphInternal(629, out glyph);
-            //font.TryAddGlyphInternal(630, out glyph);
-            //font.TryAddGlyphInternal(631, out glyph);
-            //font.TryAddGlyphInternal(122, out glyph);
-            //font.TryAddGlyphInternal(123, out glyph);
-            //font.TryAddGlyphInternal(124, out glyph);
-            //font.TryAddGlyphInternal(125, out glyph);
-            //font.TryAddGlyphInternal(126, out glyph);
-            //font.TryAddGlyphInternal(127, out glyph);
-            //font.TryAddGlyphInternal(128, out glyph);
-            //font.TryAddGlyphInternal(129, out glyph);
-            //font.TryAddGlyphInternal(130, out glyph);
-            //font.TryAddGlyphInternal(131, out glyph);
-            //font.TryAddGlyphInternal(132, out glyph);
-            //font.TryAddGlyphInternal(133, out glyph);
-            //font.TryAddGlyphInternal(134, out glyph);
-            //font.TryAddGlyphInternal(1, out glyph);
-            font.TryAddGlyphInternal(0, out glyph);
-            font.TryAddGlyphInternal(3, out glyph);
-            font.TryAddGlyphInternal(68, out glyph);
-            font.TryAddGlyphInternal(69, out glyph);
-            font.TryAddGlyphInternal(162, out glyph);
-            font.TryAddGlyphInternal(163, out glyph);
-            font.TryAddGlyphInternal(164, out glyph);
-            font.TryAddGlyphInternal(166, out glyph);
-            font.TryAddGlyphInternal(69, out glyph);
-            font.TryAddGlyphInternal(1910, out glyph);
-            font.TryAddGlyphInternal(1911, out glyph);
-            font.TryAddGlyphInternal(2991, out glyph);
-            font.TryAddGlyphInternal(2996, out glyph);
-            font.TryAddGlyphInternal(3028, out glyph);
-            font.TryAddGlyphInternal(3077, out glyph);
             font.ReadFontAssetDefinition();
             BakeFontAsset(entity, font);
+            AddComponentObject(entity, new FontAssetReference { value = font});
             AddBuffer<RenderGlyph>(entity);
 
             if (authoring.fonts.Count > 1)
@@ -139,8 +99,12 @@ namespace TextMeshDOTS.Authoring
             }
 
             //Text Content
-            var calliByte = AddBuffer<CalliByte>(entity);
-            var calliString = new CalliString(calliByte);
+            AddBuffer<TextSpan>(entity);
+            AddBuffer<GlyphPosition>(entity);
+            AddBuffer<GlyphInfo>(entity);
+            AddBuffer<CalliByte>(entity);
+            var calliByteRaw = AddBuffer<CalliByteRaw>(entity);            
+            var calliString = new CalliString(calliByteRaw);
             calliString.Append(authoring.text);
             //calliByte.RemoveAt(calliByte.Length -1);
             AddComponent(entity, new TextBaseConfiguration
@@ -151,7 +115,6 @@ namespace TextMeshDOTS.Authoring
                 lineJustification = authoring.horizontalAlignment,
                 verticalAlignment = authoring.verticalAlignment,
                 isOrthographic    = authoring.isOrthographic,
-                enableKerning     = authoring.enableKerning,
                 fontStyle         = authoring.fontStyle,
                 fontWeight        = authoring.fontWeight,
                 wordSpacing = authoring.wordSpacing,

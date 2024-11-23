@@ -102,7 +102,7 @@ namespace TextMeshDOTS.Authoring
                     {
                         var entity = entities[x * count + y];
                         
-                        var calliByteBuffer = EntityManager.GetBuffer<CalliByte>(entity);
+                        var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
                         var calliString = new CalliString(calliByteBuffer);
                         //string text = i.ToString() + j.ToString();
                         calliString.Append(text2);

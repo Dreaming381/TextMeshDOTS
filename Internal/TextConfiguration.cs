@@ -6,86 +6,7 @@ using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
 {
-    internal struct TextGenerationStateCommands
-    {
-        public float xAdvanceChange;
-        public bool xAdvanceIsOverwrite;  // False is additive
-
-        public void Reset()
-        {
-            xAdvanceChange = 0f;
-            xAdvanceIsOverwrite = false;
-        }
-    }
-
-    internal struct ActiveTextConfiguration
-    {
-        public readonly float m_fontScaleMultiplier;  // Used for handling of superscript and subscript.
-        public readonly float m_currentFontSize;
-        public readonly FontStyles m_fontStyleInternal;
-        //public readonly FontWeight                 m_fontWeightInternal;
-        public readonly int m_currentFontMaterialIndex;
-        public readonly HorizontalAlignmentOptions m_lineJustification;
-        public readonly float m_baselineOffset;
-        public readonly Color32 m_htmlColor;
-        //public readonly Color32                    m_underlineColor;
-        //public readonly Color32                    m_strikethroughColor;
-        public readonly short m_italicAngle;
-        public readonly float m_lineOffset;
-        //public readonly float                      m_lineHeight;
-        public readonly float m_cSpacing;
-        public readonly float m_monoSpacing;
-        //public readonly float                      m_xAdvance;
-        //public readonly float                      m_tagLineIndent;
-        //public readonly float                      m_tagIndent;
-        //public readonly float                      m_marginWidth;
-        //public readonly float                      m_marginHeight;
-        //public readonly float                      m_marginLeft;
-        //public readonly float                      m_marginRight;
-        //public readonly float                      m_width;
-        //public readonly bool                       m_isNonBreakingSpace;
-        public readonly float m_fxRotationAngleCCW;
-        public readonly float3 m_fxScale;
-
-        //// The following are derived values
-        //public float baseScale;
-        //
-        //public void CalculateDerived(in TextBaseConfiguration baseConfiguration, ref FontBlob font)
-        //{
-        //    baseScale = m_currentFontSize / font.pointSize * font.scale * (baseConfiguration.isOrthographic ? 1 : 0.1f);
-        //}
-        public ActiveTextConfiguration(ref TextConfigurationStack textConfigurationStack)
-        {
-            m_baselineOffset = textConfigurationStack.m_baselineOffset;
-            m_cSpacing = textConfigurationStack.m_cSpacing;
-            m_currentFontMaterialIndex = textConfigurationStack.m_currentFontMaterialIndex;
-            m_currentFontSize = textConfigurationStack.m_currentFontSize;
-            m_fontScaleMultiplier = textConfigurationStack.m_fontScaleMultiplier;
-            m_fontStyleInternal = textConfigurationStack.m_fontStyleInternal;
-            //m_fontWeightInternal       = textConfigurationStack.m_fontWeightInternal,
-            m_fxRotationAngleCCW = textConfigurationStack.m_fxRotationAngleCCW;
-            m_fxScale = textConfigurationStack.m_fxScale;
-            m_htmlColor = textConfigurationStack.m_htmlColor;
-            //m_isNonBreakingSpace       = textConfigurationStack.m_isNonBreakingSpace,
-            m_italicAngle = textConfigurationStack.m_italicAngle;
-            //m_lineHeight               = textConfigurationStack.m_lineHeight,
-            m_lineJustification = textConfigurationStack.m_lineJustification;
-            m_lineOffset = textConfigurationStack.m_lineOffset;
-            //m_marginHeight             = textConfigurationStack.m_marginHeight,
-            //m_marginLeft               = textConfigurationStack.m_marginLeft,
-            //m_marginRight              = textConfigurationStack.m_marginRight,
-            //m_marginWidth              = textConfigurationStack.m_marginWidth,
-            m_monoSpacing = textConfigurationStack.m_monoSpacing;
-            //m_strikethroughColor       = textConfigurationStack.m_strikethroughColor,
-            //m_underlineColor           = textConfigurationStack.m_underlineColor,
-            //m_width                    = textConfigurationStack.m_width,
-            //m_xAdvance                 = textConfigurationStack.m_xAdvance,
-            //m_tagIndent                 = textConfigurationStack.m_tagIndent,
-            //m_tagLineIndent             = textConfigurationStack.m_tagLineIndent,
-        }
-    }
-
-    internal struct TextConfigurationStack
+    internal struct TextConfiguration
     {
         // These top two are scratchpads for RichTextParser.
         public FixedString128Bytes m_htmlTag;
@@ -97,9 +18,8 @@ namespace TextMeshDOTS
         public FixedStack512Bytes<float> m_sizeStack;
 
         public FontStyles m_fontStyleInternal;
-        public FontWeight m_fontWeightInternal;
-        public FontStyleStack m_fontStyleStack;
-        public FixedStack512Bytes<FontWeight> m_fontWeightStack;
+        public TextFontWeight m_fontWeightInternal;
+        public FixedStack512Bytes<TextFontWeight> m_fontWeightStack;
 
         public int m_currentFontMaterialIndex;
         public FixedStack512Bytes<int> m_fontMaterialIndexStack;
@@ -126,6 +46,7 @@ namespace TextMeshDOTS
 
         public float m_cSpacing;
         public float m_monoSpacing;
+        public float m_xAdvance;
 
         public float m_tagLineIndent;
         public float m_tagIndent;
@@ -140,14 +61,13 @@ namespace TextMeshDOTS
 
         public bool m_isNonBreakingSpace;
 
-        public bool m_isParsingText;
-
         public float m_fxRotationAngleCCW;
         public float3 m_fxScale;
 
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
+        public int m_characterCount;
 
-        public void Reset(TextBaseConfiguration textBaseConfiguration)
+        public void Reset(in TextBaseConfiguration textBaseConfiguration, ref FontMaterialSet fontMaterialSet)
         {
             m_htmlTag.Clear();
 
@@ -157,10 +77,9 @@ namespace TextMeshDOTS
             m_sizeStack.Add(m_currentFontSize);
 
             m_fontStyleInternal = textBaseConfiguration.fontStyle;
-            m_fontWeightInternal = (m_fontStyleInternal & FontStyles.Bold) == FontStyles.Bold ? FontWeight.Bold : textBaseConfiguration.fontWeight;
+            m_fontWeightInternal = (m_fontStyleInternal & FontStyles.Bold) == FontStyles.Bold ? TextFontWeight.Bold : textBaseConfiguration.fontWeight;
             m_fontWeightStack.Clear();
             m_fontWeightStack.Add(m_fontWeightInternal);
-            m_fontStyleStack.Clear();
 
             m_currentFontMaterialIndex = 0;
             m_fontMaterialIndexStack.Clear();
@@ -185,7 +104,7 @@ namespace TextMeshDOTS
             m_strikethroughColorStack.Clear();
             m_strikethroughColorStack.Add(m_htmlColor);
 
-            m_italicAngle = 0;
+            m_italicAngle = fontMaterialSet[0].italicsStyleSlant;
             m_italicAngleStack.Clear();
 
             m_lineOffset = 0;  // Amount of space between lines (font line spacing + m_linespacing).
@@ -193,6 +112,7 @@ namespace TextMeshDOTS
 
             m_cSpacing = 0;  // Amount of space added between characters as a result of the use of the <cspace> tag.
             m_monoSpacing = 0;
+            m_xAdvance = 0;  // Used to track the position of each character.
 
             m_tagLineIndent = 0;  // Used for indentation of text.
             m_tagIndent = 0;
@@ -208,11 +128,12 @@ namespace TextMeshDOTS
 
             m_isNonBreakingSpace = false;
 
-            m_isParsingText = false;
             m_fxRotationAngleCCW = 0;
             m_fxScale = 1;
 
             m_highlightStateStack.Clear();
+
+            m_characterCount = 0;  // Total characters in the CalliString
         }
     }
 }

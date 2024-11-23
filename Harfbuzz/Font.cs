@@ -39,6 +39,14 @@ namespace HarfBuzz
         {
             HB.hb_font_set_scale(ptr, x_scale, y_scale);
         }
+        public void GetMetrics(MetricTag metricTag, out int position)
+        {
+            HB.hb_ot_metrics_get_position(ptr, metricTag, out position);
+        }
+        public bool GetGlyphExtends(uint glyph, out GlyphExtents extends)
+        {
+            return HB.hb_font_get_glyph_extents(ptr, glyph, out extends);
+        }
 
         public void Dispose()
         {

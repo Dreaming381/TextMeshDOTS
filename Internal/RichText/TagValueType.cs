@@ -1,11 +1,11 @@
 namespace TextMeshDOTS.RichText
 {
-    internal enum TagValueType : byte
+    internal enum TagValueType
     {
-        None = 0x0,
-        NumericalValue = 0x1,
-        StringValue = 0x2,
-        ColorValue = 0x4,
+        None = 0,
+        NumericalValue = 1,
+        StringValue = 2,
+        ColorValue = 4
     }
 }
 

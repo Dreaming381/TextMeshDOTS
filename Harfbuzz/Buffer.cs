@@ -11,7 +11,6 @@ namespace HarfBuzz
     public unsafe struct Buffer : IDisposable
     {
         public IntPtr ptr;
-
         public Buffer(Direction direction, Script script)
         {
             ptr = HB.hb_buffer_create();
@@ -67,57 +66,51 @@ namespace HarfBuzz
         {
             HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafeReadOnlyPtr(), text.Length, 0, text.Length);
         }
-
+        public void ClearContent()
+        {
+            HB.hb_buffer_clear_contents(ptr);
+        }
+        public void Reset()
+        {
+            HB.hb_buffer_reset(ptr);
+        }
         public void Dispose()
         {
             HB.hb_buffer_destroy(ptr);
         }
 
-        //public GlyphInfo[] GlyphInfo()
-        //{
-        //    uint length;
-        //    IntPtr glyphInfoPtr = HB.hb_buffer_get_glyph_infos(ptr, out length);
-        //    var glyphInfos = new GlyphInfo[length];
-        //    var size = Marshal.SizeOf(typeof(GlyphInfo));
-        //    for (int i = 0; i < length; ++i)
-        //    {
-        //        glyphInfos[i] = Marshal.PtrToStructure<GlyphInfo>(glyphInfoPtr);
-        //        glyphInfoPtr += size;
-        //    }
-        //    return glyphInfos;
-        //}
         public NativeArray<GlyphInfo> GlyphInfo()
         {
             uint length;
-            IntPtr glyphInfoPtr = HB.hb_buffer_get_glyph_infos(ptr, out length);
-            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<GlyphInfo>((void*)glyphInfoPtr, (int)length, Allocator.None);
+            var glyphInfoPtr = HB.hb_buffer_get_glyph_infos(ptr, out length);
+            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<GlyphInfo>((void*)glyphInfoPtr, (int)length, Allocator.Invalid);
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            NativeArrayUnsafeUtility.SetAtomicSafetyHandle<GlyphInfo>(ref result, AtomicSafetyHandle.Create());
+                    NativeArrayUnsafeUtility.SetAtomicSafetyHandle<GlyphInfo>(ref result, AtomicSafetyHandle.GetTempMemoryHandle());
 #endif
             return result;
         }
-        //public GlyphPosition[] GlyphPositions()
-        //{
-        //    uint length;
-        //    IntPtr glyphPositionPtr = HB.hb_buffer_get_glyph_positions(ptr, out length);
-        //    var glyphPositions = new GlyphPosition[length];
-        //    var size = Marshal.SizeOf(typeof(GlyphPosition));
-        //    for (int i = 0; i < length; ++i)
-        //    {
-        //        glyphPositions[i] = Marshal.PtrToStructure<GlyphPosition>(glyphPositionPtr);
-        //        glyphPositionPtr += size;
-        //    }
-        //    return glyphPositions;
-        //}
+        public unsafe ReadOnlySpan<GlyphInfo> GetGlyphInfosSpan()
+        {
+            uint length;
+            var infoPtrs = HB.hb_buffer_get_glyph_infos(ptr, out length);
+            return new ReadOnlySpan<GlyphInfo>(infoPtrs, (int)length);
+        }
+
         public NativeArray<GlyphPosition> GlyphPositions()
         {
             uint length;
-            IntPtr glyphInfoPtr = HB.hb_buffer_get_glyph_positions(ptr, out length);
-            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<GlyphPosition>((void*)glyphInfoPtr, (int)length, Allocator.None);
+            var glyphInfoPtr = HB.hb_buffer_get_glyph_positions(ptr, out length);
+            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<GlyphPosition>((void*)glyphInfoPtr, (int)length, Allocator.Invalid);
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            NativeArrayUnsafeUtility.SetAtomicSafetyHandle<GlyphPosition>(ref result, AtomicSafetyHandle.Create());
+                    NativeArrayUnsafeUtility.SetAtomicSafetyHandle<GlyphPosition>(ref result, AtomicSafetyHandle.GetTempMemoryHandle());
 #endif
             return result;
+        }
+        public unsafe ReadOnlySpan<GlyphPosition> GetGlyphPositionsSpan()
+        {
+            uint length;
+            var infoPtrs = HB.hb_buffer_get_glyph_positions(ptr, out length);
+            return new ReadOnlySpan<GlyphPosition>(infoPtrs, (int)length);
         }
     }
 }

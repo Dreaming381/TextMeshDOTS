@@ -43,7 +43,15 @@ namespace HarfBuzz
 
 
         #region font
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_font_get_glyph_extents(IntPtr font, uint glyph, out GlyphExtents extents);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_ot_metrics_get_position(IntPtr font, MetricTag metrics_tag, out int position);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_font_create(IntPtr face);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
@@ -67,12 +75,17 @@ namespace HarfBuzz
         #endregion
 
         #region buffer
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_buffer_clear_contents(IntPtr buffer);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_buffer_reset(IntPtr buffer);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern ClusterLevel hb_buffer_get_cluster_level(IntPtr buffer);
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_buffer_set_cluster_level(IntPtr buffer, ClusterLevel cluster_level);
 
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_buffer_add(IntPtr buffer, UInt32 codepoint, UInt32 cluster);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
@@ -85,17 +98,19 @@ namespace HarfBuzz
         internal static extern void hb_buffer_destroy(IntPtr buffer);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern IntPtr hb_buffer_get_glyph_infos(IntPtr buffer, out uint length);
+        //internal static extern IntPtr hb_buffer_get_glyph_infos(IntPtr buffer, out uint length);
+        internal static extern GlyphInfo* hb_buffer_get_glyph_infos(IntPtr buffer, out uint length);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern IntPtr hb_buffer_get_glyph_positions(IntPtr buffer, out uint length);
+        //internal static extern IntPtr hb_buffer_get_glyph_positions(IntPtr buffer, out uint length);
+        internal static extern  GlyphPosition* hb_buffer_get_glyph_positions(IntPtr buffer, out uint length);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         //public static extern IntPtr hb_language_from_string(string str, int len);
         public static extern IntPtr hb_language_from_string(byte* str, int len);
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern /* char */ void* hb_language_to_string(IntPtr language);
 
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_buffer_get_language(IntPtr buffer);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
@@ -106,7 +121,7 @@ namespace HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern ContentType hb_buffer_get_content_type(IntPtr buffer);
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_buffer_set_content_type(IntPtr buffer, ContentType content_type);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
@@ -123,17 +138,18 @@ namespace HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_face_get_glyph_count(IntPtr face);
 
-
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
-        //internal static extern bool hb_feature_from_string([MarshalAs(UnmanagedType.LPStr)] String str, Int32 len, Feature* feature);
-        internal static extern bool hb_feature_from_string(byte* str, Int32 len, Feature* feature);
+        //internal static extern bool hb_feature_from_string([MarshalAs(UnmanagedType.LPStr)] String str, Int32 len, out Feature);
+        internal static extern bool hb_feature_from_string(byte* str, Int32 len, out Feature feature);
         
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_feature_to_string(Feature* feature, /* char */ void* buf, UInt32 size);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_shape(IntPtr font, IntPtr buffer, IntPtr features, uint num_features);        
+        public static extern void hb_shape(IntPtr font, IntPtr buffer, IntPtr features, uint num_features);
+        //[DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        //internal static extern void hb_shape(IntPtr font, IntPtr buffer, Feature* features, uint num_features);
 
     }
 }

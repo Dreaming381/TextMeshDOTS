@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Unity.Collections;
 
 namespace HarfBuzz
 {
@@ -10,5 +11,13 @@ namespace HarfBuzz
         public uint value;
         public uint start;
         public uint end;
+        public Feature(FixedString32Bytes feature)
+        {           
+            unsafe
+            {
+                var text = feature.GetUnsafePtr();
+                bool result = HB.hb_feature_from_string(text, -1, out this);
+            }
+        }
     }
 }

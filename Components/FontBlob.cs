@@ -9,14 +9,15 @@ namespace TextMeshDOTS
     {
         public FixedString128Bytes                name;
         public BlobHashMap<int, GlyphBlob>        glyphs;
-        public float                              baseLine;
-        public float                              ascentLine;
-        public float                              descentLine;
-        public float                              capLine;
-        public float                              meanLine;
-        public float                              lineHeight;
-        public float                              pointSize;
-        public float                              scale;
+        public float atlasSamplingPointSize;
+        //public float                              baseLine;
+        //public float                              ascentLine;
+        //public float                              descentLine;
+        //public float                              capLine;
+        //public float                              meanLine;
+        //public float                              lineHeight;
+        //public float                              pointSize;
+        //public float                              scale;
 
         public float atlasWidth;
         public float atlasHeight;
@@ -27,10 +28,10 @@ namespace TextMeshDOTS
         public float boldStyleWeight;
         public byte  italicsStyleSlant;
 
-        public float subscriptOffset;
-        public float subscriptSize;
-        public float superscriptOffset;
-        public float superscriptSize;
+        //public float subscriptOffset;
+        //public float subscriptSize;
+        //public float superscriptOffset;
+        //public float superscriptSize;
 
         public float tabWidth;
         public float tabMultiple;
@@ -45,7 +46,6 @@ namespace TextMeshDOTS
 
     public struct GlyphBlob
     {
-        public int          glyphIndex;
         public GlyphMetrics glyphMetrics;
         public GlyphRect    glyphRect;
         public float        glyphScale;

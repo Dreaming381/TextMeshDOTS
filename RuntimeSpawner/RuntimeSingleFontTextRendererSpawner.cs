@@ -13,7 +13,7 @@ using UnityEngine.Rendering;
 namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
-    //[DisableAutoCreation]
+    [DisableAutoCreation]
     public partial class RuntimeSingleTextRendererSpawner : SystemBase
     {
         bool initialized;
@@ -100,7 +100,7 @@ namespace TextMeshDOTS.Authoring
                     {
                         var entity = entities[x * count + y];
                         EntityManager.SetSharedComponent(entity, filterSettings);
-                        var calliByteBuffer = EntityManager.GetBuffer<CalliByte>(entity);
+                        var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
                         var calliString = new CalliString(calliByteBuffer);
                         //string text = i.ToString() + j.ToString();
                         calliString.Append(text2);
@@ -129,7 +129,7 @@ namespace TextMeshDOTS.Authoring
                     {
                         var entity = entities[x * count + y];
                         EntityManager.SetSharedComponent(entity, filterSettings);
-                        var calliByteBuffer = EntityManager.GetBuffer<CalliByte>(entity);
+                        var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
                         var calliString = new CalliString(calliByteBuffer);
                         //string text = i.ToString() + j.ToString();
                         calliString.Append(text3);

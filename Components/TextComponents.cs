@@ -1,7 +1,10 @@
+using HarfBuzz;
+using System;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
+using Font = HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
@@ -20,6 +23,17 @@ namespace TextMeshDOTS
     {
         public BlobAssetReference<FontBlob> blob;
     }
+    public struct NativeFontReference : IComponentData
+    {
+        public bool isCreated;
+        public Face nativeFace;
+        public Font nativeFont;
+        public Blob nativeBlob;
+    }
+    public class FontAssetReference : IComponentData
+    {
+        public FontAsset value;
+    }
 
     /// <summary>
     /// The base settings of the text before any rich text tags or animations are applied.
@@ -27,64 +41,38 @@ namespace TextMeshDOTS
     /// </summary>
     public struct TextBaseConfiguration : IComponentData
     {
-        // Todo: Current size is 28 bytes. We could make this 20 bytes by using half for
-        // fontSize, wordSpacing, lineSpacing, and paragraphSpacing. Worth it?
-
-        /// <summary>
-        /// The size of the font, in font sizes
-        /// </summary>
-        public float fontSize;
-        /// <summary>
-        /// The line width of the font, in world units.
-        /// </summary>
-        public float maxLineWidth;
-        /// <summary>
-        /// The vertex colors of the rendered text
-        /// </summary>
+        public float fontSize;        
         public Color32 color;
+        public FontStyles fontStyle;
+        public TextFontWeight fontWeight;        
 
+        public float maxLineWidth;
         public float wordSpacing;
         public float lineSpacing;
         public float paragraphSpacing;
-        /// <summary>
-        /// The horizontal alignment mode of the text
-        /// </summary>
-        public HorizontalAlignmentOptions lineJustification
-        {
-            get => (HorizontalAlignmentOptions)((m_alignmentWeightOrthoKerning & 0x70) >> 4);
-            set => m_alignmentWeightOrthoKerning = (ushort)((m_alignmentWeightOrthoKerning & ~0x70) | ((ushort)value << 4));
-        }
-        /// <summary>
-        /// The vertical alignment mode of the text
-        /// </summary>
-        public VerticalAlignmentOptions verticalAlignment
-        {
-            get => (VerticalAlignmentOptions)((m_alignmentWeightOrthoKerning & 0x780) >> 7);
-            set => m_alignmentWeightOrthoKerning = (ushort)((m_alignmentWeightOrthoKerning & ~0x780) | ((ushort)value << 7));
-        }
-        public FontWeight fontWeight
-        {
-            get => (FontWeight)(m_alignmentWeightOrthoKerning & 0x0f);
-            set => m_alignmentWeightOrthoKerning = (ushort)((m_alignmentWeightOrthoKerning & ~0x0f) | (ushort)value);
-        }
-        public FontStyles fontStyle
-        {
-            get => (FontStyles)m_fontStyleFlags;
-            set => m_fontStyleFlags = (ushort)value;
-        }
-        public bool isOrthographic
-        {
-            get => (m_alignmentWeightOrthoKerning & 0x8000) != 0;
-            set => m_alignmentWeightOrthoKerning = (ushort)((m_alignmentWeightOrthoKerning & 0x7fff) | (value ? 0x8000 : 0));
-        }
-        public bool enableKerning
-        {
-            get => (m_alignmentWeightOrthoKerning & 0x4000) != 0;
-            set => m_alignmentWeightOrthoKerning = (ushort)((m_alignmentWeightOrthoKerning & 0xbfff) | (value ? 0x4000 : 0));
-        }
+        public HorizontalAlignmentOptions lineJustification;
+        public VerticalAlignmentOptions verticalAlignment;
+        public bool isOrthographic;
+    }
 
-        ushort m_fontStyleFlags;  // 6 bits unused, but Unity may add more.
-        ushort m_alignmentWeightOrthoKerning;  // 3 bits unused.
+    [InternalBufferCapacity(0)]
+    public struct TextSpan : IBufferElementData
+    {
+        //public IntPtr fontAsset;    //to access native Font  
+        public int fontMaterialIndex; //to access Font Blob
+        public int startIndex;
+        public int length;        
+
+        public int fontSize;
+        public Color32 color;
+        public FontStyles fontStyle;
+        public TextFontWeight fontWeight;
+
+        public override string ToString()
+        {
+            //return string.Format("{0}: {1}\n", "color", color) + string.Format("{0}: {1}\n", "fontStyle", fontStyle) + string.Format("{0}: {1}\n", "fontWeight", fontWeight) + string.Format("{0}: {1}\n", "fontSize", fontSize) + string.Format("{0}: {1}", "fontAsset", fontAsset) + string.Format("{0}: {1}\n", "startIndex", startIndex) + string.Format("{0}: {1}", "length", length);
+            return string.Format("{0}: {1}\n", "color", color) + string.Format("{0}: {1}\n", "fontStyle", fontStyle) + string.Format("{0}: {1}\n", "fontWeight", fontWeight) + string.Format("{0}: {1}\n", "fontSize", fontSize) + string.Format("{0}: {1}", "fontAsset", "startIndex", startIndex) + string.Format("{0}: {1}", "length", length);
+        }
     }
 
     /// <summary>
@@ -93,10 +81,16 @@ namespace TextMeshDOTS
     /// Usage: ReadWrite, but using the abstraction tools.
     /// </summary>
     [InternalBufferCapacity(0)]
+    public struct CalliByteRaw : IBufferElementData
+    {
+        public byte element;
+    }
+    [InternalBufferCapacity(0)]
     public struct CalliByte : IBufferElementData
     {
         public byte element;
     }
+
 
     /// <summary>
     /// The backing memory for a GlyphMapper struct. Cast to a GlyphMapper
