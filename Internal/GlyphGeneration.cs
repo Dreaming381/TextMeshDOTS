@@ -10,34 +10,31 @@ using UnityEngine;
 using Unity.Profiling;
 
 
+
 namespace TextMeshDOTS
 {
     internal static class GlyphGeneration
     {
         /// <summary> This function logic follows TMPro_Private.GenerateTextMesh() </summary>
-        internal static unsafe void CreateRenderGlyphs(ProfilerMarker marker, Font HBfont,
-                                                       ref DynamicBuffer<RenderGlyph> renderGlyphs,
-                                                       ref GlyphMappingWriter mappingWriter,
+        internal static unsafe void CreateRenderGlyphs(ref NativeFont nativeFont, //to-do: pass array of fonts, select right one
                                                        ref FontMaterialSet fontMaterialSet,
-                                                       ref TextConfiguration textConfiguration,
+                                                       ref DynamicBuffer<RenderGlyph> renderGlyphs,
+                                                       ref GlyphMappingWriter mappingWriter,                                                       
                                                        in DynamicBuffer<CalliByte> calliBytes,
-                                                       in DynamicBuffer<GlyphInfo> glyphInfos,
-                                                       in DynamicBuffer<GlyphPosition> glyphPositions,
+                                                       in DynamicBuffer<GlyphOTF> glyphOTFs,
                                                        in DynamicBuffer<TextSpan> textSpans,
                                                        in TextBaseConfiguration baseConfiguration)
         {
-            int count = renderGlyphs.Length;
             renderGlyphs.Clear();
 
             // Initialize textConfiguration which stores all fields that are modified by RichText Tags
-            textConfiguration.Reset(in baseConfiguration, ref fontMaterialSet);
+            int textSpanCounter = 0;
+            var currentTextSpan = textSpans[textSpanCounter++];
             var calliString = new CalliString(calliBytes);
-
-            marker.Begin();            
 
             var characters = calliString.GetEnumerator();
 
-            ref FontBlob font = ref fontMaterialSet[textConfiguration.m_currentFontMaterialIndex];
+            ref FontBlob font = ref fontMaterialSet[currentTextSpan.fontMaterialIndex];
 
             int characterCount = 0;
             int lastWordStartCharacterGlyphIndex = 0;
@@ -55,66 +52,45 @@ namespace TextMeshDOTS
             float maxLineDescender = float.MaxValue;
             float xAdvance = 0f;
 
-            #region review if needed
-            var fontScale = 1f; //fontAsset
-            //var fontPointSize = 12f; //font.pointSize
+            #region AtlasFactor
+            // Unity scales native Opentype metrics in GlyphRect and GlyphMetrics by 
+            // (unit * atlasSamplingPointSize / Opentype.xScale)
+            // So raw values from Opentype font need to be scaled like that as well.
+
+            var xNativeToUnity = font.atlasSamplingPointSize / nativeFont.yScale;
+            var yNativeToUnity = font.atlasSamplingPointSize / nativeFont.xScale;
+
             var fontBaseLine = 0f; //fontBaseLine
             #endregion
 
-            //scale factor to sync Harfbuzz with FontAsset and FontAtlas            
-            var baseScaleFactor = baseConfiguration.fontSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
-
-            HBfont.GetScale(out int x_scale, out int y_scale);
-            HBfont.GetMetrics(MetricTag.SubScriptEmXSize, out int subScriptEmXSize);
-            HBfont.GetMetrics(MetricTag.SubScriptEmYOffset, out int subScriptEmYOffset);
-            HBfont.GetMetrics(MetricTag.SuperScriptEmXSize, out int superScriptEmXSize);
-            HBfont.GetMetrics(MetricTag.SuperScriptEmYOffset, out int superScriptEmYOffset);            
-            HBfont.GetMetrics(MetricTag.HorizontalAscender, out int horizontalAscender);
-            HBfont.GetMetrics(MetricTag.HorizontalDescender, out int horizontalDescender);
-            HBfont.GetMetrics(MetricTag.XHeight, out int xHeight);
-            HBfont.GetMetrics(MetricTag.CapHeight, out int capHeight);
-
-            float xScale = (float)x_scale;
-            float yScale = (float)y_scale;
-            var nativeToAtlas = baseScaleFactor / font.atlasSamplingPointSize;
-            var atlasToNative = baseConfiguration.fontSize / font.atlasSamplingPointSize;
-
-            var xS = baseConfiguration.fontSize / xScale;
-            var yS = baseScaleFactor / yScale;
-            float subScriptFactor = subScriptEmXSize / xScale;            
-            float superScriptFactor = superScriptEmXSize / xScale;
-            float subScriptOffset = subScriptEmYOffset * yS;
-            float superScriptOffset = superScriptEmYOffset * yS;
+            float subScriptFactor = nativeFont.subScriptEmXSize / nativeFont.xScale;
+            float superScriptFactor = nativeFont.superScriptEmXSize / nativeFont.xScale;
+            float subScriptOffset = nativeFont.subScriptEmYOffset * yNativeToUnity;
+            float superScriptOffset = nativeFont.superScriptEmYOffset * yNativeToUnity;
 
             //Debug.Log($" horizontalAscender {horizontalAscender} b {b} {{xScale / baseConfiguration.fontSize {xScale / baseConfiguration.fontSize} xScale * baseScaleFactor {xScale * baseScaleFactor} baseConfiguration.fontSize {baseConfiguration.fontSize}");
-            float ascentLine = horizontalAscender * xS;
-            float descentLine = horizontalDescender * xS;
-            float meanLine = xHeight * xS;
-            float capLine = capHeight * xS;
+            var fontExtends = nativeFont.GetFontExtents(Direction.LeftToRight);
+            float ascentLine = fontExtends.ascender * xNativeToUnity;
+            float descentLine = fontExtends.descender * xNativeToUnity;
+            float meanLine = nativeFont.xHeight * xNativeToUnity;
+            float capLine = nativeFont.capHeight * xNativeToUnity;
 
             // Calculate the scale of the font based on selected font size and sampling point size.
             // baseScale is calculated using the font asset assigned to the text object.            
-            float baseScale = fontScale / baseConfiguration.fontSize * baseScaleFactor;
-
+            float baseScale = baseConfiguration.fontSize / font.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
             float currentElementScale = baseScale;
-            float currentEmScale = 0.01f * baseScaleFactor;
+            float currentEmScale = baseConfiguration.fontSize * 0.01f * (baseConfiguration.isOrthographic ? 1 : 0.1f);
 
             float topAnchor = GetTopAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale);
             float bottomAnchor = GetBottomAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale);
 
             Unicode.Rune currentRune, previousRune = Unicode.BadRune;//input text unicode
-            int textSpanCounter = 0;
-            //var currentTextSpan = new TextSpan(baseConfiguration, calliBytes.Length);
-            var currentTextSpan = textSpans[textSpanCounter++];
 
-            for (int k = 0, length = glyphInfos.Length; k < length; k++)
+            for (int k = 0, length = glyphOTFs.Length; k < length; k++)
             {
-                var glyphInfo = glyphInfos[k];
-                var glyphPosition = glyphPositions[k];
+                var glyphOTF = glyphOTFs[k];
 
-                //Debug.Log($"bytePosition {glyphInfo.cluster} glyph {glyphInfo.codepoint}");
-
-                var bytePosition = (int)glyphInfo.cluster;
+                var bytePosition = (int)glyphOTF.cluster;
                 characters.GotoIndex(bytePosition);
                 currentRune = characters.Current;
                 if (bytePosition >= (currentTextSpan.startIndex + currentTextSpan.length))
@@ -125,53 +101,39 @@ namespace TextMeshDOTS
                     topAnchor = GetTopAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale, topAnchor);
                 bottomAnchor = GetBottomAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale, bottomAnchor);
 
-                // Look up Character Data. TMP uses a backing array,
-                // we pull character directly from FontBlob and continue when not found
                 #region Look up Character Data
-                if (!font.glyphs.TryGetValue((int)glyphInfo.codepoint, out var glyphBlob))
+                if (!font.glyphs.TryGetValue((int)glyphOTF.codepoint, out var glyphBlob))
                     continue;
 
-                if (!HBfont.GetGlyphExtends(glyphInfo.codepoint, out GlyphExtents glyphExtents))
-                    continue;                
+                // Cache glyph metrics
+                var currentGlyphMetrics = glyphBlob.glyphMetrics;
+                var x_bearing = currentGlyphMetrics.horizontalBearingX;
+                var y_bearing = currentGlyphMetrics.horizontalBearingY;
+                var glyphHeight = currentGlyphMetrics.height;
+                var glyphWidth = currentGlyphMetrics.width;
+                var glyphScale = glyphBlob.glyphScale;
 
-                //Debug.Log($"bytePosition {glyphInfo.cluster} unicode {currentRune.value}({(char)currentRune.value}) glyph {glyphInfo.codepoint}");
-
-
-                float adjustedScale = fontScale / baseConfiguration.fontSize * currentTextSpan.fontSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);                
-
+                float adjustedScale = currentTextSpan.fontSize / font.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
                 float elementAscentLine = ascentLine;
                 float elementDescentLine = descentLine;
 
                 //handle superscript and subscript
                 float fontScaleMultiplier = 1;
-                float vOffset = 0;
+                float m_BaselineOffset = 0;
                 if ((currentTextSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
                 {
                     fontScaleMultiplier = subScriptFactor;
-                    vOffset = -subScriptOffset;
+                    m_BaselineOffset = -subScriptOffset * adjustedScale;
                 }
                 else if ((currentTextSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
                 {
                     fontScaleMultiplier = superScriptFactor;
-                    vOffset = superScriptOffset;
+                    m_BaselineOffset = superScriptOffset * adjustedScale;
                 }
 
-                currentElementScale = adjustedScale * fontScaleMultiplier * glyphBlob.glyphScale;
-                float baselineOffset = fontBaseLine * adjustedScale * fontScaleMultiplier * fontScale;
+                currentElementScale = adjustedScale * fontScaleMultiplier * glyphScale;
+                float baselineOffset = fontBaseLine * adjustedScale * fontScaleMultiplier;
                 #endregion
-
-                // Cache glyph metrics
-                var currentGlyphMetrics = glyphBlob.glyphMetrics;
-
-                var x_bearing = glyphExtents.x_bearing * nativeToAtlas;
-                var y_bearing = glyphExtents.y_bearing * nativeToAtlas;
-                var glyphHeight = -glyphExtents.height * nativeToAtlas;
-                var glyphWidth = glyphExtents.width * nativeToAtlas;
-
-                //var x_bearing = currentGlyphMetrics.horizontalBearingX * atlasToNative;
-                //var y_bearing = currentGlyphMetrics.horizontalBearingY * atlasToNative;
-                //var glyphHeight = currentGlyphMetrics.height * atlasToNative;
-                //var glyphWidth = currentGlyphMetrics.width * atlasToNative;
 
                 // Optimization to avoid calling this more than once per character.
                 bool isWhiteSpace = currentRune.value <= 0xFFFF && currentRune.IsWhiteSpace();
@@ -179,10 +141,10 @@ namespace TextMeshDOTS
                 // Handle Mono Spacing
                 #region Handle Mono Spacing
                 float monoAdvance = 0;
-                if (textConfiguration.m_monoSpacing != 0)
+                if (currentTextSpan.monoSpacing != 0)
                 {
                     monoAdvance =
-                        (textConfiguration.m_monoSpacing / 2 - (currentGlyphMetrics.width / 2 + currentGlyphMetrics.horizontalBearingX) * currentElementScale);  // * (1 - charWidthAdjDelta);
+                        (currentTextSpan.monoSpacing / 2 - (glyphWidth / 2 + x_bearing) * currentElementScale);  // * (1 - charWidthAdjDelta);
                     xAdvance += monoAdvance;
                 }
                 #endregion
@@ -205,17 +167,17 @@ namespace TextMeshDOTS
 
                 // top left is used to position bottom left and top right
                 float2 topLeft;
-                var xOffset = glyphPosition.xOffset / xScale * baseScaleFactor;
-                var yOffset = glyphPosition.yOffset / yScale * baseScaleFactor;
-                topLeft.x = xAdvance + xOffset + ((x_bearing * textConfiguration.m_fxScale.x - font.materialPadding - style_padding) * currentElementScale);
-                topLeft.y = baselineOffset + yOffset + (y_bearing + font.materialPadding) * currentElementScale - textConfiguration.m_lineOffset + vOffset;
+                var xOffset = glyphOTF.xOffset * xNativeToUnity;
+                var yOffset = glyphOTF.yOffset * yNativeToUnity;
+                topLeft.x = xAdvance + (x_bearing * currentTextSpan.fxScale - font.materialPadding - style_padding + xOffset) * currentElementScale;
+                topLeft.y = baselineOffset + (y_bearing + font.materialPadding + yOffset) * currentElementScale + m_BaselineOffset;
 
                 float2 bottomLeft;
                 bottomLeft.x = topLeft.x;
                 bottomLeft.y = topLeft.y - ((glyphHeight + font.materialPadding * 2) * currentElementScale);
 
                 float2 topRight;
-                topRight.x = bottomLeft.x + (glyphWidth * textConfiguration.m_fxScale.x + font.materialPadding * 2 + style_padding * 2) * currentElementScale;
+                topRight.x = bottomLeft.x + (glyphWidth * currentTextSpan.fxScale + font.materialPadding * 2 + style_padding * 2) * currentElementScale;
                 topRight.y = topLeft.y;
 
                 // Bottom right unused
@@ -282,8 +244,8 @@ namespace TextMeshDOTS
                 if ((currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic)
                 {
                     // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
-                    float shear_value = textConfiguration.m_italicAngle * 0.01f;
-                    float midPoint = ((capLine - (fontBaseLine + vOffset)) / 2) * fontScaleMultiplier * fontScale;
+                    float shear_value = currentTextSpan.italicAngle * 0.01f;
+                    float midPoint = ((capLine - (fontBaseLine + m_BaselineOffset)) / 2) * fontScaleMultiplier;
                     float topShear = shear_value * ((y_bearing + font.materialPadding + style_padding - midPoint) * currentElementScale);
                     bottomShear = shear_value *
                                         ((y_bearing - glyphHeight - font.materialPadding - style_padding - midPoint) *
@@ -299,7 +261,7 @@ namespace TextMeshDOTS
 
                 // Handle Character FX Rotation
                 #region Handle Character FX Rotation
-                renderGlyph.rotationCCW = textConfiguration.m_fxRotationAngleCCW;
+                renderGlyph.rotationCCW = currentTextSpan.fxRotationAngleCCW;
                 #endregion
 
                 #region Store vertex information for the character or sprite.
@@ -314,16 +276,18 @@ namespace TextMeshDOTS
                 fontMaterialSet.WriteFontMaterialIndexForGlyph(currentTextSpan.fontMaterialIndex);
                 mappingWriter.AddCharNoTags(characterCount - 1, true);
                 mappingWriter.AddCharWithTags(k, true);
-                //mappingWriter.AddBytes(prevCurNext.current.CurrentByteIndex, currentRune.LengthInUtf8Bytes(), true);
+                mappingWriter.AddBytes(characters.CurrentByteIndex, currentRune.LengthInUtf8Bytes(), true);
+                //mappingWriter.AddBytes(characters.CurrentByteIndex, characters.CurrentByteIndex - bytePosition, true);
                 #endregion
 
                 // Compute text metrics
                 #region Compute Ascender & Descender values
                 // Element Ascender in line space
-                float elementAscender = elementAscentLine * currentElementScale  + vOffset;
+                float elementAscender = elementAscentLine * currentElementScale + m_BaselineOffset;
 
                 // Element Descender in line space
-                float elementDescender = elementDescentLine * currentElementScale + vOffset;
+                float elementDescender = elementDescentLine * currentElementScale + m_BaselineOffset;
+
 
                 float adjustedAscender = elementAscender;
                 float adjustedDescender = elementDescender;
@@ -332,10 +296,10 @@ namespace TextMeshDOTS
                 if (isLineStart || isWhiteSpace == false)
                 {
                     // Special handling for Superscript and Subscript where we use the unadjusted line ascender and descender
-                    if (vOffset != 0)
+                    if (m_BaselineOffset != 0)
                     {
-                        adjustedAscender = math.max((elementAscender - vOffset) / fontScaleMultiplier, adjustedAscender);
-                        adjustedDescender = math.min((elementDescender - vOffset) / fontScaleMultiplier, adjustedDescender);
+                        adjustedAscender = math.max((elementAscender - m_BaselineOffset) / fontScaleMultiplier, adjustedAscender);
+                        adjustedDescender = math.min((elementDescender - m_BaselineOffset) / fontScaleMultiplier, adjustedDescender);
                     }
                     maxLineAscender = math.max(adjustedAscender, maxLineAscender);
                     maxLineDescender = math.min(adjustedDescender, maxLineDescender);
@@ -349,20 +313,17 @@ namespace TextMeshDOTS
                     float tabs = math.ceil(xAdvance / tabSize) * tabSize;
                     xAdvance = tabs > xAdvance ? tabs : xAdvance + tabSize;
                 }
-                else if (textConfiguration.m_monoSpacing != 0)
+                else if (currentTextSpan.monoSpacing != 0)
                 {
-                    float monoAdjustment = textConfiguration.m_monoSpacing - monoAdvance;
-                    xAdvance += (monoAdjustment + ((font.regularStyleSpacing) * currentEmScale) + textConfiguration.m_cSpacing); 
+                    float monoAdjustment = currentTextSpan.monoSpacing - monoAdvance;
+                    xAdvance += (monoAdjustment + ((font.regularStyleSpacing) * currentEmScale) + currentTextSpan.cSpacing);
                     if (isWhiteSpace || currentRune.value == 0x200B)
                         xAdvance += baseConfiguration.wordSpacing * currentEmScale;
                 }
                 else
                 {
-                    //xAdvance += ((currentGlyphMetrics.horizontalAdvance * textConfiguration.m_fxScale.x) * currentElementScale +
-                    //           (font.regularStyleSpacing + boldSpacingAdjustment) * currentEmScale + textConfiguration.m_cSpacing); 
-
-                    xAdvance += glyphPosition.xAdvance / xScale * baseScaleFactor * fontScaleMultiplier +
-                                (font.regularStyleSpacing + boldSpacingAdjustment) * currentEmScale + textConfiguration.m_cSpacing;  
+                    xAdvance += (glyphOTF.xAdvance * xNativeToUnity * currentTextSpan.fxScale) * currentElementScale +
+                                (font.regularStyleSpacing + boldSpacingAdjustment) * currentEmScale + currentTextSpan.cSpacing;
 
                     if (isWhiteSpace || currentRune.value == 0x200B)
                         xAdvance += baseConfiguration.wordSpacing * currentEmScale;
@@ -380,7 +341,7 @@ namespace TextMeshDOTS
                 if (currentRune.value == 10)
                 {
                     var glyphsLine = renderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex, renderGlyphs.Length - startOfLineGlyphIndex);
-                    var overrideMode = textConfiguration.m_lineJustification;
+                    var overrideMode = currentTextSpan.lineJustification;
                     if ((overrideMode) == HorizontalAlignmentOptions.Justified)
                     {
                         // Don't perform justified spacing for the last line in the paragraph.
@@ -448,7 +409,7 @@ namespace TextMeshDOTS
                         ApplyHorizontalAlignmentToGlyphs(ref glyphsLine,
                                                          ref characterGlyphIndicesWithPreceedingSpacesInLine,
                                                          baseConfiguration.maxLineWidth,
-                                                         textConfiguration.m_lineJustification);
+                                                         currentTextSpan.lineJustification);
 
                         if (lineCount > 0)
                         {
@@ -495,7 +456,7 @@ namespace TextMeshDOTS
                     mappingWriter.AddWordStart(renderGlyphs.Length);
                 }
 
-                if (glyphInfo.codepoint == 1)
+                if (glyphOTF.codepoint == 1)
                 {
                     accumulatedSpaces++;
                 }
@@ -505,7 +466,7 @@ namespace TextMeshDOTS
 
             var finalGlyphsLine = renderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex, renderGlyphs.Length - startOfLineGlyphIndex);
             {
-                var overrideMode = textConfiguration.m_lineJustification;
+                var overrideMode = currentTextSpan.lineJustification;
                 if (overrideMode == HorizontalAlignmentOptions.Justified)
                 {
                     // Don't perform justified spacing for the last line.

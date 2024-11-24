@@ -1,4 +1,5 @@
 using System;
+using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 
 
 namespace HarfBuzz
@@ -47,7 +48,29 @@ namespace HarfBuzz
         {
             return HB.hb_font_get_glyph_extents(ptr, glyph, out extends);
         }
+        public void GetFontExtentsForDirection(Direction direction, out FontExtents fontExtents)
+        {
+            HB.hb_font_get_extents_for_direction(ptr, direction, out fontExtents);
+        }
+        public void GetBaseline(Direction direction, uint language, uint script, out int baseline)
+        {
+            HB.hb_ot_layout_get_baseline(ptr, OpenTypeLayoutBaselineTag.Roman, direction, language, script, out baseline);
+        }
 
+
+        //public void GetGlyphAdvanceForDirection(uint glyph, Direction direction, out int x, out int y)
+        //{
+        //    fixed (int* xPtr = &x)
+        //    fixed (int* yPtr = &y)
+        //    {
+        //        HarfBuzzApi.hb_font_get_glyph_advance_for_direction(ptr, glyph, direction, xPtr, yPtr);
+        //    }
+        //}
+        public bool IsImmutable() => HB.hb_font_is_immutable(ptr);
+        public void MakeImmutable()
+        {
+            HB.hb_font_make_immutable(ptr);
+        }
         public void Dispose()
         {
             HB.hb_font_destroy(ptr);

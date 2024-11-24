@@ -1,9 +1,12 @@
 using System;
+using static UnityEngine.Rendering.VirtualTexturing.Debugging;
+using System.Runtime.InteropServices;
+using Unity.Collections;
 
 
 namespace HarfBuzz
 {
-    public struct Language : IDisposable
+    public struct Language
     {
         public IntPtr ptr;
 
@@ -19,13 +22,37 @@ namespace HarfBuzz
                 }
             }
         }
-        public Language(IntPtr language)
+        //public string GetLanguage()
+        //{
+        //    string name;
+        //    unsafe
+        //    {
+        //        name = Marshal.PtrToStringAnsi((IntPtr)HB.hb_language_to_string(ptr));
+        //    }
+        //    return name;
+        //}
+
+        //public FixedString64Bytes GetName()
+        //{
+        //    var result = new FixedString64Bytes();
+        //    unsafe
+        //    {
+        //        result.AppendRawByte;
+        //        var bla = HB.hb_language_to_string(ptr);
+        //    }
+        //}
+        public Language(uint tag)
         {
-            ptr = language;
+            ptr = HB.hb_ot_tag_to_language(tag);
         }
-        public void Dispose()
+        public override string ToString()
         {
-            HB.hb_blob_destroy(ptr);
+            string result;
+            unsafe
+            {
+                result = Marshal.PtrToStringAnsi((IntPtr)HB.hb_language_to_string(ptr));
+            }
+            return result;
         }
     }
 }

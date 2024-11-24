@@ -1,3 +1,4 @@
+using UnityEngine;
 using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
@@ -9,6 +10,7 @@ namespace TextMeshDOTS.Authoring
     {
         public static unsafe BlobAssetReference<FontBlob> BakeFont(FontAsset font)
         {
+            var faceInfo = font.faceInfo;
             font.material.SetFloat("_WeightNormal", font.regularStyleWeight);
             font.material.SetFloat("_WeightBold", font.boldStyleWeight);
             float materialPadding = font.material.GetPaddingForText(false, false);
@@ -16,20 +18,22 @@ namespace TextMeshDOTS.Authoring
             var          builder             = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot        = ref builder.ConstructRoot<FontBlob>();
             fontBlobRoot.name                = font.name;
-            fontBlobRoot.atlasSamplingPointSize = font.fontAssetCreationEditorSettings.pointSize;
-            //fontBlobRoot.scale               = font.faceInfo.scale;
-            //fontBlobRoot.pointSize           = font.faceInfo.pointSize;         //opsz: optical-size
-            //fontBlobRoot.baseLine            = font.faceInfo.baseline;          //romn: roman
-            //fontBlobRoot.ascentLine          = font.faceInfo.ascentLine;        //hasc: horizontal - ascender
-            //fontBlobRoot.descentLine         = font.faceInfo.descentLine;       //hdsc: horizontal-descender
-            //fontBlobRoot.capLine             = font.faceInfo.capLine;           //cpht: cap-height
-            //fontBlobRoot.meanLine            = font.faceInfo.meanLine;          //xhgt: x-height
-            //fontBlobRoot.lineHeight          = font.faceInfo.lineHeight;        // =ascentLine + descentLine
-            //fontBlobRoot.subscriptOffset     = font.faceInfo.subscriptOffset;   //WRONG! hcld: horizontal-clipping-descent
-            //fontBlobRoot.subscriptSize       = font.faceInfo.subscriptSize;     //WRONG vdsc: vertical-descender
-            //fontBlobRoot.superscriptOffset   = font.faceInfo.superscriptOffset; //WRONG! hcla: horizontal-clipping-ascent
-            //fontBlobRoot.superscriptSize     = font.faceInfo.superscriptSize;   //WRONG! vasc: vertical-ascender
-            fontBlobRoot.tabWidth            = font.faceInfo.tabWidth;
+            fontBlobRoot.atlasSamplingPointSize = faceInfo.pointSize;            
+
+            //fontBlobRoot.scale               = faceInfo.scale;
+            //fontBlobRoot.pointSize           = faceInfo.pointSize;         //opsz: optical-size
+            //fontBlobRoot.baseLine            = faceInfo.baseline;          //romn: roman
+            //fontBlobRoot.ascentLine          = faceInfo.ascentLine;        //hasc: horizontal - ascender
+            //fontBlobRoot.descentLine         = faceInfo.descentLine;       //hdsc: horizontal-descender
+            //fontBlobRoot.capLine             = faceInfo.capLine;           //cpht: cap-height
+            //fontBlobRoot.meanLine            = faceInfo.meanLine;          //xhgt: x-height
+            //fontBlobRoot.lineHeight          = faceInfo.lineHeight;        // =ascentLine + descentLine
+            //fontBlobRoot.subscriptOffset     = faceInfo.subscriptOffset;   //WRONG! hcld: horizontal-clipping-descent
+            //fontBlobRoot.subscriptSize       = faceInfo.subscriptSize;     //WRONG vdsc: vertical-descender
+            //fontBlobRoot.superscriptOffset   = faceInfo.superscriptOffset; //WRONG! hcla: horizontal-clipping-ascent
+            //fontBlobRoot.superscriptSize     = faceInfo.superscriptSize;   //WRONG! vasc: vertical-ascender
+
+            fontBlobRoot.tabWidth            = faceInfo.tabWidth;
             fontBlobRoot.tabMultiple         = font.tabMultiple;
             fontBlobRoot.regularStyleSpacing = font.regularStyleSpacing;
             fontBlobRoot.regularStyleWeight  = font.regularStyleWeight;

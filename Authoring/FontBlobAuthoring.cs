@@ -30,6 +30,7 @@ namespace TextMeshDOTS.Authoring
                 font.ReadFontAssetDefinition();
                 var fontBlob = FontBlobber.BakeFont(font);
                 AddComponent(entity, new FontBlobReference { blob = fontBlob });
+                AddComponentObject(entity, new FontAssetReference { value = font});
                 AddBlobAsset(ref fontBlob, out Unity.Entities.Hash128 hash);
             }
             else if (authoring.fonts.Count > 1)

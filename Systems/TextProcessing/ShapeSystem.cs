@@ -9,8 +9,9 @@ using HarfBuzz;
 namespace TextMeshDOTS
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [RequireMatchingQueriesForUpdate]
     [UpdateAfter(typeof(LoadNativeFont))]
+    [RequireMatchingQueriesForUpdate]
+    [BurstCompile]
     //[DisableAutoCreation]
     public partial struct ShapeSystem : ISystem
     {
@@ -26,8 +27,7 @@ namespace TextMeshDOTS
         {
             m_query = SystemAPI.QueryBuilder()
                       .WithAll<FontBlobReference>()
-                      .WithAllRW<GlyphInfo>()
-                      .WithAllRW<GlyphPosition>()
+                      .WithAllRW<GlyphOTF>()
                       .WithAll<CalliByte>()
                       .Build();
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
@@ -44,13 +44,13 @@ namespace TextMeshDOTS
             {
                 marker = marker,
                 marker2 = marker2,
-                
-                glyphInfoHandle = SystemAPI.GetBufferTypeHandle<GlyphInfo>(false),
-                glyphPositionHandle = SystemAPI.GetBufferTypeHandle<GlyphPosition>(false),
+
+                GlyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
-                nativeFontReferenceHandle = SystemAPI.GetComponentTypeHandle<NativeFontReference>(true),                
-                lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,                
+                nativeFontReferenceHandle = SystemAPI.GetComponentTypeHandle<NativeFont>(true),
+                lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
+            //}.Schedule(m_query, state.Dependency);
             }.ScheduleParallel(m_query, state.Dependency);
         }
     }

@@ -4,12 +4,11 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
-using UnityEngine.Rendering;
-
 
 namespace TextmeshDOTS
-{
+{    
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [UpdateAfter(typeof(GlyphHashmapSystem))]
     //[RequireMatchingQueriesForUpdate]
     partial class UpdateAtlasSystem : SystemBase
     {
@@ -26,6 +25,7 @@ namespace TextmeshDOTS
                               .Build();
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<GlyphInfo>());
             glyphs = new NativeHashSet<uint>(4096, Allocator.Persistent);
+            SystemAPI.TryGetSingletonRW<FontAtlasInfo>(out RefRW<FontAtlasInfo> fontAtlasInfo);
         }
 
         protected override void OnUpdate()
@@ -33,25 +33,27 @@ namespace TextmeshDOTS
             if (m_query.IsEmptyIgnoreFilter)
                 return;
 
-            //Debug.Log($"Update Atlas");
-            var entities = m_query.ToEntityArray(WorldUpdateAllocator);
-            var glyphInfoBuffers = SystemAPI.GetBufferLookup<GlyphInfo>(true);
-            for (int i = 0, length = entities.Length; i < length; i++) 
+            Dependency.Complete();
+            var fontAtlasInfo = SystemAPI.GetSingleton<FontAtlasInfo>();
+            var missingGlyphs = fontAtlasInfo.missingGlyphs;
+            var glyphAtlas = fontAtlasInfo.glyphAtlas;
+            if (missingGlyphs.Length > 0)
             {
-                var entity = entities[i];
-                var glyphInfoBuffer = glyphInfoBuffers[entity];
+                //Debug.Log($"Update Atlas");
+                var entities = m_query.ToEntityArray(WorldUpdateAllocator);
+                var entity = entities[0];
+
                 var font = EntityManager.GetComponentObject<FontAssetReference>(entity).value;
-                for (int j = 0, jj = glyphInfoBuffer.Length; j <jj; j++)
+                for (int j = 0, jj = missingGlyphs.Length; j < jj; j++)
                 {
-                    var glyph = glyphInfoBuffer[j];
-                    if (!glyphs.Contains(glyph.codepoint))
-                    {
-                        glyphs.Add(glyph.codepoint);
-                        font.TryAddGlyphInternal(glyph.codepoint, out _);
-                    }
+                    var glyphID = missingGlyphs[j];
+                    font.TryAddGlyphInternal(glyphID, out _);
+                    glyphAtlas.Add(glyphID);
                 }
+                missingGlyphs.Clear();
+
                 var existingMaterialMeshInfo = SystemAPI.GetComponent<MaterialMeshInfo>(entity);
-                if(existingMaterialMeshInfo.Material >= 0) //is runtime Material
+                if (existingMaterialMeshInfo.Material >= 0) //is runtime Material
                 {
                     hybridRenderer.GetMaterial(existingMaterialMeshInfo.MaterialID);
                     hybridRenderer.UnregisterMaterial(existingMaterialMeshInfo.MaterialID);

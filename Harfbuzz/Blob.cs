@@ -7,6 +7,7 @@ namespace HarfBuzz
     {
         public IntPtr ptr;
         public uint FaceCount => HB.hb_face_count(ptr);
+        public uint Length => HB.hb_blob_get_length(ptr);
 
         public Blob(string filename)
         {
@@ -20,6 +21,8 @@ namespace HarfBuzz
                 }
             }
         }
+        public bool IsImmutable() => HB.hb_blob_is_immutable(ptr);
+
         public void Dispose()
         {
             HB.hb_blob_destroy(ptr);

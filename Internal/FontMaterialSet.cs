@@ -16,7 +16,7 @@ namespace TextMeshDOTS
         {
             if (!m_hasMultipleFonts)
                 return;
-            var remap                                                                 = m_fontToEntityIndexArray[index];
+            var remap = m_fontToEntityIndexArray[index];
             m_selectorBuffer.Add(new FontMaterialSelectorForGlyph { fontMaterialIndex = remap });
         }
 

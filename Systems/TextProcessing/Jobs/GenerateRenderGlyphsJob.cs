@@ -13,8 +13,6 @@ namespace TextmeshDOTS
     [BurstCompile]    
     public partial struct GenerateRenderGlyphsJob : IJobChunk
     {
-        [ReadOnly] public ProfilerMarker marker;
-        [ReadOnly] public ProfilerMarker marker2;
         public BufferTypeHandle<RenderGlyph> renderGlyphHandle;
         public BufferTypeHandle<GlyphMappingElement> glyphMappingElementHandle;
         public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
@@ -22,11 +20,10 @@ namespace TextmeshDOTS
 
         [ReadOnly] public ComponentTypeHandle<GlyphMappingMask> glyphMappingMaskHandle;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
-        [ReadOnly] public BufferTypeHandle<GlyphInfo> glyphInfoHandle;
-        [ReadOnly] public BufferTypeHandle<GlyphPosition> glyphPositionHandle;
+        [ReadOnly] public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
         [ReadOnly] public BufferTypeHandle<TextSpan> textSpanHandle;
         [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
-        [NativeDisableUnsafePtrRestriction][ReadOnly] public ComponentTypeHandle<NativeFontReference> nativeFontReferenceHandle;
+        [NativeDisableUnsafePtrRestriction][ReadOnly] public ComponentTypeHandle<NativeFont> nativeFontReferenceHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalEntitiesHandle;
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
@@ -45,8 +42,7 @@ namespace TextmeshDOTS
                 return;
 
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
-            var glyphInfoBuffers = chunk.GetBufferAccessor(ref glyphInfoHandle);
-            var glyphPositionBuffers = chunk.GetBufferAccessor(ref glyphPositionHandle);
+            var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
             var renderGlyphBuffers = chunk.GetBufferAccessor(ref renderGlyphHandle);
             var glyphMappingBuffers = chunk.GetBufferAccessor(ref glyphMappingElementHandle);
@@ -62,14 +58,11 @@ namespace TextmeshDOTS
             bool hasMultipleFonts = selectorBuffers.Length > 0 && additionalEntitiesBuffers.Length > 0;
 
             FontMaterialSet fontMaterialSet = default;
-            TextConfiguration textConfiguration = default;
-
 
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
                 var calliBytes = calliBytesBuffers[indexInChunk];
-                var glyphInfos = glyphInfoBuffers[indexInChunk];
-                var glyphPositions = glyphPositionBuffers[indexInChunk];
+                var glyphOTFs = glyphOTFBuffers[indexInChunk];
                 var textSpans = textSpanBuffers[indexInChunk];
                 var renderGlyphs = renderGlyphBuffers[indexInChunk];
                 var fontBlobReference = fontBlobReferences[indexInChunk];
@@ -83,14 +76,12 @@ namespace TextmeshDOTS
                 else
                     fontMaterialSet.Initialize(fontBlobReference.blob);
 
-                GlyphGeneration.CreateRenderGlyphs(marker, nativeFontReference.nativeFont,
-                                                   ref renderGlyphs,
-                                                   ref m_glyphMappingWriter,
+                GlyphGeneration.CreateRenderGlyphs(ref nativeFontReference,
                                                    ref fontMaterialSet,
-                                                   ref textConfiguration,
+                                                   ref renderGlyphs,
+                                                   ref m_glyphMappingWriter,                                                   
                                                    in calliBytes,
-                                                   in glyphInfos,
-                                                   in glyphPositions,
+                                                   in glyphOTFs,
                                                    in textSpans,
                                                    in textBaseConfiguration);
 

@@ -9,7 +9,6 @@ using Unity.Mathematics;
 using Unity.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
 using Font = HarfBuzz.Font;
 
@@ -29,7 +28,6 @@ namespace TextMeshDOTS.Authoring
         public VerticalAlignmentOptions   verticalAlignment   = VerticalAlignmentOptions.TopAscent;
         public bool                       isOrthographic      = false;
         public FontStyles                 fontStyle           = FontStyles.Normal;
-        public TextFontWeight             fontWeight          = TextFontWeight.Regular;
         [Tooltip("Additional word spacing in font units where a value of 1 equals 1/100em.")]
         public float wordSpacing = 0;
         [Tooltip("Additional line spacing in font units where a value of 1 equals 1/100em.")]
@@ -40,6 +38,7 @@ namespace TextMeshDOTS.Authoring
         public Color32 color = Color.white;
 
         public List<FontAsset> fonts;
+        
     }
 
 
@@ -48,6 +47,8 @@ namespace TextMeshDOTS.Authoring
     {
         public override void Bake(TextRendererAuthoring authoring)
         {
+            //UnityEngine.Font.textureRebuilt += TextRendererBaker
+            DependsOn(authoring.fonts[0].material);
             if (authoring.fonts == null || authoring.fonts.Count == 0 || authoring.fonts[0] == null)
                 return;
 
@@ -67,7 +68,7 @@ namespace TextMeshDOTS.Authoring
 
             //Fonts
             var font = authoring.fonts[0];
-            font.ReadFontAssetDefinition();
+            font.ReadFontAssetDefinition();            
             BakeFontAsset(entity, font);
             AddComponentObject(entity, new FontAssetReference { value = font});
             AddBuffer<RenderGlyph>(entity);
@@ -77,7 +78,7 @@ namespace TextMeshDOTS.Authoring
                 AddComponent<TextMaterialMaskShaderIndex>(entity);
                 AddBuffer<FontMaterialSelectorForGlyph>(entity);
                 AddBuffer<RenderGlyphMask>(entity);
-                var additionalEntities = AddBuffer<Rendering.AdditionalFontMaterialEntity>(entity).Reinterpret<Entity>();
+                var additionalEntities = AddBuffer<AdditionalFontMaterialEntity>(entity).Reinterpret<Entity>();
                 for (int i = 1, length= authoring.fonts.Count; i <length ; i++)
                 {
                     var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
@@ -100,8 +101,7 @@ namespace TextMeshDOTS.Authoring
 
             //Text Content
             AddBuffer<TextSpan>(entity);
-            AddBuffer<GlyphPosition>(entity);
-            AddBuffer<GlyphInfo>(entity);
+            AddBuffer<GlyphOTF>(entity);
             AddBuffer<CalliByte>(entity);
             var calliByteRaw = AddBuffer<CalliByteRaw>(entity);            
             var calliString = new CalliString(calliByteRaw);
@@ -116,7 +116,6 @@ namespace TextMeshDOTS.Authoring
                 verticalAlignment = authoring.verticalAlignment,
                 isOrthographic    = authoring.isOrthographic,
                 fontStyle         = authoring.fontStyle,
-                fontWeight        = authoring.fontWeight,
                 wordSpacing = authoring.wordSpacing,
                 lineSpacing = authoring.lineSpacing,
                 paragraphSpacing = authoring.paragraphSpacing,

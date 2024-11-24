@@ -15,6 +15,7 @@ namespace TextMeshDOTS
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
+    [UpdateBefore(typeof(ShapeSystem))]
     //[DisableAutoCreation]
     public partial struct ExtractTextSegmentsSystem : ISystem
     {
@@ -40,10 +41,12 @@ namespace TextMeshDOTS
         {
             if (m_query.IsEmpty)
                 return;
+
+            //Debug.Log("Extract TextSpans");
             state.Dependency = new ExtractTextSegmentsJob
             {
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
-            }.Schedule(m_query, state.Dependency);
+            }.ScheduleParallel(m_query, state.Dependency);
         }
     }
 }

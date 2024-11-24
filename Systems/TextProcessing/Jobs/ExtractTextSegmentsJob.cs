@@ -1,14 +1,14 @@
 using TextMeshDOTS;
 using TextMeshDOTS.RichText;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
-using UnityEngine.UIElements;
-using static Unity.Collections.Unicode;
 
 namespace TextmeshDOTS
 {
+    [BurstCompile]
     public partial struct ExtractTextSegmentsJob : IJobEntity
     {
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
@@ -43,7 +43,13 @@ namespace TextmeshDOTS
                             fontSize = (int)textConfiguration.m_currentFontSize,
                             fontStyle = textConfiguration.m_fontStyleInternal,
                             fontWeight = textConfiguration.m_fontWeightInternal,
-                            color = textConfiguration.m_htmlColor,
+                            lineJustification = textConfiguration.m_lineJustification,
+                            color = textConfiguration.m_htmlColor,                            
+                            monoSpacing = textConfiguration.m_monoSpacing,
+                            cSpacing = textConfiguration.m_cSpacing,
+                            fxScale = textConfiguration.m_fxScale,
+                            fxRotationAngleCCW = textConfiguration.m_fxRotationAngleCCW,
+                            italicAngle = textConfiguration.m_italicAngle,
                         });
                     }
                     startIndex = calliString.Length;
@@ -61,14 +67,20 @@ namespace TextmeshDOTS
             }
 
             textSpans.Add(new TextSpan
-            {
+            {                
                 fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
                 startIndex = startIndex,
                 length = calliString.Length - startIndex + 1, //make last TextSpan 1 longer to ensure GlyphGeneration.CreateRenderGlyphs does not try to load next TextSpan on last index.
                 fontSize = (int)textConfiguration.m_currentFontSize,
                 fontStyle = textConfiguration.m_fontStyleInternal,
                 fontWeight = textConfiguration.m_fontWeightInternal,
+                lineJustification = textConfiguration.m_lineJustification,
                 color = textConfiguration.m_htmlColor,
+                monoSpacing = textConfiguration.m_monoSpacing,
+                cSpacing = textConfiguration.m_cSpacing,
+                fxScale = textConfiguration.m_fxScale,
+                fxRotationAngleCCW = textConfiguration.m_fxRotationAngleCCW,
+                italicAngle = textConfiguration.m_italicAngle,
             });
             textSpanBuffer.AddRange(textSpans.AsArray());
         }

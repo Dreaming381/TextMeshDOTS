@@ -54,26 +54,26 @@ namespace TextMeshDOTS.Rendering
     /// <summary> 96 byte glyph data </summary>
     public struct RenderGlyph : IBufferElementData
     {
-        public float2 blPosition;
-        public float2 trPosition;
-        public float2 blUVA;
-        public float2 trUVA;
+        public float2 blPosition;   //0
+        public float2 trPosition;   //8   
+        public float2 blUVA;        //16
+        public float2 trUVA;        //24
 
-        public float2 blUVB;
-        public float2 tlUVB;
-        public float2 trUVB;
-        public float2 brUVB;
+        public float2 blUVB;        //32
+        public float2 tlUVB;        //40
+        public float2 trUVB;        //48      
+        public float2 brUVB;        //56
 
         // Assign a UnityEngine.Color32 to these.
-        public PackedColor blColor;
+        public PackedColor blColor; //64
         public PackedColor tlColor;
         public PackedColor trColor;
         public PackedColor brColor;
 
         public int  unicode; //not needed anywhere-->remove from struct?
-        public float shear;  // Should be equal to topLeft.x - bottomLeft.x
-        public float scale;
-        public float rotationCCW;  // Radians
+        public float shear;  //72 Should be equal to topLeft.x - bottomLeft.x
+        public float scale;  //80
+        public float rotationCCW;  //88 Radians
     }
 
     public struct PackedColor

@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.TextCore;
 using UnityEngine.TextCore.LowLevel;
 using UnityEngine.TextCore.Text;
+using UnityEngine.UIElements.UIR;
 
 public static class TextCoreExtensions
 {
@@ -19,6 +21,40 @@ public static class TextCoreExtensions
     {
         return font.fontFeatureTable.glyphPairAdjustmentRecords;
     }
+    public static IntPtr GetNativeFontAsset(this FontAsset font)
+    {
+        return font.nativeFontAsset;
+    }
+    public static string GetSourceFontFilePath(this FontAsset font)
+    {
+        return font.m_SourceFontFilePath;
+    }
+    public static int GetFaceIndex(this FaceInfo faceInfo)
+    {
+        return faceInfo.faceIndex;
+    }
+
+    //public static FontEngineError LoadFontFace(this FontAsset font)
+    //{
+
+    //    if (font.atlasPopulationMode == AtlasPopulationMode.Dynamic)
+    //    {
+    //        //// Font Asset should have a valid reference to a font in the Editor.
+    //        //if (font.sourceFontFile == null)
+    //        //    font.sourceFontFile = font.SourceFont_EditorRef;
+
+    //        // Try loading the font face from source font object
+    //        if (FontEngine.LoadFontFace(font.sourceFontFile, m_FaceInfo.pointSize, m_FaceInfo.faceIndex) == FontEngineError.Success)
+    //            return FontEngineError.Success;
+
+    //        // Try loading the font face from file path
+    //        if (string.IsNullOrEmpty(font.m_SourceFontFilePath) == false)
+    //            return FontEngine.LoadFontFace(font.m_SourceFontFilePath, font.m_FaceInfo.pointSize, font.m_FaceInfo.faceIndex);
+
+    //        return FontEngineError.Invalid_Face;
+    //    }
+    //    return FontEngineError.Atlas_Generation_Cancelled;
+    //}
 
     public static bool s_initialized = false;
 

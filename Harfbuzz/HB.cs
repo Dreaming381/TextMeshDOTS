@@ -16,6 +16,9 @@ namespace HarfBuzz
 
         #region blob
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_blob_is_immutable(IntPtr blob);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_blob_create_from_file(byte* file_name);
         //internal static extern IntPtr hb_blob_create_from_file([MarshalAs(UnmanagedType.LPStr)] string file_name);
 
@@ -30,6 +33,18 @@ namespace HarfBuzz
         #endregion
 
         #region face
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_face_is_immutable(IntPtr face);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_ot_layout_get_size_params(IntPtr face, out uint design_size, out uint subfamily_id, out uint subfamily_name_id, out uint range_start, out uint range_end);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern uint hb_face_get_upem(IntPtr face);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_face_set_upem(IntPtr face, uint upem);
+
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_face_create(IntPtr blob, UInt32 index);
@@ -43,6 +58,20 @@ namespace HarfBuzz
 
 
         #region font
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_font_make_immutable(IntPtr font);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_font_is_immutable(IntPtr font);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_ot_layout_get_baseline(IntPtr font, OpenTypeLayoutBaselineTag baseline_tag, Direction direction, uint script_tag, uint language_tag, out int coord);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_font_get_glyph_advance_for_direction(IntPtr font, uint glyph, Direction direction, out int x, out int y);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_font_get_extents_for_direction(IntPtr font, Direction direction, out FontExtents extents);
+
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_font_get_glyph_extents(IntPtr font, uint glyph, out GlyphExtents extents);
@@ -74,7 +103,15 @@ namespace HarfBuzz
         internal static extern void hb_font_set_scale(IntPtr font, int x_scale, int y_scale);
         #endregion
 
+
         #region buffer
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_buffer_set_segment_properties(IntPtr buffer, SegmentProperties *props);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_buffer_get_segment_properties(IntPtr buffer, SegmentProperties *props);
+
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_buffer_clear_contents(IntPtr buffer);
 
@@ -150,6 +187,9 @@ namespace HarfBuzz
         public static extern void hb_shape(IntPtr font, IntPtr buffer, IntPtr features, uint num_features);
         //[DllImport(HarfBuzz, CallingConvention = CallConvention)]
         //internal static extern void hb_shape(IntPtr font, IntPtr buffer, Feature* features, uint num_features);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern IntPtr hb_ot_tag_to_language(uint tag);
 
     }
 }

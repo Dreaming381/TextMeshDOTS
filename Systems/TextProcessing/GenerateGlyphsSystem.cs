@@ -9,15 +9,11 @@ using HarfBuzz;
 namespace TextMeshDOTS
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [RequireMatchingQueriesForUpdate]
-    //[DisableAutoCreation]
-    [UpdateAfter(typeof(LoadNativeFont))]
+    [RequireMatchingQueriesForUpdate]    
+    [UpdateAfter(typeof(UpdateAtlasSystem))]
     public partial struct GenerateGlyphsSystem : ISystem
     {
         EntityQuery m_query;
-        static readonly ProfilerMarker marker = new ProfilerMarker("harfbuzz");
-        static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
-
 
         bool m_skipChangeFilter;
 
@@ -26,11 +22,11 @@ namespace TextMeshDOTS
         {
             m_query = SystemAPI.QueryBuilder()
                       .WithAll<FontBlobReference>()
+                      .WithAll<NativeFont>()
                       .WithAllRW<RenderGlyph>()
                       .WithAll<CalliByte>()
-                      .WithAll<GlyphInfo>()
-                      .WithAll<GlyphPosition>()
-                      .WithAll<TextSpan>()
+                      .WithAll<GlyphOTF>()
+                      .WithAll<TextSpan>()                      
                       .WithAll<TextBaseConfiguration>()
                       .WithAllRW<TextRenderControl>()
                       .Build();
@@ -43,15 +39,12 @@ namespace TextMeshDOTS
         {
             state.Dependency = new GenerateRenderGlyphsJob
             {
-                marker = marker,
-                marker2 = marker2,
                 additionalEntitiesHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
-                glyphInfoHandle = SystemAPI.GetBufferTypeHandle<GlyphInfo>(true),
-                glyphPositionHandle = SystemAPI.GetBufferTypeHandle<GlyphPosition>(true),
+                glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
-                nativeFontReferenceHandle = SystemAPI.GetComponentTypeHandle<NativeFontReference>(true),
+                nativeFontReferenceHandle = SystemAPI.GetComponentTypeHandle<NativeFont>(true),
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 glyphMappingElementHandle = SystemAPI.GetBufferTypeHandle<GlyphMappingElement>(false),
                 glyphMappingMaskHandle = SystemAPI.GetComponentTypeHandle<GlyphMappingMask>(true),

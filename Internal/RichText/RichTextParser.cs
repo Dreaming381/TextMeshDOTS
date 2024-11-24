@@ -229,7 +229,6 @@ namespace TextMeshDOTS.RichText
                     case 427:  // </b>
                     case 395:  // </B>
                         textConfiguration.m_fontStyleInternal &= ~FontStyles.Bold;
-                        textConfiguration.m_fontWeightInternal = textConfiguration.m_fontWeightStack.Peek();
                         return true;
                     case 105:  // <i>
                     case 73:  // <I>
@@ -386,57 +385,57 @@ namespace TextMeshDOTS.RichText
                     case 20863:  // </SUP>
                         textConfiguration.m_fontStyleInternal &= ~FontStyles.Superscript;                         
                         return true;
-                    case -330774850:  // <font-weight>
-                    case 2012149182:  // <FONT-WEIGHT>
-                        calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);
-                        // Reject tag if value is invalid.
-                        if (ConvertToFloat(ref textConfiguration.m_htmlTag, out value) != ParseError.None)
-                            return false;
+                    //case -330774850:  // <font-weight>
+                    //case 2012149182:  // <FONT-WEIGHT>
+                    //    calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);
+                    //    // Reject tag if value is invalid.
+                    //    if (ConvertToFloat(ref textConfiguration.m_htmlTag, out value) != ParseError.None)
+                    //        return false;
 
-                        switch ((int)value)
-                        {
-                            case 100:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.Thin;
-                                break;
-                            case 200:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.ExtraLight;
-                                break;
-                            case 300:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.Light;
-                                break;
-                            case 400:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.Regular;
-                                break;
-                            case 500:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.Medium;
-                                break;
-                            case 600:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.SemiBold;
-                                break;
-                            case 700:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
-                                break;
-                            case 800:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.Heavy;
-                                break;
-                            case 900:
-                                textConfiguration.m_fontWeightInternal = TextFontWeight.Black;
-                                break;
-                        }
+                    //    switch ((int)value)
+                    //    {
+                    //        case 100:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.Thin;
+                    //            break;
+                    //        case 200:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.ExtraLight;
+                    //            break;
+                    //        case 300:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.Light;
+                    //            break;
+                    //        case 400:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.Regular;
+                    //            break;
+                    //        case 500:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.Medium;
+                    //            break;
+                    //        case 600:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.SemiBold;
+                    //            break;
+                    //        case 700:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
+                    //            break;
+                    //        case 800:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.Heavy;
+                    //            break;
+                    //        case 900:
+                    //            textConfiguration.m_fontWeightInternal = TextFontWeight.Black;
+                    //            break;
+                    //    }
 
-                        textConfiguration.m_fontWeightStack.Add(textConfiguration.m_fontWeightInternal);
+                    //    textConfiguration.m_fontWeightStack.Add(textConfiguration.m_fontWeightInternal);
 
-                        return true;
-                    case -1885698441:  // </font-weight>
-                    case 457225591:  // </FONT-WEIGHT>
-                        textConfiguration.m_fontWeightStack.RemoveExceptRoot();
+                    //    return true;
+                    //case -1885698441:  // </font-weight>
+                    //case 457225591:  // </FONT-WEIGHT>
+                    //    textConfiguration.m_fontWeightStack.RemoveExceptRoot();
 
-                        if (textConfiguration.m_fontStyleInternal == FontStyles.Bold)
-                            textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
-                        else
-                            textConfiguration.m_fontWeightInternal = textConfiguration.m_fontWeightStack.Peek();
+                    //    if (textConfiguration.m_fontStyleInternal == FontStyles.Bold)
+                    //        textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
+                    //    else
+                    //        textConfiguration.m_fontWeightInternal = textConfiguration.m_fontWeightStack.Peek();
 
-                        return true;
+                    //    return true;
                     case 6380:  // <pos=000.00px> <pos=0em> <pos=50%>
                     case 4556:  // <POS>
                         calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);
@@ -1392,7 +1391,7 @@ namespace TextMeshDOTS.RichText
                         if (ConvertToFloat(ref textConfiguration.m_htmlTag, out value) != ParseError.None)
                             return false;
 
-                        textConfiguration.m_fxScale = new Vector3(value, 1, 1);
+                        textConfiguration.m_fxScale = value;
 
                         return true;
                     case 1105611:  // </scale>

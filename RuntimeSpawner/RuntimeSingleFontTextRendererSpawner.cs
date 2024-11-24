@@ -13,7 +13,7 @@ using UnityEngine.Rendering;
 namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     public partial class RuntimeSingleTextRendererSpawner : SystemBase
     {
         bool initialized;
@@ -46,6 +46,7 @@ namespace TextMeshDOTS.Authoring
             var fontMaterial = SystemAPI.GetComponent<FontMaterial>(fontBlobReferenceEntity);            
             var fontBlobReference = SystemAPI.GetComponent<FontBlobReference>(fontBlobReferenceEntity);
             var backEndMesh = SystemAPI.GetComponent<BackEndMesh>(fontBlobReferenceEntity);
+            var fontAssetReference = EntityManager.GetComponentObject<FontAssetReference>(fontBlobReferenceEntity);
 
             //if (!(frameCount == 0 ^ frameCount == 100))
             if (frameCount != 0)
@@ -107,12 +108,13 @@ namespace TextMeshDOTS.Authoring
 
                         EntityManager.SetComponentData(entity, textBaseConfiguration);
                         EntityManager.SetComponentData(entity, fontBlobReference);
+                        EntityManager.SetComponentData(entity, fontAssetReference);
                         EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor, (y - half) * factor, 0)));
                         EntityManager.SetComponentData(entity, textRenderControl);
                         EntityManager.SetComponentData(entity, materialMeshInfo);
                     }
                 }
-                //Debug.Log("Text spawned");
+                Debug.Log("Text 1 spawned");
             }
 
             if (frameCount == 100)
@@ -136,16 +138,18 @@ namespace TextMeshDOTS.Authoring
 
                         EntityManager.SetComponentData(entity, textBaseConfiguration);
                         EntityManager.SetComponentData(entity, fontBlobReference);
+                        EntityManager.SetComponentData(entity, fontAssetReference);
                         EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor - 1, (y - half) * factor - 1, 0)));
                         EntityManager.SetComponentData(entity, textRenderControl);
                         EntityManager.SetComponentData(entity, materialMeshInfo);
                     }
                 }
-                //Debug.Log("Text spawned");
+                Debug.Log("Text 2 spawned");
             }
             frameCount++;
 
-            //initialized = true;
+            //if(frameCount > 200)
+            //    initialized = true;
 
         }
     }

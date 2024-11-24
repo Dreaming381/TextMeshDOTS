@@ -19,7 +19,6 @@ namespace TextMeshDOTS
 
         public FontStyles m_fontStyleInternal;
         public TextFontWeight m_fontWeightInternal;
-        public FixedStack512Bytes<TextFontWeight> m_fontWeightStack;
 
         public int m_currentFontMaterialIndex;
         public FixedStack512Bytes<int> m_fontMaterialIndexStack;
@@ -62,7 +61,7 @@ namespace TextMeshDOTS
         public bool m_isNonBreakingSpace;
 
         public float m_fxRotationAngleCCW;
-        public float3 m_fxScale;
+        public float m_fxScale;
 
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
         public int m_characterCount;
@@ -77,9 +76,6 @@ namespace TextMeshDOTS
             m_sizeStack.Add(m_currentFontSize);
 
             m_fontStyleInternal = textBaseConfiguration.fontStyle;
-            m_fontWeightInternal = (m_fontStyleInternal & FontStyles.Bold) == FontStyles.Bold ? TextFontWeight.Bold : textBaseConfiguration.fontWeight;
-            m_fontWeightStack.Clear();
-            m_fontWeightStack.Add(m_fontWeightInternal);
 
             m_currentFontMaterialIndex = 0;
             m_fontMaterialIndexStack.Clear();
