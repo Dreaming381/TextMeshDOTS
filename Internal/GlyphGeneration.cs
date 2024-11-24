@@ -8,6 +8,7 @@ using HarfBuzz;
 using Font = HarfBuzz.Font;
 using UnityEngine;
 using Unity.Profiling;
+using Unity.Burst.CompilerServices;
 
 
 
@@ -273,12 +274,15 @@ namespace TextMeshDOTS
                 }
                 renderGlyph.trPosition = topRight;
                 renderGlyph.blPosition = bottomLeft;
-                renderGlyphs.Add(renderGlyph);
-                fontMaterialSet.WriteFontMaterialIndexForGlyph(currentTextSpan.fontMaterialIndex);
-                mappingWriter.AddCharNoTags(characterCount - 1, true);
-                mappingWriter.AddCharWithTags(k, true);
-                mappingWriter.AddBytes(characters.CurrentByteIndex, currentRune.LengthInUtf8Bytes(), true);
-                //mappingWriter.AddBytes(characters.CurrentByteIndex, characters.CurrentByteIndex - bytePosition, true);
+                if (Hint.Likely(currentRune.value != 10)) //do not render LF 
+                {
+                    renderGlyphs.Add(renderGlyph);
+                    fontMaterialSet.WriteFontMaterialIndexForGlyph(currentTextSpan.fontMaterialIndex);
+                    mappingWriter.AddCharNoTags(characterCount - 1, true);
+                    mappingWriter.AddCharWithTags(k, true);
+                    mappingWriter.AddBytes(characters.CurrentByteIndex, currentRune.LengthInUtf8Bytes(), true);
+                    //mappingWriter.AddBytes(characters.CurrentByteIndex, characters.CurrentByteIndex - bytePosition, true);
+                }
                 #endregion
 
                 // Compute text metrics
@@ -420,8 +424,7 @@ namespace TextMeshDOTS
                         }
                         accumulatedVerticalOffset += decentLineDelta;  // Todo: Delta should be computed per glyph
                         //apply user configurable line and paragraph spacing
-                        accumulatedVerticalOffset +=
-                            (baseConfiguration.lineSpacing);
+                        accumulatedVerticalOffset += baseConfiguration.lineSpacing * currentEmScale;
 
                         //reset line status
                         maxLineAscender = float.MinValue;

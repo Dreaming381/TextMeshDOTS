@@ -49,6 +49,7 @@ namespace TextMeshDOTS.TextProcessing
             //var testLan2 = new Language("en-sdf");
             //Debug.Log($"{testLan1} {testLan2} {language}");
             var buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
+            //buffer.ClusterLevel = ClusterLevel.Characters;
             //var segmentProperties = new SegmentProperties();
             //unsafe
             //{
