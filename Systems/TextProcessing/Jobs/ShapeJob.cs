@@ -1,5 +1,3 @@
-using TextMeshDOTS.Rendering;
-using TextMeshDOTS;
 using Unity.Burst.Intrinsics;
 using Unity.Burst;
 using Unity.Collections.LowLevel.Unsafe;
@@ -8,11 +6,10 @@ using Unity.Profiling;
 using Unity.Collections;
 using HarfBuzz;
 using System;
-using UnityEngine;
 using Buffer = HarfBuzz.Buffer;
 using UnityEngine.TextCore.Text;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS.TextProcessing
 {
     [BurstCompile]
     public partial struct ShapeJob : IJobChunk
@@ -33,8 +30,8 @@ namespace TextmeshDOTS
         [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            if (!chunk.DidChange(ref calliByteHandle, lastSystemVersion))
-                return;
+            //if (!chunk.DidChange(ref calliByteHandle, lastSystemVersion))
+            //    return;
 
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
             if (textSpanBuffers.Length == 0) //nothing to shape
@@ -46,16 +43,20 @@ namespace TextmeshDOTS
             var nativeFontReferences = chunk.GetNativeArray(ref nativeFontReferenceHandle);
 
 
-            var language = new Language(HB.HB_TAG('e', 'n', 'g', ' '));
+            //var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+            var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
+            //var testLan1 = new Language("gla bla", -1);
+            //var testLan2 = new Language("en-sdf");
+            //Debug.Log($"{testLan1} {testLan2} {language}");
             var buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
-            var segmentProperties = new SegmentProperties();
+            //var segmentProperties = new SegmentProperties();
             //unsafe
             //{
             //    buffer.GetSegmentProperties(&segmentProperties);
             //}
             //Debug.Log(props.script);
             //Debug.Log(props.direction);
-            //Debug.Log(props.language.ToString());
+            //Debug.Log($"{buffer.Language.ToString()}");
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
                 var glyphOTFs = GlyphOTFBuffers[indexInChunk];
@@ -72,11 +73,11 @@ namespace TextmeshDOTS
                 {
                     var textSpan = textSpans[i];
                     if ((textSpan.fontStyle & FontStyles.SmallCaps) == FontStyles.SmallCaps)
-                        features.Add(new Feature() { tag = HB.HB_TAG('s', 'm', 'c', 'p'), value = 1, start = (uint)textSpan.startIndex, end = (uint)(textSpan.startIndex + textSpan.length), });
-                    //if ((textSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
-                    //    features.Add(new Feature() { tag = HB.HB_TAG('s', 'u', 'b', 's'), value = 1, start = (uint)textSpan.startIndex, end = (uint)(textSpan.startIndex + textSpan.length), });
-                    //if ((textSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
-                    //    features.Add(new Feature() { tag = HB.HB_TAG('s', 'u', 'p', 's'), value = 1, start = (uint)textSpan.startIndex, end = (uint)(textSpan.startIndex + textSpan.length), });
+                        features.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, textSpan.startIndex, textSpan.endIndex));
+                    if ((textSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
+                        features.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, textSpan.startIndex, textSpan.endIndex));
+                    if ((textSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
+                        features.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, textSpan.startIndex, textSpan.endIndex));
                 }
                 //features.Add(new Feature() { tag = HB.HB_TAG('f', 'r', 'a', 'c'), value = 1, start = 0, end = (uint)calliBytes.Length, });
 
@@ -113,7 +114,7 @@ namespace TextmeshDOTS
                 //{
                 //    buffer.SetSegmentProperties(&segmentProperties);
                 //}
-                buffer.Language = language.ptr;
+                buffer.Language = language;
                 buffer.Script = Script.Latin;
                 buffer.Direction = Direction.LeftToRight;
             }

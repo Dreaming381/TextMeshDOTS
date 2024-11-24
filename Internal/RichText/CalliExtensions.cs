@@ -34,6 +34,8 @@ namespace TextMeshDOTS
         }
         public static bool IsLatin1(this Unicode.Rune rune) { return rune.value < 0x100; }
 
+        public static bool IsDigit(this Unicode.Rune rune) { return rune.value >= '0' && rune.value <= '9'; }
+
         public static bool IsWhiteSpace(this Unicode.Rune rune)
         {
             // https://en.wikipedia.org/wiki/Whitespace_character#Unicode

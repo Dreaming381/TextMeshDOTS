@@ -1,17 +1,8 @@
-using UnityEngine;
-using TextMeshDOTS.Rendering;
 using Unity.Burst;
-using Unity.Burst.Intrinsics;
-using Unity.Collections;
 using Unity.Entities;
-using HarfBuzz;
-using Font = HarfBuzz.Font;
-using Buffer = HarfBuzz.Buffer;
-using Unity.Collections.LowLevel.Unsafe;
-using Unity.Profiling;
-using TextmeshDOTS;
 
-namespace TextMeshDOTS
+
+namespace TextMeshDOTS.TextProcessing
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]

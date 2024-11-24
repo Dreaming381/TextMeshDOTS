@@ -1,12 +1,9 @@
-using UnityEngine;
 using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Entities;
-using Unity.Profiling;
-using TextmeshDOTS;
 using HarfBuzz;
 
-namespace TextMeshDOTS
+namespace TextMeshDOTS.TextProcessing
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]    

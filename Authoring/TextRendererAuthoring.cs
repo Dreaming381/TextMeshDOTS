@@ -36,7 +36,6 @@ namespace TextMeshDOTS.Authoring
         public float paragraphSpacing = 0;
 
         public Color32 color = Color.white;
-
         public List<FontAsset> fonts;
         
     }
@@ -47,8 +46,6 @@ namespace TextMeshDOTS.Authoring
     {
         public override void Bake(TextRendererAuthoring authoring)
         {
-            //UnityEngine.Font.textureRebuilt += TextRendererBaker
-            DependsOn(authoring.fonts[0].material);
             if (authoring.fonts == null || authoring.fonts.Count == 0 || authoring.fonts[0] == null)
                 return;
 
@@ -64,11 +61,12 @@ namespace TextMeshDOTS.Authoring
             meshFilter.sharedMesh = backEndMesh;
             meshRenderer.material = authoring.fonts[0].material;
 
-            var entity = GetEntity(TransformUsageFlags.Renderable);            
+            var entity = GetEntity(TransformUsageFlags.Renderable);
 
             //Fonts
             var font = authoring.fonts[0];
-            font.ReadFontAssetDefinition();            
+            font.ReadFontAssetDefinition();
+            //font.ListSomeInfo();
             BakeFontAsset(entity, font);
             AddComponentObject(entity, new FontAssetReference { value = font});
             AddBuffer<RenderGlyph>(entity);

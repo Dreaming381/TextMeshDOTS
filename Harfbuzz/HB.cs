@@ -16,11 +16,13 @@ namespace HarfBuzz
 
         #region blob
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        [return: MarshalAs(UnmanagedType.I1)]
+        [return: MarshalAs(UnmanagedType.I1)]        
         internal static extern bool hb_blob_is_immutable(IntPtr blob);
+
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern IntPtr hb_blob_create_from_file(byte* file_name);
-        //internal static extern IntPtr hb_blob_create_from_file([MarshalAs(UnmanagedType.LPStr)] string file_name);
+        internal static extern IntPtr hb_blob_create_from_file([MarshalAs(UnmanagedType.LPStr)] string file_name);
+        //internal static extern IntPtr hb_blob_create_from_file(byte* file_name);//do not use. big risk of not passing  NULL terminated char*
+
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_blob_destroy(IntPtr blob);
@@ -141,17 +143,22 @@ namespace HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         //internal static extern IntPtr hb_buffer_get_glyph_positions(IntPtr buffer, out uint length);
         internal static extern  GlyphPosition* hb_buffer_get_glyph_positions(IntPtr buffer, out uint length);
-        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        //public static extern IntPtr hb_language_from_string(string str, int len);
-        public static extern IntPtr hb_language_from_string(byte* str, int len);
-        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern /* char */ void* hb_language_to_string(IntPtr language);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern IntPtr hb_buffer_get_language(IntPtr buffer);
+        public static extern IntPtr hb_language_from_string([MarshalAs(UnmanagedType.LPStr)] string str, int len);
+        /// <summary> DANGER: ensure str is NULL terminated UTF8 when using -1 as length </summary>
+        //public static extern IntPtr hb_language_from_string(byte* str, int len);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern void hb_buffer_set_language(IntPtr buffer, IntPtr language);
+        [return: MarshalAs(UnmanagedType.LPStr)]
+        /// <summary> DANGER: convert value is null terminated UTF8 </summary>
+        public static extern IntPtr hb_language_to_string(IntPtr language);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern Language hb_buffer_get_language(IntPtr buffer);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_buffer_set_language(IntPtr buffer, Language language);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_buffer_get_length(IntPtr buffer);
@@ -177,11 +184,11 @@ namespace HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
-        //internal static extern bool hb_feature_from_string([MarshalAs(UnmanagedType.LPStr)] String str, Int32 len, out Feature);
-        internal static extern bool hb_feature_from_string(byte* str, Int32 len, out Feature feature);
+        internal static extern bool hb_feature_from_string([MarshalAs(UnmanagedType.LPStr)] string str, int len, out Feature feature);
+        //internal static extern bool hb_feature_from_string(byte* str, Int32 len, out Feature feature);
         
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern void hb_feature_to_string(Feature* feature, /* char */ void* buf, UInt32 size);
+        internal static extern void hb_feature_to_string(Feature* feature, out byte str, uint size);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_shape(IntPtr font, IntPtr buffer, IntPtr features, uint num_features);

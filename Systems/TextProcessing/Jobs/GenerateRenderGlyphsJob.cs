@@ -4,11 +4,10 @@ using Unity.Burst.Intrinsics;
 using Unity.Burst;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using Unity.Profiling;
 using Unity.Collections;
 using HarfBuzz;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS.TextProcessing
 {
     [BurstCompile]    
     public partial struct GenerateRenderGlyphsJob : IJobChunk

@@ -15,7 +15,7 @@ namespace HarfBuzz
             ptr = HB.hb_buffer_create();
             HB.hb_buffer_set_direction(ptr, direction);
             HB.hb_buffer_set_script(ptr, script);
-            HB.hb_buffer_set_language(ptr, language.ptr);
+            HB.hb_buffer_set_language(ptr, language);
         }
         public Direction Direction {
             get { return HB.hb_buffer_get_direction(ptr); }
@@ -25,11 +25,22 @@ namespace HarfBuzz
             get { return HB.hb_buffer_get_script(ptr); }
             set { HB.hb_buffer_set_script(ptr, value); } 
         }
-        public IntPtr Language
+        public Language Language
         {
             get => HB.hb_buffer_get_language(ptr);
             set => HB.hb_buffer_set_language(ptr, value);
         }
+        //public IntPtr Language
+        //{
+        //    get => HB.hb_buffer_get_language(ptr);
+        //    set => HB.hb_buffer_set_language(ptr, value);
+        //}
+        //public string GetLanguageAsString()
+        //{
+        //    HB.hb_language_to_string(HB.hb_buffer_get_language(ptr));
+
+        //}
+
         //public ContentType ContentType => HB.hb_buffer_get_content_type(ptr);
         public ContentType ContentType
         {

@@ -93,7 +93,7 @@ namespace TextMeshDOTS
                 var bytePosition = (int)glyphOTF.cluster;
                 characters.GotoIndex(bytePosition);
                 currentRune = characters.Current;
-                if (bytePosition >= (currentTextSpan.startIndex + currentTextSpan.length))
+                if (bytePosition >= currentTextSpan.endIndex)
                     currentTextSpan = textSpans[textSpanCounter++];
 
                 font = ref fontMaterialSet[currentTextSpan.fontMaterialIndex];
@@ -117,15 +117,16 @@ namespace TextMeshDOTS
                 float elementAscentLine = ascentLine;
                 float elementDescentLine = descentLine;
 
-                //handle superscript and subscript
+                //synthesize superscript and subscript unless it is a digit. Most opentype fonts should
+                //have dedicated glyphs for digits when enabling the 'subs' and 'sups' tags
                 float fontScaleMultiplier = 1;
                 float m_BaselineOffset = 0;
-                if ((currentTextSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
+                if ((currentTextSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript && !currentRune.IsDigit())
                 {
                     fontScaleMultiplier = subScriptFactor;
                     m_BaselineOffset = -subScriptOffset * adjustedScale;
                 }
-                else if ((currentTextSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
+                else if ((currentTextSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript && !currentRune.IsDigit())
                 {
                     fontScaleMultiplier = superScriptFactor;
                     m_BaselineOffset = superScriptOffset * adjustedScale;

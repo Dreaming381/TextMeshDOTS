@@ -1,4 +1,6 @@
 using System;
+using UnityEngine;
+using Unity.Collections;
 
 
 namespace HarfBuzz
@@ -9,17 +11,23 @@ namespace HarfBuzz
         public uint FaceCount => HB.hb_face_count(ptr);
         public uint Length => HB.hb_blob_get_length(ptr);
 
+        //public Blob(string filename)
+        //{
+        //    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(filename + "\0"); //IMPORTANT! interop with c++ requieres null terminated char*
+        //    unsafe
+        //    {
+        //        Debug.Log($"Last bytes is NULL? {bytes[^1]==0} {bytes[^1]}");
+        //        fixed (byte* text = bytes)
+        //        {
+        //            ptr = HB.hb_blob_create_from_file(text);
+        //            Debug.Log(System.Text.Encoding.UTF8.GetString(text, bytes.Length));
+        //        }
+        //    }
+        //}
+
         public Blob(string filename)
         {
-            //ptr = HB.hb_blob_create_from_file(filename);//retunred blob is immutable
-            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(filename);
-            unsafe
-            {
-                fixed (byte* text = bytes)
-                {
-                    ptr = HB.hb_blob_create_from_file(text);
-                }
-            }
+            ptr = HB.hb_blob_create_from_file(filename); //returned blob is immutable            
         }
         public bool IsImmutable() => HB.hb_blob_is_immutable(ptr);
 

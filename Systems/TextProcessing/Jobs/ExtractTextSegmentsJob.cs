@@ -6,7 +6,7 @@ using Unity.Entities;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS.TextProcessing
 {
     [BurstCompile]
     public partial struct ExtractTextSegmentsJob : IJobEntity
@@ -32,14 +32,14 @@ namespace TextmeshDOTS
                 var currentRune = rawCharacters.Current;
                 if (currentRune == '<')  // '<'
                 {
-                    var length = calliString.Length - startIndex;
-                    if (length > 0)
+                    //var length = calliString.Length - startIndex;
+                    if (calliString.Length > startIndex)
                     {
                         textSpans.Add(new TextSpan
                         {
                             fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
-                            startIndex = startIndex,
-                            length = length,
+                            startIndex = (uint)startIndex,
+                            endIndex = (uint)calliString.Length,
                             fontSize = (int)textConfiguration.m_currentFontSize,
                             fontStyle = textConfiguration.m_fontStyleInternal,
                             fontWeight = textConfiguration.m_fontWeightInternal,
@@ -69,8 +69,8 @@ namespace TextmeshDOTS
             textSpans.Add(new TextSpan
             {                
                 fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
-                startIndex = startIndex,
-                length = calliString.Length - startIndex + 1, //make last TextSpan 1 longer to ensure GlyphGeneration.CreateRenderGlyphs does not try to load next TextSpan on last index.
+                startIndex = (uint)startIndex,
+                endIndex = (uint)calliString.Length + 1, //make last TextSpan 1 longer to ensure GlyphGeneration.CreateRenderGlyphs does not try to load next TextSpan on last index.
                 fontSize = (int)textConfiguration.m_currentFontSize,
                 fontStyle = textConfiguration.m_fontStyleInternal,
                 fontWeight = textConfiguration.m_fontWeightInternal,

@@ -1,11 +1,10 @@
 using HarfBuzz;
-using TextMeshDOTS;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS.TextProcessing
 {    
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateAfter(typeof(GlyphHashmapSystem))]
@@ -20,10 +19,10 @@ namespace TextmeshDOTS
         {
             hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
             m_query = SystemAPI.QueryBuilder()
-                              .WithAll<GlyphInfo>()
+                              .WithAll<GlyphOTF>()
                               .WithAll<FontAssetReference>()
                               .Build();
-            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<GlyphInfo>());
+            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<GlyphOTF>());
             glyphs = new NativeHashSet<uint>(4096, Allocator.Persistent);
             SystemAPI.TryGetSingletonRW<FontAtlasInfo>(out RefRW<FontAtlasInfo> fontAtlasInfo);
         }
@@ -34,12 +33,17 @@ namespace TextmeshDOTS
                 return;
 
             Dependency.Complete();
-            var fontAtlasInfo = SystemAPI.GetSingleton<FontAtlasInfo>();
+            if (!SystemAPI.TryGetSingletonEntity<FontAtlasInfo>(out Entity fontManagerEntity))
+                return;
+
+            var fontAtlasInfo = SystemAPI.GetComponent<FontAtlasInfo>(fontManagerEntity);
             var missingGlyphs = fontAtlasInfo.missingGlyphs;
-            var glyphAtlas = fontAtlasInfo.glyphAtlas;
+            
             if (missingGlyphs.Length > 0)
             {
-                //Debug.Log($"Update Atlas");
+                Debug.Log($"Update Atlas");
+                var glyphAtlas = fontAtlasInfo.glyphAtlas;
+
                 var entities = m_query.ToEntityArray(WorldUpdateAllocator);
                 var entity = entities[0];
 

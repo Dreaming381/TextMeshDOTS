@@ -1,25 +1,22 @@
-using HarfBuzz;
-using System;
-using TextMeshDOTS;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
-using UnityEngine.TextCore.LowLevel;
-using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
-using Font = HarfBuzz.Font;
 using System.Collections.Generic;
+using System.IO;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS.TextProcessing
 {
+
+    // To-Do: establish a Native OTF and TTF Font Resource Manager as in UnityEngine.TextCore.Text.TextResourceManager
+
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateBefore(typeof(ShapeSystem))]
     //[RequireMatchingQueriesForUpdate]
     partial class LoadNativeFont : SystemBase
     {
         EntityQuery m_query;
-        Dictionary<string, NativeFont> m_fontDictionary;
+        Dictionary<string, NativeFont> m_fontDictionary; //this is local cache of FontManager.fontDictionary. Needed to ensure Dispose methods work reliably
         protected override void OnCreate()
         {
             m_query = SystemAPI.QueryBuilder()
@@ -27,16 +24,20 @@ namespace TextmeshDOTS
                               .WithAll<FontAssetReference>()
                               .WithNone<NativeFont>()
                               .Build();
-            m_fontDictionary=new Dictionary<string, NativeFont>();
+            m_fontDictionary =new Dictionary<string, NativeFont>();
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<FontBlobReference>());
+            SystemAPI.TryGetSingletonRW<FontAtlasInfo>(out RefRW<FontAtlasInfo> fontAtlasInfo);
         }
 
         protected override void OnUpdate()
         {
             if (m_query.IsEmpty)
                 return;
+
+            if (!SystemAPI.TryGetSingletonEntity<FontAtlasInfo>(out Entity fontManagerEntity))
+                return;
             
-            var entities = m_query.ToEntityArray(Allocator.Temp);            
+            var entities = m_query.ToEntityArray(Allocator.Temp);
 
             //Debug.Log($"fontAsset {fontAsset.name} sourceFontFile {fontAsset.sourceFontFile.name} fontSize {fontAsset.sourceFontFile.fontSize}");
             //string[] fontPaths = UnityEngine.Font.GetPathsToOSFonts();
@@ -44,18 +45,41 @@ namespace TextmeshDOTS
             //{
             //    Debug.Log(fontPath);
             //}
+            FontManager fontManager;
+            if (!EntityManager.HasComponent<FontManager>(fontManagerEntity))
+            {
+                fontManager =  new FontManager();
+                fontManager.fontDictionary = new Dictionary<string, NativeFont>();
+                fontManager.fontAssets = new Dictionary<string, FontAsset>();
+                EntityManager.AddComponent<FontManager>(fontManagerEntity);
+            }
+            else
+                fontManager = EntityManager.GetComponentObject<FontManager>(fontManagerEntity);
 
             for (int i = 0; i < entities.Length; i++)
             {
                 var entity= entities[i];
-                var fontName = EntityManager.GetComponentObject<FontAssetReference>(entity).value.sourceFontFile.name;
+                var fontAsset = EntityManager.GetComponentObject<FontAssetReference>(entity).value;
+                var fontName = fontAsset.sourceFontFile.name;
 
                 if (!m_fontDictionary.TryGetValue(fontName, out NativeFont nativeFontReference))
-                {
-                    //Debug.Log($"Create new NativeFontReference");
-                    var fontPath = $"Assets\\Resources\\{fontName}.ttf";
-                    nativeFontReference = new NativeFont(fontPath);
-                    m_fontDictionary.Add(fontName, nativeFontReference);
+                {                    
+                    var fontOTFPath = $"Assets/Resources/{fontName}.otf";
+                    var fontTTFPath = $"Assets/Resources/{fontName}.ttf";
+                    if (File.Exists(fontOTFPath))
+                    {
+                        //Debug.Log($"Load OTF");
+                        nativeFontReference = new NativeFont(fontOTFPath);
+                        m_fontDictionary.Add(fontName, nativeFontReference);
+                        fontManager.fontAssets.Add(fontName, fontAsset);
+                    }
+                    else if (File.Exists(fontTTFPath))
+                    {
+                        //Debug.Log($"Load TTF");
+                        nativeFontReference = new NativeFont(fontTTFPath);
+                        m_fontDictionary.Add(fontName, nativeFontReference);
+                        fontManager.fontAssets.Add(fontName, fontAsset);
+                    }
                 }
                 else
                 {
@@ -63,6 +87,8 @@ namespace TextmeshDOTS
                 }
                 EntityManager.AddComponentData(entities[i], nativeFontReference);
             }
+            fontManager.fontDictionary = m_fontDictionary;
+            EntityManager.SetComponentData<FontManager>(fontManagerEntity, fontManager);
         }
 
         protected override void OnDestroy()
@@ -74,6 +100,7 @@ namespace TextmeshDOTS
                 nativeFontReference.nativeFace.Dispose();
                 nativeFontReference.nativeBlob.Dispose();
             }
+            m_fontDictionary.Clear();
         }
     }
 }
