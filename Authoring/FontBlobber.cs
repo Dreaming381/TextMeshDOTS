@@ -3,6 +3,8 @@ using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine.TextCore.Text;
+using System;
+using System.IO;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -10,6 +12,14 @@ namespace TextMeshDOTS.Authoring
     {
         public static unsafe BlobAssetReference<FontBlob> BakeFont(FontAsset font)
         {
+            byte[] fontBytes;
+#if UNITY_EDITOR
+            var path = UnityEditor.AssetDatabase.GUIDToAssetPath(font.fontAssetCreationEditorSettings.sourceFontFileGUID);
+            fontBytes= File.ReadAllBytes(path);
+            Debug.Log($"Loaded {fontBytes.Length}bytes from {path}");
+#else
+            fontBytes = new byte[0];
+#endif
             var faceInfo = font.faceInfo;
             font.material.SetFloat("_WeightNormal", font.regularStyleWeight);
             font.material.SetFloat("_WeightBold", font.boldStyleWeight);
@@ -18,27 +28,30 @@ namespace TextMeshDOTS.Authoring
             var          builder             = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot        = ref builder.ConstructRoot<FontBlob>();
             fontBlobRoot.name                = font.name;
-            fontBlobRoot.atlasSamplingPointSize = faceInfo.pointSize;            
+            fontBlobRoot.atlasSamplingPointSize = faceInfo.pointSize;
+            BlobBuilderArray<byte> nativeFontFileBytes = builder.Allocate(ref fontBlobRoot.nativeFontFile, fontBytes.Length);
+            for (int i = 0, length = fontBytes.Length; i < length; i++)
+                nativeFontFileBytes[i]= fontBytes[i];
 
-            //fontBlobRoot.scale               = faceInfo.scale;
-            //fontBlobRoot.pointSize           = faceInfo.pointSize;         //opsz: optical-size
-            //fontBlobRoot.baseLine            = faceInfo.baseline;          //romn: roman
-            //fontBlobRoot.ascentLine          = faceInfo.ascentLine;        //hasc: horizontal - ascender
-            //fontBlobRoot.descentLine         = faceInfo.descentLine;       //hdsc: horizontal-descender
-            //fontBlobRoot.capLine             = faceInfo.capLine;           //cpht: cap-height
-            //fontBlobRoot.meanLine            = faceInfo.meanLine;          //xhgt: x-height
-            //fontBlobRoot.lineHeight          = faceInfo.lineHeight;        // =ascentLine + descentLine
-            //fontBlobRoot.subscriptOffset     = faceInfo.subscriptOffset;   //WRONG! hcld: horizontal-clipping-descent
-            //fontBlobRoot.subscriptSize       = faceInfo.subscriptSize;     //WRONG vdsc: vertical-descender
-            //fontBlobRoot.superscriptOffset   = faceInfo.superscriptOffset; //WRONG! hcla: horizontal-clipping-ascent
-            //fontBlobRoot.superscriptSize     = faceInfo.superscriptSize;   //WRONG! vasc: vertical-ascender
+                //fontBlobRoot.scale               = faceInfo.scale;
+                //fontBlobRoot.pointSize           = faceInfo.pointSize;         //opsz: optical-size
+                //fontBlobRoot.baseLine            = faceInfo.baseline;          //romn: roman
+                //fontBlobRoot.ascentLine          = faceInfo.ascentLine;        //hasc: horizontal - ascender
+                //fontBlobRoot.descentLine         = faceInfo.descentLine;       //hdsc: horizontal-descender
+                //fontBlobRoot.capLine             = faceInfo.capLine;           //cpht: cap-height
+                //fontBlobRoot.meanLine            = faceInfo.meanLine;          //xhgt: x-height
+                //fontBlobRoot.lineHeight          = faceInfo.lineHeight;        // =ascentLine + descentLine
+                //fontBlobRoot.subscriptOffset     = faceInfo.subscriptOffset;   //WRONG! hcld: horizontal-clipping-descent
+                //fontBlobRoot.subscriptSize       = faceInfo.subscriptSize;     //WRONG vdsc: vertical-descender
+                //fontBlobRoot.superscriptOffset   = faceInfo.superscriptOffset; //WRONG! hcla: horizontal-clipping-ascent
+                //fontBlobRoot.superscriptSize     = faceInfo.superscriptSize;   //WRONG! vasc: vertical-ascender
 
             fontBlobRoot.tabWidth            = faceInfo.tabWidth;
             fontBlobRoot.tabMultiple         = font.tabMultiple;
             fontBlobRoot.regularStyleSpacing = font.regularStyleSpacing;
-            fontBlobRoot.regularStyleWeight  = font.regularStyleWeight;
+            //fontBlobRoot.regularStyleWeight  = font.regularStyleWeight;
             fontBlobRoot.boldStyleSpacing    = font.boldStyleSpacing;
-            fontBlobRoot.boldStyleWeight     = font.boldStyleWeight;
+            //fontBlobRoot.boldStyleWeight     = font.boldStyleWeight;
             fontBlobRoot.italicsStyleSlant   = font.italicStyleSlant;            
             fontBlobRoot.atlasWidth          = font.atlasWidth;
             fontBlobRoot.atlasHeight         = font.atlasHeight;

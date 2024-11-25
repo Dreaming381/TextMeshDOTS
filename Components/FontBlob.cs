@@ -1,5 +1,6 @@
 using TextMeshDOTS.Collections;
 using Unity.Collections;
+using Unity.Entities;
 using UnityEngine.TextCore;
 using UnityEngine.TextCore.LowLevel;
 
@@ -9,6 +10,8 @@ namespace TextMeshDOTS
     {
         public FixedString128Bytes                name;
         public BlobHashMap<int, GlyphBlob>        glyphs;
+        public BlobArray<byte> nativeFontFile;
+        
         public float atlasSamplingPointSize;
         //public float                              baseLine;
         //public float                              ascentLine;
@@ -23,9 +26,9 @@ namespace TextMeshDOTS
         public float atlasHeight;
 
         public float regularStyleSpacing;
-        public float regularStyleWeight;
+        //public float regularStyleWeight;
         public float boldStyleSpacing;
-        public float boldStyleWeight;
+        //public float boldStyleWeight;
         public byte  italicsStyleSlant;
 
         //public float subscriptOffset;

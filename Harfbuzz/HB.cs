@@ -1,9 +1,9 @@
 using System;
 using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace HarfBuzz
 {
+
     public static unsafe class HB
     {
         public static uint HB_TAG(char c1, char c2, char c3, char c4)
@@ -18,6 +18,10 @@ namespace HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]        
         internal static extern bool hb_blob_is_immutable(IntPtr blob);
+
+        
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr hb_blob_create(void* data, uint length, MemoryMode mode, void* user_data, ReleaseDelegate destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_blob_create_from_file([MarshalAs(UnmanagedType.LPStr)] string file_name);

@@ -1,4 +1,5 @@
 using HarfBuzz;
+using NUnit.Framework.Internal;
 using System.Collections.Generic;
 using TextMeshDOTS.Rendering;
 using TextMeshDOTS.Rendering.Authoring;
@@ -7,6 +8,7 @@ using Unity.Entities;
 using Unity.Entities.Graphics;
 using Unity.Mathematics;
 using Unity.Rendering;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TextCore.Text;

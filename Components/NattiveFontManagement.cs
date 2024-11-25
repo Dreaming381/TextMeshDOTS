@@ -1,6 +1,7 @@
 using HarfBuzz;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -57,16 +58,19 @@ namespace TextMeshDOTS
             nativeFont.GetFontExtentsForDirection(direction, out FontExtents fontExtents);
             return fontExtents;
         }
-        public NativeFont(string path)
+        //public NativeFont(string path)
+        unsafe public NativeFont(ref FontBlob fontblob, uint length)
         {
             isCreated = true;
-            nativeBlob = new Blob(path);
+            nativeBlob = new Blob(fontblob.nativeFontFile.GetUnsafePtr(), length, MemoryMode.Readonly);
+            //nativeBlob = new Blob(path);
             nativeFace = new Face(nativeBlob.ptr, 0);
             nativeFont = new Font(nativeFace.ptr);
 
             nativeFont.MakeImmutable();
 
             //Debug.Log($"Loaded? {path} Blob:{nativeBlob.ptr != IntPtr.Zero} (Length:{nativeBlob.Length}) Face:{nativeFace.ptr != IntPtr.Zero} Font:{nativeFont.ptr != IntPtr.Zero}");
+            //Debug.Log($"Loaded? {fontblob.name} Blob:{nativeBlob.ptr != IntPtr.Zero} (Length:{nativeBlob.Length}) Face:{nativeFace.ptr != IntPtr.Zero} Font:{nativeFont.ptr != IntPtr.Zero}");
 
             unitsPerEm = nativeFace.UnitsPerEM;
             //nativeFont.GetBaseline(Direction.LeftToRight, HB.hb_language_from_string("en"));

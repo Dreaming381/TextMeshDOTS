@@ -1,11 +1,12 @@
 using System;
 using System.Runtime.InteropServices;
 using Unity.Entities;
+using UnityEngine;
 
 namespace HarfBuzz
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct GlyphExtents 
+    public struct GlyphExtents
     {
         public int x_bearing;
         public int y_bearing;
@@ -13,3 +14,4 @@ namespace HarfBuzz
         public int height;
     }
 }
+
