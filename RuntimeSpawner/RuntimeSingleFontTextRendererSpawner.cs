@@ -1,5 +1,6 @@
 using TextMeshDOTS.Rendering;
 using TextMeshDOTS.Rendering.Authoring;
+using TextMeshDOTS.TextProcessing;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -14,6 +15,7 @@ namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
     //[DisableAutoCreation]
+    [UpdateBefore(typeof(LoadNativeFont))]
     public partial class RuntimeSingleTextRendererSpawner : SystemBase
     {
         bool initialized;
@@ -90,7 +92,7 @@ namespace TextMeshDOTS.Authoring
 
             if (frameCount == 0)
             {
-                int count = 50;
+                int count = 100;
                 int half = count / 2;
                 var factor = 3.0f;
                 TextBackendBakingUtility.SetSubMesh(text2.Length, ref materialMeshInfo);

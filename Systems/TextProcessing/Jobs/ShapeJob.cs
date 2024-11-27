@@ -44,9 +44,7 @@ namespace TextMeshDOTS.TextProcessing
 
             //var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
             var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
-            //var testLan1 = new Language("gla bla", -1);
-            //var testLan2 = new Language("en-sdf");
-            //Debug.Log($"{testLan1} {testLan2} {language}");
+
             var buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
             //buffer.ClusterLevel = ClusterLevel.Characters;
             //var segmentProperties = new SegmentProperties();
@@ -132,8 +130,8 @@ namespace TextMeshDOTS.TextProcessing
                             xOffset = glyphPosition.xOffset,
                             yOffset = glyphPosition.yOffset,
                         });
-                        if(!glyphsInUse.Contains(codepoint))
-                            missingGlyphs.AddNoResize(new FontEntityGlyph{ entity = fontEntity, glyphID=codepoint});
+                        if (!glyphsInUse.Contains(codepoint))
+                            missingGlyphs.AddNoResize(new FontEntityGlyph { entity = fontEntity, glyphID = codepoint });
                     }
                     buffer.ClearContent();
                     //unsafe

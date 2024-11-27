@@ -19,7 +19,7 @@ namespace TextMeshDOTS
         public FixedStack512Bytes<float> m_sizeStack;
 
         public FontStyles m_fontStyleInternal;
-        public TextFontWeight m_fontWeightInternal;
+        //public TextFontWeight m_fontWeightInternal;  //currently unused. Would require switching to different fonts for each weight
 
         public int m_currentFontMaterialIndex;
         public FixedStack512Bytes<int> m_fontMaterialIndexStack;
@@ -61,7 +61,7 @@ namespace TextMeshDOTS
 
         public bool m_isNonBreakingSpace;
 
-        public float m_fxRotationAngleCCW;
+        public short m_fxRotationAngleCCW;
         public float m_fxScale;
 
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
@@ -102,7 +102,6 @@ namespace TextMeshDOTS
             m_strikethroughColorStack.Clear();
             m_strikethroughColorStack.Add(m_htmlColor);
 
-            //m_italicAngle = fontMaterialSet.GetFontBlob(0).italicsStyleSlant;
             m_italicAngle = fontMaterial[0].fontBlob.italicsStyleSlant;
             m_italicAngleStack.Clear();
 

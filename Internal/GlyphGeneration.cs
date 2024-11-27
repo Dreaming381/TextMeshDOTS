@@ -5,13 +5,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine.TextCore.Text;
 using HarfBuzz;
-using Font = HarfBuzz.Font;
-using UnityEngine;
-using Unity.Profiling;
 using Unity.Burst.CompilerServices;
-using Codice.CM.Client.Differences;
-
-
 
 
 namespace TextMeshDOTS
@@ -20,7 +14,7 @@ namespace TextMeshDOTS
     internal static class GlyphGeneration
     {
         /// <summary> This function logic follows TMPro_Private.GenerateTextMesh() </summary>
-        internal static unsafe void CreateRenderGlyphs(ref DynamicBuffer<FontMaterial> fontMaterial,
+        internal static unsafe void CreateRenderGlyphs(in DynamicBuffer<FontMaterial> fontMaterial,
                                                        ref DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer,
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
                                                        ref GlyphMappingWriter mappingWriter,                                                       
@@ -34,6 +28,8 @@ namespace TextMeshDOTS
             // Initialize textConfiguration which stores all fields that are modified by RichText Tags
             int textSpanCounter = 0;
             var currentTextSpan = textSpans[textSpanCounter++];
+            if (calliBytes.IsEmpty)
+                return;
             var calliString = new CalliString(calliBytes);
             var characters = calliString.GetEnumerator();             
 
@@ -53,6 +49,7 @@ namespace TextMeshDOTS
             float maxLineDescender = float.MaxValue;
             float xAdvance = 0f;
 
+            var previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
             ref DynamicFontBlob dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
             ref FontBlob font = ref fontMaterial[currentTextSpan.fontMaterialIndex].fontBlob;
             var m_hasMultipleFonts = fontMaterial.Length > 1;
@@ -83,13 +80,19 @@ namespace TextMeshDOTS
                 var glyphOTF = glyphOTFs[k];
 
                 var bytePosition = (int)glyphOTF.cluster;
-                characters.GotoIndex(bytePosition);
+                characters.GotoByteIndex(bytePosition);
                 currentRune = characters.Current;
                 if (bytePosition >= currentTextSpan.endIndex)
+                {
                     currentTextSpan = textSpans[textSpanCounter++];
-
-                dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
-                font = ref fontMaterial[currentTextSpan.fontMaterialIndex].fontBlob;
+                    if (previousFontMaterialIndex != currentTextSpan.fontMaterialIndex)
+                    {
+                        dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
+                        font = ref fontMaterial[currentTextSpan.fontMaterialIndex].fontBlob;
+                        scaledDynamicFont.Update(ref dynamicFont, xNativeToUnity, yNativeToUnity);
+                        previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
+                    }
+                }
 
                 if (lineCount == 0)
                     topAnchor = GetTopAnchorForConfig(ref scaledDynamicFont, baseConfiguration.verticalAlignment, baseScale, topAnchor);
@@ -276,7 +279,7 @@ namespace TextMeshDOTS
 
                     mappingWriter.AddCharNoTags(characterCount - 1, true);
                     mappingWriter.AddCharWithTags(k, true);
-                    mappingWriter.AddBytes(characters.CurrentByteIndex, currentRune.LengthInUtf8Bytes(), true);
+                    mappingWriter.AddBytes(characters.NextRuneByteIndex, currentRune.LengthInUtf8Bytes(), true);
                     //mappingWriter.AddBytes(characters.CurrentByteIndex, characters.CurrentByteIndex - bytePosition, true);
                 }
                 #endregion

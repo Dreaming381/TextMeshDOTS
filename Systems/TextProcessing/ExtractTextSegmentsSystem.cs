@@ -33,7 +33,6 @@ namespace TextMeshDOTS.TextProcessing
 
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
             m_query.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
-            //m_query.AddChangedVersionFilter(ComponentType.ReadWrite<FontMaterial>());
 
             state.RequireForUpdate(fontEntityQ);
         }

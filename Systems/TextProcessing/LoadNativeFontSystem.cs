@@ -14,8 +14,9 @@ namespace TextMeshDOTS.TextProcessing
     //[RequireMatchingQueriesForUpdate]
     partial class LoadNativeFont : SystemBase
     {
-        EntityQuery newfontsQ, fontEntityQ;
+        EntityQuery newfontsQ;
         EntityArchetype runtimeFontDataArchetype;
+
 
         //the following is needed to ensure disposal of runtime created Blobassets and Harfbuzz fonts
         //works reliably (query EntityWorld in OnDestroy is too late to reliably get all these components)
@@ -35,12 +36,6 @@ namespace TextMeshDOTS.TextProcessing
                               .WithAll<FontBlobReference>()                              
                               .WithNone<FontMaterial>()
                               .Build();
-            fontEntityQ = SystemAPI.QueryBuilder()
-                              .WithAll<GlyphsInUse>()
-                              .WithAll<MissingGlyphs>()
-                              .WithAll<HBFontAssetReference>()
-                              .WithAll<DynamicFontBlobReference>()
-                              .Build();
 
             runtimeFontDataArchetype = TextMeshDOTSArchetypes.GetRuntimeFontDataArchetype(ref CheckedStateRef);
 
@@ -57,65 +52,44 @@ namespace TextMeshDOTS.TextProcessing
             if (newfontsQ.IsEmpty)
                 return;
 
+            //Debug.Log($"Load Fonts {newfontsQ.CalculateEntityCount()}");
+
             //get data before doing any structural changes
             var entities = newfontsQ.ToEntityArray(Allocator.TempJob);
-            var existingFonts = fontEntityQ.ToComponentDataArray<HBFontAssetReference>(Allocator.TempJob);
             var tmpFontMaterial = new NativeList<FontMaterial>(21, Allocator.TempJob);
 
-            // At the end of the update we patch up RuntimeFontDataEntity, so need to add component.
-            // Do so via query overload as this cost virtually zero time
-            //EntityManager.AddComponent<RuntimeFontDataEntity>(newTextRendererQ);
-
-            //1st, collect unique fonts referenced by FontAssetReference
             //review: is there no better way to establish ONE list of used fonts at baking time
-            //to avoid reverse enginering this from font usage?
-
-
+            //to avoid reverse enginering this from all occurences of FontAssetReferences?
             for (int i = 0, ii = entities.Length; i < ii; i++)
             {
                 var entity = entities[i];
-                var fontAssets = EntityManager.GetComponentObject<FontAssetReferences>(entity).value;
-                var fontBlobs = EntityManager.GetBuffer<FontBlobReference>(entity).ToNativeArray(Allocator.Temp);
+                var fontAssets = EntityManager.GetComponentObject<FontAssetReferences>(entity).value;                   
+                var fontBlobs = EntityManager.GetBuffer<FontBlobReference>(entity).AsNativeArray();
 
                 if (fontAssets.Count != fontBlobs.Length)
                     Debug.LogError($"Unexpected: managed und unmanaged font count does not match: {fontAssets.Count} {fontBlobs.Length}");
 
-                //var ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
-                //var ecb = ecbSingleton.CreateCommandBuffer(CheckedStateRef.WorldUnmanaged);
-                
                 for (int k = 0, kk= fontAssets.Count; k < kk; k++)
                 {                    
-                    var fontAsset = fontAssets[k];                    
+                    var fontAsset = fontAssets[k];
                     if (!fontMaterialMap.TryGetValue(fontAsset.hashCode, out FontMaterial fontMaterial))
-                    {
-                        //spawn new Font Entity, and initialize all data
-                        //Debug.Log($"Load {fontAsset.name}");
-                        var newFontEntity = EntityManager.CreateEntity(runtimeFontDataArchetype);
-                        var usedGlyphs = EntityManager.AddBuffer<GlyphsInUse>(newFontEntity);
-                        
-                        var fontBlobRef = fontBlobs[k].blob;
-                        var hbFontAssetRef = new HBFontAssetReference(ref fontBlobRef.Value);
-                        var dynamicFontBlobRef = FontBlobber.CreateDynamicFontData(fontAsset, hbFontAssetRef, usedGlyphs.Reinterpret<uint>());
-                        var dynamicFontBlobReference = new DynamicFontBlobReference { blob = dynamicFontBlobRef };
-                        fontMaterial = new FontMaterial(newFontEntity, fontBlobRef, dynamicFontBlobRef, hbFontAssetRef);
-
-                        var fontAssetRef = new FontAssetReference { value = fontAsset };
-                        EntityManager.SetComponentData(newFontEntity, fontAssetRef);
-                        EntityManager.SetComponentData(newFontEntity, hbFontAssetRef);
-                        EntityManager.SetComponentData(newFontEntity, dynamicFontBlobReference);
-                        fontMaterialMap.Add(fontAsset.hashCode, fontMaterial);
-                        hbFontAssetRefMap.Add(fontAsset.hashCode, hbFontAssetRef);
-                        dynamicFontBlobMap.Add(fontAsset.hashCode, dynamicFontBlobReference);
-                    }
+                        fontMaterial = CreatNewFontEntity(fontBlobs[k].blob, fontAsset, EntityManager);
                     tmpFontMaterial.Add(fontMaterial);
                 }
                 var fontMaterials = EntityManager.AddBuffer<FontMaterial>(entity);
                 fontMaterials.AddRange(tmpFontMaterial.AsArray());
+
+                //keep font references on master Font Entity used by RuntimeSpawner to continue to use it,
+                //otherwise this just consumes chunk space on TextRenderer Entity for no reason (runtime uses FontMaterial)
+                if (!HasBuffer<FontMaterialRef>(entity))
+                {
+                    EntityManager.RemoveComponent<FontAssetReferences>(entity);
+                    EntityManager.RemoveComponent<FontBlobReference>(entity);
+                }
                 tmpFontMaterial.Clear();
             }
-            
+
             entities.Dispose();
-            existingFonts.Dispose();
             tmpFontMaterial.Dispose();
         }
 
@@ -142,6 +116,31 @@ namespace TextMeshDOTS.TextProcessing
             fontMaterialMap.Dispose();
             hbFontAssetRefMap.Dispose();
             dynamicFontBlobMap.Dispose();
+        }
+
+        FontMaterial CreatNewFontEntity(BlobAssetReference<FontBlob> fontBlobRef, FontAsset fontAsset, EntityManager entityManager)
+        {
+            //spawn new Font Entity, and initialize all data
+            //Debug.Log($"Load {fontAsset.name}");
+            var newFontEntity = entityManager.CreateEntity(runtimeFontDataArchetype);
+            var usedGlyphs = entityManager.AddBuffer<GlyphsInUse>(newFontEntity);
+
+            var hbFontAssetRef = new HBFontAssetReference(ref fontBlobRef.Value);
+            var dynamicFontBlobRef = FontBlobber.CreateDynamicFontData(fontAsset, hbFontAssetRef, usedGlyphs.Reinterpret<uint>());
+            var dynamicFontBlobReference = new DynamicFontBlobReference { blob = dynamicFontBlobRef };
+            var fontMaterial = new FontMaterial(newFontEntity, fontBlobRef, dynamicFontBlobRef, hbFontAssetRef);
+
+            var fontAssetRef = new FontAssetReference { value = fontAsset };
+
+            entityManager.SetComponentData(newFontEntity, fontAssetRef);
+            entityManager.SetComponentData(newFontEntity, hbFontAssetRef);
+            entityManager.SetComponentData(newFontEntity, dynamicFontBlobReference);
+
+            Debug.Log($"Add {fontAsset.name} to FontManager");
+            fontMaterialMap.Add(fontAsset.hashCode, fontMaterial);
+            hbFontAssetRefMap.Add(fontAsset.hashCode, hbFontAssetRef);
+            dynamicFontBlobMap.Add(fontAsset.hashCode, dynamicFontBlobReference);
+            return fontMaterial;
         }
     }
 }

@@ -71,7 +71,7 @@ namespace TextMeshDOTS.TextProcessing
                 if (selectorBuffers.Length > 0)
                     m_selectorBuffer = selectorBuffers[indexInChunk];
 
-                GlyphGeneration.CreateRenderGlyphs(ref fontMaterial,
+                GlyphGeneration.CreateRenderGlyphs(in fontMaterial,
                                                    ref m_selectorBuffer,
                                                    ref renderGlyphs,
                                                    ref m_glyphMappingWriter,                                                   

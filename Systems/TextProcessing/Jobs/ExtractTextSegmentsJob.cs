@@ -29,25 +29,25 @@ namespace TextMeshDOTS.TextProcessing
             textSpanBuffer.Clear();
             var rawCharacters = calliStringRaw.GetEnumerator();
             var characters = calliString.GetEnumerator();
-            int startIndex = 0;
+            uint startIndex = 0;
+            var previousRuneStartPosition = 0;
             while (rawCharacters.MoveNext())
             {
                 var currentRune = rawCharacters.Current;
                 if (currentRune == '<')  // '<'
                 {
-                    //var length = calliString.Length - startIndex;
-                    if (calliString.Length > startIndex)
+                    var segmentEnd = (uint)calliString.Length;
+                    if (segmentEnd > startIndex)
                     {
                         textSpans.Add(new TextSpan
                         {
                             fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
-                            startIndex = (uint)startIndex,
-                            endIndex = (uint)calliString.Length,
-                            fontSize = (int)textConfiguration.m_currentFontSize,
+                            startIndex = startIndex,
+                            endIndex = segmentEnd,
+                            fontSize = textConfiguration.m_currentFontSize,
                             fontStyle = textConfiguration.m_fontStyleInternal,
-                            fontWeight = textConfiguration.m_fontWeightInternal,
                             lineJustification = textConfiguration.m_lineJustification,
-                            color = textConfiguration.m_htmlColor,                            
+                            color = textConfiguration.m_htmlColor,
                             monoSpacing = textConfiguration.m_monoSpacing,
                             cSpacing = textConfiguration.m_cSpacing,
                             fxScale = textConfiguration.m_fxScale,
@@ -55,13 +55,16 @@ namespace TextMeshDOTS.TextProcessing
                             italicAngle = textConfiguration.m_italicAngle,
                         });
                     }
-                    startIndex = calliString.Length;
+                    startIndex = segmentEnd;
+                    
                     if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontMaterialBuffer, in textBaseConfiguration, ref textConfiguration))
                     {
+                        previousRuneStartPosition = rawCharacters.NextRuneByteIndex;
                         continue;
                     }
                     else
-                        Debug.Log($"{(char)currentRune.value} is not a valid tag at position {rawCharacters.CurrentByteIndex}");
+                        rawCharacters.GotoByteIndex(previousRuneStartPosition);
+                    
                 }
                 if ((textConfiguration.m_fontStyleInternal & FontStyles.UpperCase) == FontStyles.UpperCase)
                     calliString.Append(currentRune.ToUpper());
@@ -69,16 +72,16 @@ namespace TextMeshDOTS.TextProcessing
                     calliString.Append(currentRune.ToLower());
                 else
                     calliString.Append(currentRune);
+                previousRuneStartPosition = rawCharacters.NextRuneByteIndex;
             }
 
             textSpans.Add(new TextSpan
             {                
                 fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
                 startIndex = (uint)startIndex,
-                endIndex = (uint)calliString.Length + 1, //make last TextSpan 1 longer to ensure GlyphGeneration.CreateRenderGlyphs does not try to load next TextSpan on last index.
+                endIndex = (uint)calliString.Length,
                 fontSize = (int)textConfiguration.m_currentFontSize,
                 fontStyle = textConfiguration.m_fontStyleInternal,
-                fontWeight = textConfiguration.m_fontWeightInternal,
                 lineJustification = textConfiguration.m_lineJustification,
                 color = textConfiguration.m_htmlColor,
                 monoSpacing = textConfiguration.m_monoSpacing,

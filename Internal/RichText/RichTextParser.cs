@@ -27,7 +27,7 @@ namespace TextMeshDOTS.RichText
             richTextTagIndentifiers.Clear();
             int tagCharCount = 0;
             int tagByteCount = 0;
-            int startByteIndex = enumerator.CurrentByteIndex;
+            int startByteIndex = enumerator.NextRuneByteIndex;
             ParserState tagIndentifierFlag = ParserState.Zero;
 
             int tagIndentifierIndex = richTextTagIndentifiers.Length;
@@ -62,27 +62,27 @@ namespace TextMeshDOTS.RichText
                         {
                             tagUnitType = TagUnitType.Pixels;
                             tagValueType = currentTagIndentifier.valueType = TagValueType.NumericalValue;
-                            currentTagIndentifier.valueStartIndex = enumerator.CurrentByteIndex - unicode.LengthInUtf8Bytes();
+                            currentTagIndentifier.valueStartIndex = enumerator.NextRuneByteIndex - unicode.LengthInUtf8Bytes();
                             currentTagIndentifier.valueLength += byteCount;
                         }
                         else if (unicode == '#')
                         {
                             tagUnitType = TagUnitType.Pixels;
                             tagValueType = currentTagIndentifier.valueType = TagValueType.ColorValue;
-                            currentTagIndentifier.valueStartIndex = enumerator.CurrentByteIndex - unicode.LengthInUtf8Bytes();
+                            currentTagIndentifier.valueStartIndex = enumerator.NextRuneByteIndex - unicode.LengthInUtf8Bytes();
                             currentTagIndentifier.valueLength += byteCount;
                         }
                         else if (unicode == '"')
                         {
                             tagUnitType = TagUnitType.Pixels;
                             tagValueType = currentTagIndentifier.valueType = TagValueType.StringValue;
-                            currentTagIndentifier.valueStartIndex = enumerator.CurrentByteIndex;
+                            currentTagIndentifier.valueStartIndex = enumerator.NextRuneByteIndex;
                         }
                         else
                         {
                             tagUnitType = TagUnitType.Pixels;
                             tagValueType = currentTagIndentifier.valueType = TagValueType.StringValue;
-                            currentTagIndentifier.valueStartIndex = enumerator.CurrentByteIndex - unicode.LengthInUtf8Bytes();
+                            currentTagIndentifier.valueStartIndex = enumerator.NextRuneByteIndex - unicode.LengthInUtf8Bytes();
                             currentTagIndentifier.valueHashCode = (currentTagIndentifier.valueHashCode << 5) + currentTagIndentifier.valueHashCode ^ unicode.value;
                             currentTagIndentifier.valueLength += byteCount;
                         }
@@ -227,7 +227,7 @@ namespace TextMeshDOTS.RichText
                     case 98:  // <b>
                     case 66:  // <B>
                         textConfiguration.m_fontStyleInternal |= FontStyles.Bold;
-                        textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
+                        //textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
                         return true;
                     case 427:  // </b>
                     case 395:  // </B>
@@ -705,36 +705,36 @@ namespace TextMeshDOTS.RichText
                     //        }
                     //    }
                     //    return true;
-                    //case 275917:  // <align=>
-                    //case 186285:  // <ALIGN>
-                    //    switch (firstTagIndentifier.valueHashCode)
-                    //    {
-                    //        case 3774683:  // <align=left>
-                    //            textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Left;
-                    //            textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
-                    //            return true;
-                    //        case 136703040:  // <align=right>
-                    //            textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Right;
-                    //            textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
-                    //            return true;
-                    //        case -458210101:  // <align=center>
-                    //            textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Center;
-                    //            textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
-                    //            return true;
-                    //        case -523808257:  // <align=justified>
-                    //            textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Justified;
-                    //            textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
-                    //            return true;
-                    //        case 122383428:  // <align=flush>
-                    //            textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Flush;
-                    //            textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
-                    //            return true;
-                    //    }
-                    //    return false;
-                    //case 1065846:  // </align>
-                    //case 976214:  // </ALIGN>
-                    //    textConfiguration.m_lineJustification = textConfiguration.m_lineJustificationStack.RemoveExceptRoot();
-                    //    return true;
+                    case 275917:  // <align=>
+                    case 186285:  // <ALIGN>
+                        switch (firstTagIndentifier.valueHashCode)
+                        {
+                            case 3774683:  // <align=left>
+                                textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Left;
+                                textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
+                                return true;
+                            case 136703040:  // <align=right>
+                                textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Right;
+                                textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
+                                return true;
+                            case -458210101:  // <align=center>
+                                textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Center;
+                                textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
+                                return true;
+                            case -523808257:  // <align=justified>
+                                textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Justified;
+                                textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
+                                return true;
+                            case 122383428:  // <align=flush>
+                                textConfiguration.m_lineJustification = HorizontalAlignmentOptions.Flush;
+                                textConfiguration.m_lineJustificationStack.Add(textConfiguration.m_lineJustification);
+                                return true;
+                        }
+                        return false;
+                    case 1065846:  // </align>
+                    case 976214:  // </ALIGN>
+                        textConfiguration.m_lineJustification = textConfiguration.m_lineJustificationStack.RemoveExceptRoot();
+                        return true;
                     case 327550:  // <width=xx>
                     case 237918:  // <WIDTH>
                         calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);
@@ -1403,7 +1403,7 @@ namespace TextMeshDOTS.RichText
                         if (ConvertToFloat(ref textConfiguration.m_htmlTag, out value) != ParseError.None)
                             return false;
 
-                        textConfiguration.m_fxRotationAngleCCW = -math.radians(value);
+                        textConfiguration.m_fxRotationAngleCCW = (short)-math.radians(value);
 
                         return true;
                     case 7757466:  // </rotate>

@@ -14,6 +14,7 @@ namespace TextMeshDOTS
         public float fontSize;        
         public Color32 color;
         public FontStyles fontStyle;
+        //public TextFontWeight fontWeight; //currently unused. Would require switching to different fonts for each weight
 
         public float maxLineWidth;
         public float wordSpacing;
@@ -31,22 +32,21 @@ namespace TextMeshDOTS
         public uint startIndex;
         public uint endIndex;
 
-        public int fontSize;
+        public float fontSize;
         public Color32 color;
         public FontStyles fontStyle;
-        public TextFontWeight fontWeight;
+        //public TextFontWeight fontWeight; //currently unused. Would require switching to different fonts for each weight
         public HorizontalAlignmentOptions lineJustification;
 
         public float monoSpacing;
         public float cSpacing;
         public float fxScale;
-        public float fxRotationAngleCCW;
+        public short fxRotationAngleCCW;
         public short italicAngle;        
 
         public override string ToString()
         {
-            //return string.Format("{0}: {1}\n", "color", color) + string.Format("{0}: {1}\n", "fontStyle", fontStyle) + string.Format("{0}: {1}\n", "fontWeight", fontWeight) + string.Format("{0}: {1}\n", "fontSize", fontSize) + string.Format("{0}: {1}", "fontAsset", fontAsset) + string.Format("{0}: {1}\n", "startIndex", startIndex) + string.Format("{0}: {1}", "length", length);
-            return string.Format("{0}: {1}\n", "color", color) + string.Format("{0}: {1}\n", "fontStyle", fontStyle) + string.Format("{0}: {1}\n", "fontWeight", fontWeight) + string.Format("{0}: {1}\n", "fontSize", fontSize) + string.Format("{0}: {1}", "fontAsset", "startIndex", startIndex) + string.Format("{0}: {1}", "endIndex", endIndex);
+            return $"{startIndex}-{endIndex}: font {fontMaterialIndex}, fontSize {fontSize}, color {color}, fontStyle {fontStyle} lineJustification {lineJustification} color {color} color {color}";
         }
     }
 

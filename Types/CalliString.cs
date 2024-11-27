@@ -154,7 +154,7 @@ namespace TextMeshDOTS
         public struct Enumerator : IEnumerator<Unicode.Rune>
         {
             CalliString target;
-            int m_currentByteIndex;
+            int nextRuneByteIndex; //is actually index of byte AFTER current rune
             Unicode.Rune current;
 
             /// <summary>
@@ -164,7 +164,7 @@ namespace TextMeshDOTS
             public Enumerator(CalliString source)
             {
                 target = source;
-                m_currentByteIndex = 0;
+                nextRuneByteIndex = 0;
                 current = default;
             }
 
@@ -176,19 +176,19 @@ namespace TextMeshDOTS
             }
 
             /// <summary>
-            /// Sets offset to provided byte (not character!) position <see cref="Current"/> is valid to read afterwards.
+            /// Sets offset to provided byte (not character!) position. Ensure in caller that this is correct start of a variable length UTF8 character! <see cref="Current"/> is valid to read afterwards.
             /// </summary>
             /// <returns>True if <see cref="Current"/> is valid to read after the call.</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool GotoIndex(int bytePosition)
+            public bool GotoByteIndex(int bytePosition)
             {
                 if (bytePosition >= target.Length)
                     return false;
 
-                m_currentByteIndex = bytePosition;
+                nextRuneByteIndex = bytePosition;
                 unsafe
                 {
-                    Unicode.Utf8ToUcs(out current, target.GetUnsafeReadOnlyPtr(), ref m_currentByteIndex, target.Length);
+                    Unicode.Utf8ToUcs(out current, target.GetUnsafeReadOnlyPtr(), ref nextRuneByteIndex, target.Length);
                 }
                 return true;
             }
@@ -200,25 +200,22 @@ namespace TextMeshDOTS
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
-                if (m_currentByteIndex >= target.Length)
+                if (nextRuneByteIndex >= target.Length)
                     return false;
 
                 unsafe
                 {
-                    Unicode.Utf8ToUcs(out current, target.GetUnsafeReadOnlyPtr(), ref m_currentByteIndex, target.Length);
+                    Unicode.Utf8ToUcs(out current, target.GetUnsafeReadOnlyPtr(), ref nextRuneByteIndex, target.Length);
                 }
 
                 return true;
             }
 
+            //cannot implement MovePrevious realiably as we cannot establish length of previous UTF8 rune 
             public bool MovePrevious()
             {
-                if (m_currentByteIndex >= current.LengthInUtf8Bytes())
-                {
-                    m_currentByteIndex -= current.LengthInUtf8Bytes();
-                    return true;
-                }
-                return false;
+
+                throw new NotImplementedException();
             }
 
             /// <summary>
@@ -226,7 +223,7 @@ namespace TextMeshDOTS
             /// </summary>
             public void Reset()
             {
-                m_currentByteIndex = 0;
+                nextRuneByteIndex = 0;
                 current = default;
             }
 
@@ -237,16 +234,16 @@ namespace TextMeshDOTS
             }
 
             /// <summary>
-            /// The current character.
+            /// The current character
             /// </summary>
             /// <value>The current character.</value>
             public Unicode.Rune Current => current;
 
             /// <summary>
-            /// The startIndex in bytes of the current character.
+            /// The startIndex in bytes of the next character.
             /// </summary>
-            /// <value>The current character byte index.</value>
-            public int CurrentByteIndex => m_currentByteIndex;
+            /// <value>The next character byte index.</value>
+            public int NextRuneByteIndex => nextRuneByteIndex;
         }
 
         /// <summary>
