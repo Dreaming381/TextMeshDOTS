@@ -6,8 +6,9 @@ using HarfBuzz;
 namespace TextMeshDOTS.TextProcessing
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [RequireMatchingQueriesForUpdate]    
-    [UpdateAfter(typeof(UpdateAtlasSystem))]
+    [RequireMatchingQueriesForUpdate]
+    //[UpdateAfter(typeof(UpdateAtlasSystem))]
+    [UpdateAfter(typeof(ShapeSystem))]
     public partial struct GenerateGlyphsSystem : ISystem
     {
         EntityQuery m_query;
@@ -18,14 +19,13 @@ namespace TextMeshDOTS.TextProcessing
         public void OnCreate(ref SystemState state)
         {
             m_query = SystemAPI.QueryBuilder()
-                      .WithAll<FontBlobReference>()
-                      .WithAll<NativeFont>()
                       .WithAllRW<RenderGlyph>()
                       .WithAll<CalliByte>()
                       .WithAll<GlyphOTF>()
                       .WithAll<TextSpan>()                      
                       .WithAll<TextBaseConfiguration>()
                       .WithAllRW<TextRenderControl>()
+                      .WithAll<FontMaterial>()
                       .Build();
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
         }
@@ -36,22 +36,20 @@ namespace TextMeshDOTS.TextProcessing
         {
             state.Dependency = new GenerateRenderGlyphsJob
             {
-                additionalEntitiesHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
+                renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
+                glyphMappingElementHandle = SystemAPI.GetBufferTypeHandle<GlyphMappingElement>(false),                
+                selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
+                textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
+
+                fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),
+                glyphMappingMaskHandle = SystemAPI.GetComponentTypeHandle<GlyphMappingMask>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
-                fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
-                nativeFontReferenceHandle = SystemAPI.GetComponentTypeHandle<NativeFont>(true),
-                fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
-                glyphMappingElementHandle = SystemAPI.GetBufferTypeHandle<GlyphMappingElement>(false),
-                glyphMappingMaskHandle = SystemAPI.GetComponentTypeHandle<GlyphMappingMask>(true),
-                lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
-                renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
-                selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
-                textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
+               
+                lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion, 
             }.ScheduleParallel(m_query, state.Dependency);
         }
     }
 }
-

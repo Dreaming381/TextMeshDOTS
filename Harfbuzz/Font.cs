@@ -52,9 +52,9 @@ namespace HarfBuzz
         {
             HB.hb_font_get_extents_for_direction(ptr, direction, out fontExtents);
         }
-        public void GetBaseline(Direction direction, uint language, uint script, out int baseline)
+        public void GetBaseline(Direction direction, Script script, out int baseline)
         {
-            HB.hb_ot_layout_get_baseline(ptr, OpenTypeLayoutBaselineTag.Roman, direction, language, script, out baseline);
+            HB.hb_ot_layout_get_baseline(ptr, OpenTypeLayoutBaselineTag.Roman, direction, script, HB.HB_TAG('A', 'P', 'P', 'H'), out baseline);
         }
 
 

@@ -83,9 +83,9 @@ namespace HarfBuzz
             
             //HB.hb_buffer_add_utf8(ptr, text, text.Length, 0, text.Length);
         }
-        public void AddText(DynamicBuffer<byte> text)
+        public void AddText(DynamicBuffer<byte> text, uint startIndex, int length)
         {
-            HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafeReadOnlyPtr(), text.Length, 0, text.Length);
+            HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafeReadOnlyPtr(), text.Length, startIndex, length);
         }
         public void ClearContent()
         {

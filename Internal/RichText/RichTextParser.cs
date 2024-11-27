@@ -1,4 +1,5 @@
 using Unity.Collections;
+using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
@@ -17,7 +18,8 @@ namespace TextMeshDOTS.RichText
         internal static bool ValidateHtmlTag(
             in CalliString calliString,
             ref CalliString.Enumerator enumerator,
-            ref FontMaterialSet fontMaterialSet,
+            //ref FontMaterialSet fontMaterialSet,
+            ref DynamicBuffer<FontMaterial> fontMaterial,
             in TextBaseConfiguration baseConfiguration,
             ref TextConfiguration textConfiguration)  //this is just a cache to avoid allocation
         {
@@ -217,7 +219,8 @@ namespace TextMeshDOTS.RichText
             {
                 float value = 0;
 
-                ref var currentFont = ref fontMaterialSet[textConfiguration.m_currentFontMaterialIndex];
+                //ref var currentFont = ref fontMaterialSet.GetFontBlob(textConfiguration.m_currentFontMaterialIndex);
+                ref var currentFont = ref fontMaterial[textConfiguration.m_currentFontMaterialIndex].fontBlob;
 
                 switch (firstTagIndentifier.nameHashCode)
                 {
@@ -267,12 +270,7 @@ namespace TextMeshDOTS.RichText
                             calliString.GetSubString(ref textConfiguration.m_htmlTag, richTextTagIndentifiers[1].valueStartIndex, richTextTagIndentifiers[1].valueLength);
                             charCount = richTextTagIndentifiers[1].valueLength - richTextTagIndentifiers[1].valueStartIndex;
                             textConfiguration.m_strikethroughColor = HexCharsToColor(textConfiguration.m_htmlTag, charCount);
-                            textConfiguration.m_strikethroughColor.a = textConfiguration.m_htmlColor.a <
-                                                                            textConfiguration.m_strikethroughColor.a ? (byte)(textConfiguration.m_htmlColor.a) : (byte)(
-                                textConfiguration
-                                .
-                                m_strikethroughColor
-                                .a);
+                            textConfiguration.m_strikethroughColor.a = textConfiguration.m_htmlColor.a < textConfiguration.m_strikethroughColor.a ? textConfiguration.m_htmlColor.a : textConfiguration.m_strikethroughColor.a;
                         }
                         else
                             textConfiguration.m_strikethroughColor = textConfiguration.m_htmlColor;
@@ -293,11 +291,7 @@ namespace TextMeshDOTS.RichText
                             calliString.GetSubString(ref textConfiguration.m_htmlTag, richTextTagIndentifiers[1].valueStartIndex, richTextTagIndentifiers[1].valueLength);
                             charCount = richTextTagIndentifiers[1].valueLength - richTextTagIndentifiers[1].valueStartIndex;
                             textConfiguration.m_underlineColor = HexCharsToColor(textConfiguration.m_htmlTag, charCount);
-                            textConfiguration.m_underlineColor.a = textConfiguration.m_htmlColor.a <
-                                                                        textConfiguration.m_underlineColor.a ? (byte)(textConfiguration.m_htmlColor.a) : (byte)(
-                                textConfiguration.
-                                m_underlineColor
-                                .a);
+                            textConfiguration.m_underlineColor.a = textConfiguration.m_htmlColor.a < textConfiguration.m_underlineColor.a ? textConfiguration.m_htmlColor.a : textConfiguration.m_underlineColor.a;
                         }
                         else
                             textConfiguration.m_underlineColor = textConfiguration.m_htmlColor;
@@ -563,9 +557,12 @@ namespace TextMeshDOTS.RichText
 
                         calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);
 
-                        for (int i = 0; i < fontMaterialSet.length; i++)
+                        //for (int i = 0; i < fontMaterialSet.length; i++)
+                        for (int i = 0, lenght = fontMaterial.Length; i < lenght; i++)
                         {
-                            ref var candidateFont = ref fontMaterialSet[i];
+                            //ref var candidateFont = ref fontMaterialSet.GetFontBlob(i);
+                            ref var candidateFont = ref fontMaterial[i].fontBlob;
+                            //Debug.Log($"check {textConfiguration.m_htmlTag} = {candidateFont.name}");
                             if (textConfiguration.m_htmlTag.Equals(candidateFont.name))
                             {
                                 textConfiguration.m_currentFontMaterialIndex = i;

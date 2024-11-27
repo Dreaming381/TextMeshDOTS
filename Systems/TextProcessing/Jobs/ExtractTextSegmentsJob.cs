@@ -1,24 +1,27 @@
-using TextMeshDOTS;
+using UnityEngine;
 using TextMeshDOTS.RichText;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 using UnityEngine.TextCore.Text;
+
 
 namespace TextMeshDOTS.TextProcessing
 {
     [BurstCompile]
     public partial struct ExtractTextSegmentsJob : IJobEntity
     {
-        [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
-        public void Execute(in TextBaseConfiguration textBaseConfiguration, in FontBlobReference fontBlobReference, in DynamicBuffer<CalliByteRaw> calliBytesRawBuffer, ref DynamicBuffer<CalliByte> calliBytesBuffer, ref DynamicBuffer<TextSpan> textSpanBuffer)
+        public void Execute(Entity entity, 
+            in TextBaseConfiguration textBaseConfiguration, 
+            in DynamicBuffer<CalliByteRaw> calliBytesRawBuffer, 
+            ref DynamicBuffer<CalliByte> calliBytesBuffer, 
+            ref DynamicBuffer<TextSpan> textSpanBuffer,
+            ref DynamicBuffer<FontMaterial> fontMaterialBuffer)
         {
-            FontMaterialSet fontMaterialSet = default;
-            TextConfiguration textConfiguration = default;
-            fontMaterialSet.Initialize(fontBlobReference.blob);
 
-            textConfiguration.Reset(in textBaseConfiguration, ref fontMaterialSet);
+            TextConfiguration textConfiguration = default;
+
+            textConfiguration.Reset(in textBaseConfiguration, fontMaterialBuffer);
             var textSpans = new NativeList<TextSpan>(16, Allocator.Temp);
             var calliStringRaw = new CalliString(calliBytesRawBuffer);
             var calliString = new CalliString(calliBytesBuffer);
@@ -53,10 +56,12 @@ namespace TextMeshDOTS.TextProcessing
                         });
                     }
                     startIndex = calliString.Length;
-                    if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontMaterialSet, in textBaseConfiguration, ref textConfiguration))
+                    if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontMaterialBuffer, in textBaseConfiguration, ref textConfiguration))
                     {
                         continue;
                     }
+                    else
+                        Debug.Log($"{(char)currentRune.value} is not a valid tag at position {rawCharacters.CurrentByteIndex}");
                 }
                 if ((textConfiguration.m_fontStyleInternal & FontStyles.UpperCase) == FontStyles.UpperCase)
                     calliString.Append(currentRune.ToUpper());
@@ -83,6 +88,6 @@ namespace TextMeshDOTS.TextProcessing
                 italicAngle = textConfiguration.m_italicAngle,
             });
             textSpanBuffer.AddRange(textSpans.AsArray());
-        }
+        }        
     }
 }

@@ -1,30 +1,10 @@
-using HarfBuzz;
-using System;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
-using Font = HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
-    [InternalBufferCapacity(2)]
-    public struct MultiFontBlobReferences : IBufferElementData
-    {
-        public BlobAssetReference<FontBlob> blob;
-    }
-
-    /// <summary>
-    /// A reference to the font blob asset used for text rendering.
-    /// If you choose to change this at runtime, you must also change the material designed to work with the font.
-    /// Usage: Typically don't touch, but can be read-write if you know what you are doing.
-    /// </summary>
-    public struct FontBlobReference : IComponentData
-    {
-        public BlobAssetReference<FontBlob> blob;
-    }
-    
-
     /// <summary>
     /// The base settings of the text before any rich text tags or animations are applied.
     /// Usage: ReadWrite
@@ -47,10 +27,7 @@ namespace TextMeshDOTS
     [InternalBufferCapacity(0)]
     public struct TextSpan : IBufferElementData
     {
-        //public IntPtr fontAsset;    //to access native Font  
         public int fontMaterialIndex; //to access Font Blob
-        //public int startIndex;
-        //public int length;
         public uint startIndex;
         public uint endIndex;
 

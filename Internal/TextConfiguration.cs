@@ -1,5 +1,6 @@
 using TextMeshDOTS.RichText;
 using Unity.Collections;
+using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
@@ -66,7 +67,8 @@ namespace TextMeshDOTS
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
         public int m_characterCount;
 
-        public void Reset(in TextBaseConfiguration textBaseConfiguration, ref FontMaterialSet fontMaterialSet)
+        //public void Reset(in TextBaseConfiguration textBaseConfiguration, ref FontMaterialSet fontMaterialSet)
+        public void Reset(in TextBaseConfiguration textBaseConfiguration, DynamicBuffer<FontMaterial> fontMaterial)
         {
             m_htmlTag.Clear();
 
@@ -100,7 +102,8 @@ namespace TextMeshDOTS
             m_strikethroughColorStack.Clear();
             m_strikethroughColorStack.Add(m_htmlColor);
 
-            m_italicAngle = fontMaterialSet[0].italicsStyleSlant;
+            //m_italicAngle = fontMaterialSet.GetFontBlob(0).italicsStyleSlant;
+            m_italicAngle = fontMaterial[0].fontBlob.italicsStyleSlant;
             m_italicAngleStack.Clear();
 
             m_lineOffset = 0;  // Amount of space between lines (font line spacing + m_linespacing).

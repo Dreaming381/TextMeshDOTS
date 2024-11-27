@@ -9,16 +9,19 @@ using Font = HarfBuzz.Font;
 using UnityEngine;
 using Unity.Profiling;
 using Unity.Burst.CompilerServices;
+using Codice.CM.Client.Differences;
+
 
 
 
 namespace TextMeshDOTS
 {
+    
     internal static class GlyphGeneration
     {
         /// <summary> This function logic follows TMPro_Private.GenerateTextMesh() </summary>
-        internal static unsafe void CreateRenderGlyphs(ref NativeFont nativeFont, //to-do: pass array of fonts, select right one
-                                                       ref FontMaterialSet fontMaterialSet,
+        internal static unsafe void CreateRenderGlyphs(ref DynamicBuffer<FontMaterial> fontMaterial,
+                                                       ref DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer,
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
                                                        ref GlyphMappingWriter mappingWriter,                                                       
                                                        in DynamicBuffer<CalliByte> calliBytes,
@@ -32,10 +35,7 @@ namespace TextMeshDOTS
             int textSpanCounter = 0;
             var currentTextSpan = textSpans[textSpanCounter++];
             var calliString = new CalliString(calliBytes);
-
-            var characters = calliString.GetEnumerator();
-
-            ref FontBlob font = ref fontMaterialSet[currentTextSpan.fontMaterialIndex];
+            var characters = calliString.GetEnumerator();             
 
             int characterCount = 0;
             int lastWordStartCharacterGlyphIndex = 0;
@@ -53,28 +53,19 @@ namespace TextMeshDOTS
             float maxLineDescender = float.MaxValue;
             float xAdvance = 0f;
 
+            ref DynamicFontBlob dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
+            ref FontBlob font = ref fontMaterial[currentTextSpan.fontMaterialIndex].fontBlob;
+            var m_hasMultipleFonts = fontMaterial.Length > 1;
+
             #region AtlasFactor
             // Unity scales native Opentype metrics in GlyphRect and GlyphMetrics by 
             // (unit * atlasSamplingPointSize / Opentype.xScale)
             // So raw values from Opentype font need to be scaled like that as well.
-
-            var xNativeToUnity = font.atlasSamplingPointSize / nativeFont.yScale;
-            var yNativeToUnity = font.atlasSamplingPointSize / nativeFont.xScale;
-
-            var fontBaseLine = 0f; //fontBaseLine
+            var xNativeToUnity = font.atlasSamplingPointSize / dynamicFont.yScale;
+            var yNativeToUnity = font.atlasSamplingPointSize / dynamicFont.xScale;
             #endregion
 
-            float subScriptFactor = nativeFont.subScriptEmXSize / nativeFont.xScale;
-            float superScriptFactor = nativeFont.superScriptEmXSize / nativeFont.xScale;
-            float subScriptOffset = nativeFont.subScriptEmYOffset * yNativeToUnity;
-            float superScriptOffset = nativeFont.superScriptEmYOffset * yNativeToUnity;
-
-            //Debug.Log($" horizontalAscender {horizontalAscender} b {b} {{xScale / baseConfiguration.fontSize {xScale / baseConfiguration.fontSize} xScale * baseScaleFactor {xScale * baseScaleFactor} baseConfiguration.fontSize {baseConfiguration.fontSize}");
-            var fontExtends = nativeFont.GetFontExtents(Direction.LeftToRight);
-            float ascentLine = fontExtends.ascender * xNativeToUnity;
-            float descentLine = fontExtends.descender * xNativeToUnity;
-            float meanLine = nativeFont.xHeight * xNativeToUnity;
-            float capLine = nativeFont.capHeight * xNativeToUnity;
+            var scaledDynamicFont = new ScaledDynamicFont(ref dynamicFont, xNativeToUnity, yNativeToUnity);            
 
             // Calculate the scale of the font based on selected font size and sampling point size.
             // baseScale is calculated using the font asset assigned to the text object.            
@@ -82,8 +73,8 @@ namespace TextMeshDOTS
             float currentElementScale = baseScale;
             float currentEmScale = baseConfiguration.fontSize * 0.01f * (baseConfiguration.isOrthographic ? 1 : 0.1f);
 
-            float topAnchor = GetTopAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale);
-            float bottomAnchor = GetBottomAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale);
+            float topAnchor = GetTopAnchorForConfig(ref scaledDynamicFont, baseConfiguration.verticalAlignment, baseScale);
+            float bottomAnchor = GetBottomAnchorForConfig(ref scaledDynamicFont, baseConfiguration.verticalAlignment, baseScale);
 
             Unicode.Rune currentRune, previousRune = Unicode.BadRune;//input text unicode
 
@@ -97,13 +88,15 @@ namespace TextMeshDOTS
                 if (bytePosition >= currentTextSpan.endIndex)
                     currentTextSpan = textSpans[textSpanCounter++];
 
-                font = ref fontMaterialSet[currentTextSpan.fontMaterialIndex];
+                dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
+                font = ref fontMaterial[currentTextSpan.fontMaterialIndex].fontBlob;
+
                 if (lineCount == 0)
-                    topAnchor = GetTopAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale, topAnchor);
-                bottomAnchor = GetBottomAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale, bottomAnchor);
+                    topAnchor = GetTopAnchorForConfig(ref scaledDynamicFont, baseConfiguration.verticalAlignment, baseScale, topAnchor);
+                bottomAnchor = GetBottomAnchorForConfig(ref scaledDynamicFont, baseConfiguration.verticalAlignment, baseScale, bottomAnchor);
 
                 #region Look up Character Data
-                if (!font.glyphs.TryGetValue((int)glyphOTF.codepoint, out var glyphBlob))
+                if (!dynamicFont.glyphs.TryGetValue(glyphOTF.codepoint, out var glyphBlob))
                     continue;
 
                 // Cache glyph metrics
@@ -115,8 +108,8 @@ namespace TextMeshDOTS
                 var glyphScale = glyphBlob.glyphScale;
 
                 float adjustedScale = currentTextSpan.fontSize / font.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
-                float elementAscentLine = ascentLine;
-                float elementDescentLine = descentLine;
+                float elementAscentLine = scaledDynamicFont.ascender;
+                float elementDescentLine = scaledDynamicFont.descender;
 
                 //synthesize superscript and subscript unless it is a digit. Most opentype fonts should
                 //have dedicated glyphs for digits when enabling the 'subs' and 'sups' tags
@@ -124,17 +117,17 @@ namespace TextMeshDOTS
                 float m_BaselineOffset = 0;
                 if ((currentTextSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript && !currentRune.IsDigit())
                 {
-                    fontScaleMultiplier = subScriptFactor;
-                    m_BaselineOffset = -subScriptOffset * adjustedScale;
+                    fontScaleMultiplier = scaledDynamicFont.subScriptEmXSize;
+                    m_BaselineOffset = -scaledDynamicFont.subScriptEmYOffset * adjustedScale;
                 }
                 else if ((currentTextSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript && !currentRune.IsDigit())
                 {
-                    fontScaleMultiplier = superScriptFactor;
-                    m_BaselineOffset = superScriptOffset * adjustedScale;
+                    fontScaleMultiplier = scaledDynamicFont.superScriptEmXSize;
+                    m_BaselineOffset = scaledDynamicFont.superScriptEmYOffset * adjustedScale;
                 }
 
                 currentElementScale = adjustedScale * fontScaleMultiplier * glyphScale;
-                float baselineOffset = fontBaseLine * adjustedScale * fontScaleMultiplier;
+                float baselineOffset = scaledDynamicFont.baseLine * adjustedScale * fontScaleMultiplier;
                 #endregion
 
                 // Optimization to avoid calling this more than once per character.
@@ -247,7 +240,7 @@ namespace TextMeshDOTS
                 {
                     // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
                     float shear_value = currentTextSpan.italicAngle * 0.01f;
-                    float midPoint = ((capLine - (fontBaseLine + m_BaselineOffset)) / 2) * fontScaleMultiplier;
+                    float midPoint = ((scaledDynamicFont.capHeight - (scaledDynamicFont.baseLine + m_BaselineOffset)) / 2) * fontScaleMultiplier;
                     float topShear = shear_value * ((y_bearing + font.materialPadding + style_padding - midPoint) * currentElementScale);
                     bottomShear = shear_value *
                                         ((y_bearing - glyphHeight - font.materialPadding - style_padding - midPoint) *
@@ -277,7 +270,10 @@ namespace TextMeshDOTS
                 if (Hint.Likely(currentRune.value != 10)) //do not render LF 
                 {
                     renderGlyphs.Add(renderGlyph);
-                    fontMaterialSet.WriteFontMaterialIndexForGlyph(currentTextSpan.fontMaterialIndex);
+                    //fontMaterialSet.WriteFontMaterialIndexForGlyph(currentTextSpan.fontMaterialIndex);
+                    if (m_hasMultipleFonts)
+                        m_selectorBuffer.Add(new FontMaterialSelectorForGlyph { fontMaterialIndex = (byte)currentTextSpan.fontMaterialIndex });
+
                     mappingWriter.AddCharNoTags(characterCount - 1, true);
                     mappingWriter.AddCharWithTags(k, true);
                     mappingWriter.AddBytes(characters.CurrentByteIndex, currentRune.LengthInUtf8Bytes(), true);
@@ -338,9 +334,9 @@ namespace TextMeshDOTS
                 #region Check for Line Feed and Last Character
                 if (isLineStart)
                     isLineStart = false;
-                currentLineHeight = (ascentLine - descentLine) * baseScale; //font.lineHeight * baseScale;  //why not (font.ascentLine-font.baseLine) * baseScale ?
-                ascentLineDelta = maxLineAscender - ascentLine * baseScale;
-                decentLineDelta = descentLine * baseScale - maxLineDescender;
+                currentLineHeight = (scaledDynamicFont.ascender - scaledDynamicFont.descender) * baseScale; 
+                ascentLineDelta = maxLineAscender - scaledDynamicFont.ascender * baseScale;
+                decentLineDelta = scaledDynamicFont.descender * baseScale - maxLineDescender;
                 //if (currentRune.value == 10 || currentRune.value == 11 || currentRune.value == 0x03 || currentRune.value == 0x2028 ||
                 //    currentRune.value == 0x2029 || textConfiguration.m_characterCount == calliString.Length - 1)
                 if (currentRune.value == 10)
@@ -377,7 +373,7 @@ namespace TextMeshDOTS
 
                     lineCount++;
                     isLineStart = true;
-                    bottomAnchor = GetBottomAnchorForConfig(fontBaseLine, ascentLine, descentLine, capLine, meanLine, baseConfiguration.verticalAlignment, baseScale);
+                    bottomAnchor = GetBottomAnchorForConfig(ref scaledDynamicFont, baseConfiguration.verticalAlignment, baseScale);
 
                     xAdvance = 0;
                     previousRune = currentRune;
@@ -487,32 +483,32 @@ namespace TextMeshDOTS
             ApplyVerticalAlignmentToGlyphs(ref renderGlyphs, topAnchor, bottomAnchor, accumulatedVerticalOffset, baseConfiguration.verticalAlignment);
         }
 
-        static float GetTopAnchorForConfig(float fontBaseLine, float ascentLine, float descentLine, float capLine, float meanLine, VerticalAlignmentOptions verticalMode, float baseScale, float oldValue = float.PositiveInfinity)
+        static float GetTopAnchorForConfig(ref ScaledDynamicFont  scaledDynamicFont, VerticalAlignmentOptions verticalMode, float baseScale, float oldValue = float.PositiveInfinity)
         {
             bool replace = oldValue == float.PositiveInfinity;
             switch (verticalMode)
             {
                 case VerticalAlignmentOptions.TopBase: return 0f;
                 case VerticalAlignmentOptions.MiddleTopAscentToBottomDescent:
-                case VerticalAlignmentOptions.TopAscent: return baseScale * math.max(ascentLine - fontBaseLine, math.select(oldValue, float.NegativeInfinity, replace));
-                case VerticalAlignmentOptions.TopDescent: return baseScale * math.min(descentLine - fontBaseLine, oldValue);
-                case VerticalAlignmentOptions.TopCap: return baseScale * math.max(capLine - fontBaseLine, math.select(oldValue, float.NegativeInfinity, replace));
-                case VerticalAlignmentOptions.TopMean: return baseScale * math.max(meanLine - fontBaseLine, math.select(oldValue, float.NegativeInfinity, replace));
+                case VerticalAlignmentOptions.TopAscent: return baseScale * math.max(scaledDynamicFont.ascender - scaledDynamicFont.baseLine, math.select(oldValue, float.NegativeInfinity, replace));
+                case VerticalAlignmentOptions.TopDescent: return baseScale * math.min(scaledDynamicFont.descender - scaledDynamicFont.baseLine, oldValue);
+                case VerticalAlignmentOptions.TopCap: return baseScale * math.max(scaledDynamicFont.capHeight - scaledDynamicFont.baseLine, math.select(oldValue, float.NegativeInfinity, replace));
+                case VerticalAlignmentOptions.TopMean: return baseScale * math.max(scaledDynamicFont.xHeight - scaledDynamicFont.baseLine, math.select(oldValue, float.NegativeInfinity, replace));
                 default: return 0f;
             }
         }
 
-        static float GetBottomAnchorForConfig(float fontBaseLine, float ascentLine, float descentLine, float capLine, float meanLine, VerticalAlignmentOptions verticalMode, float baseScale, float oldValue = float.PositiveInfinity)
+        static float GetBottomAnchorForConfig(ref ScaledDynamicFont scaledDynamicFont, VerticalAlignmentOptions verticalMode, float baseScale, float oldValue = float.PositiveInfinity)
         {
             bool replace = oldValue == float.PositiveInfinity;
             switch (verticalMode)
             {
                 case VerticalAlignmentOptions.BottomBase: return 0f;
-                case VerticalAlignmentOptions.BottomAscent: return baseScale * math.max(ascentLine - fontBaseLine, math.select(oldValue, float.NegativeInfinity, replace));
+                case VerticalAlignmentOptions.BottomAscent: return baseScale * math.max(scaledDynamicFont.ascender - scaledDynamicFont.baseLine, math.select(oldValue, float.NegativeInfinity, replace));
                 case VerticalAlignmentOptions.MiddleTopAscentToBottomDescent:
-                case VerticalAlignmentOptions.BottomDescent: return baseScale * math.min(descentLine - fontBaseLine, oldValue);
-                case VerticalAlignmentOptions.BottomCap: return baseScale * math.max(capLine - fontBaseLine, math.select(oldValue, float.NegativeInfinity, replace));
-                case VerticalAlignmentOptions.BottomMean: return baseScale * math.max(meanLine - fontBaseLine, math.select(oldValue, float.NegativeInfinity, replace));
+                case VerticalAlignmentOptions.BottomDescent: return baseScale * math.min(scaledDynamicFont.descender - scaledDynamicFont.baseLine, oldValue);
+                case VerticalAlignmentOptions.BottomCap: return baseScale * math.max(scaledDynamicFont.capHeight - scaledDynamicFont.baseLine, math.select(oldValue, float.NegativeInfinity, replace));
+                case VerticalAlignmentOptions.BottomMean: return baseScale * math.max(scaledDynamicFont.xHeight - scaledDynamicFont.baseLine, math.select(oldValue, float.NegativeInfinity, replace));
                 default: return 0f;
             }
         }

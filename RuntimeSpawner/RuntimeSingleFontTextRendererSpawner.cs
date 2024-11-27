@@ -25,7 +25,7 @@ namespace TextMeshDOTS.Authoring
             initialized = false;
             textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref CheckedStateRef);
             fontEntityQ = new EntityQueryBuilder(Allocator.Temp)
-                    .WithAll<FontBlobReference, FontMaterial, BackEndMesh>()
+                    .WithAll<FontBlobReference, FontMaterialRef, BackEndMesh>()
                     .Build(EntityManager);
             RequireForUpdate(fontEntityQ);
         }
@@ -43,10 +43,10 @@ namespace TextMeshDOTS.Authoring
                 return;
 
             var fontBlobReferenceEntity = fontEntityQ.GetSingletonEntity();
-            var fontMaterial = SystemAPI.GetComponent<FontMaterial>(fontBlobReferenceEntity);            
-            var fontBlobReference = SystemAPI.GetComponent<FontBlobReference>(fontBlobReferenceEntity);
+            var fontMaterialsBuffer = SystemAPI.GetBuffer<FontMaterialRef>(fontBlobReferenceEntity);
+            var fontBlobReferences = SystemAPI.GetBuffer<FontBlobReference>(fontBlobReferenceEntity).ToNativeArray(Allocator.Temp);
             var backEndMesh = SystemAPI.GetComponent<BackEndMesh>(fontBlobReferenceEntity);
-            var fontAssetReference = EntityManager.GetComponentObject<FontAssetReference>(fontBlobReferenceEntity);
+            var fontAssetReference = EntityManager.GetComponentObject<FontAssetReferences>(fontBlobReferenceEntity);
 
             //if (!(frameCount == 0 ^ frameCount == 100))
             if (frameCount != 0)
@@ -56,7 +56,7 @@ namespace TextMeshDOTS.Authoring
             }
 
             var entitiesGraphicsSystem = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
-            var brgMaterialID = entitiesGraphicsSystem.RegisterMaterial(fontMaterial.value);
+            var brgMaterialID = entitiesGraphicsSystem.RegisterMaterial(fontMaterialsBuffer[0].value);
             var brgMeshID = entitiesGraphicsSystem.RegisterMesh(backEndMesh.value);
             var materialMeshInfo = new MaterialMeshInfo { MaterialID = brgMaterialID, MeshID = brgMeshID };
             var textRenderControl = new TextRenderControl { flags = TextRenderControl.Flags.Dirty };
@@ -90,7 +90,7 @@ namespace TextMeshDOTS.Authoring
 
             if (frameCount == 0)
             {
-                int count = 100;
+                int count = 50;
                 int half = count / 2;
                 var factor = 3.0f;
                 TextBackendBakingUtility.SetSubMesh(text2.Length, ref materialMeshInfo);
@@ -107,7 +107,9 @@ namespace TextMeshDOTS.Authoring
                         calliString.Append(text2);
 
                         EntityManager.SetComponentData(entity, textBaseConfiguration);
-                        EntityManager.SetComponentData(entity, fontBlobReference);
+                        EntityManager.AddBuffer<FontBlobReference>(entity);
+                        var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontBlobReference>(entity);
+                        fontBlobReferencesBuffer.CopyFrom(fontBlobReferences);
                         EntityManager.SetComponentData(entity, fontAssetReference);
                         EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor, (y - half) * factor, 0)));
                         EntityManager.SetComponentData(entity, textRenderControl);
@@ -137,7 +139,9 @@ namespace TextMeshDOTS.Authoring
                         calliString.Append(text3);
 
                         EntityManager.SetComponentData(entity, textBaseConfiguration);
-                        EntityManager.SetComponentData(entity, fontBlobReference);
+                        EntityManager.AddBuffer<FontBlobReference>(entity);
+                        var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontBlobReference>(entity);
+                        fontBlobReferencesBuffer.CopyFrom(fontBlobReferences);
                         EntityManager.SetComponentData(entity, fontAssetReference);
                         EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor - 1, (y - half) * factor - 1, 0)));
                         EntityManager.SetComponentData(entity, textRenderControl);

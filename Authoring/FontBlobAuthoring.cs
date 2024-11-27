@@ -1,3 +1,4 @@
+using HarfBuzz;
 using System.Collections.Generic;
 using TextMeshDOTS.Rendering.Authoring;
 using Unity.Collections;
@@ -10,55 +11,47 @@ namespace TextMeshDOTS.Authoring
 {
     public class FontBlobAuthoring : MonoBehaviour
     {
-        public List<FontAsset> fonts;
+        public List<FontAsset> fontAssets;
     }
     class FontBlobAuthoringBaker : Baker<FontBlobAuthoring>
     {
         public override void Bake(FontBlobAuthoring authoring)
         {
-            if (authoring.fonts == null || authoring.fonts.Count == 0 || authoring.fonts[0] == null)
+            if (authoring.fontAssets == null || authoring.fontAssets.Count == 0 || authoring.fontAssets[0] == null)
                 return;
 
             var entity = GetEntity(TransformUsageFlags.None);
             var mesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
 
-            if(authoring.fonts.Count == 1)
+            AddComponentObject(entity, new FontAssetReferences { value = authoring.fontAssets });
+            AddComponent(entity, new BackEndMesh { value = mesh });
+            var fontMaterialRefs = new NativeList<FontMaterialRef>(authoring.fontAssets.Count, Allocator.Temp);
+            
+            var fontReferences = AddBuffer<FontBlobReference>(entity);
+
+            foreach (var fontAsset in authoring.fontAssets)
             {
-                var font = authoring.fonts[0];
-                AddComponent(entity, new BackEndMesh { value = mesh });
-                AddComponent(entity, new FontMaterial { value = font.material });
-                font.ReadFontAssetDefinition();
-                var fontBlob = FontBlobber.BakeFont(font);
-                AddComponent(entity, new FontBlobReference { blob = fontBlob });
-                AddComponentObject(entity, new FontAssetReference { value = font});
-                AddBlobAsset(ref fontBlob, out Unity.Entities.Hash128 hash);
+                if (fontAsset == null) 
+                    continue;
+                fontAsset.ReadFontAssetDefinition();
+                var fontBlobRef = BakeFontAsset(fontAsset);
+                fontReferences.Add(new FontBlobReference { blob = fontBlobRef });
+                fontMaterialRefs.Add(new FontMaterialRef { value = fontAsset.material });
             }
-            else if (authoring.fonts.Count > 1)
+            var fontMaterialRefsBuffer = AddBuffer<FontMaterialRef>(entity);
+            fontMaterialRefsBuffer.AddRange(fontMaterialRefs.AsArray());
+        }
+        BlobAssetReference<FontBlob> BakeFontAsset(FontAsset fontAsset)
+        {
+            var customHash = new Unity.Entities.Hash128((uint)fontAsset.GetHashCode(), 0, 0, 0);
+            if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<FontBlob> blobReference))
             {
-                var multiFontMaterials = new NativeArray<MultiFontMaterials>(authoring.fonts.Count, Allocator.TempJob);
-                var multiFontBlobReferences = new NativeArray<MultiFontBlobReferences>(authoring.fonts.Count, Allocator.TempJob);
-                for (int i = 0; i < authoring.fonts.Count; i++)
-                {
-                    var font = authoring.fonts[i];
-                    if (font == null)
-                        continue;
-                    font.ReadFontAssetDefinition();
-                    var fontBlob = FontBlobber.BakeFont(font);
-                    AddBlobAsset(ref fontBlob, out Unity.Entities.Hash128 hash);
-                    multiFontMaterials[i] = new MultiFontMaterials { value = font.material };                    
-                    multiFontBlobReferences[i] = new MultiFontBlobReferences { blob = fontBlob };                    
-                }
+                blobReference = FontBlobber.BakeFontBlob(fontAsset);
 
-                AddComponent(entity, new BackEndMesh { value = mesh });
-
-                var multiFontMaterialsBuffer = AddBuffer<MultiFontMaterials>(entity);
-                multiFontMaterialsBuffer.AddRange(multiFontMaterials);
-
-                var multiFontBlobReferencesBuffer = AddBuffer<MultiFontBlobReferences>(entity);
-                multiFontBlobReferencesBuffer.AddRange(multiFontBlobReferences);
-                multiFontMaterials.Dispose();
-                multiFontBlobReferences.Dispose();
+                // Register the Blob Asset to the Baker for de-duplication and reverting.
+                AddBlobAssetWithCustomHash<FontBlob>(ref blobReference, customHash);
             }
+            return blobReference;
         }
     }
 }

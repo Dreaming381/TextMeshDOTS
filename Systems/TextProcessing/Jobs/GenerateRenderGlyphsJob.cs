@@ -17,15 +17,13 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
         public ComponentTypeHandle<TextRenderControl> textRenderControlHandle;
 
+        [ReadOnly] public BufferTypeHandle<FontMaterial> fontMaterialHandle;
         [ReadOnly] public ComponentTypeHandle<GlyphMappingMask> glyphMappingMaskHandle;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
         [ReadOnly] public BufferTypeHandle<TextSpan> textSpanHandle;
         [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
-        [NativeDisableUnsafePtrRestriction][ReadOnly] public ComponentTypeHandle<NativeFont> nativeFontReferenceHandle;
-        [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
-        [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalEntitiesHandle;
-        [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
+
 
         public uint lastSystemVersion;
 
@@ -36,10 +34,12 @@ namespace TextMeshDOTS.TextProcessing
         {
             if (!(chunk.DidChange(ref glyphMappingMaskHandle, lastSystemVersion) ||
                   chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
+                  chunk.DidChange(ref textSpanHandle, lastSystemVersion) ||
                   chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
+                  chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
 
+            var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
@@ -47,36 +47,32 @@ namespace TextMeshDOTS.TextProcessing
             var glyphMappingBuffers = chunk.GetBufferAccessor(ref glyphMappingElementHandle);
             var glyphMappingMasks = chunk.GetNativeArray(ref glyphMappingMaskHandle);
             var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
-            var fontBlobReferences = chunk.GetNativeArray(ref fontBlobReferenceHandle);
-            var nativeFontReferences = chunk.GetNativeArray(ref nativeFontReferenceHandle);            
             var textRenderControls = chunk.GetNativeArray(ref textRenderControlHandle);
 
             // Optional
             var selectorBuffers = chunk.GetBufferAccessor(ref selectorHandle);
-            var additionalEntitiesBuffers = chunk.GetBufferAccessor(ref additionalEntitiesHandle);
-            bool hasMultipleFonts = selectorBuffers.Length > 0 && additionalEntitiesBuffers.Length > 0;
-
-            FontMaterialSet fontMaterialSet = default;
 
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
+                var fontMaterial = fontMaterialBuffers[indexInChunk];
                 var calliBytes = calliBytesBuffers[indexInChunk];
                 var glyphOTFs = glyphOTFBuffers[indexInChunk];
                 var textSpans = textSpanBuffers[indexInChunk];
                 var renderGlyphs = renderGlyphBuffers[indexInChunk];
-                var fontBlobReference = fontBlobReferences[indexInChunk];
-                var nativeFontReference = nativeFontReferences[indexInChunk];
                 var textBaseConfiguration = textBaseConfigurations[indexInChunk];
                 var textRenderControl = textRenderControls[indexInChunk];
 
+                if (textSpans.Length == 0)
+                    continue;//not ready yet
+                 
                 m_glyphMappingWriter.StartWriter(glyphMappingMasks.Length > 0 ? glyphMappingMasks[indexInChunk].mask : default);
-                if (hasMultipleFonts)
-                    fontMaterialSet.Initialize(fontBlobReference.blob, selectorBuffers[indexInChunk], additionalEntitiesBuffers[indexInChunk], ref fontBlobReferenceLookup);
-                else
-                    fontMaterialSet.Initialize(fontBlobReference.blob);
 
-                GlyphGeneration.CreateRenderGlyphs(ref nativeFontReference,
-                                                   ref fontMaterialSet,
+                DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer=default;
+                if (selectorBuffers.Length > 0)
+                    m_selectorBuffer = selectorBuffers[indexInChunk];
+
+                GlyphGeneration.CreateRenderGlyphs(ref fontMaterial,
+                                                   ref m_selectorBuffer,
                                                    ref renderGlyphs,
                                                    ref m_glyphMappingWriter,                                                   
                                                    in calliBytes,
