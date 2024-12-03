@@ -1,12 +1,13 @@
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS.RichText
 {
-    internal static class RichTextParser
+    public static class RichTextParser
     {
         /// <summary>
         /// Function to identify and validate the rich tag. Returns the byte position of the > if the tag was valid.
@@ -218,7 +219,7 @@ namespace TextMeshDOTS.RichText
             else
             {
                 float value = 0;
-
+                int fontIndex = -1;
                 //ref var currentFont = ref fontMaterialSet.GetFontBlob(textConfiguration.m_currentFontMaterialIndex);
                 ref var currentFont = ref fontMaterial[textConfiguration.m_currentFontMaterialIndex].fontBlob;
 
@@ -227,39 +228,39 @@ namespace TextMeshDOTS.RichText
                     case 98:  // <b>
                     case 66:  // <B>
                         textConfiguration.m_fontStyleInternal |= FontStyles.Bold;
-                        //textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
+                        textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
+                        textConfiguration.m_fontWeightInternalStack.Add(textConfiguration.m_fontWeightInternal);
+                        fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                        if (fontIndex != -1)
+                        {
+                            textConfiguration.m_currentFontMaterialIndex = fontIndex;
+                            textConfiguration.m_fontMaterialIndexStack.Add(fontIndex);
+                        }
+
                         return true;
                     case 427:  // </b>
                     case 395:  // </B>
                         textConfiguration.m_fontStyleInternal &= ~FontStyles.Bold;
+                        textConfiguration.m_fontWeightInternal = textConfiguration.m_fontWeightInternalStack.RemoveExceptRoot();
+                        textConfiguration.m_currentFontMaterialIndex = textConfiguration.m_fontMaterialIndexStack.RemoveExceptRoot();
                         return true;
                     case 105:  // <i>
                     case 73:  // <I>
                         textConfiguration.m_fontStyleInternal |= FontStyles.Italic;
-
-                        if (richTextTagIndentifiers.Length > 1 && (richTextTagIndentifiers[1].nameHashCode == 276531 || richTextTagIndentifiers[1].nameHashCode == 186899))
+                        
+                        //switch font in case italic has a dedicated font
+                        fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.fontFamilyHash, textConfiguration.m_fontWeightInternal, true);
+                        if (fontIndex != -1)
                         {
-                            // Reject tag if value is invalid.
-                            calliString.GetSubString(ref textConfiguration.m_htmlTag, richTextTagIndentifiers[1].valueStartIndex, richTextTagIndentifiers[1].valueLength);
-
-                            if (ConvertToFloat(ref textConfiguration.m_htmlTag, out value) != ParseError.None)
-                                return false;
-                            textConfiguration.m_italicAngle = (short)value;
-
-                            // Make sure angle is within valid range.
-                            if (textConfiguration.m_italicAngle < -180 || textConfiguration.m_italicAngle > 180)
-                                return false;
+                            textConfiguration.m_currentFontMaterialIndex = fontIndex;
+                            textConfiguration.m_fontMaterialIndexStack.Add(fontIndex);
                         }
-                        else
-                            textConfiguration.m_italicAngle = currentFont.italicsStyleSlant;
-
-                        textConfiguration.m_italicAngleStack.Add(textConfiguration.m_italicAngle);
 
                         return true;
                     case 434:  // </i>
                     case 402:  // </I>
-                        textConfiguration.m_italicAngle = textConfiguration.m_italicAngleStack.RemoveExceptRoot();
                         textConfiguration.m_fontStyleInternal &= ~FontStyles.Italic;
+                        textConfiguration.m_currentFontMaterialIndex = textConfiguration.m_fontMaterialIndexStack.RemoveExceptRoot();
                         return true;
                     case 115:  // <s>
                     case 83:  // <S>
@@ -556,19 +557,15 @@ namespace TextMeshDOTS.RichText
                         }
 
                         calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);
+                        //var desiredFontFamilyHash = TextCoreExtensions.GetHashCodeCaseInSensitive(textConfiguration.m_htmlTag.ToString());
+                        var desiredFontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(textConfiguration.m_htmlTag);
 
-                        //for (int i = 0; i < fontMaterialSet.length; i++)
-                        for (int i = 0, lenght = fontMaterial.Length; i < lenght; i++)
+                        fontIndex = TextHelper.GetFontIndex(fontMaterial, desiredFontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                        if (fontIndex != -1)
                         {
-                            //ref var candidateFont = ref fontMaterialSet.GetFontBlob(i);
-                            ref var candidateFont = ref fontMaterial[i].fontBlob;
-                            //Debug.Log($"check {textConfiguration.m_htmlTag} = {candidateFont.name}");
-                            if (textConfiguration.m_htmlTag.Equals(candidateFont.name))
-                            {
-                                textConfiguration.m_currentFontMaterialIndex = i;
-                                textConfiguration.m_fontMaterialIndexStack.Add(i);
-                                return true;
-                            }
+                            textConfiguration.m_currentFontMaterialIndex = fontIndex;
+                            textConfiguration.m_fontMaterialIndexStack.Add(fontIndex);
+                            return true;
                         }
                         return false;
                     case 154158:  // </font>

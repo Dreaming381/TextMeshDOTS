@@ -52,7 +52,6 @@ namespace TextMeshDOTS.TextProcessing
                             cSpacing = textConfiguration.m_cSpacing,
                             fxScale = textConfiguration.m_fxScale,
                             fxRotationAngleCCW = textConfiguration.m_fxRotationAngleCCW,
-                            italicAngle = textConfiguration.m_italicAngle,
                         });
                     }
                     startIndex = segmentEnd;
@@ -88,7 +87,6 @@ namespace TextMeshDOTS.TextProcessing
                 cSpacing = textConfiguration.m_cSpacing,
                 fxScale = textConfiguration.m_fxScale,
                 fxRotationAngleCCW = textConfiguration.m_fxRotationAngleCCW,
-                italicAngle = textConfiguration.m_italicAngle,
             });
             textSpanBuffer.AddRange(textSpans.AsArray());
         }        

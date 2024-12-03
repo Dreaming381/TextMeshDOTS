@@ -14,7 +14,7 @@ namespace TextMeshDOTS
         public float fontSize;        
         public Color32 color;
         public FontStyles fontStyle;
-        //public TextFontWeight fontWeight; //currently unused. Would require switching to different fonts for each weight
+        public TextFontWeight fontWeight;
 
         public float maxLineWidth;
         public float wordSpacing;
@@ -35,14 +35,12 @@ namespace TextMeshDOTS
         public float fontSize;
         public Color32 color;
         public FontStyles fontStyle;
-        //public TextFontWeight fontWeight; //currently unused. Would require switching to different fonts for each weight
         public HorizontalAlignmentOptions lineJustification;
 
         public float monoSpacing;
         public float cSpacing;
         public float fxScale;
         public short fxRotationAngleCCW;
-        public short italicAngle;        
 
         public override string ToString()
         {

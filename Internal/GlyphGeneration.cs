@@ -25,6 +25,7 @@ namespace TextMeshDOTS
         {
             renderGlyphs.Clear();
 
+
             // Initialize textConfiguration which stores all fields that are modified by RichText Tags
             int textSpanCounter = 0;
             var currentTextSpan = textSpans[textSpanCounter++];
@@ -151,7 +152,8 @@ namespace TextMeshDOTS
                 #region Handle Style Padding
                 float boldSpacingAdjustment = 0;
                 float style_padding = 0;
-                if ((currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold)
+                //if bold is requested and fontMaterialIndex > 0, then a dedciated bold font has been found, so no need to simulate 
+                if ((currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && currentTextSpan.fontMaterialIndex == 0) 
                 {
                     style_padding = 0;
                     boldSpacingAdjustment = font.boldStyleSpacing;
@@ -230,7 +232,8 @@ namespace TextMeshDOTS
 
                 #region Pack Scale into renderGlyph.scale
                 var scale = currentTextSpan.fontSize;
-                if ((currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold)
+                //if bold is requested and fontMaterialIndex > 0, then a dedciated bold font has been found, so no need to simulate 
+                if ((currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && currentTextSpan.fontMaterialIndex == 0)
                     scale *= -1;
 
                 renderGlyph.scale = scale;
@@ -239,10 +242,11 @@ namespace TextMeshDOTS
                 // Check if we need to Shear the rectangles for Italic styles
                 #region Handle Italic & Shearing
                 float bottomShear = 0f;
-                if ((currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic)
+                //if italic is requested and fontMaterialIndex > 0, then a dedciated Italic font has been found, so no need to simulate 
+                if ((currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic && currentTextSpan.fontMaterialIndex == 0)
                 {
                     // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
-                    float shear_value = currentTextSpan.italicAngle * 0.01f;
+                    float shear_value = font.italicsStyleSlant * 0.01f; 
                     float midPoint = ((scaledDynamicFont.capHeight - (scaledDynamicFont.baseLine + m_BaselineOffset)) / 2) * fontScaleMultiplier;
                     float topShear = shear_value * ((y_bearing + font.materialPadding + style_padding - midPoint) * currentElementScale);
                     bottomShear = shear_value *
@@ -273,7 +277,6 @@ namespace TextMeshDOTS
                 if (Hint.Likely(currentRune.value != 10)) //do not render LF 
                 {
                     renderGlyphs.Add(renderGlyph);
-                    //fontMaterialSet.WriteFontMaterialIndexForGlyph(currentTextSpan.fontMaterialIndex);
                     if (m_hasMultipleFonts)
                         m_selectorBuffer.Add(new FontMaterialSelectorForGlyph { fontMaterialIndex = (byte)currentTextSpan.fontMaterialIndex });
 

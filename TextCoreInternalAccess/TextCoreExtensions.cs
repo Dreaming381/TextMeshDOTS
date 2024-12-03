@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.TextCore;
 using UnityEngine.TextCore.LowLevel;
@@ -9,44 +7,37 @@ namespace TextMeshDOTS
 {
     public static class TextCoreExtensions
     {
-        public static Dictionary<uint, GlyphPairAdjustmentRecord> GetGlyphPairAdjustmentRecordLookup(this FontAsset font)
-        {
-            return font.fontFeatureTable.m_GlyphPairAdjustmentRecordLookup;
-        }
+        //public static int GetHashCodeCaseInSensitive(string text)
+        //{
+        //    return TextUtilities.GetHashCodeCaseInSensitive(text);
+        //}
         public static bool TryAddGlyphInternal(this FontAsset font, uint glyphIndex, out Glyph glyph)
         {
             return font.TryAddGlyphInternal(glyphIndex, out glyph);
         }
 
-        public static List<GlyphPairAdjustmentRecord> GetGlyphPairAdjustmentRecords(this FontAsset font)
+        public static int GetTextFontWeightIndex(TextFontWeight textFontWeight)
         {
-            return font.fontFeatureTable.glyphPairAdjustmentRecords;
+            return TextUtilities.GetTextFontWeightIndex(textFontWeight);
         }
-        public static IntPtr GetNativeFontAsset(this FontAsset font)
-        {
-            return font.nativeFontAsset;
-        }
-        public static string GetSourceFontFilePath(this FontAsset font)
-        {
-            return font.m_SourceFontFilePath;
-        }
-        public static void ListSomeInfo(this FontAsset font)
-        {
-            Debug.Log($"font.m_SourceFontFilePath {font.m_SourceFontFilePath}");
-            Debug.Log($"font.sourceFontFile.name {font.sourceFontFile.name}");
-            Debug.Log($"font.m_SourceFontFilePath {font.name}");
-            Debug.Log($"font.InternalDynamicOS {font.InternalDynamicOS}");
+        
+        //public static void ListSomeInfo(this FontAsset font)
+        //{
+        //    Debug.Log($"font.m_SourceFontFilePath {font.m_SourceFontFilePath}");
+        //    Debug.Log($"font.sourceFontFile.name {font.sourceFontFile.name}");
+        //    Debug.Log($"font.m_SourceFontFilePath {font.name}");
+        //    Debug.Log($"font.InternalDynamicOS {font.InternalDynamicOS}");
 
-            //FontEngine.
+        //    //FontEngine.
 
-            Debug.Log($"nativeFontAsset {font.nativeFontAsset != IntPtr.Zero}");
-            Debug.Log($"font.familyNameHashCode {font.familyNameHashCode}");
-            Debug.Log($"font.styleNameHashCode {font.styleNameHashCode}");
-        }
-        public static int GetFaceIndex(this FaceInfo faceInfo)
-        {
-            return faceInfo.faceIndex;
-        }
+        //    Debug.Log($"nativeFontAsset {font.nativeFontAsset != IntPtr.Zero}");
+        //    Debug.Log($"font.familyNameHashCode {font.familyNameHashCode}");
+        //    Debug.Log($"font.styleNameHashCode {font.styleNameHashCode}");
+        //}
+        //public static int GetFaceIndex(this FaceInfo faceInfo)
+        //{
+        //    return faceInfo.faceIndex;
+        //}
 
         //public static FontEngineError LoadFontFace(this FontAsset font)
         //{

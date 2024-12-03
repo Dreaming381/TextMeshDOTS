@@ -18,8 +18,10 @@ namespace TextMeshDOTS
         public float m_currentFontSize;
         public FixedStack512Bytes<float> m_sizeStack;
 
+        public int fontFamilyHash;
         public FontStyles m_fontStyleInternal;
-        //public TextFontWeight m_fontWeightInternal;  //currently unused. Would require switching to different fonts for each weight
+        public TextFontWeight m_fontWeightInternal;
+        public FixedStack512Bytes<TextFontWeight> m_fontWeightInternalStack;
 
         public int m_currentFontMaterialIndex;
         public FixedStack512Bytes<int> m_fontMaterialIndexStack;
@@ -37,9 +39,6 @@ namespace TextMeshDOTS
         public FixedStack512Bytes<Color32> m_colorStack;
         public FixedStack512Bytes<Color32> m_strikethroughColorStack;
         public FixedStack512Bytes<Color32> m_underlineColorStack;
-
-        public short m_italicAngle;
-        public FixedStack512Bytes<short> m_italicAngleStack;
 
         public float m_lineOffset;
         public float m_lineHeight;
@@ -67,7 +66,6 @@ namespace TextMeshDOTS
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
         public int m_characterCount;
 
-        //public void Reset(in TextBaseConfiguration textBaseConfiguration, ref FontMaterialSet fontMaterialSet)
         public void Reset(in TextBaseConfiguration textBaseConfiguration, DynamicBuffer<FontMaterial> fontMaterial)
         {
             m_htmlTag.Clear();
@@ -77,11 +75,25 @@ namespace TextMeshDOTS
             m_sizeStack.Clear();
             m_sizeStack.Add(m_currentFontSize);
 
+            fontFamilyHash = fontMaterial[0].fontBlob.fontAssetRef.familyNameHash;
             m_fontStyleInternal = textBaseConfiguration.fontStyle;
+            m_fontWeightInternal = textBaseConfiguration.fontWeight;
+            m_fontWeightInternalStack.Clear();
+            m_fontWeightInternalStack.Add(textBaseConfiguration.fontWeight);
 
-            m_currentFontMaterialIndex = 0;
+            
             m_fontMaterialIndexStack.Clear();
-            m_fontMaterialIndexStack.Add(0);
+            var fontIndex = TextHelper.GetFontIndex(fontMaterial, fontFamilyHash, textBaseConfiguration.fontWeight, (textBaseConfiguration.fontStyle & FontStyles.Italic) == FontStyles.Italic);
+            if (fontIndex != -1)
+            {
+                m_currentFontMaterialIndex = fontIndex;
+                m_fontMaterialIndexStack.Add(fontIndex);
+            }
+            else
+            {
+                m_currentFontMaterialIndex = 0;
+                m_fontMaterialIndexStack.Add(0);
+            }
 
             m_lineJustification = textBaseConfiguration.lineJustification;
             m_lineJustificationStack.Clear();
@@ -101,9 +113,6 @@ namespace TextMeshDOTS
             m_underlineColorStack.Add(m_htmlColor);
             m_strikethroughColorStack.Clear();
             m_strikethroughColorStack.Add(m_htmlColor);
-
-            m_italicAngle = fontMaterial[0].fontBlob.italicsStyleSlant;
-            m_italicAngleStack.Clear();
 
             m_lineOffset = 0;  // Amount of space between lines (font line spacing + m_linespacing).
             m_lineHeight = float.MinValue;  //TMP_Math.FLOAT_UNSET -->is there a better way to do this?

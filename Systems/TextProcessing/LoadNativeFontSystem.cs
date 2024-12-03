@@ -1,8 +1,11 @@
+using HarfBuzz;
 using System.Collections.Generic;
+using System.IO;
 using TextMeshDOTS.Authoring;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS.TextProcessing
@@ -43,7 +46,7 @@ namespace TextMeshDOTS.TextProcessing
             fontMaterialMap = new NativeHashMap<int, FontMaterial>(256, Allocator.Persistent);
             hbFontAssetRefMap = new NativeHashMap<int, HBFontAssetReference>(256, Allocator.Persistent);
             dynamicFontBlobMap = new NativeHashMap<int, DynamicFontBlobReference>(256, Allocator.Persistent);
-
+            
             //SystemAPI.TryGetSingletonRW<GlyphsInUse>(out RefRW<GlyphsInUse> fontAtlasInfo);
         }
 
@@ -64,7 +67,7 @@ namespace TextMeshDOTS.TextProcessing
             {
                 var entity = entities[i];
                 var fontAssets = EntityManager.GetComponentObject<FontAssetReferences>(entity).value;                   
-                var fontBlobs = EntityManager.GetBuffer<FontBlobReference>(entity).AsNativeArray();
+                var fontBlobs = EntityManager.GetBuffer<FontBlobReference>(entity).ToNativeArray(Allocator.Temp);
 
                 if (fontAssets.Count != fontBlobs.Length)
                     Debug.LogError($"Unexpected: managed und unmanaged font count does not match: {fontAssets.Count} {fontBlobs.Length}");
@@ -125,7 +128,12 @@ namespace TextMeshDOTS.TextProcessing
             var newFontEntity = entityManager.CreateEntity(runtimeFontDataArchetype);
             var usedGlyphs = entityManager.AddBuffer<GlyphsInUse>(newFontEntity);
 
-            var hbFontAssetRef = new HBFontAssetReference(ref fontBlobRef.Value);
+            //To-To: figure out how to get path to system font or embedded asset font at runtime
+            string filePath = null;
+#if UNITY_EDITOR
+            filePath = UnityEditor.AssetDatabase.GUIDToAssetPath(fontAsset.fontAssetCreationEditorSettings.sourceFontFileGUID);
+#endif
+            var hbFontAssetRef = new HBFontAssetReference(ref fontBlobRef.Value, filePath);
             var dynamicFontBlobRef = FontBlobber.CreateDynamicFontData(fontAsset, hbFontAssetRef, usedGlyphs.Reinterpret<uint>());
             var dynamicFontBlobReference = new DynamicFontBlobReference { blob = dynamicFontBlobRef };
             var fontMaterial = new FontMaterial(newFontEntity, fontBlobRef, dynamicFontBlobRef, hbFontAssetRef);

@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Rendering;
 using TextMeshDOTS.Rendering.Authoring;
+using UnityEngine;
 
 namespace TextMeshDOTS.Rendering
 {

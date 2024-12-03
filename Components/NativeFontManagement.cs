@@ -1,4 +1,5 @@
 using HarfBuzz;
+using System;
 using System.Collections.Generic;
 using TextMeshDOTS.Collections;
 using Unity.Collections;
@@ -6,6 +7,7 @@ using Unity.Entities;
 using UnityEngine;
 using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
+using static TreeEditor.TextureAtlas;
 using Font = HarfBuzz.Font;
 
 namespace TextMeshDOTS
@@ -92,18 +94,35 @@ namespace TextMeshDOTS
 
 
     /// <summary> HarfBuzz font pointer and static font data extracted by HarfBuzz</summary>
-    public struct HBFontAssetReference : IComponentData
+    public struct HBFontAssetReference : IComponentData, IEquatable<HBFontAssetReference>
     {
-        public int fontHash;
+        public FixedString128Bytes familyName;
+        public FixedString128Bytes styleName; //this is a composite of TextFontWeight and (regular/italic)
+        public FontAssetRef fontAssetRef;
+
         public Face face;
         public Font font;
-        public Blob blob;      
+        public Blob blob;
 
-        unsafe public HBFontAssetReference(ref FontBlob fontblob)
+        //unsafe public HBFontAssetReference(ref FontBlob fontblob)
+        //{            
+        //    fontHash = fontblob.fontAssetRef;
+        //    blob = new Blob(fontblob.nativeFontFile.GetUnsafePtr(), (uint)fontblob.nativeFontFile.Length, MemoryMode.Readonly);
+        //    face = new Face(blob.ptr, 0);
+        //    font = new Font(face.ptr);
+        //    font.MakeImmutable();
+        //    //Debug.Log($"HBFontAssetReference {fontHash} {fontblob.name} {fontblob.fontHash}");
+
+        //    //Debug.Log($"Loaded? {path} Blob:{nativeBlob.ptr != IntPtr.Zero} (Length:{nativeBlob.Length}) Face:{nativeFace.ptr != IntPtr.Zero} Font:{nativeFont.ptr != IntPtr.Zero}");
+        //    //Debug.Log($"Loaded? {fontblob.name} Blob:{nativeBlob.ptr != IntPtr.Zero} (Length:{nativeBlob.Length}) Face:{nativeFace.ptr != IntPtr.Zero} Font:{nativeFont.ptr != IntPtr.Zero}");
+        //}
+        unsafe public HBFontAssetReference(ref FontBlob fontblob, string fileName)
         {
-            
-            fontHash = fontblob.fontHash;
-            blob = new Blob(fontblob.nativeFontFile.GetUnsafePtr(), (uint)fontblob.nativeFontFile.Length, MemoryMode.Readonly);
+            familyName = fontblob.familyName;
+            styleName = fontblob.styleName;
+            fontAssetRef = fontblob.fontAssetRef;
+
+            blob = new Blob(fileName);
             face = new Face(blob.ptr, 0);
             font = new Font(face.ptr);
             font.MakeImmutable();
@@ -111,7 +130,27 @@ namespace TextMeshDOTS
 
             //Debug.Log($"Loaded? {path} Blob:{nativeBlob.ptr != IntPtr.Zero} (Length:{nativeBlob.Length}) Face:{nativeFace.ptr != IntPtr.Zero} Font:{nativeFont.ptr != IntPtr.Zero}");
             //Debug.Log($"Loaded? {fontblob.name} Blob:{nativeBlob.ptr != IntPtr.Zero} (Length:{nativeBlob.Length}) Face:{nativeFace.ptr != IntPtr.Zero} Font:{nativeFont.ptr != IntPtr.Zero}");
-        }        
+        }
+
+        public override bool Equals(object obj) => obj is HBFontAssetReference other && Equals(other);
+        public bool Equals(HBFontAssetReference other)
+        {
+            return fontAssetRef == other.fontAssetRef;
+        }
+
+        public static bool operator ==(HBFontAssetReference e1, HBFontAssetReference e2)
+        {
+            return e1.fontAssetRef == e2.fontAssetRef;
+        }
+        public static bool operator !=(HBFontAssetReference e1, HBFontAssetReference e2)
+        {
+            return e1.fontAssetRef != e2.fontAssetRef;
+        }
+        public override int GetHashCode()
+        {
+            return fontAssetRef.GetHashCode();
+        }
+
     }
     #endregion
 

@@ -11,7 +11,7 @@ namespace TextMeshDOTS.TextProcessing
     //[RequireMatchingQueriesForUpdate]
     partial class UpdateAtlasSystem : SystemBase
     {
-        EntityQuery m_query, fontAssetQ;
+        EntityQuery m_query;//, fontAssetQ;
         //EntitiesGraphicsSystem hybridRenderer;
         NativeHashSet<uint> glyphs;
         protected override void OnCreate()
@@ -25,10 +25,10 @@ namespace TextMeshDOTS.TextProcessing
                               .WithAll<MissingGlyphs>()
                               .Build();
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<MissingGlyphs>());
-            fontAssetQ = SystemAPI.QueryBuilder()
-                              .WithAll<FontAssetReferences>()
-                              .Build();
-            RequireForUpdate(fontAssetQ);
+            //fontAssetQ = SystemAPI.QueryBuilder()
+            //                  .WithAll<FontAssetReferences>()
+            //                  .Build();
+            //RequireForUpdate(fontAssetQ);
         }
 
         protected override void OnUpdate()

@@ -69,7 +69,10 @@ namespace TextMeshDOTS.TextProcessing
 
                 DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer=default;
                 if (selectorBuffers.Length > 0)
+                {                    
                     m_selectorBuffer = selectorBuffers[indexInChunk];
+                    m_selectorBuffer.Clear();
+                }
 
                 GlyphGeneration.CreateRenderGlyphs(in fontMaterial,
                                                    ref m_selectorBuffer,

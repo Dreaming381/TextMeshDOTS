@@ -26,27 +26,27 @@ namespace TextMeshDOTS.Authoring
             AddComponentObject(entity, new FontAssetReferences { value = authoring.fontAssets });
             AddComponent(entity, new BackEndMesh { value = mesh });
             var fontMaterialRefs = new NativeList<FontMaterialRef>(authoring.fontAssets.Count, Allocator.Temp);
-            
+
             var fontReferences = AddBuffer<FontBlobReference>(entity);
 
             foreach (var fontAsset in authoring.fontAssets)
             {
-                if (fontAsset == null) 
+                if (fontAsset == null)
                     continue;
                 fontAsset.ReadFontAssetDefinition();
-                var fontBlobRef = BakeFontAsset(fontAsset);
+                var fontBlobRef = BakeFontAsset(fontAsset, TextFontWeight.Regular, false);
                 fontReferences.Add(new FontBlobReference { blob = fontBlobRef });
                 fontMaterialRefs.Add(new FontMaterialRef { value = fontAsset.material });
             }
             var fontMaterialRefsBuffer = AddBuffer<FontMaterialRef>(entity);
             fontMaterialRefsBuffer.AddRange(fontMaterialRefs.AsArray());
         }
-        BlobAssetReference<FontBlob> BakeFontAsset(FontAsset fontAsset)
+        BlobAssetReference<FontBlob> BakeFontAsset(FontAsset fontAsset, TextFontWeight textFontWeight, bool isItalic)
         {
             var customHash = new Unity.Entities.Hash128((uint)fontAsset.GetHashCode(), 0, 0, 0);
             if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<FontBlob> blobReference))
             {
-                blobReference = FontBlobber.BakeFontBlob(fontAsset);
+                blobReference = FontBlobber.BakeFontBlob(fontAsset, textFontWeight, isItalic);
 
                 // Register the Blob Asset to the Baker for de-duplication and reverting.
                 AddBlobAssetWithCustomHash<FontBlob>(ref blobReference, customHash);

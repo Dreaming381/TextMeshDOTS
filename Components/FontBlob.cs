@@ -1,7 +1,10 @@
+using System;
 using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
+using UnityEngine;
 using UnityEngine.TextCore;
+using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
 {
@@ -11,12 +14,13 @@ namespace TextMeshDOTS
     /// (e.g. which glyphs are currerently used, position of these glyphs in atlas texture,
     /// texture index in case multiple textures are needed) 
     /// </summary>
-    public struct FontBlob
+    public struct FontBlob : IEquatable<FontBlob>
     {
-        public FixedString128Bytes name;
-        public int fontHash;
-        public BlobArray<byte> nativeFontFile;    //needed by Harfbuzz
-        
+        public FixedString128Bytes familyName;
+        public FixedString128Bytes styleName;
+        public FontAssetRef fontAssetRef;
+        //public BlobArray<byte> nativeFontFile;    //needed by Harfbuzz
+
         public float atlasSamplingPointSize;
         public float atlasWidth;
         public float atlasHeight;
@@ -28,6 +32,25 @@ namespace TextMeshDOTS
         public byte  italicsStyleSlant;
         public float tabWidth;
         public float tabMultiple;
+
+        public override bool Equals(object obj) => obj is FontBlob other && Equals(other);
+        public bool Equals(FontBlob other)
+        {
+            return fontAssetRef == other.fontAssetRef;
+        }
+
+        public static bool operator ==(FontBlob e1, FontBlob e2)
+        {
+            return e1.fontAssetRef == e2.fontAssetRef;
+        }
+        public static bool operator !=(FontBlob e1, FontBlob e2)
+        {
+            return e1.fontAssetRef != e2.fontAssetRef;
+        }
+        public override int GetHashCode()
+        {
+            return fontAssetRef.GetHashCode();
+        }
     }
     /// <summary> dynamic font data from FontAsset (or extracted by HarfBuzz) </summary>
     public struct DynamicFontBlob
@@ -123,5 +146,46 @@ namespace TextMeshDOTS
         public GlyphMetrics glyphMetrics;   //source: UnityFontAsset or Harfbuzz (GlyphExtends)
         public GlyphRect glyphRect;         //source: UnityFontAsset 
         public float glyphScale;            //source: UnityFontAsset. Review why this is needed
+    }
+    public struct FontAssetRef : IEquatable<FontAssetRef>
+    {
+        public int familyNameHash;
+        public TextFontWeight textFontWeight;
+        public bool isItalic;
+
+        public FontAssetRef(int familyNameHash, TextFontWeight textFontWeight, bool isItalic)
+        {
+            this.familyNameHash = familyNameHash;
+            this.textFontWeight = textFontWeight;
+            this.isItalic = isItalic;
+        }
+        public override bool Equals(object obj) => obj is FontAssetRef other && Equals(other);
+
+        public bool Equals(FontAssetRef other)
+        {
+            return familyNameHash == other.familyNameHash && textFontWeight == other.textFontWeight && isItalic == other.isItalic;
+        }
+
+        public static bool operator ==(FontAssetRef e1, FontAssetRef e2)
+        {
+            return e1.familyNameHash == e2.familyNameHash && e1.textFontWeight == e2.textFontWeight && e1.isItalic == e2.isItalic;
+        }
+        public static bool operator !=(FontAssetRef e1, FontAssetRef e2)
+        {
+            return e1.familyNameHash != e2.familyNameHash || e1.textFontWeight != e2.textFontWeight || e1.isItalic != e2.isItalic;
+        }
+        public override int GetHashCode()
+        {
+            //return HashCode.Combine(mapID, scamin, TextureName);
+            int hashCode = 2055808453;
+            hashCode = hashCode * -1521134295 + familyNameHash;
+            hashCode = hashCode * -1521134295 + textFontWeight.GetHashCode();
+            hashCode = hashCode * -1521134295 + isItalic.GetHashCode();
+            return hashCode;
+        }
+        public override string ToString()
+        {
+            return $"FamilyHash {familyNameHash} textFontWeight {textFontWeight} isItalic {isItalic}";
+        }
     }
 }

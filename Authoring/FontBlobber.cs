@@ -2,26 +2,14 @@ using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine.TextCore.Text;
-using UnityEngine;
-using System.IO;
 using HarfBuzz;
-using System;
-
 
 namespace TextMeshDOTS.Authoring
 {
     public static class FontBlobber
     {
-        public static BlobAssetReference<FontBlob> BakeFontBlob(FontAsset fontAsset)
+        public static BlobAssetReference<FontBlob> BakeFontBlob(FontAsset fontAsset, TextFontWeight textFontWeight, bool isItalic)
         {
-            byte[] fontBytes;
-#if UNITY_EDITOR
-            var path = UnityEditor.AssetDatabase.GUIDToAssetPath(fontAsset.fontAssetCreationEditorSettings.sourceFontFileGUID);
-            fontBytes= File.ReadAllBytes(path);
-            //Debug.Log($"Loaded {fontBytes.Length}bytes from {path}");
-#else
-            fontBytes = new byte[0];
-#endif
             var faceInfo = fontAsset.faceInfo;
             fontAsset.material.SetFloat("_WeightNormal", fontAsset.regularStyleWeight);
             fontAsset.material.SetFloat("_WeightBold", fontAsset.boldStyleWeight);
@@ -29,12 +17,11 @@ namespace TextMeshDOTS.Authoring
 
             var          builder             = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot        = ref builder.ConstructRoot<FontBlob>();
-            fontBlobRoot.name = fontAsset.name;
-            fontBlobRoot.fontHash = fontAsset.hashCode;
-            
-            BlobBuilderArray<byte> nativeFontFileBytes = builder.Allocate(ref fontBlobRoot.nativeFontFile, fontBytes.Length);
-            for (int i = 0, length = fontBytes.Length; i < length; i++)
-                nativeFontFileBytes[i]= fontBytes[i];
+
+            //create references to load font data at runtime
+            fontBlobRoot.familyName = fontAsset.faceInfo.familyName;
+            fontBlobRoot.styleName = fontAsset.faceInfo.styleName;
+            fontBlobRoot.fontAssetRef = new FontAssetRef(TextHelper.GetHashCodeCaseInSensitive(faceInfo.familyName), textFontWeight, isItalic);
 
             fontBlobRoot.atlasSamplingPointSize = faceInfo.pointSize;
             fontBlobRoot.atlasWidth = fontAsset.atlasWidth;
@@ -182,6 +169,7 @@ namespace TextMeshDOTS.Authoring
             }
             result.Dispose();
 
-        }        
+        }
+        
     }
 }
