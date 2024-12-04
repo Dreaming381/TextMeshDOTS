@@ -101,7 +101,8 @@ namespace TextMeshDOTS.Authoring
 
 
             var glyphLookupTable = fontAsset.glyphLookupTable;
-            var characterHashMapBuilder = builder.AllocateHashMap(ref fontBlobRoot.glyphs, glyphLookupTable.Count);
+            int count = glyphLookupTable.Count==0 ? 1 : glyphLookupTable.Count;
+            var characterHashMapBuilder = builder.AllocateHashMap(ref fontBlobRoot.glyphs, count);
             foreach (var glyph in glyphLookupTable.Values)
             {
                 usedGlyphs.Add(glyph.index);

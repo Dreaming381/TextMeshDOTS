@@ -125,6 +125,12 @@ namespace TextMeshDOTS
             blob = new Blob(fileName);
             face = new Face(blob.ptr, 0);
             font = new Font(face.ptr);
+
+            //in order to get the same scaled GlyphMetrics as Unity, we could set the scale to atlasSamplingPointSize,
+            //but this would eliminate all units of precision as Harfbuzz works internaly with int
+            //so better to do this correction during glyph generation
+            //font.SetScale((int)fontblob.atlasSamplingPointSize, (int)fontblob.atlasSamplingPointSize); 
+
             font.MakeImmutable();
             //Debug.Log($"HBFontAssetReference {fontHash} {fontblob.name} {fontblob.fontHash}");
 

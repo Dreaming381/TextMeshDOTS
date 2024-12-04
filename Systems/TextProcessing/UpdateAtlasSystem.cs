@@ -1,3 +1,4 @@
+using System.Linq;
 using TextMeshDOTS.Authoring;
 using Unity.Collections;
 using Unity.Entities;
@@ -36,8 +37,8 @@ namespace TextMeshDOTS.TextProcessing
             if (m_query.IsEmpty)
                 return;
 
-            var entities = m_query.ToEntityArray(Allocator.TempJob);
-            var newGlyphBlobs= new NativeList<GlyphBlob>(256, Allocator.TempJob);
+            var entities = m_query.ToEntityArray(Allocator.Persistent);
+            var newGlyphBlobs= new NativeList<GlyphBlob>(256, Allocator.Persistent);
             for (int i = 0, ii = entities.Length; i < ii; i++)
             {
                 var entity= entities[i];
@@ -53,7 +54,8 @@ namespace TextMeshDOTS.TextProcessing
                     
                     var dynamicFontBlobReference = SystemAPI.GetComponent<DynamicFontBlobReference>(entity);
 
-                    for (int j = 0, jj = missingGlyphs.Length; j < jj; j++)
+                    //for (int j = 0, jj = missingGlyphs.Length; j < jj; j++)
+                    for (int j = missingGlyphs.Length -1; j >=0; j--)
                     {
                         var missingGlyph = missingGlyphs[j];
                         if (fontAsset.TryAddGlyphInternal(missingGlyph.glyphID, out Glyph glyph))

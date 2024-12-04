@@ -59,11 +59,10 @@ namespace TextMeshDOTS
             // Unity scales native Opentype metrics in GlyphRect and GlyphMetrics by 
             // (unit * atlasSamplingPointSize / Opentype.xScale)
             // So raw values from Opentype font need to be scaled like that as well.
-            var xNativeToUnity = font.atlasSamplingPointSize / dynamicFont.yScale;
-            var yNativeToUnity = font.atlasSamplingPointSize / dynamicFont.xScale;
+            var scaledDynamicFont = new ScaledDynamicFont(ref dynamicFont, ref font, out float xNativeToUnity, out float yNativeToUnity);
             #endregion
 
-            var scaledDynamicFont = new ScaledDynamicFont(ref dynamicFont, xNativeToUnity, yNativeToUnity);            
+
 
             // Calculate the scale of the font based on selected font size and sampling point size.
             // baseScale is calculated using the font asset assigned to the text object.            
@@ -90,7 +89,7 @@ namespace TextMeshDOTS
                     {
                         dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
                         font = ref fontMaterial[currentTextSpan.fontMaterialIndex].fontBlob;
-                        scaledDynamicFont.Update(ref dynamicFont, xNativeToUnity, yNativeToUnity);
+                        scaledDynamicFont.Update(ref dynamicFont, ref font, out xNativeToUnity, out yNativeToUnity);
                         previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
                     }
                 }
@@ -152,8 +151,9 @@ namespace TextMeshDOTS
                 #region Handle Style Padding
                 float boldSpacingAdjustment = 0;
                 float style_padding = 0;
-                //if bold is requested and fontMaterialIndex > 0, then a dedciated bold font has been found, so no need to simulate 
-                if ((currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && currentTextSpan.fontMaterialIndex == 0) 
+                //if bold is requested current font is not bold (=it has not been found), then simulate bold
+                bool simulateBold = (currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && font.fontAssetRef.textFontWeight != TextFontWeight.Bold;
+                if (simulateBold) 
                 {
                     style_padding = 0;
                     boldSpacingAdjustment = font.boldStyleSpacing;
@@ -232,8 +232,7 @@ namespace TextMeshDOTS
 
                 #region Pack Scale into renderGlyph.scale
                 var scale = currentTextSpan.fontSize;
-                //if bold is requested and fontMaterialIndex > 0, then a dedciated bold font has been found, so no need to simulate 
-                if ((currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && currentTextSpan.fontMaterialIndex == 0)
+                if (simulateBold)
                     scale *= -1;
 
                 renderGlyph.scale = scale;
@@ -242,8 +241,12 @@ namespace TextMeshDOTS
                 // Check if we need to Shear the rectangles for Italic styles
                 #region Handle Italic & Shearing
                 float bottomShear = 0f;
+
+                //if italic is requested current font is not italic (=it has not been found), then simulate italic
+                bool simulateItalic = (currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic && !font.fontAssetRef.isItalic;
+
                 //if italic is requested and fontMaterialIndex > 0, then a dedciated Italic font has been found, so no need to simulate 
-                if ((currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic && currentTextSpan.fontMaterialIndex == 0)
+                if (simulateItalic)
                 {
                     // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
                     float shear_value = font.italicsStyleSlant * 0.01f; 

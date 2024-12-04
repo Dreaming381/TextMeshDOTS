@@ -1,7 +1,6 @@
 using Unity.Burst;
 using Unity.Entities;
 using Unity.Collections;
-using HarfBuzz;
 using Unity.Jobs;
 
 
@@ -35,16 +34,15 @@ namespace TextMeshDOTS.TextProcessing
     [BurstCompile]
     public partial struct CopyMissingGlyphsToFontEntitiesJob : IJobEntity
     {
-        [ReadOnly] public NativeList<FontEntityGlyph> missingGlyphs;
+        [ReadOnly] public NativeList<FontEntityGlyph> newMissingGlyphs;
         public void Execute(Entity entity, ref DynamicBuffer<MissingGlyphs> missingGlyphsBuffer)
         {
-            var tmp = new NativeList<uint>(1024, Allocator.Temp);
-            foreach (var glyph in missingGlyphs)
+            var missingGlyphsBufferAsUint = missingGlyphsBuffer.Reinterpret<uint>();
+            foreach (var glyph in newMissingGlyphs)
             {
-                if (glyph.entity == entity && !tmp.Contains(glyph.glyphID))
-                    tmp.Add(glyph.glyphID);
+                if (glyph.entity == entity && !missingGlyphsBufferAsUint.AsNativeArray().Contains(glyph.glyphID))
+                    missingGlyphsBufferAsUint.Add(glyph.glyphID);
             }
-            missingGlyphsBuffer.Reinterpret<uint>().AddRange(tmp.AsArray());
         }
     }
 }

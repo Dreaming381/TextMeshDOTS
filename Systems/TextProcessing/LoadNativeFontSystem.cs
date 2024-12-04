@@ -144,7 +144,7 @@ namespace TextMeshDOTS.TextProcessing
             entityManager.SetComponentData(newFontEntity, hbFontAssetRef);
             entityManager.SetComponentData(newFontEntity, dynamicFontBlobReference);
 
-            Debug.Log($"Add {fontAsset.name} to FontManager");
+            //Debug.Log($"Add {fontAsset.name} to FontManager");
             fontMaterialMap.Add(fontAsset.hashCode, fontMaterial);
             hbFontAssetRefMap.Add(fontAsset.hashCode, hbFontAssetRef);
             dynamicFontBlobMap.Add(fontAsset.hashCode, dynamicFontBlobReference);

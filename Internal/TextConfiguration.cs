@@ -18,13 +18,13 @@ namespace TextMeshDOTS
         public float m_currentFontSize;
         public FixedStack512Bytes<float> m_sizeStack;
 
-        public int fontFamilyHash;
+        public int m_fontFamilyHash;
+        public FixedStack512Bytes<int> m_fontFamilyHashStack;
         public FontStyles m_fontStyleInternal;
         public TextFontWeight m_fontWeightInternal;
         public FixedStack512Bytes<TextFontWeight> m_fontWeightInternalStack;
 
         public int m_currentFontMaterialIndex;
-        public FixedStack512Bytes<int> m_fontMaterialIndexStack;
 
         public HorizontalAlignmentOptions m_lineJustification;
         public FixedStack512Bytes<HorizontalAlignmentOptions> m_lineJustificationStack;
@@ -75,25 +75,20 @@ namespace TextMeshDOTS
             m_sizeStack.Clear();
             m_sizeStack.Add(m_currentFontSize);
 
-            fontFamilyHash = fontMaterial[0].fontBlob.fontAssetRef.familyNameHash;
+            m_fontFamilyHash = fontMaterial[0].fontBlob.fontAssetRef.familyNameHash;
+            m_fontFamilyHashStack.Clear();
+            m_fontFamilyHashStack.Add(m_fontFamilyHash);
+
             m_fontStyleInternal = textBaseConfiguration.fontStyle;
             m_fontWeightInternal = textBaseConfiguration.fontWeight;
             m_fontWeightInternalStack.Clear();
-            m_fontWeightInternalStack.Add(textBaseConfiguration.fontWeight);
-
+            m_fontWeightInternalStack.Add(m_fontWeightInternal);
             
-            m_fontMaterialIndexStack.Clear();
-            var fontIndex = TextHelper.GetFontIndex(fontMaterial, fontFamilyHash, textBaseConfiguration.fontWeight, (textBaseConfiguration.fontStyle & FontStyles.Italic) == FontStyles.Italic);
+            var fontIndex = TextHelper.GetFontIndex(fontMaterial, m_fontFamilyHash, textBaseConfiguration.fontWeight, (textBaseConfiguration.fontStyle & FontStyles.Italic) == FontStyles.Italic);
             if (fontIndex != -1)
-            {
                 m_currentFontMaterialIndex = fontIndex;
-                m_fontMaterialIndexStack.Add(fontIndex);
-            }
             else
-            {
                 m_currentFontMaterialIndex = 0;
-                m_fontMaterialIndexStack.Add(0);
-            }
 
             m_lineJustification = textBaseConfiguration.lineJustification;
             m_lineJustificationStack.Clear();

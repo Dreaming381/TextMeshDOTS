@@ -1,3 +1,4 @@
+using HarfBuzz;
 using System;
 using TextMeshDOTS.Collections;
 using Unity.Collections;
@@ -111,8 +112,11 @@ namespace TextMeshDOTS
         //public float superScriptEmXOffset;
         public float superScriptEmYOffset;
 
-        public ScaledDynamicFont(ref DynamicFontBlob dynamicFont, float xNativeToUnity, float yNativeToUnity)
+        public ScaledDynamicFont(ref DynamicFontBlob dynamicFont, ref FontBlob fontBlob, out float xNativeToUnity, out float yNativeToUnity)
         {
+            xNativeToUnity = fontBlob.atlasSamplingPointSize / dynamicFont.yScale;
+            yNativeToUnity = fontBlob.atlasSamplingPointSize / dynamicFont.xScale;
+
             ascender = dynamicFont.ascender * xNativeToUnity;
             descender = dynamicFont.descender * xNativeToUnity;
             baseLine = dynamicFont.baseLine * xNativeToUnity;
@@ -125,8 +129,11 @@ namespace TextMeshDOTS
             subScriptEmYOffset = dynamicFont.subScriptEmYOffset * yNativeToUnity;
             superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
         }
-        public void Update(ref DynamicFontBlob dynamicFont, float xNativeToUnity, float yNativeToUnity)
+        public void Update(ref DynamicFontBlob dynamicFont, ref FontBlob fontBlob, out float xNativeToUnity, out float yNativeToUnity)
         {
+            xNativeToUnity = fontBlob.atlasSamplingPointSize / dynamicFont.yScale;
+            yNativeToUnity = fontBlob.atlasSamplingPointSize / dynamicFont.xScale;
+
             ascender = dynamicFont.ascender * xNativeToUnity;
             descender = dynamicFont.descender * xNativeToUnity;
             baseLine = dynamicFont.baseLine * xNativeToUnity;

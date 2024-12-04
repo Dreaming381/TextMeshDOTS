@@ -11,5 +11,10 @@ namespace HarfBuzz
         public int xOffset;
         public int yOffset;
         private uint var1;
+
+        public override string ToString()
+        {
+            return $" {xAdvance} {yAdvance} {xOffset} {yOffset} ";
+        }
     }
 }

@@ -76,7 +76,7 @@ namespace TextMeshDOTS.TextProcessing
 
             state.Dependency = new CopyMissingGlyphsToFontEntitiesJob
             {
-                missingGlyphs= missingGlyphs,
+                newMissingGlyphs= missingGlyphs,
             }.ScheduleParallel(fontEntityQ, state.Dependency);
             missingGlyphs.Dispose(state.Dependency);
         }

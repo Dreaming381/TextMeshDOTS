@@ -15,6 +15,11 @@ namespace TextMeshDOTS
         {
             return font.TryAddGlyphInternal(glyphIndex, out glyph);
         }
+        public static bool TryGetGlyph(this FontAsset font, uint glyphIndex, out Glyph glyph)
+        {
+            return font.glyphLookupTable.TryGetValue(glyphIndex, out glyph);
+        }
+
 
         public static int GetTextFontWeightIndex(TextFontWeight textFontWeight)
         {

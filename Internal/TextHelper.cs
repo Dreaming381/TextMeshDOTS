@@ -13,8 +13,12 @@ namespace TextMeshDOTS
 
             for (int i = 0, lenght = fontMaterial.Length; i < lenght; i++)
             {
+                //Debug.Log($"Testing {fontMaterial[i].fontBlob.familyName} {fontMaterial[i].fontBlob.styleName}");
                 if (fontMaterial[i].fontBlob.fontAssetRef == fontAssetRef)
+                {
+                    //Debug.Log($"Match at index {i}");
                     return i;
+                }
             }
             return -1;
         }
