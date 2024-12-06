@@ -1,3 +1,4 @@
+using HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Entities;
@@ -8,12 +9,13 @@ namespace TextMeshDOTS.TextProcessing
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
-    [UpdateBefore(typeof(ShapeSystem))]
+    [UpdateBefore(typeof(ShapeSystem))]    
     //[DisableAutoCreation]
     public partial struct ExtractTextSegmentsSystem : ISystem
     {
         EntityQuery m_query;
         EntityQuery fontEntityQ;
+        bool m_skipChangeFilter;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -27,23 +29,34 @@ namespace TextMeshDOTS.TextProcessing
                       .Build();
             fontEntityQ = SystemAPI.QueryBuilder()
                   .WithAll<GlyphsInUse>()
-                  .WithAll<HBFontAssetReference>()
                   .WithAll<DynamicFontBlobReference>()
                   .Build();
 
-            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
-            m_query.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
+            //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
+            //m_query.AddChangedVersionFilter(ComponentType.ReadWrite<FontMaterial>());
+            //m_query.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
 
             state.RequireForUpdate(fontEntityQ);
+            m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
         }
 
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            //if (m_query.IsEmpty)
+            //    return;
             //Debug.Log("Extract TextSpans");
-            state.Dependency = new ExtractTextSegmentsJob
+            state.Dependency = new ExtractTextSegmentsChunkJob
             {
+                calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(false),
+                textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(false),
+
+                fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),               
+                calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),                
+                textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
+
+                lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(m_query, state.Dependency);
         }
     }

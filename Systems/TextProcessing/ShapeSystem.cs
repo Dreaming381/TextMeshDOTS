@@ -36,11 +36,10 @@ namespace TextMeshDOTS.TextProcessing
             fontEntityQ = SystemAPI.QueryBuilder()
                               .WithAll<GlyphsInUse>()
                               .WithAll<MissingGlyphs>()
-                              .WithAll<HBFontAssetReference>()
                               .WithAll<DynamicFontBlobReference>()
                               .Build();
 
-            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
+            //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
             //m_query.AddChangedVersionFilter(ComponentType.ReadWrite<FontMaterial>());
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;

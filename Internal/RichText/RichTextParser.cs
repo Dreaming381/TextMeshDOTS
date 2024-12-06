@@ -220,8 +220,7 @@ namespace TextMeshDOTS.RichText
             {
                 float value = 0;
                 int fontIndex = -1;
-                //ref var currentFont = ref fontMaterialSet.GetFontBlob(textConfiguration.m_currentFontMaterialIndex);
-                ref var currentFont = ref fontMaterial[textConfiguration.m_currentFontMaterialIndex].fontBlob;
+                ref var currentFont = ref fontMaterial[textConfiguration.m_currentFontMaterialIndex].dynamicFontBlob;
 
                 switch (firstTagIndentifier.nameHashCode)
                 {
@@ -567,7 +566,7 @@ namespace TextMeshDOTS.RichText
                         fontIndex = TextHelper.GetFontIndex(fontMaterial, desiredFontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
                         if (fontIndex != -1)
                         {
-                            textConfiguration.m_fontFamilyHash = fontMaterial[fontIndex].fontBlob.fontAssetRef.familyNameHash;
+                            textConfiguration.m_fontFamilyHash = fontMaterial[fontIndex].dynamicFontBlob.fontAssetRef.familyNameHash;
                             textConfiguration.m_fontFamilyHashStack.Add(textConfiguration.m_fontFamilyHash);
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
                             return true;

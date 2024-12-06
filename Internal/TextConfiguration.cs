@@ -75,7 +75,7 @@ namespace TextMeshDOTS
             m_sizeStack.Clear();
             m_sizeStack.Add(m_currentFontSize);
 
-            m_fontFamilyHash = fontMaterial[0].fontBlob.fontAssetRef.familyNameHash;
+            m_fontFamilyHash = fontMaterial[0].dynamicFontBlob.fontAssetRef.familyNameHash;
             m_fontFamilyHashStack.Clear();
             m_fontFamilyHashStack.Add(m_fontFamilyHash);
 

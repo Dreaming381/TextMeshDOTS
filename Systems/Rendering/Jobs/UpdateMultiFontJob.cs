@@ -27,7 +27,7 @@ namespace TextMeshDOTS.Rendering
             var entities = chunk.GetNativeArray(entityHandle);
             if (!controlLookup.DidChange(entities[0], lastSystemVersion))
                 return;
-
+            //Debug.Log("Update MultiFont");
             var glyphBuffers = chunk.GetBufferAccessor(ref glyphHandle);
             var selectorBuffers = chunk.GetBufferAccessor(ref selectorHandle);
             var entityBuffers = chunk.GetBufferAccessor(ref additionalEntityHandle);

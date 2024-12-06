@@ -10,7 +10,7 @@ using UnityEngine.TextCore.Text;
 namespace TextMeshDOTS
 {
     /// <summary>
-    /// Purpose of FontBlob is to store immutable data from original OTF or TTF. 
+    /// Purpose of FontBlob is to store reference to desired font (otf, ttf file)
     /// Any kind of dynamic data should be generated during runtime and stored elsewhere
     /// (e.g. which glyphs are currerently used, position of these glyphs in atlas texture,
     /// texture index in case multiple textures are needed) 
@@ -18,28 +18,14 @@ namespace TextMeshDOTS
     public struct FontBlob : IEquatable<FontBlob>
     {
         public FixedString128Bytes familyName;
-        public FixedString128Bytes styleName;
+        public FixedString128Bytes styleName; //this is a composite of TextFontWeight and (regular/italic)
         public FontAssetRef fontAssetRef;
-        //public BlobArray<byte> nativeFontFile;    //needed by Harfbuzz
-
-        public float atlasSamplingPointSize;
-        public float atlasWidth;
-        public float atlasHeight;
-        /// <summary> Padding that is read from material properties </summary>
-        public float materialPadding;
-
-        public float regularStyleSpacing;
-        public float boldStyleSpacing;
-        public byte  italicsStyleSlant;
-        public float tabWidth;
-        public float tabMultiple;
 
         public override bool Equals(object obj) => obj is FontBlob other && Equals(other);
         public bool Equals(FontBlob other)
         {
             return fontAssetRef == other.fontAssetRef;
         }
-
         public static bool operator ==(FontBlob e1, FontBlob e2)
         {
             return e1.fontAssetRef == e2.fontAssetRef;
@@ -56,6 +42,25 @@ namespace TextMeshDOTS
     /// <summary> dynamic font data from FontAsset (or extracted by HarfBuzz) </summary>
     public struct DynamicFontBlob
     {
+        public FixedString128Bytes familyName;
+        public FixedString128Bytes styleName;
+        public FontAssetRef fontAssetRef;
+
+        #region data from Fontasset which is set by user
+        //choose atalas parameter so that number of font glyphs fits! e.g. 60 sampling size and 2048x2048 texture
+        public float atlasSamplingPointSize; 
+        public float atlasWidth;    
+        public float atlasHeight;
+
+        public float materialPadding;//padding read from material properties
+
+        public float regularStyleSpacing;   //default: 0f
+        public float boldStyleSpacing;      //default: 7f
+        public byte italicsStyleSlant;      //default: 35f
+        public float tabWidth;              
+        public float tabMultiple;           //default: 10f
+        #endregion
+
         public BlobHashMap<uint, GlyphBlob> glyphs;
 
         public float ascender; //depends on language and script direction, so risky to do it here. Better move to TextSpan
@@ -112,10 +117,10 @@ namespace TextMeshDOTS
         //public float superScriptEmXOffset;
         public float superScriptEmYOffset;
 
-        public ScaledDynamicFont(ref DynamicFontBlob dynamicFont, ref FontBlob fontBlob, out float xNativeToUnity, out float yNativeToUnity)
+        public ScaledDynamicFont(ref DynamicFontBlob dynamicFont, out float xNativeToUnity, out float yNativeToUnity)
         {
-            xNativeToUnity = fontBlob.atlasSamplingPointSize / dynamicFont.yScale;
-            yNativeToUnity = fontBlob.atlasSamplingPointSize / dynamicFont.xScale;
+            xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.yScale;
+            yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.xScale;
 
             ascender = dynamicFont.ascender * xNativeToUnity;
             descender = dynamicFont.descender * xNativeToUnity;
@@ -129,10 +134,10 @@ namespace TextMeshDOTS
             subScriptEmYOffset = dynamicFont.subScriptEmYOffset * yNativeToUnity;
             superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
         }
-        public void Update(ref DynamicFontBlob dynamicFont, ref FontBlob fontBlob, out float xNativeToUnity, out float yNativeToUnity)
+        public void Update(ref DynamicFontBlob dynamicFont, out float xNativeToUnity, out float yNativeToUnity)
         {
-            xNativeToUnity = fontBlob.atlasSamplingPointSize / dynamicFont.yScale;
-            yNativeToUnity = fontBlob.atlasSamplingPointSize / dynamicFont.xScale;
+            xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.yScale;
+            yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.xScale;
 
             ascender = dynamicFont.ascender * xNativeToUnity;
             descender = dynamicFont.descender * xNativeToUnity;

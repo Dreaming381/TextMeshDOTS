@@ -48,7 +48,6 @@ namespace TextMeshDOTS.Authoring
             var fontMaterialsBuffer = SystemAPI.GetBuffer<FontMaterialRef>(fontBlobReferenceEntity);
             var fontBlobReferences = SystemAPI.GetBuffer<FontBlobReference>(fontBlobReferenceEntity).ToNativeArray(Allocator.Temp);
             var backEndMesh = SystemAPI.GetComponent<BackEndMesh>(fontBlobReferenceEntity);
-            var fontAssetReference = EntityManager.GetComponentObject<FontAssetReferences>(fontBlobReferenceEntity);
 
             //if (!(frameCount == 0 ^ frameCount == 100))
             if (frameCount != 0)
@@ -112,7 +111,6 @@ namespace TextMeshDOTS.Authoring
                         EntityManager.AddBuffer<FontBlobReference>(entity);
                         var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontBlobReference>(entity);
                         fontBlobReferencesBuffer.CopyFrom(fontBlobReferences);
-                        EntityManager.SetComponentData(entity, fontAssetReference);
                         EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor, (y - half) * factor, 0)));
                         EntityManager.SetComponentData(entity, textRenderControl);
                         EntityManager.SetComponentData(entity, materialMeshInfo);
@@ -144,7 +142,6 @@ namespace TextMeshDOTS.Authoring
                         EntityManager.AddBuffer<FontBlobReference>(entity);
                         var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontBlobReference>(entity);
                         fontBlobReferencesBuffer.CopyFrom(fontBlobReferences);
-                        EntityManager.SetComponentData(entity, fontAssetReference);
                         EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor - 1, (y - half) * factor - 1, 0)));
                         EntityManager.SetComponentData(entity, textRenderControl);
                         EntityManager.SetComponentData(entity, materialMeshInfo);

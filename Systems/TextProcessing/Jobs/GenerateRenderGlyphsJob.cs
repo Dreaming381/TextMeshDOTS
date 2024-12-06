@@ -1,11 +1,10 @@
 using TextMeshDOTS.Rendering;
-using TextMeshDOTS;
 using Unity.Burst.Intrinsics;
 using Unity.Burst;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Collections;
 using HarfBuzz;
+using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -38,7 +37,7 @@ namespace TextMeshDOTS.TextProcessing
                   chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
                   chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
-
+            //Debug.Log("Generate Glyphs");
             var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);

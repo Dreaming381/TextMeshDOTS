@@ -10,6 +10,7 @@ using Buffer = HarfBuzz.Buffer;
 using UnityEngine.TextCore.Text;
 using TextMeshDOTS.Rendering;
 using System.Linq;
+using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -34,9 +35,10 @@ namespace TextMeshDOTS.TextProcessing
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             if (!(chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref textSpanHandle, lastSystemVersion)))
+                  chunk.DidChange(ref textSpanHandle, lastSystemVersion) ||
+                  chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
-
+            //Debug.Log("Shape");
             var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
@@ -102,7 +104,7 @@ namespace TextMeshDOTS.TextProcessing
                     var length = (int)(endIndex - startIndex);
                     buffer.AddText(text, startIndex, length);
 
-                    var font = fontMaterial[currentFont].hbFont;
+                    var font = fontMaterial[currentFont].font;
                     var fontEntity = fontMaterial[currentFont].fontEntity;
                     var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
                     //marker.Begin();

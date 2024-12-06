@@ -24,9 +24,6 @@ namespace TextMeshDOTS
                                                        in TextBaseConfiguration baseConfiguration)
         {
             renderGlyphs.Clear();
-
-
-            // Initialize textConfiguration which stores all fields that are modified by RichText Tags
             int textSpanCounter = 0;
             var currentTextSpan = textSpans[textSpanCounter++];
             if (calliBytes.IsEmpty)
@@ -52,21 +49,19 @@ namespace TextMeshDOTS
 
             var previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
             ref DynamicFontBlob dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
-            ref FontBlob font = ref fontMaterial[currentTextSpan.fontMaterialIndex].fontBlob;
             var m_hasMultipleFonts = fontMaterial.Length > 1;
 
             #region AtlasFactor
             // Unity scales native Opentype metrics in GlyphRect and GlyphMetrics by 
             // (unit * atlasSamplingPointSize / Opentype.xScale)
             // So raw values from Opentype font need to be scaled like that as well.
-            var scaledDynamicFont = new ScaledDynamicFont(ref dynamicFont, ref font, out float xNativeToUnity, out float yNativeToUnity);
+            var scaledDynamicFont = new ScaledDynamicFont(ref dynamicFont, out float xNativeToUnity, out float yNativeToUnity);
             #endregion
-
 
 
             // Calculate the scale of the font based on selected font size and sampling point size.
             // baseScale is calculated using the font asset assigned to the text object.            
-            float baseScale = baseConfiguration.fontSize / font.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+            float baseScale = baseConfiguration.fontSize / dynamicFont.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
             float currentElementScale = baseScale;
             float currentEmScale = baseConfiguration.fontSize * 0.01f * (baseConfiguration.isOrthographic ? 1 : 0.1f);
 
@@ -88,8 +83,7 @@ namespace TextMeshDOTS
                     if (previousFontMaterialIndex != currentTextSpan.fontMaterialIndex)
                     {
                         dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
-                        font = ref fontMaterial[currentTextSpan.fontMaterialIndex].fontBlob;
-                        scaledDynamicFont.Update(ref dynamicFont, ref font, out xNativeToUnity, out yNativeToUnity);
+                        scaledDynamicFont.Update(ref dynamicFont, out xNativeToUnity, out yNativeToUnity);
                         previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
                     }
                 }
@@ -110,7 +104,7 @@ namespace TextMeshDOTS
                 var glyphWidth = currentGlyphMetrics.width;
                 var glyphScale = glyphBlob.glyphScale;
 
-                float adjustedScale = currentTextSpan.fontSize / font.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                float adjustedScale = currentTextSpan.fontSize / dynamicFont.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
                 float elementAscentLine = scaledDynamicFont.ascender;
                 float elementDescentLine = scaledDynamicFont.descender;
 
@@ -151,12 +145,12 @@ namespace TextMeshDOTS
                 #region Handle Style Padding
                 float boldSpacingAdjustment = 0;
                 float style_padding = 0;
-                //if bold is requested current font is not bold (=it has not been found), then simulate bold
-                bool simulateBold = (currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && font.fontAssetRef.textFontWeight != TextFontWeight.Bold;
+                //if bold is requested and current font is not bold (=it has not been found), then simulate bold
+                bool simulateBold = (currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && dynamicFont.fontAssetRef.textFontWeight != TextFontWeight.Bold;
                 if (simulateBold) 
                 {
                     style_padding = 0;
-                    boldSpacingAdjustment = font.boldStyleSpacing;
+                    boldSpacingAdjustment = dynamicFont.boldStyleSpacing;
                 }
                 #endregion Handle Style Padding
 
@@ -169,15 +163,15 @@ namespace TextMeshDOTS
                 float2 topLeft;
                 var xOffset = glyphOTF.xOffset * xNativeToUnity;
                 var yOffset = glyphOTF.yOffset * yNativeToUnity;
-                topLeft.x = xAdvance + (x_bearing * currentTextSpan.fxScale - font.materialPadding - style_padding + xOffset) * currentElementScale;
-                topLeft.y = baselineOffset + (y_bearing + font.materialPadding + yOffset) * currentElementScale + m_BaselineOffset;
+                topLeft.x = xAdvance + (x_bearing * currentTextSpan.fxScale - dynamicFont.materialPadding - style_padding + xOffset) * currentElementScale;
+                topLeft.y = baselineOffset + (y_bearing + dynamicFont.materialPadding + yOffset) * currentElementScale + m_BaselineOffset;
 
                 float2 bottomLeft;
                 bottomLeft.x = topLeft.x;
-                bottomLeft.y = topLeft.y - ((glyphHeight + font.materialPadding * 2) * currentElementScale);
+                bottomLeft.y = topLeft.y - ((glyphHeight + dynamicFont.materialPadding * 2) * currentElementScale);
 
                 float2 topRight;
-                topRight.x = bottomLeft.x + (glyphWidth * currentTextSpan.fxScale + font.materialPadding * 2 + style_padding * 2) * currentElementScale;
+                topRight.x = bottomLeft.x + (glyphWidth * currentTextSpan.fxScale + dynamicFont.materialPadding * 2 + style_padding * 2) * currentElementScale;
                 topRight.y = topLeft.y;
 
                 // Bottom right unused
@@ -186,13 +180,13 @@ namespace TextMeshDOTS
                 #region Setup UVA
                 var glyphRect = glyphBlob.glyphRect;
                 float2 blUVA, tlUVA, trUVA, brUVA;
-                blUVA.x = (glyphRect.x - font.materialPadding - style_padding) / font.atlasWidth;
-                blUVA.y = (glyphRect.y - font.materialPadding - style_padding) / font.atlasHeight;
+                blUVA.x = (glyphRect.x - dynamicFont.materialPadding - style_padding) / dynamicFont.atlasWidth;
+                blUVA.y = (glyphRect.y - dynamicFont.materialPadding - style_padding) / dynamicFont.atlasHeight;
 
                 tlUVA.x = blUVA.x;
-                tlUVA.y = (glyphRect.y + font.materialPadding + style_padding + glyphRect.height) / font.atlasHeight;
+                tlUVA.y = (glyphRect.y + dynamicFont.materialPadding + style_padding + glyphRect.height) / dynamicFont.atlasHeight;
 
-                trUVA.x = (glyphRect.x + font.materialPadding + style_padding + glyphRect.width) / font.atlasWidth;
+                trUVA.x = (glyphRect.x + dynamicFont.materialPadding + style_padding + glyphRect.width) / dynamicFont.atlasWidth;
                 trUVA.y = tlUVA.y;
 
                 brUVA.x = trUVA.x;
@@ -241,19 +235,16 @@ namespace TextMeshDOTS
                 // Check if we need to Shear the rectangles for Italic styles
                 #region Handle Italic & Shearing
                 float bottomShear = 0f;
-
-                //if italic is requested current font is not italic (=it has not been found), then simulate italic
-                bool simulateItalic = (currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic && !font.fontAssetRef.isItalic;
-
-                //if italic is requested and fontMaterialIndex > 0, then a dedciated Italic font has been found, so no need to simulate 
+                //if italic is requested and current font is not italic (=it has not been found), then simulate italic
+                bool simulateItalic = (currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic && !dynamicFont.fontAssetRef.isItalic;
                 if (simulateItalic)
                 {
                     // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
-                    float shear_value = font.italicsStyleSlant * 0.01f; 
+                    float shear_value = dynamicFont.italicsStyleSlant * 0.01f; 
                     float midPoint = ((scaledDynamicFont.capHeight - (scaledDynamicFont.baseLine + m_BaselineOffset)) / 2) * fontScaleMultiplier;
-                    float topShear = shear_value * ((y_bearing + font.materialPadding + style_padding - midPoint) * currentElementScale);
+                    float topShear = shear_value * ((y_bearing + dynamicFont.materialPadding + style_padding - midPoint) * currentElementScale);
                     bottomShear = shear_value *
-                                        ((y_bearing - glyphHeight - font.materialPadding - style_padding - midPoint) *
+                                        ((y_bearing - glyphHeight - dynamicFont.materialPadding - style_padding - midPoint) *
                                          currentElementScale);
 
                     topLeft.x += topShear;
@@ -319,21 +310,21 @@ namespace TextMeshDOTS
                 #region XAdvance, Tabulation & Stops
                 if (currentRune.value == 9)
                 {
-                    float tabSize = font.tabWidth * font.tabMultiple * currentElementScale;
+                    float tabSize = dynamicFont.tabWidth * dynamicFont.tabMultiple * currentElementScale;
                     float tabs = math.ceil(xAdvance / tabSize) * tabSize;
                     xAdvance = tabs > xAdvance ? tabs : xAdvance + tabSize;
                 }
                 else if (currentTextSpan.monoSpacing != 0)
                 {
                     float monoAdjustment = currentTextSpan.monoSpacing - monoAdvance;
-                    xAdvance += (monoAdjustment + ((font.regularStyleSpacing) * currentEmScale) + currentTextSpan.cSpacing);
+                    xAdvance += (monoAdjustment + ((dynamicFont.regularStyleSpacing) * currentEmScale) + currentTextSpan.cSpacing);
                     if (isWhiteSpace || currentRune.value == 0x200B)
                         xAdvance += baseConfiguration.wordSpacing * currentEmScale;
                 }
                 else
                 {
                     xAdvance += (glyphOTF.xAdvance * xNativeToUnity * currentTextSpan.fxScale) * currentElementScale +
-                                (font.regularStyleSpacing + boldSpacingAdjustment) * currentEmScale + currentTextSpan.cSpacing;
+                                (dynamicFont.regularStyleSpacing + boldSpacingAdjustment) * currentEmScale + currentTextSpan.cSpacing;
 
                     if (isWhiteSpace || currentRune.value == 0x200B)
                         xAdvance += baseConfiguration.wordSpacing * currentEmScale;

@@ -14,6 +14,7 @@ namespace TextMeshDOTS.Rendering
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
+    [UpdateAfter(typeof(TextRenderingUpdateSystem))]
     //[DisableAutoCreation]
     public partial class TextRenderingDispatchSystem : SystemBase
     {
@@ -115,7 +116,7 @@ namespace TextMeshDOTS.Rendering
 
             if (m_changedGlyphsQuery.IsEmpty)
                 return;
-
+            
             try
             {
                 Dependency = UpdateRenderGlyphChunks(Dependency, textStats);

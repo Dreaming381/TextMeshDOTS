@@ -3,6 +3,7 @@ using Unity.Collections;
 using Unity.Entities;
 using UnityEngine.TextCore.Text;
 using HarfBuzz;
+using UnityEngine.TextCore;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -10,31 +11,17 @@ namespace TextMeshDOTS.Authoring
     {
         public static BlobAssetReference<FontBlob> BakeFontBlob(FontAsset fontAsset, TextFontWeight textFontWeight, bool isItalic)
         {
-            var faceInfo = fontAsset.faceInfo;
             fontAsset.material.SetFloat("_WeightNormal", fontAsset.regularStyleWeight);
             fontAsset.material.SetFloat("_WeightBold", fontAsset.boldStyleWeight);
-            float materialPadding = fontAsset.material.GetPaddingForText(false, false);
 
             var          builder             = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot        = ref builder.ConstructRoot<FontBlob>();
 
             //create references to load font data at runtime
-            fontBlobRoot.familyName = fontAsset.faceInfo.familyName;
-            fontBlobRoot.styleName = fontAsset.faceInfo.styleName;
+            var faceInfo = fontAsset.faceInfo;
+            fontBlobRoot.familyName = faceInfo.familyName;
+            fontBlobRoot.styleName = faceInfo.styleName;
             fontBlobRoot.fontAssetRef = new FontAssetRef(TextHelper.GetHashCodeCaseInSensitive(faceInfo.familyName), textFontWeight, isItalic);
-
-            fontBlobRoot.atlasSamplingPointSize = faceInfo.pointSize;
-            fontBlobRoot.atlasWidth = fontAsset.atlasWidth;
-            fontBlobRoot.atlasHeight = fontAsset.atlasHeight;
-            fontBlobRoot.materialPadding = materialPadding;
-
-            //as the following data are "invented" by Unity FontEngine vs coming from original font,
-            //review if we store  this here or just "invent it" ourself in StaticFontData
-            fontBlobRoot.regularStyleSpacing = fontAsset.regularStyleSpacing;
-            fontBlobRoot.boldStyleSpacing    = fontAsset.boldStyleSpacing;
-            fontBlobRoot.italicsStyleSlant   = fontAsset.italicStyleSlant;
-            fontBlobRoot.tabWidth = faceInfo.tabWidth;
-            fontBlobRoot.tabMultiple = fontAsset.tabMultiple;
 
             var result = builder.CreateBlobAssetReference<FontBlob>(Allocator.Persistent);
             builder.Dispose();
@@ -42,14 +29,9 @@ namespace TextMeshDOTS.Authoring
             return result;
         }
 
-        //Review if BlobAssetReference<DynamicFontData> can live inside Baking/BlobAsset store,
-        //including patching of data during runtime? or just manage Construction, patching, disposing in FontManager System?
-        public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(FontAsset fontAsset, HBFontAssetReference hbFontAsset, DynamicBuffer<uint> usedGlyphs)
+        public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(FontAsset fontAsset, Face face,Font font, FontAssetRef fontAssetRef, DynamicBuffer<uint> usedGlyphs)
         {
-            //first, get data
-            var face = hbFontAsset.face;
-            var font = hbFontAsset.font;
-
+            //first, get all native data
             font.GetBaseline(Direction.LeftToRight, Script.Latin, out int baseLine);
             font.GetFontExtentsForDirection(Direction.LeftToRight, out FontExtents fontExtents);
 
@@ -69,11 +51,25 @@ namespace TextMeshDOTS.Authoring
             font.GetMetrics(MetricTag.SuperScriptEmXOffset, out int superScriptEmXOffset);
             font.GetMetrics(MetricTag.SuperScriptEmYOffset, out int superScriptEmYOffset);
 
-            
-
             var builder = new BlobBuilder(Allocator.Temp);
             ref DynamicFontBlob fontBlobRoot = ref builder.ConstructRoot<DynamicFontBlob>();
 
+            //second, copy over some data from FontAsset which is set by user and does not come from native font
+            fontBlobRoot.familyName = fontAsset.faceInfo.familyName;
+            fontBlobRoot.styleName = fontAsset.faceInfo.styleName;
+            fontBlobRoot.fontAssetRef = fontAssetRef;
+
+            fontBlobRoot.atlasSamplingPointSize = fontAsset.faceInfo.pointSize;
+            fontBlobRoot.atlasWidth = fontAsset.atlasWidth;
+            fontBlobRoot.atlasHeight = fontAsset.atlasHeight;
+            fontBlobRoot.materialPadding = fontAsset.material.GetPaddingForText(false, false); 
+            fontBlobRoot.regularStyleSpacing = fontAsset.regularStyleSpacing;
+            fontBlobRoot.boldStyleSpacing = fontAsset.boldStyleSpacing;
+            fontBlobRoot.italicsStyleSlant = fontAsset.italicStyleSlant;
+            fontBlobRoot.tabWidth = fontAsset.faceInfo.tabWidth;
+            fontBlobRoot.tabMultiple = fontAsset.tabMultiple;
+
+            //third, copy over native font data
             fontBlobRoot.ascender = fontExtents.ascender;
             fontBlobRoot.descender = fontExtents.descender;
             fontBlobRoot.baseLine = baseLine;
@@ -99,7 +95,6 @@ namespace TextMeshDOTS.Authoring
             fontBlobRoot.superScriptEmXOffset = superScriptEmXOffset;
             fontBlobRoot.superScriptEmYOffset = superScriptEmYOffset;
 
-
             var glyphLookupTable = fontAsset.glyphLookupTable;
             int count = glyphLookupTable.Count==0 ? 1 : glyphLookupTable.Count;
             var characterHashMapBuilder = builder.AllocateHashMap(ref fontBlobRoot.glyphs, count);
@@ -119,6 +114,20 @@ namespace TextMeshDOTS.Authoring
             ref var dynamicFontData = ref dynamicFontDataReference.Value;
             var builder = new BlobBuilder(Allocator.Temp);
             ref DynamicFontBlob fontBlobRoot = ref builder.ConstructRoot<DynamicFontBlob>();
+
+            fontBlobRoot.familyName = dynamicFontData.familyName;
+            fontBlobRoot.styleName = dynamicFontData.styleName;
+            fontBlobRoot.fontAssetRef = dynamicFontData.fontAssetRef;
+
+            fontBlobRoot.atlasSamplingPointSize = dynamicFontData.atlasSamplingPointSize;
+            fontBlobRoot.atlasWidth = dynamicFontData.atlasWidth;
+            fontBlobRoot.atlasHeight = dynamicFontData.atlasHeight;
+            fontBlobRoot.materialPadding = dynamicFontData.materialPadding;
+            fontBlobRoot.regularStyleSpacing = dynamicFontData.regularStyleSpacing;
+            fontBlobRoot.boldStyleSpacing = dynamicFontData.boldStyleSpacing;
+            fontBlobRoot.italicsStyleSlant = dynamicFontData.italicsStyleSlant;
+            fontBlobRoot.tabWidth = dynamicFontData.tabWidth;
+            fontBlobRoot.tabMultiple = dynamicFontData.tabMultiple;
 
             fontBlobRoot.ascender = dynamicFontData.ascender;
             fontBlobRoot.descender = dynamicFontData.descender;

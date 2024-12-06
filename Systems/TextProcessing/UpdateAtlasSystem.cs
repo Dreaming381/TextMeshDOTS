@@ -19,9 +19,8 @@ namespace TextMeshDOTS.TextProcessing
         {
             //hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
             m_query = SystemAPI.QueryBuilder()
-                              .WithAll<FontAssetReference>()  
-                              .WithAll<HBFontAssetReference>()
                               .WithAll<DynamicFontBlobReference>()
+                              .WithAll<FontBlobReference>()
                               .WithAll<GlyphsInUse>()
                               .WithAll<MissingGlyphs>()
                               .Build();
@@ -46,13 +45,11 @@ namespace TextMeshDOTS.TextProcessing
 
                 if (missingGlyphs.Length > 0)
                 {
-                    var fontAsset = EntityManager.GetComponentObject<FontAssetReference>(entity).value;
-                    Debug.Log($"Update Atlas for {fontAsset.name}");
-
                     var glyphsInUse = SystemAPI.GetBuffer<GlyphsInUse>(entity);
-                    var hbFontAssetReference = SystemAPI.GetComponent<HBFontAssetReference>(entity);
-                    
                     var dynamicFontBlobReference = SystemAPI.GetComponent<DynamicFontBlobReference>(entity);
+                    var fontBlobReference = SystemAPI.GetBuffer<FontBlobReference>(entity);
+                    var fontAsset = fontBlobReference[0].fontAsset.Value;
+                    Debug.Log($"Update Atlas for {fontAsset.name}");
 
                     //for (int j = 0, jj = missingGlyphs.Length; j < jj; j++)
                     for (int j = missingGlyphs.Length -1; j >=0; j--)

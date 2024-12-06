@@ -23,7 +23,6 @@ namespace TextMeshDOTS.Authoring
             var entity = GetEntity(TransformUsageFlags.None);
             var mesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
 
-            AddComponentObject(entity, new FontAssetReferences { value = authoring.fontAssets });
             AddComponent(entity, new BackEndMesh { value = mesh });
             var fontMaterialRefs = new NativeList<FontMaterialRef>(authoring.fontAssets.Count, Allocator.Temp);
 
@@ -35,7 +34,7 @@ namespace TextMeshDOTS.Authoring
                     continue;
                 fontAsset.ReadFontAssetDefinition();
                 var fontBlobRef = BakeFontAsset(fontAsset, TextFontWeight.Regular, false);
-                fontReferences.Add(new FontBlobReference { blob = fontBlobRef });
+                fontReferences.Add(new FontBlobReference { fontBlob = fontBlobRef, fontAsset = fontAsset });
                 fontMaterialRefs.Add(new FontMaterialRef { value = fontAsset.material });
             }
             var fontMaterialRefsBuffer = AddBuffer<FontMaterialRef>(entity);
