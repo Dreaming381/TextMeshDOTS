@@ -7,7 +7,7 @@ using Font = HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
-    #region Baking Components to reference Font on each TextRenderer
+    #region Baking Components
     /// <summary> Reference to raw otf and ttf font data</summary>
     [InternalBufferCapacity(1)]
     public struct FontBlobReference : IBufferElementData
@@ -18,7 +18,7 @@ namespace TextMeshDOTS
     #endregion
 
 
-    #region Runtime Components NOT stored on TextRenderer but rather on dedicated FontEntity
+    #region Runtime Components
     /// <summary> HarfBuzz font pointer and static font data extracted by HarfBuzz</summary>
     [InternalBufferCapacity(1)]
     public unsafe struct FontMaterial : IBufferElementData

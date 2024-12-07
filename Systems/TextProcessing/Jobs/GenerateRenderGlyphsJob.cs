@@ -37,6 +37,7 @@ namespace TextMeshDOTS.TextProcessing
                   chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
                   chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
+
             //Debug.Log("Generate Glyphs");
             var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
@@ -67,7 +68,8 @@ namespace TextMeshDOTS.TextProcessing
                 m_glyphMappingWriter.StartWriter(glyphMappingMasks.Length > 0 ? glyphMappingMasks[indexInChunk].mask : default);
 
                 DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer=default;
-                if (selectorBuffers.Length > 0)
+                bool multiFont = selectorBuffers.Length > 0;
+                if (multiFont)
                 {                    
                     m_selectorBuffer = selectorBuffers[indexInChunk];
                     m_selectorBuffer.Clear();
@@ -80,7 +82,8 @@ namespace TextMeshDOTS.TextProcessing
                                                    in calliBytes,
                                                    in glyphOTFs,
                                                    in textSpans,
-                                                   in textBaseConfiguration);
+                                                   in textBaseConfiguration,
+                                                   multiFont);
 
                 if (glyphMappingBuffers.Length > 0)
                 {

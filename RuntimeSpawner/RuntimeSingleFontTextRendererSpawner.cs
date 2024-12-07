@@ -10,6 +10,7 @@ using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -66,6 +67,8 @@ namespace TextMeshDOTS.Authoring
             {
                 fontSize = 12,
                 color = (Color32)Color.blue,
+                fontStyle = FontStyles.Normal,
+                fontWeight = TextFontWeight.Regular,
                 maxLineWidth = 3,
                 lineJustification = HorizontalAlignmentOptions.Left,
                 verticalAlignment = VerticalAlignmentOptions.TopBase,

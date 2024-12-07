@@ -38,6 +38,7 @@ namespace TextMeshDOTS.TextProcessing
                   chunk.DidChange(ref textSpanHandle, lastSystemVersion) ||
                   chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
+
             //Debug.Log("Shape");
             var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
@@ -46,17 +47,10 @@ namespace TextMeshDOTS.TextProcessing
 
             //var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
             var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
+            var latinLTR = new SegmentProperties(Direction.LeftToRight, Script.Latin, language);
+            var buffer = new Buffer(true);
+            var features = new NativeList<Feature>(16, Allocator.Temp);
 
-            var buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
-            //buffer.ClusterLevel = ClusterLevel.Characters;
-            //var segmentProperties = new SegmentProperties();
-            //unsafe
-            //{
-            //    buffer.GetSegmentProperties(&segmentProperties);
-            //}
-            //Debug.Log(props.script);
-            //Debug.Log(props.direction);
-            //Debug.Log($"{buffer.Language.ToString()}");
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
                 var textSpans = textSpanBuffers[indexInChunk];
@@ -69,12 +63,12 @@ namespace TextMeshDOTS.TextProcessing
                 var calliBytes = calliBytesBuffers[indexInChunk];
 
                 glyphOTFs.Clear();
-                var text = calliBytes.Reinterpret<byte>();                
+                var text = calliBytes.Reinterpret<byte>();
 
-                var features = new NativeList<Feature>(16, Allocator.Temp);
-                for(int i  = 0, length= textSpans.Length; i < length; i++) 
+                
+                for (int i = 0, length = textSpans.Length; i < length; i++)
                 {
-                    var textSpan = textSpans[i];                    
+                    var textSpan = textSpans[i];
                     if ((textSpan.fontStyle & FontStyles.SmallCaps) == FontStyles.SmallCaps)
                         features.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, textSpan.startIndex, textSpan.endIndex));
                     if ((textSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
@@ -87,8 +81,7 @@ namespace TextMeshDOTS.TextProcessing
                 int cur = 0;
                 var currentSpan = textSpans[cur];
                 uint startIndex;
-                uint endIndex;                
-
+                uint endIndex;
                 do
                 {
                     startIndex = currentSpan.startIndex;
@@ -103,6 +96,8 @@ namespace TextMeshDOTS.TextProcessing
 
                     var length = (int)(endIndex - startIndex);
                     buffer.AddText(text, startIndex, length);
+                    buffer.SetSegmentProperties(latinLTR);
+
 
                     var font = fontMaterial[currentFont].font;
                     var fontEntity = fontMaterial[currentFont].fontEntity;
@@ -110,9 +105,8 @@ namespace TextMeshDOTS.TextProcessing
                     //marker.Begin();
                     unsafe
                     {
-                        //HB.hb_shape(HBfont.ptr, buffer.ptr, IntPtr.Zero, 0);
-                        HB.hb_shape(font.ptr, buffer.ptr, features.Length > 0 ? (IntPtr)features.GetUnsafePtr() : IntPtr.Zero, (uint)features.Length);
-                        //HB.hb_shape(font.ptr, buffer.ptr, (IntPtr)features.GetUnsafePtr(), (uint)features.Length);
+                        var featurePointer = features.Length > 0 ? (IntPtr)features.GetUnsafePtr() : IntPtr.Zero;
+                        HB.hb_shape(font.ptr, buffer.ptr, featurePointer, (uint)features.Length);
                     }
                     //marker.End();
 
@@ -136,14 +130,9 @@ namespace TextMeshDOTS.TextProcessing
                             missingGlyphs.AddNoResize(new FontEntityGlyph { entity = fontEntity, glyphID = codepoint });
                     }
                     buffer.ClearContent();
-                    //unsafe
-                    //{
-                    //    buffer.SetSegmentProperties(&segmentProperties);
-                    //}
-                    buffer.Language = language;
-                    buffer.Script = Script.Latin;
-                    buffer.Direction = Direction.LeftToRight;
+                    features.Clear();
                 } while (cur < textSpans.Length);
+                features.Clear();
             }
             buffer.Dispose();
         }

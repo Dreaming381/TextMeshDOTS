@@ -21,13 +21,13 @@ namespace TextMeshDOTS.Authoring
         [TextArea(5, 10)]
         public string text;
 
-        public float                      fontSize            = 12f;
-        public bool                       wordWrap            = true;
-        public float                      maxLineWidth        = float.MaxValue;
+        public float fontSize = 12f;
+        public bool wordWrap = true;
+        public float maxLineWidth = float.MaxValue;
         public HorizontalAlignmentOptions horizontalAlignment = HorizontalAlignmentOptions.Left;
-        public VerticalAlignmentOptions   verticalAlignment   = VerticalAlignmentOptions.TopAscent;
-        public bool                       isOrthographic      = false;
-        public FontStyles                 fontStyle           = FontStyles.Normal;
+        public VerticalAlignmentOptions verticalAlignment = VerticalAlignmentOptions.TopAscent;
+        public bool isOrthographic = false;
+        public FontStyles fontStyle = FontStyles.Normal;
         [Tooltip("Additional word spacing in font units where a value of 1 equals 1/100em.")]
         public float wordSpacing = 0;
         [Tooltip("Additional line spacing in font units where a value of 1 equals 1/100em.")]
@@ -46,6 +46,8 @@ namespace TextMeshDOTS.Authoring
         public override void Bake(TextRendererAuthoring authoring)
         {
             var fontAsset = authoring.fontAssets[0];
+            DependsOn(fontAsset);
+            DependsOn(fontAsset.material);
             if (authoring.fontAssets == null || authoring.fontAssets.Count == 0 || fontAsset == null)
                 return;
 
@@ -71,11 +73,11 @@ namespace TextMeshDOTS.Authoring
             AddComponent<TextShaderIndex>(entity);
 
             var additionalEntities = new NativeList<Entity>(16, Allocator.Temp);
-            var fontBlobReferences = new NativeList<FontBlobReference>(16, Allocator.Temp);            
+            var fontBlobReferences = new NativeList<FontBlobReference>(16, Allocator.Temp);
 
             //add Regular FontWeight
             var fontBlobRef = BakeFontAsset(fontAsset, TextFontWeight.Regular, false);
-            fontBlobReferences.Add(new FontBlobReference { fontBlob = fontBlobRef , fontAsset = fontAsset});
+            fontBlobReferences.Add(new FontBlobReference { fontBlob = fontBlobRef, fontAsset = fontAsset });
             //add Regular FontWeight - Italic
             var fontWeightPair = fontAsset.fontWeightTable[TextCoreExtensions.GetTextFontWeightIndex(TextFontWeight.Regular)];
             if (fontWeightPair.italicTypeface != null)
@@ -83,7 +85,7 @@ namespace TextMeshDOTS.Authoring
 
             //add additional FontWeights. Bold is pretty much always needed and should always be set by user.
             //Consider to parse the entire fontAsset.fontWeightTable instead of only Bold
-            //also consider this creates a lot of entities that are posisbly not needed / not rendered.
+            //also consider this creates a lot of entities that are possibly not needed / not rendered.
             //-->disable MaterialMeshInfo for all non used entities once this is clear after parsing TextSpans?
             AddFontWeightPair(TextFontWeight.Bold, entity, fontAsset, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
 
@@ -93,9 +95,11 @@ namespace TextMeshDOTS.Authoring
                 for (int i = 1, length = authoring.fontAssets.Count; i < length; i++)
                 {
                     fontAsset = authoring.fontAssets[i];
+                    if (fontAsset == null)
+                        continue;
                     AddAdditionalFontEntity(entity, fontAsset, TextFontWeight.Regular, false, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
                     AddFontWeightPair(TextFontWeight.Regular, entity, fontAsset, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer); //for regular FontWeight, this call will just add italic
-                    AddFontWeightPair(TextFontWeight.Bold, entity, fontAsset, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer); 
+                    AddFontWeightPair(TextFontWeight.Bold, entity, fontAsset, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
                 }
             }
             var fontReferencesBuffer = AddBuffer<FontBlobReference>(entity);
@@ -113,19 +117,19 @@ namespace TextMeshDOTS.Authoring
             AddBuffer<TextSpan>(entity);
             AddBuffer<GlyphOTF>(entity);
             AddBuffer<CalliByte>(entity);
-            var calliByteRaw = AddBuffer<CalliByteRaw>(entity);            
+            var calliByteRaw = AddBuffer<CalliByteRaw>(entity);
             var calliString = new CalliString(calliByteRaw);
             calliString.Append(authoring.text);
             AddComponent(entity, new TextBaseConfiguration
             {
-                fontSize          = authoring.fontSize,
-                color             = authoring.color,
-                maxLineWidth      = math.select(float.MaxValue, authoring.maxLineWidth, authoring.wordWrap),
+                fontSize = authoring.fontSize,
+                color = authoring.color,
+                maxLineWidth = math.select(float.MaxValue, authoring.maxLineWidth, authoring.wordWrap),
                 lineJustification = authoring.horizontalAlignment,
                 verticalAlignment = authoring.verticalAlignment,
-                isOrthographic    = authoring.isOrthographic,
-                fontStyle         = authoring.fontStyle,
-                fontWeight = (authoring.fontStyle & FontStyles.Bold)==FontStyles.Bold ? TextFontWeight.Bold : TextFontWeight.Regular,
+                isOrthographic = authoring.isOrthographic,
+                fontStyle = authoring.fontStyle,
+                fontWeight = (authoring.fontStyle & FontStyles.Bold) == FontStyles.Bold ? TextFontWeight.Bold : TextFontWeight.Regular,
                 wordSpacing = authoring.wordSpacing,
                 lineSpacing = authoring.lineSpacing,
                 paragraphSpacing = authoring.paragraphSpacing,
@@ -143,7 +147,7 @@ namespace TextMeshDOTS.Authoring
                 // Register the Blob Asset to the Baker for de-duplication and reverting.
                 AddBlobAssetWithCustomHash<FontBlob>(ref blobReference, customHash);
             }
-            return blobReference;        
+            return blobReference;
         }
         void AddEntityGraphicsComponents(Entity entity, FontAsset fontAsset, Mesh backEndMesh)
         {
@@ -161,7 +165,7 @@ namespace TextMeshDOTS.Authoring
                 },
                 LightProbeUsage = LightProbeUsage.Off,
             };
-            this.BakeMeshAndMaterial(entity, renderMeshDescription, backEndMesh, fontAsset.material);            
+            this.BakeMeshAndMaterial(entity, renderMeshDescription, backEndMesh, fontAsset.material);
         }
 
         void AddFontWeightPair(TextFontWeight textFontWeight, Entity mainEntity, FontAsset mainFontAsset,
@@ -179,15 +183,16 @@ namespace TextMeshDOTS.Authoring
             if (fontWeightPair.italicTypeface != null)
                 AddAdditionalFontEntity(mainEntity, fontWeightPair.italicTypeface, textFontWeight, true, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
         }
-        void AddAdditionalFontEntity(Entity entity, 
-            FontAsset fontAsset, 
-            TextFontWeight textFontWeight, 
-            bool isItalic, 
-            NativeList<FontBlobReference> fontBlobReferences, 
-            NativeList<Entity> additionalEntities, 
-            Mesh backEndMesh, 
+        void AddAdditionalFontEntity(Entity entity,
+            FontAsset fontAsset,
+            TextFontWeight textFontWeight,
+            bool isItalic,
+            NativeList<FontBlobReference> fontBlobReferences,
+            NativeList<Entity> additionalEntities,
+            Mesh backEndMesh,
             MeshRenderer meshRenderer)
-        {           
+        {
+            DependsOn(fontAsset.material);
             var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
             fontAsset.ReadFontAssetDefinition();
 
@@ -198,7 +203,7 @@ namespace TextMeshDOTS.Authoring
             additionalEntities.Add(newEntity);
 
             AddComponent<TextMaterialMaskShaderIndex>(newEntity);
-            AddBuffer<RenderGlyphMask>(newEntity);            
+            AddBuffer<RenderGlyphMask>(newEntity);
 
             //add all components MeshRendererBaker would add to a single rendered entity 
             AddEntityGraphicsComponents(newEntity, fontAsset, backEndMesh);

@@ -17,6 +17,10 @@ namespace HarfBuzz
             HB.hb_buffer_set_script(ptr, script);
             HB.hb_buffer_set_language(ptr, language);
         }
+        public Buffer(bool dummyProperty)
+        {
+            ptr = HB.hb_buffer_create();
+        }
         public Direction Direction {
             get { return HB.hb_buffer_get_direction(ptr); }
             set { HB.hb_buffer_set_direction(ptr, value); } 
@@ -53,13 +57,13 @@ namespace HarfBuzz
             set => HB.hb_buffer_set_cluster_level(ptr, value);
         }
 
-        public void GetSegmentProperties(SegmentProperties* segmentProperties)
+        public void GetSegmentProperties(out SegmentProperties segmentProperties)
         {
-            HB.hb_buffer_get_segment_properties(ptr, segmentProperties);
+            HB.hb_buffer_get_segment_properties(ptr, out segmentProperties);
         }
-        public void SetSegmentProperties(SegmentProperties* segmentProperties)
+        public void SetSegmentProperties(SegmentProperties segmentProperties)
         {
-            HB.hb_buffer_set_segment_properties(ptr, segmentProperties);
+            HB.hb_buffer_set_segment_properties(ptr, ref segmentProperties);
         }
 
         public uint Length => HB.hb_buffer_get_length(ptr);
@@ -143,5 +147,15 @@ namespace HarfBuzz
         ///*< private >*/
         //void* reserved1;
         //void* reserved2;
+        public SegmentProperties(Direction direction, Script script, Language language)
+        {
+            this.direction = direction;
+            this.script = script;
+            this.language = language;
+        }
+        public override string ToString()
+        {
+            return $"Direction: {direction} Script: {script} Language: {language}";
+        }
     }
 }

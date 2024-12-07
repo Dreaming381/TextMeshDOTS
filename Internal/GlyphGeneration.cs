@@ -21,7 +21,8 @@ namespace TextMeshDOTS
                                                        in DynamicBuffer<CalliByte> calliBytes,
                                                        in DynamicBuffer<GlyphOTF> glyphOTFs,
                                                        in DynamicBuffer<TextSpan> textSpans,
-                                                       in TextBaseConfiguration baseConfiguration)
+                                                       in TextBaseConfiguration baseConfiguration,
+                                                       bool multiFont)
         {
             renderGlyphs.Clear();
             int textSpanCounter = 0;
@@ -49,7 +50,6 @@ namespace TextMeshDOTS
 
             var previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
             ref DynamicFontBlob dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
-            var m_hasMultipleFonts = fontMaterial.Length > 1;
 
             #region AtlasFactor
             // Unity scales native Opentype metrics in GlyphRect and GlyphMetrics by 
@@ -271,7 +271,7 @@ namespace TextMeshDOTS
                 if (Hint.Likely(currentRune.value != 10)) //do not render LF 
                 {
                     renderGlyphs.Add(renderGlyph);
-                    if (m_hasMultipleFonts)
+                    if (multiFont)
                         m_selectorBuffer.Add(new FontMaterialSelectorForGlyph { fontMaterialIndex = (byte)currentTextSpan.fontMaterialIndex });
 
                     mappingWriter.AddCharNoTags(characterCount - 1, true);

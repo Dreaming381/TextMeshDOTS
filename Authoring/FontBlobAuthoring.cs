@@ -1,4 +1,3 @@
-using HarfBuzz;
 using System.Collections.Generic;
 using TextMeshDOTS.Rendering.Authoring;
 using Unity.Collections;
@@ -24,21 +23,49 @@ namespace TextMeshDOTS.Authoring
             var mesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
 
             AddComponent(entity, new BackEndMesh { value = mesh });
-            var fontMaterialRefs = new NativeList<FontMaterialRef>(authoring.fontAssets.Count, Allocator.Temp);
+            var fontMaterialRefs = new NativeList<FontMaterialRef>(16, Allocator.Temp);
+            var fontBlobReferences = new NativeList<FontBlobReference>(16, Allocator.Temp);
 
-            var fontReferences = AddBuffer<FontBlobReference>(entity);
-
-            foreach (var fontAsset in authoring.fontAssets)
+            for (int i = 0, length = authoring.fontAssets.Count; i < length; i++)
             {
-                if (fontAsset == null)
+                var mainFontAsset = authoring.fontAssets[i];
+                if (mainFontAsset == null)
                     continue;
-                fontAsset.ReadFontAssetDefinition();
-                var fontBlobRef = BakeFontAsset(fontAsset, TextFontWeight.Regular, false);
-                fontReferences.Add(new FontBlobReference { fontBlob = fontBlobRef, fontAsset = fontAsset });
-                fontMaterialRefs.Add(new FontMaterialRef { value = fontAsset.material });
+                mainFontAsset.ReadFontAssetDefinition();
+
+                // add fontWeight
+                var fontBlobRef = BakeFontAsset(mainFontAsset, TextFontWeight.Regular, false);
+                fontBlobReferences.Add(new FontBlobReference { fontBlob = fontBlobRef, fontAsset = mainFontAsset });
+                fontMaterialRefs.Add(new FontMaterialRef { value = mainFontAsset.material });
+
+                //add fontWeight italic
+                AddFontWeightPair(TextFontWeight.Regular, mainFontAsset, fontBlobReferences, fontMaterialRefs); //for regular FontWeight, this call will just add italic
+                AddFontWeightPair(TextFontWeight.Bold, mainFontAsset, fontBlobReferences, fontMaterialRefs);
             }
+            var fontReferencesBuffer = AddBuffer<FontBlobReference>(entity);
+            fontReferencesBuffer.AddRange(fontBlobReferences.AsArray());
             var fontMaterialRefsBuffer = AddBuffer<FontMaterialRef>(entity);
             fontMaterialRefsBuffer.AddRange(fontMaterialRefs.AsArray());
+        }
+
+        void AddFontWeightPair(TextFontWeight textFontWeight, FontAsset mainFontAsset, NativeList<FontBlobReference> fontBlobReferences, NativeList<FontMaterialRef> fontMaterialRefs)
+        {
+            var fontWeightPair = mainFontAsset.fontWeightTable[TextCoreExtensions.GetTextFontWeightIndex(textFontWeight)];
+            //add fontWeight 
+            if (fontWeightPair.regularTypeface != null)
+            {
+                var fontBlobRef = BakeFontAsset(fontWeightPair.regularTypeface, textFontWeight, false);
+                fontBlobReferences.Add(new FontBlobReference { fontBlob = fontBlobRef, fontAsset = fontWeightPair.regularTypeface });
+                fontMaterialRefs.Add(new FontMaterialRef { value = fontWeightPair.regularTypeface.material });
+            }
+
+            //add fontWeight italic
+            if (fontWeightPair.italicTypeface != null)
+            {
+                var fontBlobRef = BakeFontAsset(fontWeightPair.italicTypeface, textFontWeight, true);
+                fontBlobReferences.Add(new FontBlobReference { fontBlob = fontBlobRef, fontAsset = fontWeightPair.italicTypeface });
+                fontMaterialRefs.Add(new FontMaterialRef { value = fontWeightPair.italicTypeface.material });
+            }
         }
         BlobAssetReference<FontBlob> BakeFontAsset(FontAsset fontAsset, TextFontWeight textFontWeight, bool isItalic)
         {

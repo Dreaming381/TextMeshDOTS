@@ -31,6 +31,7 @@ namespace TextMeshDOTS.TextProcessing
                   chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
                   chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
+
             //Debug.Log("Extract TextSegments");
             var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);

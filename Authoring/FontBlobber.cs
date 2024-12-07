@@ -4,6 +4,8 @@ using Unity.Entities;
 using UnityEngine.TextCore.Text;
 using HarfBuzz;
 using UnityEngine.TextCore;
+using UnityEngine;
+using Font = HarfBuzz.Font;
 
 namespace TextMeshDOTS.Authoring
 {

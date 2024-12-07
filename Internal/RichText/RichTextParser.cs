@@ -1,8 +1,8 @@
+using UnityEngine;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
-using UnityEngine;
 using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS.RichText
@@ -227,14 +227,11 @@ namespace TextMeshDOTS.RichText
                     case 98:  // <b>
                     case 66:  // <B>
                         textConfiguration.m_fontStyleInternal |= FontStyles.Bold;
-                        textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;
+                        textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;                       
                         textConfiguration.m_fontWeightInternalStack.Add(textConfiguration.m_fontWeightInternal);
                         fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
                         if (fontIndex != -1)
-                        {
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
-                            //textConfiguration.m_fontMaterialIndexStack.Add(fontIndex);
-                        }
 
                         return true;
                     case 427:  // </b>
@@ -244,7 +241,6 @@ namespace TextMeshDOTS.RichText
                         fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
                         if (fontIndex != -1)
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
-                        //textConfiguration.m_currentFontMaterialIndex = textConfiguration.m_fontMaterialIndexStack.RemoveExceptRoot();
                         return true;
                     case 105:  // <i>
                     case 73:  // <I>
@@ -253,10 +249,7 @@ namespace TextMeshDOTS.RichText
                         //switch font in case italic has a dedicated font
                         fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, true);
                         if (fontIndex != -1)
-                        {
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
-                            //textConfiguration.m_fontMaterialIndexStack.Add(fontIndex);
-                        }
 
                         return true;
                     case 434:  // </i>
@@ -265,7 +258,7 @@ namespace TextMeshDOTS.RichText
                         fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, false);
                         if (fontIndex != -1)
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
-                        //textConfiguration.m_currentFontMaterialIndex = textConfiguration.m_fontMaterialIndexStack.RemoveExceptRoot();
+
                         return true;
                     case 115:  // <s>
                     case 83:  // <S>
@@ -575,7 +568,6 @@ namespace TextMeshDOTS.RichText
                     case 154158:  // </font>
                     case 141358:  // </FONT>
                         {
-                            //textConfiguration.m_currentFontMaterialIndex = textConfiguration.m_fontMaterialIndexStack.RemoveExceptRoot();
                             textConfiguration.m_fontFamilyHash = textConfiguration.m_fontFamilyHashStack.RemoveExceptRoot();
                             fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
                             if (fontIndex != -1)

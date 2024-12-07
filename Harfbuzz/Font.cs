@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 
 
@@ -32,6 +33,23 @@ namespace HarfBuzz
         //{
         //    HB.hb_font_set_ptem(ptr, ptem);
         //}
+        public void GetPPEM(out uint x_ppem, out uint y_ppem)
+        {
+            HB.hb_font_get_ppem(ptr, out x_ppem, out y_ppem);
+        }
+        public float Get_PTEM()
+        {
+            return HB.hb_font_get_ptem(ptr);
+        }
+
+        public void GetSyntheticBold(out float x_embolden, out float y_embolden, out bool in_place)
+        {
+            HB.hb_font_get_synthetic_bold(ptr, out x_embolden, out y_embolden, out in_place);
+        }
+        public float GetSynthesticSlant()
+        {
+            return HB.hb_font_get_synthetic_slant(ptr);
+        }
         public void GetScale(out int x_scale, out int y_scale)
         {
             HB.hb_font_get_scale(ptr, out x_scale, out y_scale);

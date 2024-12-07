@@ -65,6 +65,12 @@ namespace HarfBuzz
 
         #region font
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern float hb_font_get_synthetic_slant(IntPtr font);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_font_get_synthetic_bold(IntPtr font, out float x_embolden, out float y_embolden, [MarshalAs(UnmanagedType.I1)] out bool in_place);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_font_make_immutable(IntPtr font);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
@@ -113,10 +119,10 @@ namespace HarfBuzz
         #region buffer
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern void hb_buffer_set_segment_properties(IntPtr buffer, SegmentProperties *props);
+        internal static extern void hb_buffer_set_segment_properties(IntPtr buffer, ref SegmentProperties props);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern void hb_buffer_get_segment_properties(IntPtr buffer, SegmentProperties *props);
+        internal static extern void hb_buffer_get_segment_properties(IntPtr buffer, out SegmentProperties props);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_buffer_clear_contents(IntPtr buffer);
@@ -201,6 +207,5 @@ namespace HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_ot_tag_to_language(uint tag);
-
     }
 }
