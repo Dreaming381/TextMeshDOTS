@@ -1,9 +1,10 @@
+using HarfBuzz.SDF;
 using System;
 using System.Runtime.InteropServices;
+using UnityEngine.UI;
 
 namespace HarfBuzz
 {
-
     public static unsafe class HB
     {
         public static uint HB_TAG(char c1, char c2, char c3, char c4)
@@ -13,6 +14,26 @@ namespace HarfBuzz
 
         private const string HarfBuzz = "libharfbuzz-0.dll";
         private const CallingConvention CallConvention = CallingConvention.Cdecl;
+
+        #region draw
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr hb_draw_funcs_create();
+
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void hb_draw_funcs_destroy(IntPtr dfuncs);
+
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void hb_draw_funcs_set_move_to_func(IntPtr dfuncs, MoveToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void hb_draw_funcs_set_line_to_func(IntPtr dfuncs, MoveToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void hb_draw_funcs_set_quadratic_to_func(IntPtr dfuncs, QuadraticToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void hb_draw_funcs_set_cubic_to_func(IntPtr dfuncs, CubicToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void hb_font_draw_glyph(IntPtr font, uint glyph, IntPtr dfuncs, ref BezierData draw_data);
+        #endregion
 
         #region blob
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
