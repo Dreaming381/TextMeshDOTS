@@ -1,3 +1,4 @@
+using Codice.Client.BaseCommands;
 using System;
 using System.Runtime.InteropServices;
 using Unity.Entities;
@@ -12,6 +13,10 @@ namespace HarfBuzz
         public int y_bearing;
         public int width;
         public int height;
+        public override string ToString()
+        {
+            return $"x_bearing {x_bearing} y_bearing {y_bearing} {width} {height}";
+        }
     }
 }
 

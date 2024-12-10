@@ -1,5 +1,6 @@
 using System.IO;
 using Unity.Collections;
+using Unity.Mathematics;
 
 namespace HarfBuzz.SDF
 {
@@ -37,6 +38,30 @@ namespace HarfBuzz.SDF
                 writer.WriteLine($"{minDistances[i]}");
             }
             writer.WriteLine();
+            writer.Close();
+        }
+        public static void WriteGlyphOutlineToFile(string path, BezierData bezierData)
+        {
+            var edges = bezierData.edges;
+            var contourIDs= bezierData.contourIDs;
+            if (contourIDs.Length < 2 || edges.Length == 0)
+                return;
+
+            StreamWriter writer = new StreamWriter(path, false);
+            SDFEdge edge;
+            for (int contourID = 0, end= contourIDs.Length - 1; contourID < end; contourID++) //for each contour
+            {
+                int startID = contourIDs[contourID];
+                int nextStartID = contourIDs[contourID + 1];
+                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
+                {
+                    edge = edges[edgeID];
+                    writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y},");
+                }
+                edge = edges[nextStartID - 1];
+                writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y},");                
+                writer.WriteLine();
+            }
             writer.Close();
         }
     }

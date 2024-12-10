@@ -140,11 +140,11 @@ namespace HarfBuzz.SDF
             switch (edge.edge_type)
             {
                 case SDFEdgeType.LINE:
-                    Debug.Log($"Line Not implemented");
+                    Debug.Log($"LINE Not implemented");
                     //success = GetMinDistanceCubic(edge, point, out signedDistance);
                     break;
-                case SDFEdgeType.CONIC:
-                    Debug.Log($"CONIC Not implemented");
+                case SDFEdgeType.QUADRATIC:
+                    Debug.Log($"QUADRATIC Not implemented");
                     //success = GetMinDistanceCubic(edge, point, out signedDistance);
                     break;
                 case SDFEdgeType.CUBIC:               

@@ -1,7 +1,9 @@
+using Codice.Client.BaseCommands;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.TextCore;
 
 namespace HarfBuzz.SDF
 {
@@ -11,15 +13,17 @@ namespace HarfBuzz.SDF
 
         public const float CORNER_CHECK_EPSILON = 32 / (1 << 16); //The epsilon distance  used for corner
 
-        public static bool SDFGenerateSubDivision(NativeList<SDFEdge> edge_list, int spread, NativeArray<byte> buffer, int width, int rows)
+        public static bool SDFGenerateSubDivision(ref BezierData bezierData, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
             var success = true;
-            var new_edges = new NativeList<SDFEdge>(edge_list.Length, Allocator.Temp);
-            success = SplitSDFShape(edge_list, new_edges);
-            success = SDFGenerateBoundingBox(new_edges, spread, buffer, width, rows);
+            if (bezierData.contourIDs.Length < 2 || bezierData.edges.Length == 0)
+                return false;
+            //var new_edges = new NativeList<SDFEdge>(edge_list.Length, Allocator.Temp);
+            //success = SplitSDFShape(edge_list, new_edges);
+            success = SDFGenerateBoundingBox(ref bezierData, spread, buffer, glyphRect, atlasWidth, atlasHeight);
             return success;
         }
-        public static bool SDFGenerate(NativeList<SDFEdge> shape, float spread, ref NativeArray<byte> buffer, int width, int rows)
+        public static bool SDFGenerate(NativeList<SDFEdge> shape, float spread, NativeArray<byte> buffer, int width, int rows)
         {
             bool flip_y = true;
             SDFOrientation orientation = SDFOrientation.TRUETYPE;
@@ -106,38 +110,48 @@ namespace HarfBuzz.SDF
             return true;
         }
 
-        static bool SplitSDFShape(NativeList<SDFEdge> edge_list, NativeList<SDFEdge> new_edges)
+        static bool SplitSDFShape(ref BezierData bezierData, NativeList<SDFEdge> new_edges)
         {
+            var edges = bezierData.edges;
+            var contourIDs = bezierData.contourIDs;
+
             bool success = true;
-            /* for each edge */
-            for (int i = 0, length = edge_list.Length; i < length; i++)
+            SDFEdge edge;
+            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
-                var edge = edge_list[i];
-
-                switch (edge.edge_type)
+                int startID = contourIDs[contourID];
+                int nextStartID = contourIDs[contourID + 1];
+                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
-                    case SDFEdgeType.LINE:
-                    case SDFEdgeType.CONIC:
-                    case SDFEdgeType.CUBIC:
-                        edge.edge_type = SDFEdgeType.LINE;
-                        new_edges.Add(edge);
-                        break;
+                    edge = edges[edgeID];
+                    switch (edge.edge_type)
+                    {
+                        case SDFEdgeType.LINE:
+                        case SDFEdgeType.QUADRATIC:
+                        case SDFEdgeType.CUBIC:
+                            edge.edge_type = SDFEdgeType.LINE;
+                            new_edges.Add(edge);
+                            break;
 
-                    default:
-                        break;
-                        //error = FT_THROW(Invalid_Argument);
+                        default:
+                            break;
+                            //error = FT_THROW(Invalid_Argument);
+                    }
                 }
             }
             return success;
         }
-        static bool SDFGenerateBoundingBox(NativeList<SDFEdge> edge_list, int spread, NativeArray<byte> buffer, int width, int rows)
+        static bool SDFGenerateBoundingBox(ref BezierData bezierData, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
+            var edges = bezierData.edges;
+            var contourIDs = bezierData.contourIDs;
+
             bool flip_y = true;
             SDFOrientation orientation = SDFOrientation.TRUETYPE;
             bool flip_sign = true;
             int overloadSign = 0;
             float sp_sq;   /* `spread` [* `spread`] as a 16.16 fixed value */
-            var dists = new NativeArray<SignedDistance>(width * rows, Allocator.Temp);
+            var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
 
             if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
                 return false;
@@ -149,81 +163,84 @@ namespace HarfBuzz.SDF
 
             int maxIndex = int.MinValue;
             int minIndex = int.MaxValue;
-            /* loop over all edges */
-            for (int i = 0, length = edge_list.Length; i < length; i++)
+            var rectX = glyphRect.x;
+            var rectY = glyphRect.y;
+            var rectWidth = glyphRect.width;
+            var rectHeight = glyphRect.height;
+
+            SDFEdge edge;
+            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
-                var edge = edge_list[i];
-                Rect cbox;
-                int x, y;
-
-
-                /* get the control box and increase it by `spread' */
-                cbox = GetControlBox(edge);
-
-                cbox.xMin = cbox.xMin - spread;
-                cbox.xMax = cbox.xMax + spread;
-                cbox.yMin = cbox.yMin - spread;
-                cbox.yMax = cbox.yMax + spread;
-
-                //Debug.Log($"x {cbox.x} y {cbox.y} width {cbox.width} height {cbox.height}");
-
-                /* now loop over the pixels in the control box. */
-                for (y = (int)cbox.yMin; y < cbox.yMax; y++)
+                int startID = contourIDs[contourID];
+                int nextStartID = contourIDs[contourID + 1];
+                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
-                    for (x = (int)cbox.xMin; x < cbox.xMax; x++)
+                    edge = edges[edgeID];
+                    BBox cbox;
+
+                    /* get the control box and increase it by `spread' */
+                    cbox = GetControlBox(edge);
+                    //cbox = GetBBox(edge);
+                    cbox.Expand(spread);
+
+                    /* now loop over the pixels in the control box. */
+                    for (int y = (int)cbox.min.y, yEnd= (int)cbox.max.y; y < yEnd; y++)
                     {
-                        float2 grid_point;
-                        SignedDistance dist = max_sdf;
-                        int index = 0;
-                        float diff = 0;
-
-                        if (x < 0 || x >= width)
-                            continue;
-                        if (y < 0 || y >= rows)
-                            continue;
-
-                        grid_point.x = x;
-                        grid_point.y = y;
-
-                        /* This `grid_point` is at the corner, but we */
-                        /* use the center of the pixel.               */
-                        grid_point.x += 1f / 2f;
-                        grid_point.y += 1f / 2f;
-                        SDFEdgeGetMinDistance(edge, grid_point, ref dist);
-
-                        if (orientation == SDFOrientation.FILL_LEFT)
-                            dist.sign = -dist.sign;
-
-                        /* ignore if the distance is greater than spread;       */
-                        /* otherwise it creates artifacts due to the wrong sign */
-                        if (dist.distance > sp_sq)
-                            continue;
-
-                        /* take the square root of the distance if required */
-                        if (SDFCommon.USE_SQUARED_DISTANCES)
-                            dist.distance = math.sqrt(dist.distance);
-
-                        if (flip_y)
-                            index = y * width + x;
-                        else
-                            index = (rows - y - 1) * width + x;
-
-                        if (index < minIndex)
-                            minIndex = index;
-                        if (index > maxIndex)
-                            maxIndex = index;
-
-                        /* check whether the pixel is set or not */
-                        if (Equals(dists[index].sign, 0))
-                            dists[index] = dist;
-                        else
+                        for (int x = (int)cbox.min.x, xEnd = (int)cbox.max.x; x < xEnd; x++)
                         {
-                            diff = math.abs(dists[index].distance - dist.distance);
+                            float2 grid_point;
+                            SignedDistance dist = max_sdf;
+                            int index = 0;
+                            float diff = 0;
 
-                            if (diff <= CORNER_CHECK_EPSILON)
-                                dists[index] = ResolveCorner(dists[index], dist);
-                            else if (dists[index].distance > dist.distance)
+                            if (x < 0 || x >= rectWidth)
+                                continue;
+                            if (y < 0 || y >= rectHeight)
+                                continue;
+
+                            grid_point.x = x;
+                            grid_point.y = y;
+
+                            /* This `grid_point` is at the corner, but we */
+                            /* use the center of the pixel.               */
+                            grid_point.x += 1f / 2f;
+                            grid_point.y += 1f / 2f;
+                            SDFEdgeGetMinDistance(edge, grid_point, ref dist);
+
+                            if (orientation == SDFOrientation.FILL_LEFT)
+                                dist.sign = -dist.sign;
+
+                            /* ignore if the distance is greater than spread;       */
+                            /* otherwise it creates artifacts due to the wrong sign */
+                            if (dist.distance > sp_sq)
+                                continue;
+
+                            /* take the square root of the distance if required */
+                            if (SDFCommon.USE_SQUARED_DISTANCES)
+                                dist.distance = math.sqrt(dist.distance);
+
+                            if (flip_y)
+                                index = y * rectWidth + x;
+                            else
+                                index = (rectHeight - y - 1) * rectWidth + x;
+
+                            if (index < minIndex)
+                                minIndex = index;
+                            if (index > maxIndex)
+                                maxIndex = index;
+
+                            /* check whether the pixel is set or not */
+                            if (Equals(dists[index].sign, 0))
                                 dists[index] = dist;
+                            else
+                            {
+                                diff = math.abs(dists[index].distance - dist.distance);
+
+                                if (diff <= CORNER_CHECK_EPSILON)
+                                    dists[index] = ResolveCorner(dists[index], dist);
+                                else if (dists[index].distance > dist.distance)
+                                    dists[index] = dist;
+                            }
                         }
                     }
                 }
@@ -232,23 +249,22 @@ namespace HarfBuzz.SDF
             /* final pass */
             //var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
             int outsideSign = -1;
-            for (var j = 0; j < rows; j++)
+            for (int row = 0; row < rectHeight; row++)
             {
                 /* We assume the starting pixel of each row is outside. */
                 int current_sign = outsideSign;
-                int index;
-
 
                 if (overloadSign != 0)
                     current_sign = overloadSign < 0 ? -1 : 1;
 
-                for (int i = 0; i < width; i++)
+                for (int column = 0; column < rectWidth; column++)
                 {
-                    index = j * width + i;
+                    var sourceIndex = rectWidth * row + column;
+                    var targetIndex = (atlasWidth * (row + rectY)) + (column + rectX);
 
                     /* if the pixel is not set                     */
                     /* its shortest distance is more than `spread` */
-                    var dist = dists[index];
+                    var dist = dists[sourceIndex];
                     if (Equals(dist.sign, 0))
                     {
                         dist.sign = outsideSign;
@@ -262,11 +278,11 @@ namespace HarfBuzz.SDF
 
                     /* flip sign if required */
                     dist.distance *= flip_sign ? -current_sign : current_sign;
-                    dists[index] = dist;
+                    dists[sourceIndex] = dist;
 
                     /* concatenate to appropriate format */
                     //buffer[index] = map_fixed_to_sdf(dist.distance, spread);
-                    buffer[index] = (byte)((dist.distance + spread) * 24);
+                    buffer[targetIndex] = (byte)((dist.distance + spread) * 24);
                     //minDistances[index] = ((dist.distance + spread) * 24);
                     //buffer[index] = (byte)dist.distance;
                     //minDistances[index] = dist.distance;
@@ -275,46 +291,35 @@ namespace HarfBuzz.SDF
             //SDFCommon.WriteMinDistancesToFile("DistancesSubDivide.txt", minDistances);
             return true;
         }
-        static Rect GetControlBox(SDFEdge edge)
+        
+        static BBox GetControlBox(SDFEdge edge)
         {
-            Rect cbox = new Rect(0, 0, 0, 0);
+            BBox cbox = BBox.Empty;
             bool is_set = false;
 
 
             switch (edge.edge_type)
             {
                 case SDFEdgeType.CUBIC:
-                    cbox.xMin = edge.control2.x;
-                    cbox.xMax = edge.control2.x;
-                    cbox.yMin = edge.control2.y;
-                    cbox.yMax = edge.control2.y;
+                    cbox.min = edge.control2;
+                    cbox.max = edge.control2;
 
                     is_set = true;
-                    goto case SDFEdgeType.CONIC;
+                    goto case SDFEdgeType.QUADRATIC;
 
-                case SDFEdgeType.CONIC:
+                case SDFEdgeType.QUADRATIC:
                     if (is_set)
                     {
-                        cbox.xMin = edge.control1.x < cbox.xMin
-                                    ? edge.control1.x
-                                    : cbox.xMin;
-                        cbox.xMax = edge.control1.x > cbox.xMax
-                                    ? edge.control1.x
-                                    : cbox.xMax;
+                        cbox.min.x = edge.control1.x < cbox.min.x ? edge.control1.x : cbox.min.x;
+                        cbox.min.y = edge.control1.y < cbox.min.y ? edge.control1.y : cbox.min.y;
 
-                        cbox.yMin = edge.control1.y < cbox.yMin
-                                    ? edge.control1.y
-                                    : cbox.yMin;
-                        cbox.yMax = edge.control1.y > cbox.yMax
-                                    ? edge.control1.y
-                                    : cbox.yMax;
+                        cbox.max.x = edge.control1.x > cbox.max.x ? edge.control1.x : cbox.max.x;                        
+                        cbox.max.y = edge.control1.y > cbox.max.y ? edge.control1.y : cbox.max.y;
                     }
                     else
                     {
-                        cbox.xMin = edge.control1.x;
-                        cbox.xMax = edge.control1.x;
-                        cbox.yMin = edge.control1.y;
-                        cbox.yMax = edge.control1.y;
+                        cbox.min = edge.control1;
+                        cbox.max = edge.control1;
 
                         is_set = true;
                     }
@@ -323,41 +328,23 @@ namespace HarfBuzz.SDF
                 case SDFEdgeType.LINE:
                     if (is_set)
                     {
-                        cbox.xMin = edge.start_pos.x < cbox.xMin
-                                    ? edge.start_pos.x
-                                    : cbox.xMin;
-                        cbox.xMax = edge.start_pos.x > cbox.xMax
-                                    ? edge.start_pos.x
-                                    : cbox.xMax;
+                        cbox.min.x = edge.start_pos.x < cbox.min.x ? edge.start_pos.x : cbox.min.x;
+                        cbox.max.x = edge.start_pos.x > cbox.max.x ? edge.start_pos.x : cbox.max.x;
 
-                        cbox.yMin = edge.start_pos.y < cbox.yMin
-                                    ? edge.start_pos.y
-                                    : cbox.yMin;
-                        cbox.yMax = edge.start_pos.y > cbox.yMax
-                                    ? edge.start_pos.y
-                                    : cbox.yMax;
+                        cbox.min.y = edge.start_pos.y < cbox.min.y ? edge.start_pos.y : cbox.min.y;
+                        cbox.max.y = edge.start_pos.y > cbox.max.y ? edge.start_pos.y : cbox.max.y;
                     }
                     else
                     {
-                        cbox.xMin = edge.start_pos.x;
-                        cbox.xMax = edge.start_pos.x;
-                        cbox.yMin = edge.start_pos.y;
-                        cbox.yMax = edge.start_pos.y;
+                        cbox.min = edge.start_pos;
+                        cbox.max = edge.start_pos;
                     }
 
-                    cbox.xMin = edge.end_pos.x < cbox.xMin
-                                ? edge.end_pos.x
-                                : cbox.xMin;
-                    cbox.xMax = edge.end_pos.x > cbox.xMax
-                                ? edge.end_pos.x
-                                : cbox.xMax;
+                    cbox.min.x = edge.end_pos.x < cbox.min.x ? edge.end_pos.x : cbox.min.x;
+                    cbox.max.x = edge.end_pos.x > cbox.max.x ? edge.end_pos.x : cbox.max.x;
 
-                    cbox.yMin = edge.end_pos.y < cbox.yMin
-                                ? edge.end_pos.y
-                                : cbox.yMin;
-                    cbox.yMax = edge.end_pos.y > cbox.yMax
-                                ? edge.end_pos.y
-                                : cbox.yMax;
+                    cbox.min.y = edge.end_pos.y < cbox.min.y ? edge.end_pos.y : cbox.min.y;
+                    cbox.max.y = edge.end_pos.y > cbox.max.y ? edge.end_pos.y : cbox.max.y;
 
                     break;
 
@@ -366,6 +353,21 @@ namespace HarfBuzz.SDF
             }
 
             return cbox;
+        }
+        static BBox GetBBox(SDFEdge edge)
+        {
+            switch (edge.edge_type)
+            {
+                case SDFEdgeType.CUBIC:
+                    return BBox.GetCubicBezierBBox(edge.start_pos, edge.control1, edge.control2, edge.end_pos);
+                case SDFEdgeType.QUADRATIC:                    
+                    return BBox.GetQuadraticBezierBBox(edge.start_pos, edge.control1, edge.end_pos);
+                case SDFEdgeType.LINE:                    
+                    return BBox.GetLineBBox(edge.start_pos, edge.end_pos);
+                default:
+                    break;
+            }
+            return BBox.Empty;
         }
 
         static bool SDFContourGetMinDistance(NativeList<SDFEdge> edge_list, float2 point, ref SignedDistance signedDistance)
@@ -402,8 +404,8 @@ namespace HarfBuzz.SDF
                 case SDFEdgeType.LINE:
                     success = GetMinDistanceLine(edge, point, ref signedDistance);
                     break;
-                case SDFEdgeType.CONIC:
-                    Debug.Log($"CONIC Not implemented");
+                case SDFEdgeType.QUADRATIC:
+                    Debug.Log($"QUADRATIC Not implemented");
                     //success = GetMinDistanceCubic(edge, point, ref signedDistance);
                     break;
                 case SDFEdgeType.CUBIC:
@@ -654,6 +656,5 @@ namespace HarfBuzz.SDF
         {
             return (math.abs(a - b) <= math.max(absTol, relTol * math.max(math.abs(a), math.abs(b))));
         }
-
     }
 }
