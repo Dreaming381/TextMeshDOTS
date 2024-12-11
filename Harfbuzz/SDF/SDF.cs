@@ -1,9 +1,7 @@
-using Codice.Client.BaseCommands;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.TextCore;
 
 namespace HarfBuzz.SDF
 {
@@ -13,7 +11,7 @@ namespace HarfBuzz.SDF
 
         public const float CORNER_CHECK_EPSILON = 32 / (1 << 16); //The epsilon distance  used for corner
 
-        public static bool SDFGenerateSubDivision(ref BezierData bezierData, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        public static bool SDFGenerateSubDivision(ref BezierData bezierData, int spread, NativeArray<byte> buffer, RectInt glyphRect, int atlasWidth, int atlasHeight)
         {
             var success = true;
             if (bezierData.contourIDs.Length < 2 || bezierData.edges.Length == 0)
@@ -141,7 +139,7 @@ namespace HarfBuzz.SDF
             }
             return success;
         }
-        static bool SDFGenerateBoundingBox(ref BezierData bezierData, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        static bool SDFGenerateBoundingBox(ref BezierData bezierData, int spread, NativeArray<byte> buffer, RectInt glyphRect, int atlasWidth, int atlasHeight)
         {
             var edges = bezierData.edges;
             var contourIDs = bezierData.contourIDs;

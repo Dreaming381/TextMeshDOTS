@@ -1,3 +1,4 @@
+using Codice.Client.BaseCommands;
 using System;
 using Unity.Mathematics;
 
@@ -7,8 +8,9 @@ namespace HarfBuzz.SDF
     {
         public float2 min;
         public float2 max;
-        public float Width => max.x - min.x;
-        public float Height => max.y - min.y;
+        public bool IsValid => math.all(min <= max);
+        public float width => max.x - min.x;
+        public float height => max.y - min.y;
 
         /// <summary>  Create an empty, invalid BBox. </summary>
         public static readonly BBox Empty = new BBox { min = float.MaxValue, max = float.MinValue };
@@ -126,7 +128,7 @@ namespace HarfBuzz.SDF
         }
         public override string ToString()
         {
-            return $"min {min} max {max} width {Width} height {Height}";
+            return $"min {min} max {max} width {width} height {height}";
         }
     }
 }

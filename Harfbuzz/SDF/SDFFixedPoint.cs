@@ -11,7 +11,7 @@ namespace HarfBuzz.SDF
         public static SignedDistanceFixed max_sdf => new SignedDistanceFixed { distance = int.MaxValue, sign = 0, cross = 0 };
         public const int CORNER_CHECK_EPSILON = 32;//The epsilon distance (in 16.16 fractional units) used for corner
 
-        public static bool SDFGenerate(NativeList<SDFEdge> shape, int spread, ref NativeArray<byte> buffer, int width, int rows)
+        public static bool SDFGenerate(NativeList<SDFEdge> shape, int spread, NativeArray<byte> buffer, int width, int rows)
         {
             bool flip_y = true;
             SDFOrientation orientation = SDFOrientation.TRUETYPE;
