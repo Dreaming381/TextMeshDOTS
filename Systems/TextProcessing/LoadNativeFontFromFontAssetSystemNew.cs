@@ -10,7 +10,7 @@ namespace TextMeshDOTS.TextProcessing
 {
     // To-Do: establish a Native OTF and TTF Font Resource Manager as in UnityEngine.TextCore.Text.TextResourceManager
 
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateBefore(typeof(ExtractTextSegmentsSystem))]
     //[RequireMatchingQueriesForUpdate]
     partial class LoadNativeFontFromFontAssetSystem : SystemBase

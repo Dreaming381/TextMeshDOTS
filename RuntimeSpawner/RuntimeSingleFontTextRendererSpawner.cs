@@ -90,7 +90,7 @@ namespace TextMeshDOTS.Authoring
 
             if (frameCount == 0)
             {
-                
+
                 var text1 = "The quick brown fox jumps over the lazy dog\n ¶";
                 //var text2 = "Test 123";
                 //var text3 = "ZYX";

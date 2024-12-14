@@ -68,9 +68,36 @@ namespace HarfBuzz.SDF
                 {
                     edge = edges[edgeID];
                     writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
+                    //writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.control1.x} {edge.control1.y} {edge.end_pos.x} {edge.end_pos.y} {edge.edge_type}");
                 }
                 edge = edges[nextStartID - 1];
                 writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");                
+                writer.WriteLine();
+            }
+            writer.Close();
+        }
+        public static void WriteGlyphOutlineToFile(string path, BezierData bezierData, bool useIterator)
+        {
+            var edges = bezierData.edges;
+            var contourIDs = bezierData.contourIDs;
+            if (contourIDs.Length < 2 || edges.Length == 0)
+                return;
+
+            StreamWriter writer = new StreamWriter(path, false);
+            SDFEdge edge;
+            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
+            {
+                int startID = contourIDs[contourID];
+                int nextStartID = contourIDs[contourID + 1];
+                int interator = startID;
+                do
+                {
+                    edge = edges[interator];
+                    writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
+                    interator = edge.nextId;
+                } while (interator != -1 && interator != nextStartID);
+                //edge = edges[nextStartID - 1];
+                //writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
                 writer.WriteLine();
             }
             writer.Close();

@@ -1,4 +1,5 @@
 using HarfBuzz;
+using HarfBuzz.SDF;
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -96,6 +97,7 @@ namespace TextMeshDOTS
     {
         public FixedString128Bytes family;
         public FontAssetRef fontAssetRef;
+        public SDFOrientation orientation;
         public Blob blob;
         public Face face;
         public Font font;

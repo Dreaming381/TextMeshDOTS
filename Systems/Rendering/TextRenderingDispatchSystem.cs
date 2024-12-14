@@ -12,7 +12,7 @@ namespace TextMeshDOTS.Rendering
     /// chunks to accomodate changed chunks appears complicated, prone to fragmentation 
     /// --> research if it's worth it and how to do
     /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
     [UpdateAfter(typeof(TextRenderingUpdateSystem))]
     //[DisableAutoCreation]

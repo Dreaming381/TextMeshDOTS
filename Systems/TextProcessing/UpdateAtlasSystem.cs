@@ -8,7 +8,7 @@ using UnityEngine.TextCore;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateAfter(typeof(ShapeSystem))]
     //[RequireMatchingQueriesForUpdate]
     partial class UpdateAtlasSystem : SystemBase

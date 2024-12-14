@@ -30,7 +30,7 @@ namespace TextMeshDOTS.TextProcessing
         int padding;//size of font in atlas
         int atlasSamplingPointSize;//size of font in atlas
         int atlasWidth;
-        int atlasHeight;
+        int atlasHeight;        
         NativeHashMap<int, FontTextureReference> fontTextureReferenceMap;
 
         //[BurstCompile]
@@ -159,6 +159,8 @@ namespace TextMeshDOTS.TextProcessing
         void LoadFont(int pointSize, Texture2D texture2D, ref SystemState state)
         {
             var blob = new Blob("Assets\\Resources\\Notosans\\NotoSansDisplay-Regular.ttf");
+            var orientation = SDFOrientation.TRUETYPE;
+
             var face = new Face(blob.ptr, 0);
             var font = new Font(face.ptr);
             font.SetScale(pointSize, pointSize);
@@ -190,7 +192,7 @@ namespace TextMeshDOTS.TextProcessing
 
             var fontEntity = state.EntityManager.CreateEntity(nativeFontDataArchetype);
             var fontAssetRef = new FontAssetRef(TextHelper.GetHashCodeCaseInSensitive(fontFamily), TextFontWeight.Regular, fontSubFamily.Contains(italicString));
-            var hbFontPointer = new HBFontPointer { family = fontFamily, blob = blob, face = face, font = font, hbDrawFuncts = drawFunct };
+            var hbFontPointer = new HBFontPointer { family = fontFamily, orientation = orientation,  fontAssetRef = fontAssetRef, blob = blob, face = face, font = font, hbDrawFuncts = drawFunct };
             var hbFontAssetRef = new HBFontAssetRef { family = fontFamily, subFamily = fontSubFamily, fontAssetRef = fontAssetRef };
             var fontTextureReference = new FontTextureReference { texture = texture2D };
 

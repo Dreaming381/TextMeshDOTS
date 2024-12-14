@@ -58,10 +58,11 @@ namespace HarfBuzz.SDF
 
             marker.Begin();
             var atlasRect = usedRects[glyphBlob.glyphID];//render SDF into the reserved padded atlas texture  window 
-            SDF.SDFGenerateSubDivision(ref bezierData, SDFCommon.DEFAULT_SPREAD, textureData, atlasRect, atlasWidth, atlasHeight);
+            SDF.SDFGenerateSubDivision(ref bezierData, SDFOrientation.TRUETYPE, SDFCommon.DEFAULT_SPREAD, textureData, atlasRect, atlasWidth, atlasHeight);
+            //SDF.SDFGenerate(ref bezierData, SDFCommon.DEFAULT_SPREAD, textureData, atlasRect, atlasWidth, atlasHeight);
             //SDFFixedPoint.SDFGenerateSubDivision(ref bezierData, SDFCommon.DEFAULT_SPREAD, textureData, atlasRect, atlasWidth, atlasHeight);
             //SDFFixedPoint.SDFGenerate(bezierData.edges, SDFCommon.DEFAULT_SPREAD, textureData, atlasWidth, atlasHeight);
-            //SDF.SDFGenerate(bezierData.edges, SDFCommon.DEFAULT_SPREAD, textureData, atlasWidth, atlasHeight);
+            
 
              marker.End();
         }

@@ -42,6 +42,7 @@ namespace HarfBuzz.SDF
         public float2 control1;
         public float2 control2;
         public SDFEdgeType edge_type;
+        public int nextId; //linked list ID
         public SDFEdge(float2 start_pos, float2 end_pos, float2 control1, float2 control2, SDFEdgeType edge_type)
         {
             this.start_pos = start_pos; 
@@ -49,6 +50,7 @@ namespace HarfBuzz.SDF
             this.control1 = control1;
             this.control2 = control2;
             this.edge_type = edge_type;
+            this.nextId = -1;
         }
     }
     public enum SDFEdgeType : byte
