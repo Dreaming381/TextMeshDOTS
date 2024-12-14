@@ -1,5 +1,6 @@
 using HarfBuzz;
 using System;
+using System.Numerics;
 using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
@@ -152,13 +153,8 @@ namespace TextMeshDOTS
             superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
         }
     }
-    public struct GlyphBlob
-    {
-        public uint glyphID;
-        public GlyphMetrics glyphMetrics;   //source: UnityFontAsset or Harfbuzz (GlyphExtends)
-        public GlyphRect glyphRect;         //source: UnityFontAsset 
-        public float glyphScale;            //source: UnityFontAsset. Review why this is needed
-    }
+
+
     public struct FontAssetRef : IEquatable<FontAssetRef>
     {
         public int familyNameHash;

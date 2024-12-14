@@ -1,6 +1,5 @@
 using System;
-using Unity.Rendering;
-
+using Unity.Collections;
 
 namespace HarfBuzz
 {
@@ -22,6 +21,13 @@ namespace HarfBuzz
         public void GetSizeParams(out uint design_size, out uint subfamily_id, out uint subfamily_name_id, out uint range_start, out uint range_end)
         {
             HB.hb_ot_layout_get_size_params(ptr, out design_size, out subfamily_id, out subfamily_name_id, out range_start, out range_end);
+        }
+        public void GetFaceInfo(HB_OT_NAME_ID name_id, Language language, ref uint textSize, ref FixedString128Bytes text)
+        {
+            unsafe 
+            {
+                HB.hb_ot_name_get_utf8(ptr, name_id, language, ref textSize, text.GetUnsafePtr());
+            }
         }
         public bool IsImmutable() => HB.hb_face_is_immutable(ptr);
         public void Dispose()

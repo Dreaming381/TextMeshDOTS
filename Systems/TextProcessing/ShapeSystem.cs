@@ -9,8 +9,8 @@ using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateAfter(typeof(LoadNativeFont))]
+    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [UpdateAfter(typeof(ExtractTextSegmentsSystem))]
     [RequireMatchingQueriesForUpdate]
     [BurstCompile]
     //[DisableAutoCreation]
@@ -29,14 +29,15 @@ namespace TextMeshDOTS.TextProcessing
             m_query = SystemAPI.QueryBuilder()
                       .WithAllRW<GlyphOTF>()
                       .WithAll<CalliByte>()
-                      .WithAll<FontMaterial>()
-                      .Build();
-            
+                      //.WithAll<FontMaterial>()
+                      .WithAll<FontEntity>()
+                      .Build();            
 
             fontEntityQ = SystemAPI.QueryBuilder()
                               .WithAll<GlyphsInUse>()
                               .WithAll<MissingGlyphs>()
-                              .WithAll<DynamicFontBlobReference>()
+                              //.WithAll<DynamicFontBlobReference>()
+                              .WithAll<FontTextureReference>()
                               .Build();
 
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
@@ -58,7 +59,9 @@ namespace TextMeshDOTS.TextProcessing
                 
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
                 selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
-                fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),
+                //fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),
+                fontEntityHandle = SystemAPI.GetBufferTypeHandle<FontEntity>(true),
+                hbFontPointerLookup = SystemAPI.GetComponentLookup<HBFontPointer>(),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),

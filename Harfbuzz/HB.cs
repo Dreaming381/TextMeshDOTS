@@ -1,7 +1,7 @@
 using HarfBuzz.SDF;
 using System;
 using System.Runtime.InteropServices;
-using UnityEngine.UI;
+using TextMeshDOTS;
 
 namespace HarfBuzz
 {
@@ -30,6 +30,7 @@ namespace HarfBuzz
         public static extern void hb_draw_funcs_set_quadratic_to_func(IntPtr dfuncs, QuadraticToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
         [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
         public static extern void hb_draw_funcs_set_cubic_to_func(IntPtr dfuncs, CubicToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+
 
         [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
         public static extern void hb_font_draw_glyph(IntPtr font, uint glyph, IntPtr dfuncs, ref BezierData draw_data);
@@ -60,6 +61,8 @@ namespace HarfBuzz
         #endregion
 
         #region face
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern uint hb_ot_name_get_utf8(IntPtr face, HB_OT_NAME_ID name_id, Language language, ref uint text_size, byte* text);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_face_is_immutable(IntPtr face);

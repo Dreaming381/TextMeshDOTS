@@ -7,9 +7,9 @@ using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
-    [UpdateBefore(typeof(ShapeSystem))]    
+    //[UpdateAfter(typeof(RegisterFontMaterialSystem))]    
     //[DisableAutoCreation]
     public partial struct ExtractTextSegmentsSystem : ISystem
     {
@@ -25,11 +25,13 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAllRW<CalliByte>()
                       .WithAllRW<TextSpan>()
                       .WithAll<TextBaseConfiguration>()
-                      .WithAll<FontMaterial>()
+                      //.WithAll<FontMaterial>()
+                      .WithAll<FontEntity>()
                       .Build();
             fontEntityQ = SystemAPI.QueryBuilder()
                   .WithAll<GlyphsInUse>()
-                  .WithAll<DynamicFontBlobReference>()
+                  .WithAll<FontTextureReference>()
+                  //.WithAll<DynamicFontBlobReference>()
                   .Build();
 
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
@@ -52,7 +54,9 @@ namespace TextMeshDOTS.TextProcessing
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(false),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(false),
 
-                fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),               
+                //fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),               
+                fontEntityHandle = SystemAPI.GetBufferTypeHandle<FontEntity>(true),
+                hbFontPointerLookup = SystemAPI.GetComponentLookup<HBFontPointer>(),
                 calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),                
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
 

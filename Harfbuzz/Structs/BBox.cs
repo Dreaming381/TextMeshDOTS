@@ -128,7 +128,8 @@ namespace HarfBuzz.SDF
         }
         public override string ToString()
         {
-            return $"min {min} max {max} width {width} height {height}";
+            return $"x {min.x} y {min.y} width {width} height {height}";
+            //return $"min {min} max {max} width {width} height {height}";
         }
     }
 }

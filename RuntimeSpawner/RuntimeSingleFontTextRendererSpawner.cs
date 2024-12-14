@@ -1,6 +1,5 @@
 using TextMeshDOTS.Rendering;
 using TextMeshDOTS.Rendering.Authoring;
-using TextMeshDOTS.TextProcessing;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -16,7 +15,7 @@ namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
     //[DisableAutoCreation]
-    [UpdateBefore(typeof(LoadNativeFont))]
+    //[UpdateBefore(typeof(LoadNativeFont))]
     public partial class RuntimeSingleTextRendererSpawner : SystemBase
     {
         bool initialized;
@@ -27,9 +26,14 @@ namespace TextMeshDOTS.Authoring
         {
             initialized = false;
             textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref CheckedStateRef);
-            fontEntityQ = new EntityQueryBuilder(Allocator.Temp)
-                    .WithAll<FontBlobReference, FontMaterialRef, BackEndMesh>()
-                    .Build(EntityManager);
+            fontEntityQ = SystemAPI.QueryBuilder()
+                    .WithAll<HBFontAssetRef>()
+                    .WithAll<FontTextureReference>()
+                    .WithAll<GlyphsInUse>()
+                    .WithAll<MissingGlyphs>()
+                    .WithAll<HBFontPointer>()
+                    .WithAll<MaterialMeshInfo>()
+                    .Build();
             RequireForUpdate(fontEntityQ);
         }
 
@@ -45,31 +49,31 @@ namespace TextMeshDOTS.Authoring
             if (fontEntityQ.IsEmptyIgnoreFilter)
                 return;
 
-            var fontBlobReferenceEntity = fontEntityQ.GetSingletonEntity();
-            var fontMaterialsBuffer = SystemAPI.GetBuffer<FontMaterialRef>(fontBlobReferenceEntity);
-            var fontBlobReferences = SystemAPI.GetBuffer<FontBlobReference>(fontBlobReferenceEntity).ToNativeArray(Allocator.Temp);
-            var backEndMesh = SystemAPI.GetComponent<BackEndMesh>(fontBlobReferenceEntity);
+            var fontEntities = fontEntityQ.ToEntityArray(Allocator.TempJob);
+            var fontEntity=fontEntities[0];
+            fontEntities.Dispose();
+            //var fontMaterialsBuffer = SystemAPI.GetBuffer<FontMaterialRef>(fontBlobReferenceEntity);
+            //var fontBlobReferences = SystemAPI.GetBuffer<FontBlobReference>(fontBlobReferenceEntity).ToNativeArray(Allocator.Temp);
+            var materialMeshInfo = SystemAPI.GetComponent<MaterialMeshInfo>(fontEntity);
 
             //if (!(frameCount == 0 ^ frameCount == 100))
-            if (frameCount != 0)
-            {
-                frameCount++;
-                return;
-            }
+            //if (frameCount != 0)
+            //{
+            //    frameCount++;
+            //    return;
+            //}
 
-            var entitiesGraphicsSystem = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
-            var brgMaterialID = entitiesGraphicsSystem.RegisterMaterial(fontMaterialsBuffer[0].value);
-            var brgMeshID = entitiesGraphicsSystem.RegisterMesh(backEndMesh.value);
-            var materialMeshInfo = new MaterialMeshInfo { MaterialID = brgMaterialID, MeshID = brgMeshID };
+
+
             var textRenderControl = new TextRenderControl { flags = TextRenderControl.Flags.Dirty };
 
             var textBaseConfiguration = new TextBaseConfiguration
             {
                 fontSize = 12,
-                color = (Color32)Color.blue,
+                color = (Color32)Color.white,
                 fontStyle = FontStyles.Normal,
                 fontWeight = TextFontWeight.Regular,
-                maxLineWidth = 3,
+                maxLineWidth = 10,
                 lineJustification = HorizontalAlignmentOptions.Left,
                 verticalAlignment = VerticalAlignmentOptions.TopBase,
             };
@@ -84,78 +88,98 @@ namespace TextMeshDOTS.Authoring
                 StaticShadowCaster = false,
             };
 
-
-            //var text1 = "the quick brown fox jumps over the lazy dog the quick brown fox jumps over the lazy dog";
-            var text2 = "Test 123";
-            var text3 = "ZYX";
-            //var kerningTest = "WAVES in my Yard YAWN AT MY LAWN Toyota AWAY PALM";
-
-
-
             if (frameCount == 0)
             {
-                int count = 100;
-                int half = count / 2;
-                var factor = 3.0f;
-                TextBackendBakingUtility.SetSubMesh(text2.Length, ref materialMeshInfo);
-                var entities = EntityManager.CreateEntity(textRenderArchetype, count * count, WorldUpdateAllocator);
-                for (int x = 0; x < count; x++)
-                {
-                    for (int y = 0; y < count; y++)
-                    {
-                        var entity = entities[x * count + y];
-                        EntityManager.SetSharedComponent(entity, filterSettings);
-                        var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
-                        var calliString = new CalliString(calliByteBuffer);
-                        //string text = i.ToString() + j.ToString();
-                        calliString.Append(text2);
+                
+                var text1 = "The quick brown fox jumps over the lazy dog\n ¶";
+                //var text2 = "Test 123";
+                //var text3 = "ZYX";
+                //var kerningTest = "WAVES in my Yard YAWN AT MY LAWN Toyota AWAY PALM";
 
-                        EntityManager.SetComponentData(entity, textBaseConfiguration);
-                        EntityManager.AddBuffer<FontBlobReference>(entity);
-                        var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontBlobReference>(entity);
-                        fontBlobReferencesBuffer.CopyFrom(fontBlobReferences);
-                        EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor, (y - half) * factor, 0)));
-                        EntityManager.SetComponentData(entity, textRenderControl);
-                        EntityManager.SetComponentData(entity, materialMeshInfo);
-                    }
-                }
-                Debug.Log("Text 1 spawned");
+                TextBackendBakingUtility.SetSubMesh(text1.Length, ref materialMeshInfo);
+                var entity = EntityManager.CreateEntity(textRenderArchetype);
+                EntityManager.SetSharedComponent(entity, filterSettings);
+                var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
+                var calliString = new CalliString(calliByteBuffer);
+                //string text = i.ToString() + j.ToString();
+                calliString.Append(text1);
+
+                EntityManager.SetComponentData(entity, textBaseConfiguration);
+                var fontEntityBuffer = EntityManager.GetBuffer<FontEntity>(entity).Reinterpret<Entity>();
+                fontEntityBuffer.Add(fontEntity);
+                EntityManager.SetComponentData(entity, LocalTransform.FromPosition(float3.zero));
+                EntityManager.SetComponentData(entity, textRenderControl);
+                EntityManager.SetComponentData(entity, materialMeshInfo);
             }
 
-            if (frameCount == 100)
-            {
-                int count = 50;
-                int half = count / 2;
-                var factor = 2.0f;
-                textBaseConfiguration.color = Color.red;
-                TextBackendBakingUtility.SetSubMesh(text3.Length, ref materialMeshInfo);
-                var entities = EntityManager.CreateEntity(textRenderArchetype, count * count, WorldUpdateAllocator);
-                for (int x = 0; x < count; x++)
-                {
-                    for (int y = 0; y < count; y++)
-                    {
-                        var entity = entities[x * count + y];
-                        EntityManager.SetSharedComponent(entity, filterSettings);
-                        var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
-                        var calliString = new CalliString(calliByteBuffer);
-                        //string text = i.ToString() + j.ToString();
-                        calliString.Append(text3);
+            //if (frameCount == 0)
+            //{
+            //    int count = 100;
+            //    int half = count / 2;
+            //    var factor = 3.0f;
+            //    TextBackendBakingUtility.SetSubMesh(text2.Length, ref materialMeshInfo);
+            //    var entities = EntityManager.CreateEntity(textRenderArchetype, count * count, WorldUpdateAllocator);
+            //    for (int x = 0; x < count; x++)
+            //    {
+            //        for (int y = 0; y < count; y++)
+            //        {
+            //            var entity = entities[x * count + y];
+            //            EntityManager.SetSharedComponent(entity, filterSettings);
+            //            var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
+            //            var calliString = new CalliString(calliByteBuffer);
+            //            //string text = i.ToString() + j.ToString();
+            //            calliString.Append(text2);
 
-                        EntityManager.SetComponentData(entity, textBaseConfiguration);
-                        EntityManager.AddBuffer<FontBlobReference>(entity);
-                        var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontBlobReference>(entity);
-                        fontBlobReferencesBuffer.CopyFrom(fontBlobReferences);
-                        EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor - 1, (y - half) * factor - 1, 0)));
-                        EntityManager.SetComponentData(entity, textRenderControl);
-                        EntityManager.SetComponentData(entity, materialMeshInfo);
-                    }
-                }
-                Debug.Log("Text 2 spawned");
-            }
+            //            EntityManager.SetComponentData(entity, textBaseConfiguration);
+            //            EntityManager.AddBuffer<FontBlobReference>(entity);
+            //            var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontEntity>(entity).Reinterpret<Entity>();
+            //            fontBlobReferencesBuffer.Add(fontEntity);
+            //            EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor, (y - half) * factor, 0)));
+            //            EntityManager.SetComponentData(entity, textRenderControl);
+            //            EntityManager.SetComponentData(entity, materialMeshInfo);
+            //        }
+            //    }
+            //    Debug.Log("Text 1 spawned");
+            //}
+
+            //if (frameCount == 100)
+            //{
+            //    int count = 50;
+            //    int half = count / 2;
+            //    var factor = 2.0f;
+            //    textBaseConfiguration.color = Color.red;
+            //    TextBackendBakingUtility.SetSubMesh(text3.Length, ref materialMeshInfo);
+            //    var entities = EntityManager.CreateEntity(textRenderArchetype, count * count, WorldUpdateAllocator);
+            //    for (int x = 0; x < count; x++)
+            //    {
+            //        for (int y = 0; y < count; y++)
+            //        {
+            //            var entity = entities[x * count + y];
+            //            EntityManager.SetSharedComponent(entity, filterSettings);
+            //            var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
+            //            var calliString = new CalliString(calliByteBuffer);
+            //            //string text = i.ToString() + j.ToString();
+            //            calliString.Append(text3);
+
+            //            EntityManager.SetComponentData(entity, textBaseConfiguration);
+            //            EntityManager.AddBuffer<FontBlobReference>(entity);
+            //            var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontBlobReference>(entity);
+            //            fontBlobReferencesBuffer.CopyFrom(fontBlobReferences);
+            //            EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * factor - 1, (y - half) * factor - 1, 0)));
+            //            EntityManager.SetComponentData(entity, textRenderControl);
+            //            EntityManager.SetComponentData(entity, materialMeshInfo);
+            //        }
+            //    }
+            //    Debug.Log("Text 2 spawned");
+            //}
             frameCount++;
 
-            //if(frameCount > 200)
-            //    initialized = true;
+            //if (frameCount > 200)
+            //{
+            //    Debug.Log($"Triggered font destruction");
+            //    EntityManager.DestroyEntity(fontEntityQ);
+            //    //initialized = true;
+            //}
 
         }
     }

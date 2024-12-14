@@ -1,15 +1,28 @@
+using AOT;
 using System;
+using System.Runtime.InteropServices;
 using Unity.Mathematics;
 using UnityEngine;
 
 namespace HarfBuzz.SDF
 {
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void ReleaseDelegate();
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void MoveToDelegate(IntPtr dfuncs, ref BezierData data, ref DrawState st, float to_x, float to_y, IntPtr user_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void QuadraticToDelegate(IntPtr dfuncs, ref BezierData data, ref DrawState st, float control_x, float control_y, float to_x, float to_y, IntPtr user_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void CubicToDelegate(IntPtr dfuncs, ref BezierData data, ref DrawState st, float control1_x, float control1_y, float control2_x, float control2_y, float to_x, float to_y, IntPtr user_data);
+
+
     public static unsafe class HBDelegateProxies
     {
+        [MonoPInvokeCallback(typeof(ReleaseDelegate))]
         public static void Test()
         {
             //Debug.Log($"harfbuzz blob called this delegate upon destroying blob ");

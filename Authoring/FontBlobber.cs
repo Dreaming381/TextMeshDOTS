@@ -103,7 +103,7 @@ namespace TextMeshDOTS.Authoring
             foreach (var glyph in glyphLookupTable.Values)
             {
                 usedGlyphs.Add(glyph.index);
-                characterHashMapBuilder.Add(glyph.index, new GlyphBlob {glyphID = glyph.index, glyphMetrics = glyph.metrics, glyphRect = glyph.glyphRect, glyphScale = glyph.scale });
+                characterHashMapBuilder.Add(glyph.index, new GlyphBlob {glyphID = glyph.index, glyphExtents = (GlyphExtents)glyph.metrics, glyphRect = glyph.glyphRect});
             }
 
             var result = builder.CreateBlobAssetReference<DynamicFontBlob>(Allocator.Persistent);

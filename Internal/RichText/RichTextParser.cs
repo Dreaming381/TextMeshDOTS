@@ -16,13 +16,20 @@ namespace TextMeshDOTS.RichText
         /// <param name="startIndex"></param>
         /// <param name="endIndex"></param>
         /// <returns></returns>
+        //internal static bool ValidateHtmlTag(
+        //    in CalliString calliString,
+        //    ref CalliString.Enumerator enumerator,
+        //    //ref FontMaterialSet fontMaterialSet,
+        //    ref DynamicBuffer<FontMaterial> fontMaterial,
+        //    in TextBaseConfiguration baseConfiguration,
+        //    ref TextConfiguration textConfiguration)  //this is just a cache to avoid allocation
         internal static bool ValidateHtmlTag(
-            in CalliString calliString,
-            ref CalliString.Enumerator enumerator,
-            //ref FontMaterialSet fontMaterialSet,
-            ref DynamicBuffer<FontMaterial> fontMaterial,
-            in TextBaseConfiguration baseConfiguration,
-            ref TextConfiguration textConfiguration)  //this is just a cache to avoid allocation
+    in CalliString calliString,
+    ref CalliString.Enumerator enumerator,
+    ref DynamicBuffer<FontEntity> fontEntities,
+    ref ComponentLookup<HBFontPointer> hbFontPointerLookup,
+    in TextBaseConfiguration baseConfiguration,
+    ref TextConfiguration textConfiguration)  //this is just a cache to avoid allocation
         {
             ref var richTextTagIndentifiers = ref textConfiguration.richTextTagIndentifiers;
             richTextTagIndentifiers.Clear();
@@ -220,7 +227,10 @@ namespace TextMeshDOTS.RichText
             {
                 float value = 0;
                 int fontIndex = -1;
-                ref var currentFont = ref fontMaterial[textConfiguration.m_currentFontMaterialIndex].dynamicFontBlob;
+                //ref var currentFont = ref fontMaterial[textConfiguration.m_currentFontMaterialIndex].dynamicFontBlob;
+                var currentEntity = fontEntities[textConfiguration.m_currentFontMaterialIndex].value;
+                var hbFontPointer = hbFontPointerLookup[currentEntity];
+                ref var currentFont = ref hbFontPointer.blob;
 
                 switch (firstTagIndentifier.nameHashCode)
                 {
@@ -229,7 +239,8 @@ namespace TextMeshDOTS.RichText
                         textConfiguration.m_fontStyleInternal |= FontStyles.Bold;
                         textConfiguration.m_fontWeightInternal = TextFontWeight.Bold;                       
                         textConfiguration.m_fontWeightInternalStack.Add(textConfiguration.m_fontWeightInternal);
-                        fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                        //fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                        fontIndex = TextHelper.GetFontIndex(fontEntities, hbFontPointerLookup, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
                         if (fontIndex != -1)
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
 
@@ -238,16 +249,18 @@ namespace TextMeshDOTS.RichText
                     case 395:  // </B>
                         textConfiguration.m_fontStyleInternal &= ~FontStyles.Bold;
                         textConfiguration.m_fontWeightInternal = textConfiguration.m_fontWeightInternalStack.RemoveExceptRoot();
-                        fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                        //fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                        fontIndex = TextHelper.GetFontIndex(fontEntities, hbFontPointerLookup, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
                         if (fontIndex != -1)
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
                         return true;
                     case 105:  // <i>
                     case 73:  // <I>
                         textConfiguration.m_fontStyleInternal |= FontStyles.Italic;
-                        
+
                         //switch font in case italic has a dedicated font
-                        fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, true);
+                        //fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, true);
+                        fontIndex = TextHelper.GetFontIndex(fontEntities, hbFontPointerLookup, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, true);
                         if (fontIndex != -1)
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
 
@@ -255,7 +268,8 @@ namespace TextMeshDOTS.RichText
                     case 434:  // </i>
                     case 402:  // </I>
                         textConfiguration.m_fontStyleInternal &= ~FontStyles.Italic;
-                        fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, false);
+                        //fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, false);
+                        fontIndex = TextHelper.GetFontIndex(fontEntities, hbFontPointerLookup, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, false);
                         if (fontIndex != -1)
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
 
@@ -556,10 +570,13 @@ namespace TextMeshDOTS.RichText
                         calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);
                         var desiredFontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(textConfiguration.m_htmlTag);
 
-                        fontIndex = TextHelper.GetFontIndex(fontMaterial, desiredFontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                        //fontIndex = TextHelper.GetFontIndex(fontMaterial, desiredFontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                        fontIndex = TextHelper.GetFontIndex(fontEntities, hbFontPointerLookup, desiredFontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
                         if (fontIndex != -1)
                         {
-                            textConfiguration.m_fontFamilyHash = fontMaterial[fontIndex].dynamicFontBlob.fontAssetRef.familyNameHash;
+                            
+                            //textConfiguration.m_fontFamilyHash = fontMaterial[fontIndex].dynamicFontBlob.fontAssetRef.familyNameHash;
+                            textConfiguration.m_fontFamilyHash = hbFontPointerLookup[fontEntities[fontIndex].value].fontAssetRef.familyNameHash;
                             textConfiguration.m_fontFamilyHashStack.Add(textConfiguration.m_fontFamilyHash);
                             textConfiguration.m_currentFontMaterialIndex = fontIndex;
                             return true;
@@ -569,7 +586,8 @@ namespace TextMeshDOTS.RichText
                     case 141358:  // </FONT>
                         {
                             textConfiguration.m_fontFamilyHash = textConfiguration.m_fontFamilyHashStack.RemoveExceptRoot();
-                            fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                            //fontIndex = TextHelper.GetFontIndex(fontMaterial, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
+                            fontIndex = TextHelper.GetFontIndex(fontEntities, hbFontPointerLookup, textConfiguration.m_fontFamilyHash, textConfiguration.m_fontWeightInternal, (textConfiguration.m_fontStyleInternal & FontStyles.Italic) == FontStyles.Italic);
                             if (fontIndex != -1)
                                 textConfiguration.m_currentFontMaterialIndex = fontIndex;
 

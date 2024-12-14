@@ -1,3 +1,4 @@
+using HarfBuzz;
 using System.Linq;
 using TextMeshDOTS.Authoring;
 using Unity.Collections;
@@ -19,10 +20,11 @@ namespace TextMeshDOTS.TextProcessing
         {
             //hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
             m_query = SystemAPI.QueryBuilder()
-                              .WithAll<DynamicFontBlobReference>()
-                              .WithAll<FontBlobReference>()
+                              .WithAll<HBFontAssetRef>()
+                              .WithAll<FontTextureReference>()
                               .WithAll<GlyphsInUse>()
                               .WithAll<MissingGlyphs>()
+                              .WithAll<CreatedFromFontAsset>()
                               .Build();
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<MissingGlyphs>());
             //fontAssetQ = SystemAPI.QueryBuilder()
@@ -46,17 +48,16 @@ namespace TextMeshDOTS.TextProcessing
                 if (missingGlyphs.Length > 0)
                 {
                     var glyphsInUse = SystemAPI.GetBuffer<GlyphsInUse>(entity);
-                    var dynamicFontBlobReference = SystemAPI.GetComponent<DynamicFontBlobReference>(entity);
-                    var fontBlobReference = SystemAPI.GetBuffer<FontBlobReference>(entity);
-                    var fontAsset = fontBlobReference[0].fontAsset.Value;
-                    Debug.Log($"Update Atlas for {fontAsset.name}");
+                    var fontTextureReference = SystemAPI.GetComponent<FontTextureReference>(entity);
+                    var fontAsset = SystemAPI.GetComponent<CreatedFromFontAsset>(entity).fontAsset.Value;
+                    Debug.Log($"Update Atlas for {fontTextureReference.blob.Value.familyName}");
 
                     //for (int j = 0, jj = missingGlyphs.Length; j < jj; j++)
                     for (int j = missingGlyphs.Length -1; j >=0; j--)
                     {
                         var missingGlyph = missingGlyphs[j];
                         if (fontAsset.TryAddGlyphInternal(missingGlyph.glyphID, out Glyph glyph))
-                            newGlyphBlobs.Add(new GlyphBlob { glyphID = glyph.index, glyphMetrics = glyph.metrics, glyphRect = glyph.glyphRect, glyphScale = glyph.scale });
+                            newGlyphBlobs.Add(new GlyphBlob { glyphID = glyph.index, glyphExtents = (GlyphExtents)glyph.metrics, glyphRect = glyph.glyphRect });
                         else
                             Debug.Log($"Glyph {missingGlyph.glyphID} was not found in {fontAsset.name}");
                     }
@@ -64,8 +65,8 @@ namespace TextMeshDOTS.TextProcessing
                     {
                         Debug.Log($"Patched {fontAsset.name}: added {missingGlyphs.Length} glyphs ");
                         glyphsInUse.Reinterpret<uint>().AddRange(missingGlyphs.Reinterpret<uint>().AsNativeArray());
-                        dynamicFontBlobReference.blob.PatchDynamicFontData(newGlyphBlobs);
-                        SystemAPI.SetComponent(entity, dynamicFontBlobReference);
+                        fontTextureReference.blob.PatchDynamicFontData(newGlyphBlobs);
+                        SystemAPI.SetComponent(entity, fontTextureReference);
                     }
                     else
                         Debug.Log($"Nothing to patch {fontAsset.name}");

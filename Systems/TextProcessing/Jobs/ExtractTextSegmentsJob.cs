@@ -18,7 +18,9 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<CalliByte> calliByteHandle;
         public BufferTypeHandle<TextSpan> textSpanHandle;
 
-        [ReadOnly] public BufferTypeHandle<FontMaterial> fontMaterialHandle;
+        //[ReadOnly] public BufferTypeHandle<FontMaterial> fontMaterialHandle;
+        [ReadOnly] public BufferTypeHandle<FontEntity> fontEntityHandle;
+        [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByteRaw> calliByteRawHandle;        
         [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
 
@@ -29,11 +31,13 @@ namespace TextMeshDOTS.TextProcessing
         {
             if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion) ||
                   chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
+                  chunk.DidChange(ref fontEntityHandle, lastSystemVersion)))
+                //chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
 
             //Debug.Log("Extract TextSegments");
-            var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
+            //var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
+            var fontEntityBuffers = chunk.GetBufferAccessor(ref fontEntityHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var calliBytesRawBuffers = chunk.GetBufferAccessor(ref calliByteRawHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
@@ -43,15 +47,17 @@ namespace TextMeshDOTS.TextProcessing
 
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
-                var fontMaterialBuffer = fontMaterialBuffers[indexInChunk];
+                //var fontMaterialBuffer = fontMaterialBuffers[indexInChunk];
+                var fontEntityBuffer = fontEntityBuffers[indexInChunk];
                 var calliBytesBuffer = calliBytesBuffers[indexInChunk];
                 var calliBytesRawBuffer = calliBytesRawBuffers[indexInChunk];
                 var textSpanBuffer = textSpanBuffers[indexInChunk];
                 var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
-               
 
-                textConfiguration.Reset(in textBaseConfiguration, fontMaterialBuffer);
+
+                //textConfiguration.Reset(in textBaseConfiguration, fontMaterialBuffer);
+                textConfiguration.Reset(in textBaseConfiguration, fontEntityBuffer, hbFontPointerLookup);
                 var textSpans = new NativeList<TextSpan>(16, Allocator.Temp);
                 var calliStringRaw = new CalliString(calliBytesRawBuffer);
                 var calliString = new CalliString(calliBytesBuffer);
@@ -86,7 +92,8 @@ namespace TextMeshDOTS.TextProcessing
                         }
                         startIndex = segmentEnd;
 
-                        if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontMaterialBuffer, in textBaseConfiguration, ref textConfiguration))
+                        //if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontMaterialBuffer, in textBaseConfiguration, ref textConfiguration))
+                        if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontEntityBuffer, ref hbFontPointerLookup, in textBaseConfiguration, ref textConfiguration))
                         {
                             previousRuneStartPosition = rawCharacters.NextRuneByteIndex;
                             continue;
@@ -124,86 +131,86 @@ namespace TextMeshDOTS.TextProcessing
         }
     }
 
-    [BurstCompile]
-    public partial struct ExtractTextSegmentsJob : IJobEntity
-    {
-        public void Execute(Entity entity, 
-            in TextBaseConfiguration textBaseConfiguration, 
-            in DynamicBuffer<CalliByteRaw> calliBytesRawBuffer, 
-            ref DynamicBuffer<CalliByte> calliBytesBuffer, 
-            ref DynamicBuffer<TextSpan> textSpanBuffer,
-            ref DynamicBuffer<FontMaterial> fontMaterialBuffer)
-        {
-            TextConfiguration textConfiguration = default;
+    //[BurstCompile]
+    //public partial struct ExtractTextSegmentsJob : IJobEntity
+    //{
+    //    public void Execute(Entity entity, 
+    //        in TextBaseConfiguration textBaseConfiguration, 
+    //        in DynamicBuffer<CalliByteRaw> calliBytesRawBuffer, 
+    //        ref DynamicBuffer<CalliByte> calliBytesBuffer, 
+    //        ref DynamicBuffer<TextSpan> textSpanBuffer,
+    //        ref DynamicBuffer<FontMaterial> fontMaterialBuffer)
+    //    {
+    //        TextConfiguration textConfiguration = default;
 
-            textConfiguration.Reset(in textBaseConfiguration, fontMaterialBuffer);
-            var textSpans = new NativeList<TextSpan>(16, Allocator.Temp);
-            var calliStringRaw = new CalliString(calliBytesRawBuffer);
-            var calliString = new CalliString(calliBytesBuffer);
-            calliBytesBuffer.Clear();
-            textSpanBuffer.Clear();
-            var rawCharacters = calliStringRaw.GetEnumerator();
-            var characters = calliString.GetEnumerator();
-            uint startIndex = 0;
-            var previousRuneStartPosition = 0;
-            while (rawCharacters.MoveNext())
-            {
-                var currentRune = rawCharacters.Current;
-                if (currentRune == '<')  // '<'
-                {
-                    var segmentEnd = (uint)calliString.Length;
-                    if (segmentEnd > startIndex)
-                    {
-                        textSpans.Add(new TextSpan
-                        {
-                            fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
-                            startIndex = startIndex,
-                            endIndex = segmentEnd,
-                            fontSize = textConfiguration.m_currentFontSize,
-                            fontStyle = textConfiguration.m_fontStyleInternal,
-                            lineJustification = textConfiguration.m_lineJustification,
-                            color = textConfiguration.m_htmlColor,
-                            monoSpacing = textConfiguration.m_monoSpacing,
-                            cSpacing = textConfiguration.m_cSpacing,
-                            fxScale = textConfiguration.m_fxScale,
-                            fxRotationAngleCCW = textConfiguration.m_fxRotationAngleCCW,
-                        });
-                    }
-                    startIndex = segmentEnd;
+    //        textConfiguration.Reset(in textBaseConfiguration, fontMaterialBuffer);
+    //        var textSpans = new NativeList<TextSpan>(16, Allocator.Temp);
+    //        var calliStringRaw = new CalliString(calliBytesRawBuffer);
+    //        var calliString = new CalliString(calliBytesBuffer);
+    //        calliBytesBuffer.Clear();
+    //        textSpanBuffer.Clear();
+    //        var rawCharacters = calliStringRaw.GetEnumerator();
+    //        var characters = calliString.GetEnumerator();
+    //        uint startIndex = 0;
+    //        var previousRuneStartPosition = 0;
+    //        while (rawCharacters.MoveNext())
+    //        {
+    //            var currentRune = rawCharacters.Current;
+    //            if (currentRune == '<')  // '<'
+    //            {
+    //                var segmentEnd = (uint)calliString.Length;
+    //                if (segmentEnd > startIndex)
+    //                {
+    //                    textSpans.Add(new TextSpan
+    //                    {
+    //                        fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
+    //                        startIndex = startIndex,
+    //                        endIndex = segmentEnd,
+    //                        fontSize = textConfiguration.m_currentFontSize,
+    //                        fontStyle = textConfiguration.m_fontStyleInternal,
+    //                        lineJustification = textConfiguration.m_lineJustification,
+    //                        color = textConfiguration.m_htmlColor,
+    //                        monoSpacing = textConfiguration.m_monoSpacing,
+    //                        cSpacing = textConfiguration.m_cSpacing,
+    //                        fxScale = textConfiguration.m_fxScale,
+    //                        fxRotationAngleCCW = textConfiguration.m_fxRotationAngleCCW,
+    //                    });
+    //                }
+    //                startIndex = segmentEnd;
                     
-                    if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontMaterialBuffer, in textBaseConfiguration, ref textConfiguration))
-                    {
-                        previousRuneStartPosition = rawCharacters.NextRuneByteIndex;
-                        continue;
-                    }
-                    else
-                        rawCharacters.GotoByteIndex(previousRuneStartPosition);
+    //                if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontMaterialBuffer, in textBaseConfiguration, ref textConfiguration))
+    //                {
+    //                    previousRuneStartPosition = rawCharacters.NextRuneByteIndex;
+    //                    continue;
+    //                }
+    //                else
+    //                    rawCharacters.GotoByteIndex(previousRuneStartPosition);
                     
-                }
-                if ((textConfiguration.m_fontStyleInternal & FontStyles.UpperCase) == FontStyles.UpperCase)
-                    calliString.Append(currentRune.ToUpper());
-                else if ((textConfiguration.m_fontStyleInternal & FontStyles.LowerCase) == FontStyles.LowerCase)
-                    calliString.Append(currentRune.ToLower());
-                else
-                    calliString.Append(currentRune);
-                previousRuneStartPosition = rawCharacters.NextRuneByteIndex;
-            }
+    //            }
+    //            if ((textConfiguration.m_fontStyleInternal & FontStyles.UpperCase) == FontStyles.UpperCase)
+    //                calliString.Append(currentRune.ToUpper());
+    //            else if ((textConfiguration.m_fontStyleInternal & FontStyles.LowerCase) == FontStyles.LowerCase)
+    //                calliString.Append(currentRune.ToLower());
+    //            else
+    //                calliString.Append(currentRune);
+    //            previousRuneStartPosition = rawCharacters.NextRuneByteIndex;
+    //        }
 
-            textSpans.Add(new TextSpan
-            {                
-                fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
-                startIndex = (uint)startIndex,
-                endIndex = (uint)calliString.Length,
-                fontSize = (int)textConfiguration.m_currentFontSize,
-                fontStyle = textConfiguration.m_fontStyleInternal,
-                lineJustification = textConfiguration.m_lineJustification,
-                color = textConfiguration.m_htmlColor,
-                monoSpacing = textConfiguration.m_monoSpacing,
-                cSpacing = textConfiguration.m_cSpacing,
-                fxScale = textConfiguration.m_fxScale,
-                fxRotationAngleCCW = textConfiguration.m_fxRotationAngleCCW,
-            });
-            textSpanBuffer.AddRange(textSpans.AsArray());
-        }        
-    }
+    //        textSpans.Add(new TextSpan
+    //        {                
+    //            fontMaterialIndex = textConfiguration.m_currentFontMaterialIndex,
+    //            startIndex = (uint)startIndex,
+    //            endIndex = (uint)calliString.Length,
+    //            fontSize = (int)textConfiguration.m_currentFontSize,
+    //            fontStyle = textConfiguration.m_fontStyleInternal,
+    //            lineJustification = textConfiguration.m_lineJustification,
+    //            color = textConfiguration.m_htmlColor,
+    //            monoSpacing = textConfiguration.m_monoSpacing,
+    //            cSpacing = textConfiguration.m_cSpacing,
+    //            fxScale = textConfiguration.m_fxScale,
+    //            fxRotationAngleCCW = textConfiguration.m_fxRotationAngleCCW,
+    //        });
+    //        textSpanBuffer.AddRange(textSpans.AsArray());
+    //    }        
+    //}
 }

@@ -1,7 +1,9 @@
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
+using UnityEngine.TextCore;
 
 namespace HarfBuzz.SDF
 {
@@ -11,7 +13,7 @@ namespace HarfBuzz.SDF
 
         public const float CORNER_CHECK_EPSILON = 32 / (1 << 16); //The epsilon distance  used for corner
 
-        public static bool SDFGenerateSubDivision(ref BezierData bezierData, int spread, NativeArray<byte> buffer, RectInt glyphRect, int atlasWidth, int atlasHeight)
+        public static bool SDFGenerateSubDivision(ref BezierData bezierData, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
             var success = true;
             if (bezierData.contourIDs.Length < 2 || bezierData.edges.Length == 0)
@@ -139,14 +141,14 @@ namespace HarfBuzz.SDF
             }
             return success;
         }
-        static bool SDFGenerateBoundingBox(ref BezierData bezierData, int spread, NativeArray<byte> buffer, RectInt glyphRect, int atlasWidth, int atlasHeight)
+        static bool SDFGenerateBoundingBox(ref BezierData bezierData, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
             var edges = bezierData.edges;
             var contourIDs = bezierData.contourIDs;
 
             bool flip_y = true;
             SDFOrientation orientation = SDFOrientation.TRUETYPE;
-            bool flip_sign = true;
+            bool flip_sign = false;
             int overloadSign = 0;
             float sp_sq;   /* `spread` [* `spread`] as a 16.16 fixed value */
             var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
@@ -245,7 +247,7 @@ namespace HarfBuzz.SDF
             }
 
             /* final pass */
-            //var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
+            var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
             int outsideSign = -1;
             for (int row = 0; row < rectHeight; row++)
             {
@@ -279,11 +281,9 @@ namespace HarfBuzz.SDF
                     dists[sourceIndex] = dist;
 
                     /* concatenate to appropriate format */
-                    //buffer[index] = map_fixed_to_sdf(dist.distance, spread);
-                    buffer[targetIndex] = (byte)((dist.distance + spread) * 24);
-                    //minDistances[index] = ((dist.distance + spread) * 24);
-                    //buffer[index] = (byte)dist.distance;
-                    //minDistances[index] = dist.distance;
+                    var result = ((dist.distance + spread) * 16);
+                    buffer[targetIndex] = (byte)result;
+                    minDistances[sourceIndex] = result;
                 }
             }
             //SDFCommon.WriteMinDistancesToFile("DistancesSubDivide.txt", minDistances);
@@ -403,8 +403,7 @@ namespace HarfBuzz.SDF
                     success = GetMinDistanceLine(edge, point, ref signedDistance);
                     break;
                 case SDFEdgeType.QUADRATIC:
-                    Debug.Log($"QUADRATIC Not implemented");
-                    //success = GetMinDistanceCubic(edge, point, ref signedDistance);
+                    success = GetMinDistanceQuadratic(edge, point, ref signedDistance);
                     break;
                 case SDFEdgeType.CUBIC:
                     success = GetMinDistanceCubic(edge, point, ref signedDistance);
@@ -496,6 +495,137 @@ namespace HarfBuzz.SDF
 
                 signedDistance.cross = (line_segment.x * nearest_vector.y) -
                                        (line_segment.y * nearest_vector.x);
+            }
+            return true;
+        }
+
+        static bool GetMinDistanceQuadratic(SDFEdge conic, float2 point, ref SignedDistance signedDistance)
+        {
+            float2 aA, bB, cC, dD; /* A, B, C in the above comment          */
+            float2 nearest_point = default;  /* point on curve nearest to `point`     */
+            float2 direction;      /* direction of curve at `nearest_point` */
+            float2 p0, p1, p2, p3;  /* control points of a cubic curve       */
+            float2 p;               /* `point` to which shortest distance    */
+            float min_factor = 0;            /* factor at shortest distance */
+            float min_factor_sq = 0;            /* factor at shortest distance */
+            float cross;                        /* to determine the sign       */
+            float min = int.MaxValue;   /* shortest distance           */
+
+            if (conic.edge_type != SDFEdgeType.QUADRATIC)
+            {
+                Debug.Log($"Edge is not quadratic: {conic.edge_type}");
+                return false;
+            }
+            p0 = conic.start_pos;
+            p1 = conic.control1;
+            p2 = conic.end_pos;
+            p = point;
+
+            /* compute substitution coefficients */
+            aA.x = p0.x - 2 * p1.x + p2.x;
+            aA.y = p0.y - 2 * p1.y + p2.y;
+
+            bB.x = 2 * (p1.x - p0.x);
+            bB.y = 2 * (p1.y - p0.y);
+
+            cC.x = p0.x;
+            cC.y = p0.y;
+
+            /* do Newton's iterations */
+            for (int iterations = 0; iterations <= SDFCommon.MAX_NEWTON_DIVISIONS; iterations++)
+            {
+                float factor = (float)iterations / SDFCommon.MAX_NEWTON_DIVISIONS;
+                float factor2;
+                float length;
+
+                float2 curve_point; /* point on the curve  */
+                float2 dist_vector; /* `curve_point` - `p` */
+
+                float2 d1;           /* first  derivative   */
+                float2 d2;           /* second derivative   */
+
+                float temp1;
+                float temp2;
+
+
+                for (int steps = 0; steps < SDFCommon.MAX_NEWTON_STEPS; steps++)
+                {
+                    factor2 = factor * factor;
+
+                    /* B(t) = t^2 * A + t * B + p0 */
+                    curve_point.x = (aA.x * factor2) +
+                                    (bB.x * factor) + cC.x;
+                    curve_point.y = (aA.y * factor2) +
+                                    (bB.y * factor) + cC.y;
+
+                    /* P(t) in the comment */
+                    dist_vector.x = curve_point.x - p.x;
+                    dist_vector.y = curve_point.y - p.y;
+
+                    if (SDFCommon.USE_SQUARED_DISTANCES)
+                        length = math.lengthsq(dist_vector);
+                    else
+                        length = math.length(dist_vector);
+
+                    if (length < min)
+                    {
+                        min = length;
+                        min_factor = factor;
+                        nearest_point = curve_point;
+                    }
+
+                    /* This is Newton's approximation.          */
+                    /*                                          */
+                    /*   t := P(t) . B'(t) /                    */
+                    /*          (B'(t) . B'(t) + P(t) . B''(t)) */
+
+                    /* B'(t) = 2tA + B */
+                    d1.x = (aA.x * 2 * factor) + bB.x;
+                    d1.y = (aA.y * 2 * factor) + bB.y;
+
+                    /* B''(t) = 2A */
+                    d2.x = 2 * aA.x;
+                    d2.y = 2 * aA.y;
+
+                    /* temp1 = P(t) . B'(t) */
+                    temp1 = math.dot(dist_vector, d1);
+
+                    /* temp2 = B'(t) . B'(t) + P(t) . B''(t) */
+                    temp2 = math.dot(d1, d1) +
+                            math.dot(dist_vector, d2);
+
+                    factor -= temp1 / temp2;
+
+                    if (factor < 0 || factor > 1)
+                        break;
+                }
+            }
+            /* B'(t) = 2t * A + B */
+            direction.x = 2 * ( aA.x * min_factor ) + bB.x;
+            direction.y = 2 * ( aA.y * min_factor ) + bB.y;
+
+            /* determine the sign */
+            cross = (nearest_point.x - p.x) * direction.y  -
+                    (nearest_point.y - p.y) * direction.x ;
+
+            /* assign the values */
+            signedDistance.distance = min;
+            signedDistance.sign = cross < 0 ? 1 : -1;
+
+            if (!Equals(min_factor, 0) && !Equals(min_factor - 1, 0))
+                signedDistance.cross = 1;   /* the two are perpendicular */
+            else
+            {
+              /* convert to nearest vector */
+              nearest_point.x -= p.x;
+              nearest_point.y -= p.y;
+
+                /* compute `cross` if not perpendicular */
+                direction = math.normalize(direction);
+                nearest_point = math.normalize(nearest_point);
+
+                signedDistance.cross = direction.x * nearest_point.y -
+                                        direction.y * nearest_point.x;
             }
             return true;
         }
@@ -597,9 +727,6 @@ namespace HarfBuzz.SDF
                     d2.x = aA.x * 6 * factor + 2 * bB.x;
                     d2.y = aA.y * 6 * factor + 2 * bB.y;
 
-                    //dist_vector.x /= 1024;
-                    //dist_vector.y /= 1024;
-
                     /* temp1 = P(t) . B'(t) */
                     temp1 = math.dot(dist_vector, d1);
 
@@ -622,11 +749,12 @@ namespace HarfBuzz.SDF
                           bB.y * 2 * min_factor + cC.y;
 
             /* determine the sign */
-            cross = (nearest_point.x - p.x) * direction.y - (nearest_point.y - p.y) * direction.x;
+            cross = (nearest_point.x - p.x) * direction.y - 
+                    (nearest_point.y - p.y) * direction.x;
             
             //* assign the values */
             signedDistance.distance = min;
-            signedDistance.sign = cross < 0 ? (sbyte)1 : (sbyte)-1;
+            signedDistance.sign = cross < 0 ? 1 : -1;
             if (!Equals(min_factor, 0) && !Equals(min_factor - 1, 0))
                 signedDistance.cross = 1;   /* the two are perpendicular */
             else

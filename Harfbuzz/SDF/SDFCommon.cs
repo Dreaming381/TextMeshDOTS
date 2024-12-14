@@ -40,6 +40,17 @@ namespace HarfBuzz.SDF
             writer.WriteLine();
             writer.Close();
         }
+        public static void WriteMinDistancesToFile(string path, in NativeArray<byte> minDistances)
+        {
+            if (minDistances.Length == 0) return;
+            StreamWriter writer = new StreamWriter(path, false);
+            for (int i = 0, end = minDistances.Length; i < end; i++)
+            {
+                writer.WriteLine($"{minDistances[i]}");
+            }
+            writer.WriteLine();
+            writer.Close();
+        }
         public static void WriteGlyphOutlineToFile(string path, BezierData bezierData)
         {
             var edges = bezierData.edges;
@@ -56,10 +67,10 @@ namespace HarfBuzz.SDF
                 for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
                     edge = edges[edgeID];
-                    writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y},");
+                    writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
                 }
                 edge = edges[nextStartID - 1];
-                writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y},");                
+                writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");                
                 writer.WriteLine();
             }
             writer.Close();

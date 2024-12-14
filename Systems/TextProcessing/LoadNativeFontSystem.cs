@@ -1,168 +1,213 @@
 using HarfBuzz;
-using System.Collections.Generic;
-using System.IO;
-using TextMeshDOTS.Authoring;
-using Unity.Collections;
+using System;
+using Unity.Burst;
 using Unity.Entities;
 using UnityEngine;
-using UnityEngine.TextCore.LowLevel;
-using UnityEngine.TextCore.Text;
 using Font = HarfBuzz.Font;
+using Unity.Collections;
+using Unity.Profiling;
+using HarfBuzz.SDF;
+using Unity.Jobs;
+using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    // To-Do: establish a Native OTF and TTF Font Resource Manager as in UnityEngine.TextCore.Text.TextResourceManager
-
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateBefore(typeof(ExtractTextSegmentsSystem))]
+    //[DisableAutoCreation]
+    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     //[RequireMatchingQueriesForUpdate]
-    partial class LoadNativeFont : SystemBase
+    [UpdateAfter(typeof(ShapeSystem))]
+    partial struct LoadNativeFontSystem : ISystem
     {
-        EntityQuery textRendererQ;
-        EntityArchetype runtimeFontDataArchetype;
+        EntityQuery fontEntityQ;
 
+        static readonly ProfilerMarker marker = new ProfilerMarker("Glyph");
+        static readonly ProfilerMarker marker2 = new ProfilerMarker("Atlas");
+        static readonly ProfilerMarker marker3 = new ProfilerMarker("SDF");
 
-        //the following is needed to ensure disposal of runtime created Blobassets and Harfbuzz fonts
-        //works reliably (query EntityWorld in OnDestroy is too late to reliably get all these components)
-        NativeHashMap<int, FontMaterial> fontMaterialMap;
-        NativeHashMap<int, DynamicFontBlobReference> dynamicFontBlobMap;
+        UnityObjectRef<Texture2D> texture2D;
+        NativeAtlas nativeAtlas;
+        EntityArchetype nativeFontDataArchetype;
+        int padding;//size of font in atlas
+        int atlasSamplingPointSize;//size of font in atlas
+        int atlasWidth;
+        int atlasHeight;
+        NativeHashMap<int, FontTextureReference> fontTextureReferenceMap;
 
-        //static readonly ProfilerMarker marker1 = new ProfilerMarker("load blob");
-        //static readonly ProfilerMarker marker2 = new ProfilerMarker("load face");
-        //static readonly ProfilerMarker marker3 = new ProfilerMarker("load font");
-
-        protected override void OnCreate()
+        //[BurstCompile]
+        public void OnCreate(ref SystemState state)
         {
-            textRendererQ = SystemAPI.QueryBuilder()
-                              .WithAll<FontBlobReference>()                              
-                              .WithNone<GlyphsInUse>()
-                              .Build();
-            textRendererQ.SetChangedVersionFilter(typeof(FontBlobReference));
-
-            runtimeFontDataArchetype = TextMeshDOTSArchetypes.GetRuntimeFontDataArchetype(ref CheckedStateRef);
-
-            fontMaterialMap = new NativeHashMap<int, FontMaterial>(256, Allocator.Persistent);
-            dynamicFontBlobMap = new NativeHashMap<int, DynamicFontBlobReference>(256, Allocator.Persistent);
-            
-            //SystemAPI.TryGetSingletonRW<GlyphsInUse>(out RefRW<GlyphsInUse> fontAtlasInfo);
+            fontEntityQ = SystemAPI.QueryBuilder()
+                .WithAll<HBFontAssetRef>()
+                .WithAll<FontTextureReference>()
+                .WithAll<GlyphsInUse>()
+                .WithAll<MissingGlyphs>()
+                .WithAll<HBFontPointer>()
+                .WithAbsent<CreatedFromFontAsset>()
+                .Build();
+            padding = 9;
+            atlasSamplingPointSize = 50;
+            atlasWidth = atlasHeight = 1024;
+            texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.Alpha8, false);
+            var rawTextureData = texture2D.Value.GetRawTextureData<byte>();
+            for (int i = 0; i < rawTextureData.Length; i++)
+                rawTextureData[i] = 0;
+            texture2D.Value.Apply();
+            nativeAtlas = new NativeAtlas(rawTextureData, 2048, atlasWidth, atlasHeight, Allocator.Persistent);
+            fontTextureReferenceMap = new NativeHashMap<int, FontTextureReference>(256, Allocator.Persistent);
+            nativeFontDataArchetype = TextMeshDOTSArchetypes.GetNativeFontDataArchetype(ref state);
+            LoadFont(atlasSamplingPointSize, texture2D, ref state);
         }
 
-        protected override void OnUpdate()
+        //[BurstCompile]
+        public void OnUpdate(ref SystemState state)
         {
-            if (textRendererQ.IsEmpty)
+            if(fontEntityQ.IsEmpty) 
                 return;
+            state.Dependency.Complete();
+            var fontEntities = fontEntityQ.ToEntityArray(Allocator.Persistent);
+            var hbFontPointersLookup = SystemAPI.GetComponentLookup<HBFontPointer>(true);
+            var hbFontAssetRefLookup = SystemAPI.GetComponentLookup<HBFontAssetRef>(true);
+            var fontTextureReferenceLookup = SystemAPI.GetComponentLookup<FontTextureReference>(false);
+            var glyphsInUseLookup = SystemAPI.GetBufferLookup<GlyphsInUse>(false);
+            var missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false);
+            //var glyphIDs = new NativeList<uint>(256, Allocator.TempJob);
 
-            //Debug.Log($"Load Fonts {textRendererQ.CalculateEntityCount()} (already {fontMaterialMap.Count} fonts loaded)");
-
-            //get data before doing any structural changes
-            var entities = textRendererQ.ToEntityArray(Allocator.TempJob);
-            var tmpFontMaterial = new NativeList<FontMaterial>(32, Allocator.TempJob);
-
-            //review: is there no better way to establish ONE list of used fonts at baking time
-            //to avoid reverse enginering this from all occurences of FontAssetReferences?
-            for (int i = 0, ii = entities.Length; i < ii; i++)
+            for (int i = 0, ii = fontEntities.Length; i < ii; i++)
             {
-                var entity = entities[i];
-                var fontBlobReferenceBuffer = EntityManager.GetBuffer<FontBlobReference>(entity).ToNativeArray(Allocator.Temp);
+                nativeAtlas.Clear();
+                var fontEntity = fontEntities[i];
+                var missingGlyphs = missingGlyphsLookup[fontEntity].Reinterpret<uint>();
+                if(missingGlyphs.Length == 0)
+                    continue;                
 
-                for (int k = 0, kk= fontBlobReferenceBuffer.Length; k < kk; k++)
-                {                    
-                    var fontAsset = fontBlobReferenceBuffer[k].fontAsset.Value;
-                    if (!fontMaterialMap.TryGetValue(fontAsset.hashCode, out FontMaterial fontMaterial))
-                        fontMaterial = CreatNewFontEntity(fontBlobReferenceBuffer[k], fontAsset, EntityManager);
-                    tmpFontMaterial.Add(fontMaterial);
-                    //Debug.Log($"Load {fontAsset.faceInfo.familyName} {fontAsset.faceInfo.styleName}");
-                }
+                var fontTextureReference = fontTextureReferenceLookup[fontEntity];
+                var textureData = fontTextureReference.texture.Value.GetRawTextureData<byte>();
 
-                DynamicBuffer<FontMaterial> fontMaterials;
-                if (EntityManager.HasBuffer<FontMaterial>(entity))
-                {                    
-                    fontMaterials = EntityManager.GetBuffer<FontMaterial>(entity);
-                    //Debug.Log($"Clear existing {fontMaterials.Length} Fonts ");
-                    fontMaterials.Clear();
-                }
-                else
+                var hbFontAssetRef = hbFontAssetRefLookup[fontEntity];
+                Debug.Log($"Missing {missingGlyphs.Length} glyphs for font {hbFontAssetRef.family} {hbFontAssetRef.subFamily}, populating atlas");
+                ////for (uint codepoint = 0; codepoint < 143; codepoint++)
+                //for (uint codepoint = 0; codepoint < 512; codepoint++)
+                //    glyphIDs.Add(codepoint);
+
+                var getGlyphRectsJob = new GetGlyphRectsJob()
                 {
-                    fontMaterials = EntityManager.AddBuffer<FontMaterial>(entity);                    
-                }
-                fontMaterials.AddRange(tmpFontMaterial.AsArray());
+                    padding = padding,
+                    fontEntity = fontEntity,
+                    hbFontPointerLookup = hbFontPointersLookup,
+                    placedGlyphs = nativeAtlas.placedGlyphs,
+                    freeRects = nativeAtlas.freeRects,
+                    usedRects = nativeAtlas.usedRects,
+                    glyphIDs = missingGlyphs,
+                };
+                state.Dependency = getGlyphRectsJob.Schedule(state.Dependency);
 
-                ////keep font references on master Font Entity used by RuntimeSpawner to continue to use it,
-                ////otherwise this just consumes chunk space on TextRenderer Entity for no reason (runtime uses FontMaterial)
-                //if (!HasBuffer<FontMaterialRef>(entity))
-                //{
-                //    EntityManager.RemoveComponent<FontBlobReference>(entity);
-                //}
-                tmpFontMaterial.Clear();
+                var populateAtlasTextureJob = new PopulateAtlasTextureJob()
+                {
+                    padding = padding,
+                    fontEntity = fontEntity,
+                    hbFontPointerLookup = hbFontPointersLookup,
+                    atlasWidth = nativeAtlas.atlasWidth,
+                    atlasHeight = nativeAtlas.atlasHeight,
+                    placedGlyphs = nativeAtlas.placedGlyphs,
+                    usedRects = nativeAtlas.usedRects,
+                    textureData = textureData,
+                    marker = marker3,
+                };
+                state.Dependency = populateAtlasTextureJob.Schedule(nativeAtlas.placedGlyphs, 1, state.Dependency);
+
+                var spawnNativeFontJob = new SpawnNativeFontJob()
+                {
+                    fontEntity = fontEntity,
+                    hbFontPointerLookup = hbFontPointersLookup,
+                    hbFontAssetRefLookup = hbFontAssetRefLookup,
+                    fontTextureReferenceLookup = fontTextureReferenceLookup,
+                    glyphsInUseLookup = glyphsInUseLookup,
+                    atlasSamplingPointSize = atlasSamplingPointSize,
+                    atlasWidth = atlasWidth,
+                    atlasHeight = atlasHeight,
+                    padding = padding,
+                    //fontTextureReferenceMap = fontTextureReferenceMap,
+                    hbGlyphs = nativeAtlas.placedGlyphs,
+                    //texture2D = texture2D,
+                };
+                state.Dependency = spawnNativeFontJob.Schedule(state.Dependency);
+                state.Dependency.Complete();
+                fontTextureReference.texture.Value.Apply();
             }
-
-            entities.Dispose();
-            tmpFontMaterial.Dispose();
+            fontEntities.Dispose();
+            //glyphIDs.Dispose(state.Dependency);
+            //state.Enabled = false;
         }
 
-        protected override void OnDestroy()
+        [BurstCompile]
+        public void OnDestroy(ref SystemState state)
         {
-            //Debug.Log($"Dispose {fontMaterialMap.Count} Fonts");
-            foreach(var fontMaterial in fontMaterialMap)
+            //blob.Dispose();
+            //face.Dispose();
+            //font.Dispose();
+            //HB.hb_draw_funcs_destroy(drawFunct);
+            foreach (var fontTextureReference in fontTextureReferenceMap)
             {
-                fontMaterial.Value.font.Dispose();
-                fontMaterial.Value.face.Dispose();
-                fontMaterial.Value.blob.Dispose();
-            }
-
-            //need to destroy runtime generated dynamicFontBlob manually.
-            //disposal of baked FontBlobs are managed by Unity
-            foreach (var dynamicFontBlob in dynamicFontBlobMap)
-            {
-                if (dynamicFontBlob.Value.blob.IsCreated)
-                    dynamicFontBlob.Value.blob.Dispose();
+                if (fontTextureReference.Value.blob.IsCreated)
+                    fontTextureReference.Value.blob.Dispose();
                 else
                     Debug.LogError("Error disposing invalid reference");
             }
-            fontMaterialMap.Dispose();
-            dynamicFontBlobMap.Dispose();
+            nativeAtlas.Dispose();
+            fontTextureReferenceMap.Dispose();
         }
-
-        FontMaterial CreatNewFontEntity(FontBlobReference fontBlobReference, FontAsset fontAsset, EntityManager entityManager)
+        void LoadFont(int pointSize, Texture2D texture2D, ref SystemState state)
         {
-            //spawn new Font Entity, and initialize all data
-            //Debug.Log($"Load {fontAsset.name}");
-            var fontBlob = fontBlobReference.fontBlob;
-            var newFontEntity = entityManager.CreateEntity(runtimeFontDataArchetype);
+            var blob = new Blob("Assets\\Resources\\Notosans\\NotoSansDisplay-Regular.ttf");
+            var face = new Face(blob.ptr, 0);
+            var font = new Font(face.ptr);
+            font.SetScale(pointSize, pointSize);
+
+            var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+            var italicString = new FixedString32Bytes("Italic");
             
+            var fontFamily = new FixedString128Bytes();            
+            uint textSize = (uint)fontFamily.Capacity;
+            face.GetFaceInfo(HB_OT_NAME_ID.FONT_FAMILY, language, ref textSize, ref fontFamily);
+            fontFamily.Length = (int)textSize;
 
-            //To-To: figure out how to get path to system font or embedded asset font at runtime
-            string filePath = null;
-#if UNITY_EDITOR
-            filePath = UnityEditor.AssetDatabase.GUIDToAssetPath(fontAsset.fontAssetCreationEditorSettings.sourceFontFileGUID);
-#endif
+            var fontSubFamily = new FixedString128Bytes();
+            textSize = (uint)fontFamily.Capacity;
+            face.GetFaceInfo(HB_OT_NAME_ID.FONT_SUBFAMILY, language, ref textSize, ref fontSubFamily);
+            fontSubFamily.Length = (int)textSize;
 
-            CreateNativeFont(filePath, out Blob blob, out Face face, out Font font);
-            var usedGlyphs = entityManager.AddBuffer<GlyphsInUse>(newFontEntity);
-            var dynamicFontBlobRef = FontBlobber.CreateDynamicFontData(fontAsset, face, font, fontBlob.Value.fontAssetRef, usedGlyphs.Reinterpret<uint>());
-            var dynamicFontBlobReference = new DynamicFontBlobReference { blob = dynamicFontBlobRef };            
-            entityManager.SetComponentData(newFontEntity, dynamicFontBlobReference);
-            var fontBlobReferenceBuffer = entityManager.AddBuffer<FontBlobReference>(newFontEntity);
-            fontBlobReferenceBuffer.Add(fontBlobReference);
+            var drawFunct = HB.hb_draw_funcs_create();
+            var moveToDelegate = (MoveToDelegate)HBDelegateProxies.HBDraw_MoveTo;
+            var lineToDelegate = (MoveToDelegate)HBDelegateProxies.HBDraw_LineTo;
+            var quadraticToDelegate = (QuadraticToDelegate)HBDelegateProxies.HBDraw_QuadraticTo;
+            var cubicToDelegate = (CubicToDelegate)HBDelegateProxies.HBDraw_CubicTo;
+            var releaseDelegate = (ReleaseDelegate)null;// HBDelegateProxies.Test;
 
-            //Debug.Log($"Add {fontAsset.name} to FontManager");
-            var fontMaterial = new FontMaterial(newFontEntity, blob, font, face, ref fontBlob.Value, dynamicFontBlobRef);
-            fontMaterialMap.Add(fontAsset.hashCode, fontMaterial);
-            dynamicFontBlobMap.Add(fontAsset.hashCode, dynamicFontBlobReference);
-            return fontMaterial;
-        }
-        void CreateNativeFont(string fileName, out Blob blob, out Face face, out Font font)
-        {
-            //blob = new Blob(fontblob.nativeFontFile.GetUnsafePtr(), (uint)fontblob.nativeFontFile.Length, MemoryMode.Readonly);
-            blob = new Blob(fileName);
-            face = new Face(blob.ptr, 0);
-            font = new Font(face.ptr);
+            HB.hb_draw_funcs_set_move_to_func(drawFunct, moveToDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_set_line_to_func(drawFunct, lineToDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_set_quadratic_to_func(drawFunct, quadraticToDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_set_cubic_to_func(drawFunct, cubicToDelegate, IntPtr.Zero, releaseDelegate);
 
-            //in order to get the same scaled GlyphMetrics as Unity, we could set the scale to atlasSamplingPointSize,
-            //but this would eliminate all units of precision as Harfbuzz works internaly with int
-            //so better to do this correction during glyph generation
-            //font.SetScale((int)fontblob.atlasSamplingPointSize, (int)fontblob.atlasSamplingPointSize);
-            font.MakeImmutable();
+            var fontEntity = state.EntityManager.CreateEntity(nativeFontDataArchetype);
+            var fontAssetRef = new FontAssetRef(TextHelper.GetHashCodeCaseInSensitive(fontFamily), TextFontWeight.Regular, fontSubFamily.Contains(italicString));
+            var hbFontPointer = new HBFontPointer { family = fontFamily, blob = blob, face = face, font = font, hbDrawFuncts = drawFunct };
+            var hbFontAssetRef = new HBFontAssetRef { family = fontFamily, subFamily = fontSubFamily, fontAssetRef = fontAssetRef };
+            var fontTextureReference = new FontTextureReference { texture = texture2D };
+
+            state.EntityManager.SetComponentData(fontEntity, hbFontAssetRef);
+            state.EntityManager.AddComponentData(fontEntity, hbFontPointer);
+            state.EntityManager.SetComponentData(fontEntity, fontTextureReference);
+
+            //var result = new FixedString128Bytes();
+            //var values = Enum.GetValues(typeof(HB_OT_NAME_ID));
+            //foreach (HB_OT_NAME_ID value in values)
+            //{
+            //    textSize = (uint)result.Capacity;
+            //    face.GetFaceInfo(value, language, ref textSize, ref result);
+            //    result.Length = (int)textSize;
+            //    Debug.Log($"{value}: {result}");
+            //    result.Clear();                
+            //}
         }
     }
 }

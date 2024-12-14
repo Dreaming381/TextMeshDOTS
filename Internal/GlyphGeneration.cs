@@ -14,7 +14,9 @@ namespace TextMeshDOTS
     internal static class GlyphGeneration
     {
         /// <summary> This function logic follows TMPro_Private.GenerateTextMesh() </summary>
-        internal static unsafe void CreateRenderGlyphs(in DynamicBuffer<FontMaterial> fontMaterial,
+        internal static unsafe void CreateRenderGlyphs(//in DynamicBuffer<FontMaterial> fontMaterial,
+                                                       in DynamicBuffer<FontEntity> fontEntities,
+                                                       in ComponentLookup<FontTextureReference> fontTextureReferenceLookup,
                                                        ref DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer,
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
                                                        ref GlyphMappingWriter mappingWriter,                                                       
@@ -49,7 +51,10 @@ namespace TextMeshDOTS
             float xAdvance = 0f;
 
             var previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
-            ref DynamicFontBlob dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
+            var currentEntity = fontEntities[currentTextSpan.fontMaterialIndex].value;
+            var hbFontPointer = fontTextureReferenceLookup[currentEntity].blob;
+            ref DynamicFontBlob dynamicFont = ref fontTextureReferenceLookup[currentEntity].blob.Value;
+            //ref DynamicFontBlob dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
 
             #region AtlasFactor
             // Unity scales native Opentype metrics in GlyphRect and GlyphMetrics by 
@@ -82,7 +87,8 @@ namespace TextMeshDOTS
                     currentTextSpan = textSpans[textSpanCounter++];
                     if (previousFontMaterialIndex != currentTextSpan.fontMaterialIndex)
                     {
-                        dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
+                        //dynamicFont = ref fontMaterial[currentTextSpan.fontMaterialIndex].dynamicFontBlob;
+                        dynamicFont = ref fontTextureReferenceLookup[currentEntity].blob.Value;
                         scaledDynamicFont.Update(ref dynamicFont, out xNativeToUnity, out yNativeToUnity);
                         previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
                     }
@@ -97,12 +103,11 @@ namespace TextMeshDOTS
                     continue;
 
                 // Cache glyph metrics
-                var currentGlyphMetrics = glyphBlob.glyphMetrics;
-                var x_bearing = currentGlyphMetrics.horizontalBearingX;
-                var y_bearing = currentGlyphMetrics.horizontalBearingY;
-                var glyphHeight = currentGlyphMetrics.height;
-                var glyphWidth = currentGlyphMetrics.width;
-                var glyphScale = glyphBlob.glyphScale;
+                var currentGlyphExtents = glyphBlob.glyphExtents;
+                var x_bearing = currentGlyphExtents.x_bearing;
+                var y_bearing = currentGlyphExtents.y_bearing;
+                var glyphHeight = currentGlyphExtents.height;
+                var glyphWidth = currentGlyphExtents.width;
 
                 float adjustedScale = currentTextSpan.fontSize / dynamicFont.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
                 float elementAscentLine = scaledDynamicFont.ascender;
@@ -123,7 +128,7 @@ namespace TextMeshDOTS
                     m_BaselineOffset = scaledDynamicFont.superScriptEmYOffset * adjustedScale;
                 }
 
-                currentElementScale = adjustedScale * fontScaleMultiplier * glyphScale;
+                currentElementScale = adjustedScale * fontScaleMultiplier;
                 float baselineOffset = scaledDynamicFont.baseLine * adjustedScale * fontScaleMultiplier;
                 #endregion
 

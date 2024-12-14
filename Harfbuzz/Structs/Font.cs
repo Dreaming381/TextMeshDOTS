@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using TextMeshDOTS;
 using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 
 

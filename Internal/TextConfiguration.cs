@@ -66,7 +66,8 @@ namespace TextMeshDOTS
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
         public int m_characterCount;
 
-        public void Reset(in TextBaseConfiguration textBaseConfiguration, DynamicBuffer<FontMaterial> fontMaterial)
+        //public void Reset(in TextBaseConfiguration textBaseConfiguration, DynamicBuffer<FontMaterial> fontMaterial)
+        public void Reset(in TextBaseConfiguration textBaseConfiguration, in DynamicBuffer<FontEntity> fontEntities, in ComponentLookup<HBFontPointer> hbFontPointerLookup)
         {
             m_htmlTag.Clear();
 
@@ -75,7 +76,8 @@ namespace TextMeshDOTS
             m_sizeStack.Clear();
             m_sizeStack.Add(m_currentFontSize);
 
-            m_fontFamilyHash = fontMaterial[0].dynamicFontBlob.fontAssetRef.familyNameHash;
+            //m_fontFamilyHash = fontMaterial[0].dynamicFontBlob.fontAssetRef.familyNameHash;
+            m_fontFamilyHash = hbFontPointerLookup[fontEntities[0].value].fontAssetRef.familyNameHash;
             m_fontFamilyHashStack.Clear();
             m_fontFamilyHashStack.Add(m_fontFamilyHash);
 
@@ -83,8 +85,9 @@ namespace TextMeshDOTS
             m_fontWeightInternal = textBaseConfiguration.fontWeight;
             m_fontWeightInternalStack.Clear();
             m_fontWeightInternalStack.Add(m_fontWeightInternal);
-            
-            var fontIndex = TextHelper.GetFontIndex(fontMaterial, m_fontFamilyHash, textBaseConfiguration.fontWeight, (textBaseConfiguration.fontStyle & FontStyles.Italic) == FontStyles.Italic);
+
+            //var fontIndex = TextHelper.GetFontIndex(fontMaterial, m_fontFamilyHash, textBaseConfiguration.fontWeight, (textBaseConfiguration.fontStyle & FontStyles.Italic) == FontStyles.Italic);
+            var fontIndex = TextHelper.GetFontIndex(fontEntities, hbFontPointerLookup, m_fontFamilyHash, textBaseConfiguration.fontWeight, (textBaseConfiguration.fontStyle & FontStyles.Italic) == FontStyles.Italic);
             if (fontIndex != -1)
                 m_currentFontMaterialIndex = fontIndex;
             else

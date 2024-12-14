@@ -1,7 +1,9 @@
 using HarfBuzz;
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Entities;
+using UnityEngine;
 using UnityEngine.TextCore.Text;
 using Font = HarfBuzz.Font;
 
@@ -77,6 +79,35 @@ namespace TextMeshDOTS
     public struct DynamicFontBlobReference : IComponentData
     {
         public BlobAssetReference<DynamicFontBlob> blob;
+    }
+    public struct FontTextureReference : ICleanupComponentData
+    {
+        public UnityObjectRef<Material> material;
+        public UnityObjectRef<Texture2D> texture;
+        public BlobAssetReference<DynamicFontBlob> blob;
+    }
+    public struct HBFontAssetRef : IComponentData
+    {
+        public FixedString128Bytes family;
+        public FixedString128Bytes subFamily;
+        public FontAssetRef fontAssetRef;
+    }
+    public struct HBFontPointer: ICleanupComponentData
+    {
+        public FixedString128Bytes family;
+        public FontAssetRef fontAssetRef;
+        public Blob blob;
+        public Face face;
+        public Font font;
+        public IntPtr hbDrawFuncts;
+    }
+    public struct FontEntity : IBufferElementData
+    {
+        public Entity value;
+    }
+    public  struct CreatedFromFontAsset : IComponentData 
+    {
+        public UnityObjectRef<FontAsset> fontAsset;
     }
     #endregion
 }

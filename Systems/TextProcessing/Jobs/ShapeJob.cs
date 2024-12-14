@@ -23,7 +23,9 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
         public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
 
-        [ReadOnly] public BufferTypeHandle<FontMaterial> fontMaterialHandle;
+        //[ReadOnly] public BufferTypeHandle<FontMaterial> fontMaterialHandle;
+        [ReadOnly] public BufferTypeHandle<FontEntity> fontEntityHandle;
+        [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<TextSpan> textSpanHandle;
         [ReadOnly] public BufferLookup<GlyphsInUse> glyphsInUseLookup;
@@ -36,11 +38,13 @@ namespace TextMeshDOTS.TextProcessing
         {
             if (!(chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
                   chunk.DidChange(ref textSpanHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
+                chunk.DidChange(ref fontEntityHandle, lastSystemVersion)))
+                //chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
 
             //Debug.Log("Shape");
-            var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
+            //var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
+            var fontEntityBuffers = chunk.GetBufferAccessor(ref fontEntityHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
@@ -58,7 +62,8 @@ namespace TextMeshDOTS.TextProcessing
                 if (textSpans.Length == 0)
                     continue;//not ready yet
 
-                var fontMaterial = fontMaterialBuffers[indexInChunk];
+                //var fontMaterialBuffer = fontMaterialBuffers[indexInChunk];
+                var fontEntityBuffer = fontEntityBuffers[indexInChunk];
                 var glyphOTFs = glyphOTFBuffers[indexInChunk];
                 var calliBytes = calliBytesBuffers[indexInChunk];
 
@@ -99,8 +104,10 @@ namespace TextMeshDOTS.TextProcessing
                     buffer.SetSegmentProperties(latinLTR);
 
 
-                    var font = fontMaterial[currentFont].font;
-                    var fontEntity = fontMaterial[currentFont].fontEntity;
+                    //var font = fontMaterial[currentFont].font;
+                    //var fontEntity = fontMaterial[currentFont].fontEntity;
+                    var fontEntity = fontEntityBuffer[currentFont].value;
+                    var font = hbFontPointerLookup[fontEntity].font;
                     var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
                     //marker.Begin();
                     unsafe

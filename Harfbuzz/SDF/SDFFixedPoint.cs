@@ -1,4 +1,5 @@
 using FixPointCS;
+using System;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -10,7 +11,16 @@ namespace HarfBuzz.SDF
     {
         public static SignedDistanceFixed max_sdf => new SignedDistanceFixed { distance = int.MaxValue, sign = 0, cross = 0 };
         public const int CORNER_CHECK_EPSILON = 32;//The epsilon distance (in 16.16 fractional units) used for corner
-
+        public static bool SDFGenerateSubDivision(ref BezierData bezierData, int spread, NativeArray<byte> buffer, RectInt glyphRect, int atlasWidth, int atlasHeight)
+        {
+            var success = true;
+            if (bezierData.contourIDs.Length < 2 || bezierData.edges.Length == 0)
+                return false;
+            //var new_edges = new NativeList<SDFEdge>(edge_list.Length, Allocator.Temp);
+            //success = SplitSDFShape(edge_list, new_edges);
+            success = SDFGenerateBoundingBox(ref bezierData, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+            return success;
+        }
         public static bool SDFGenerate(NativeList<SDFEdge> shape, int spread, NativeArray<byte> buffer, int width, int rows)
         {
             bool flip_y = true;
@@ -32,7 +42,7 @@ namespace HarfBuzz.SDF
                 Debug.Log($"sdf_generate:  Cannot render glyph with width/height == 0 (width: {width}, height: {rows})");
                 return false;
             }
-            //var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
+            var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
             /* loop over all rows */
             for (int y = 0; y < rows; y++)
             {
@@ -46,7 +56,6 @@ namespace HarfBuzz.SDF
                     SignedDistanceFixed min_dist = max_sdf;
 
                     int index;
-                    int value;
                     grid_point.x = FT_INT_26D6(x);
                     grid_point.y = FT_INT_26D6(y);
                     /* This `grid_point' is at the corner, but we */
@@ -57,12 +66,12 @@ namespace HarfBuzz.SDF
                     /* iterate over all contours manually */
                     //for (int i = 0, length=shape.Length; i < length; i++)
                     //{
-                        SignedDistanceFixed current_dist = max_sdf;
-                        SDFContourGetMinDistance(shape, grid_point, ref current_dist);
+                    SignedDistanceFixed current_dist = max_sdf;
+                    SDFContourGetMinDistance(shape, grid_point, ref current_dist);
 
-                        if (current_dist.distance < min_dist.distance)
-                            min_dist = current_dist;
-                    
+                    if (current_dist.distance < min_dist.distance)
+                        min_dist = current_dist;
+
                     //contour_list = contour_list->next;
                     //}
 
@@ -81,24 +90,242 @@ namespace HarfBuzz.SDF
                         min_dist.sign = (sbyte)-min_dist.sign;
                     if (flip_sign)
                         min_dist.sign = (sbyte)-min_dist.sign;
-                    //min_dist.distance /= 64; /* convert from 16.16 to 22.10 */
+                    min_dist.distance /= 65536; /* convert from 16.16 to 22.10 */
                     //value = min_dist.distance & 0x0000FFFF; /* truncate to 6.10 */
 
-                    min_dist.distance /= 65536;
-                    value = min_dist.distance & 0x000000FF;
-                    value *= min_dist.sign;
+                    //min_dist.distance /= 65536;
+                    //value = min_dist.distance & 0x000000FF;
+                    min_dist.distance *= min_dist.sign;
                     if (flip_y)
                         index = y * width + x;
                     else
                         index = (rows - y - 1) * width + x;
-                    //buffer[index] = (byte)((value / 1024 + spread) * 24);
-                    //minDistances[index] = ((value / 1024 + spread) * 24);
-                    buffer[index] = (byte)((value + spread) * 24);
-                    //minDistances[index] = ((value + spread) * 24);
+
+                    //var result = ((value + spread) * 24);
+                    MapFixedToSDF(min_dist.distance, spread, out byte result);
+
+                    buffer[index] = (byte)result;
+                    minDistances[index] = result;
                 }
             }
             //SDFCommon.WriteMinDistancesToFile("DistancesFixed.txt", minDistances);
             return true;
+        }
+
+        static bool SDFGenerateBoundingBox(ref BezierData bezierData, int spread, NativeArray<byte> buffer, RectInt glyphRect, int atlasWidth, int atlasHeight)
+        {
+            var edges = bezierData.edges;
+            var contourIDs = bezierData.contourIDs;
+
+            bool flip_y = true;
+            SDFOrientation orientation = SDFOrientation.TRUETYPE;
+            bool flip_sign = true;
+            int overloadSign = 0;
+            int sp_sq;   /* `spread` [* `spread`] as a 16.16 fixed value */
+            var dists = new NativeArray<SignedDistanceFixed>(glyphRect.width * glyphRect.height, Allocator.Temp);
+
+            if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
+                return false;
+
+            int fixed_spread = FT_INT_16D16(spread);
+
+            if (SDFCommon.USE_SQUARED_DISTANCES)
+                sp_sq = FT_INT_16D16(spread * spread);
+            else
+                sp_sq = FT_INT_16D16(spread);
+
+            int maxIndex = int.MinValue;
+            int minIndex = int.MaxValue;
+            var rectX = glyphRect.x;
+            var rectY = glyphRect.y;
+            var rectWidth = glyphRect.width;
+            var rectHeight = glyphRect.height;
+
+            SDFEdge edge;
+            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
+            {
+                int startID = contourIDs[contourID];
+                int nextStartID = contourIDs[contourID + 1];
+                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
+                {
+                    edge = edges[edgeID];
+                    BBox cbox;
+
+                    /* get the control box and increase it by `spread' */
+                    cbox = GetControlBox(edge);
+                    //cbox = GetBBox(edge);
+                    cbox.Expand(spread);
+
+                    /* now loop over the pixels in the control box. */
+                    for (int y = (int)cbox.min.y, yEnd = (int)cbox.max.y; y < yEnd; y++)
+                    {
+                        for (int x = (int)cbox.min.x, xEnd = (int)cbox.max.x; x < xEnd; x++)
+                        {
+                            int2 grid_point;
+                            SignedDistanceFixed dist = max_sdf;
+                            int index = 0;
+                            int diff = 0;
+
+                            if (x < 0 || x >= rectWidth)
+                                continue;
+                            if (y < 0 || y >= rectHeight)
+                                continue;
+
+                            grid_point.x = FT_INT_26D6(x);
+                            grid_point.y = FT_INT_26D6(y);
+
+                            /* This `grid_point` is at the corner, but we */
+                            /* use the center of the pixel.               */
+                            grid_point.x += FT_INT_26D6(1) / 2;
+                            grid_point.y += FT_INT_26D6(1) / 2;
+
+                            SDFEdgeGetMinDistance(edge, grid_point, ref dist);                            
+
+                            if (orientation == SDFOrientation.FILL_LEFT)
+                                dist.sign = (sbyte)-dist.sign;
+
+                            /* ignore if the distance is greater than spread;       */
+                            /* otherwise it creates artifacts due to the wrong sign */
+                            if (dist.distance > sp_sq)
+                                continue;
+
+                            /* take the square root of the distance if required */
+                            if (SDFCommon.USE_SQUARED_DISTANCES)
+                                dist.distance = SquareRoot(dist.distance);
+
+                            if (flip_y)
+                                index = y * rectWidth + x;
+                            else
+                                index = (rectHeight - y - 1) * rectWidth + x;
+
+                            if (index < minIndex)
+                                minIndex = index;
+                            if (index > maxIndex)
+                                maxIndex = index;
+
+                            /* check whether the pixel is set or not */
+                            if (dists[index].sign == 0)
+                                dists[index] = dist;
+                            else
+                            {
+                                diff = FT_ABS(dists[index].distance - dist.distance);
+
+                                if (diff <= CORNER_CHECK_EPSILON)
+                                    dists[index] = ResolveCorner(dists[index], dist);
+                                else if (dists[index].distance > dist.distance)
+                                    dists[index] = dist;
+                            }
+                        }
+                    }
+                }
+            }
+
+            /* final pass */
+            var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
+            int outsideSign = -1;
+            for (int row = 0; row < rectHeight; row++)
+            {
+                /* We assume the starting pixel of each row is outside. */
+                int current_sign = outsideSign;
+
+                if (overloadSign != 0)
+                    current_sign = overloadSign < 0 ? -1 : 1;
+
+                for (int column = 0; column < rectWidth; column++)
+                {
+                    var sourceIndex = rectWidth * row + column;
+                    var targetIndex = (atlasWidth * (row + rectY)) + (column + rectX);
+
+                    /* if the pixel is not set                     */
+                    /* its shortest distance is more than `spread` */
+                    var dist = dists[sourceIndex];
+                    minDistances[sourceIndex] = dist.distance;
+                    if (dist.sign == 0)
+                    {
+                        dist.sign = outsideSign;
+                        dist.distance = -fixed_spread;
+                    }
+                    current_sign = dist.sign;
+
+                    /* clamp the values */
+                    if (dist.distance > fixed_spread)
+                        dist.distance = fixed_spread;
+
+                    /* flip sign if required */
+                    dist.distance *= flip_sign ? -current_sign : current_sign;
+                    dists[sourceIndex] = dist;
+
+                    /* concatenate to appropriate format */
+                    MapFixedToSDF(dist.distance, fixed_spread, out byte result);
+                    buffer[targetIndex] = result;
+                    minDistances[sourceIndex] = result;
+                }
+            }
+            SDFCommon.WriteMinDistancesToFile("DistancesFixedSubDivide.txt", minDistances);
+            return true;
+        }
+
+        static BBox GetControlBox(SDFEdge edge)
+        {
+            BBox cbox = BBox.Empty;
+            bool is_set = false;
+
+
+            switch (edge.edge_type)
+            {
+                case SDFEdgeType.CUBIC:
+                    cbox.min = edge.control2;
+                    cbox.max = edge.control2;
+
+                    is_set = true;
+                    goto case SDFEdgeType.QUADRATIC;
+
+                case SDFEdgeType.QUADRATIC:
+                    if (is_set)
+                    {
+                        cbox.min.x = edge.control1.x < cbox.min.x ? edge.control1.x : cbox.min.x;
+                        cbox.min.y = edge.control1.y < cbox.min.y ? edge.control1.y : cbox.min.y;
+
+                        cbox.max.x = edge.control1.x > cbox.max.x ? edge.control1.x : cbox.max.x;
+                        cbox.max.y = edge.control1.y > cbox.max.y ? edge.control1.y : cbox.max.y;
+                    }
+                    else
+                    {
+                        cbox.min = edge.control1;
+                        cbox.max = edge.control1;
+
+                        is_set = true;
+                    }
+                    goto case SDFEdgeType.LINE;
+
+                case SDFEdgeType.LINE:
+                    if (is_set)
+                    {
+                        cbox.min.x = edge.start_pos.x < cbox.min.x ? edge.start_pos.x : cbox.min.x;
+                        cbox.max.x = edge.start_pos.x > cbox.max.x ? edge.start_pos.x : cbox.max.x;
+
+                        cbox.min.y = edge.start_pos.y < cbox.min.y ? edge.start_pos.y : cbox.min.y;
+                        cbox.max.y = edge.start_pos.y > cbox.max.y ? edge.start_pos.y : cbox.max.y;
+                    }
+                    else
+                    {
+                        cbox.min = edge.start_pos;
+                        cbox.max = edge.start_pos;
+                    }
+
+                    cbox.min.x = edge.end_pos.x < cbox.min.x ? edge.end_pos.x : cbox.min.x;
+                    cbox.max.x = edge.end_pos.x > cbox.max.x ? edge.end_pos.x : cbox.max.x;
+
+                    cbox.min.y = edge.end_pos.y < cbox.min.y ? edge.end_pos.y : cbox.min.y;
+                    cbox.max.y = edge.end_pos.y > cbox.max.y ? edge.end_pos.y : cbox.max.y;
+
+                    break;
+
+                default:
+                    break;
+            }
+
+            return cbox;
         }
         /// <summary>
         /// Converts a FP value into a float.
@@ -140,20 +367,109 @@ namespace HarfBuzz.SDF
             switch (edge.edge_type)
             {
                 case SDFEdgeType.LINE:
-                    Debug.Log($"LINE Not implemented");
-                    //success = GetMinDistanceCubic(edge, point, out signedDistance);
+                    success = GetMinDistanceLineFixed(edge, point, ref signedDistance);
                     break;
                 case SDFEdgeType.QUADRATIC:
                     Debug.Log($"QUADRATIC Not implemented");
                     //success = GetMinDistanceCubic(edge, point, out signedDistance);
                     break;
-                case SDFEdgeType.CUBIC:               
+                case SDFEdgeType.CUBIC:
                     success = GetMinDistanceCubicFixed(edge, point, ref signedDistance);
                     break;
                 default:
                     break;
             }
             return success;
+        }
+        static bool GetMinDistanceLineFixed(SDFEdge line, int2 point, ref SignedDistanceFixed signedDistance)
+        {
+            int2 a;                   /* start position */
+            int2 b;                   /* end position   */
+            int2 p;                   /* current point  */
+
+            int2 line_segment;      /* `b` - `a` */
+            int2 p_sub_a;           /* `p` - `a` */
+
+            int sq_line_length;       /* squared length of `line_segment` */
+            int factor;               /* factor of the nearest point      */
+            int cross;                /* used to determine sign           */
+
+            int2 nearest_point;    /* `point_on_line`       */
+            int2 nearest_vector;   /* `p` - `nearest_point` */
+
+
+            if (line.edge_type != SDFEdgeType.LINE)
+            {
+                Debug.Log($"Edge is not a line: {line.edge_type}");
+                return false;
+            }
+
+            a = FT_26D6VecFromFloat(line.start_pos);
+            b = FT_26D6VecFromFloat(line.end_pos);
+            p = point;
+
+            line_segment.x = b.x - a.x;
+            line_segment.y = b.y - a.y;
+
+            p_sub_a.x = p.x - a.x;
+            p_sub_a.y = p.y - a.y;
+
+            sq_line_length = (line_segment.x * line_segment.x) +
+                             (line_segment.y * line_segment.y);
+
+            factor = (p_sub_a.x * line_segment.x) +
+                     (p_sub_a.y * line_segment.y);
+
+            factor = factor / sq_line_length;
+
+            /* clamp the factor between 0.0 and 1.0 in fixed-point */
+            if (factor > 1)
+                factor = 1;
+            if (factor < 0)
+                factor = 0;
+
+            nearest_point.x = line_segment.x * factor;
+            nearest_point.y = line_segment.y * factor;
+
+            nearest_point.x = a.x + nearest_point.x;
+            nearest_point.y = a.y + nearest_point.y;
+
+            nearest_vector.x = nearest_point.x - p.x;
+            nearest_vector.y = nearest_point.y - p.y;
+
+            cross = (nearest_vector.x * line_segment.y) -
+                    (nearest_vector.y * line_segment.x);
+
+            /* assign the output */
+            signedDistance.sign = cross < 0 ? 1 : -1;
+            signedDistance.distance = VECTOR_LENGTH_16D16(nearest_vector); 
+
+            /* Instead of finding `cross` for checking corner we */
+            /* directly set it here.  This is more efficient     */
+            /* because if the distance is perpendicular we can   */
+            /* directly set it to 1.                             */
+            //if (factor != 0 && factor != 1)
+            if (factor != 0 && factor != FT_INT_16D16(1))
+                signedDistance.cross = FT_INT_16D16(1);
+            else
+            {
+                /* [OPTIMIZATION]: Pre-compute this direction. */
+                /* If not perpendicular then compute `cross`.  */
+                //FT_Vector_NormLen(line_segment);
+                //FT_Vector_NormLen(nearest_vector);
+
+                var tmpLine_segment = ToDoubleVec(line_segment);
+                tmpLine_segment = math.normalize(tmpLine_segment);
+                line_segment = FT_16D16VecFromDouble(tmpLine_segment);
+
+                var tmpNearest_vector = ToDoubleVec(nearest_vector);
+                tmpNearest_vector = math.normalize(tmpNearest_vector);
+                nearest_vector = FT_16D16VecFromDouble(tmpNearest_vector);
+
+                signedDistance.cross = (line_segment.x * nearest_vector.y) -
+                                       (line_segment.y * nearest_vector.x);
+            }
+            return true;
         }
         public static bool GetMinDistanceCubicFixed(SDFEdge cubic, int2 point, ref SignedDistanceFixed signedDistance)
         {
@@ -275,7 +591,7 @@ namespace HarfBuzz.SDF
 
                     if (factor < 0 || factor > FT_INT_16D16(1))
                         break;
-                }                
+                }
             }
             /* B'(t) = 3t^2 * A + 2t * B + C */
             direction.x = Fixed32.Mul(aA.x, 3 * min_factor_sq) +
@@ -311,7 +627,7 @@ namespace HarfBuzz.SDF
                 nearest_point = FT_16D16VecFromDouble(tmpNearest_point);
 
                 signedDistance.cross = Fixed32.Mul(direction.x, nearest_point.y) -
-                                       Fixed32.Mul(direction.y, nearest_point.x); 
+                                       Fixed32.Mul(direction.y, nearest_point.x);
             }
             return true;
         }
@@ -379,6 +695,45 @@ namespace HarfBuzz.SDF
             q >>= 8;
             return (int)q;
         }
+        public static SignedDistanceFixed ResolveCorner(SignedDistanceFixed sdf1, SignedDistanceFixed sdf2)
+        {
+            return FT_ABS(sdf1.cross) > FT_ABS(sdf2.cross) ? sdf1 : sdf2;
+        }
+
+        static void MapFixedToSDF(int dist, int max_value, out byte alpha8)
+        {
+            int udist;
+
+
+            /* normalize the distance values */
+            dist = Fixed32.DivPrecise( dist, max_value );
+
+            udist = dist < 0 ? -dist : dist;
+
+            /* Reduce the distance values to 8 bits.                   */
+            /*                                                         */
+            /* Since +1/-1 in 16.16 takes the 16th bit, we right-shift */
+            /* the number by 9 to make it fit into the 7-bit range.    */
+            /*                                                         */
+            /* One bit is reserved for the sign.                       */
+            udist >>= 9;
+
+            /* Since `char` can only store a maximum positive value    */
+            /* of 127 we need to make sure it does not wrap around and */
+            /* give a negative value.                                  */
+            if ( dist > 0 && udist > 127 )
+                udist = 127;
+            if ( dist < 0 && udist > 128 )
+                udist = 128;
+
+                /* Output the data; negative values are from [0, 127] and positive    */
+                /* from [128, 255].  One important thing is that negative values      */
+                /* are inverted here, that means [0, 128] maps to [-128, 0] linearly. */
+                /* More on that in `freetype.h` near the documentation of             */
+                /* `FT_RENDER_MODE_SDF`.                                              */
+                //alpha8 = dist < 0 ? 128 - (byte)udist : (byte)udist + 128;
+                alpha8 = dist < 0 ? (byte)(128 - udist) : (byte)(udist + 128);
+            }
 
         //int FT_Vector_Length(int2 vec)
         //{
@@ -570,3 +925,4 @@ namespace HarfBuzz.SDF
         //}
     }
 }
+

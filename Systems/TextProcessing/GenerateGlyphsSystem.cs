@@ -5,10 +5,10 @@ using HarfBuzz;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
     //[UpdateAfter(typeof(UpdateAtlasSystem))]
-    [UpdateAfter(typeof(ShapeSystem))]
+    [UpdateAfter(typeof(LoadNativeFontSystem))]
     public partial struct GenerateGlyphsSystem : ISystem
     {
         EntityQuery m_query;
@@ -25,7 +25,8 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAll<TextSpan>()                      
                       .WithAll<TextBaseConfiguration>()
                       .WithAllRW<TextRenderControl>()
-                      .WithAll<FontMaterial>()
+                      //.WithAll<FontMaterial>()
+                      .WithAll<FontEntity>()
                       .Build();
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
         }
@@ -41,7 +42,9 @@ namespace TextMeshDOTS.TextProcessing
                 selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
-                fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),
+                //fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),
+                fontEntityHandle = SystemAPI.GetBufferTypeHandle<FontEntity>(true),
+                fontTextureReferenceLookup = SystemAPI.GetComponentLookup<FontTextureReference>(true),
                 glyphMappingMaskHandle = SystemAPI.GetComponentTypeHandle<GlyphMappingMask>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),
