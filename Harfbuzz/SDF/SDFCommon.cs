@@ -95,9 +95,9 @@ namespace HarfBuzz.SDF
                     edge = edges[interator];
                     writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
                     interator = edge.nextId;
-                } while (interator != -1 && interator != nextStartID);
-                //edge = edges[nextStartID - 1];
-                //writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
+                } while (interator != -1);
+                edge = edges[nextStartID - 1];
+                writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
                 writer.WriteLine();
             }
             writer.Close();

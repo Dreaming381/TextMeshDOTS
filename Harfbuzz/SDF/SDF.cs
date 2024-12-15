@@ -1,14 +1,9 @@
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using Unity.Collections;
-using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
-using Unity.VisualScripting.YamlDotNet.Core;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.TextCore;
-using static Unity.Burst.Intrinsics.X86;
+
 
 namespace HarfBuzz.SDF
 {
@@ -23,6 +18,11 @@ namespace HarfBuzz.SDF
             var success = true;
             if (bezierData.contourIDs.Length < 2 || bezierData.edges.Length == 0)
                 return false;
+
+            //first ensure the last contour is correctly terminated.
+            //to-do: do this in release delegate of hb_shape?
+            bezierData.edges.ElementAt(bezierData.edges.Length - 1).nextId = -1;
+
             //var new_edges = new NativeList<SDFEdge>(edge_list.Length, Allocator.Temp);
             //SDFCommon.WriteGlyphOutlineToFile("BeforeSplit.txt", bezierData);
             success = SplitSDFShape(ref bezierData);
@@ -60,7 +60,6 @@ namespace HarfBuzz.SDF
             var rectY = glyphRect.y;
             var rectWidth = glyphRect.width;
             var rectHeight = glyphRect.height;
-
 
             //var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
             /* loop over all rows */
@@ -160,11 +159,6 @@ namespace HarfBuzz.SDF
                 int startID = contourIDs[contourID];
                 int nextStartID = contourIDs[contourID + 1];
 
-                //convert edgeList into linked list
-                for (int edgeID = startID; edgeID < nextStartID; edgeID++) 
-                    edges.ElementAt(edgeID).nextId = edgeID + 1;
-                edges.ElementAt(nextStartID - 1).nextId = -1;
-
                 int iterator = startID;
                 float dx;
                 int num_splits, loopIT;
@@ -178,32 +172,48 @@ namespace HarfBuzz.SDF
                             break;
                         case SDFEdgeType.QUADRATIC:
                             dx = GetDx(edges, iterator);
-                            num_splits = 1;
-                            while (dx > 0.25f)
+                            if (dx > 0.5f)
                             {
-                                dx /= 4;
-                                num_splits *=2;
+                                num_splits = 1;
+                                while (dx > 0.5f)
+                                {
+                                    dx /= 4;
+                                    num_splits *= 2;
+                                }
+                                loopIT = iterator;
+                                for (int i = 0; i < num_splits; i++)
+                                {
+                                    iterator = split_conic(edges, loopIT);
+                                    loopIT = edges[loopIT].nextId;
+                                }
                             }
-                            loopIT = iterator;
-                            for (int i = 0; i < num_splits; i++)
+                            else
                             {
-                                iterator = split_conic(edges, loopIT);
-                                loopIT = edges[loopIT].nextId;
+                                edges.ElementAt(iterator).edge_type=SDFEdgeType.LINE;
+                                iterator = edge.nextId;
                             }
                             break;
                         case SDFEdgeType.CUBIC:
                             dx = GetDx2(edges, iterator);
-                            num_splits = 1;
-                            while (dx > 0.25f)
+                            if (dx > 0.5f)
                             {
-                                dx /= 4;
-                                num_splits *= 2;
+                                num_splits = 1;
+                                while (dx > 0.5f)
+                                {
+                                    dx /= 4;
+                                    num_splits *= 2;
+                                }
+                                loopIT = iterator;
+                                for (int i = 0; i < num_splits; i++)
+                                {
+                                    iterator = split_cubic(edges, loopIT);
+                                    loopIT = edges[loopIT].nextId;
+                                }
                             }
-                            loopIT = iterator;
-                            for (int i = 0; i < num_splits; i++)
+                            else
                             {
-                                iterator = split_cubic(edges, loopIT);
-                                loopIT = edges[loopIT].nextId;
+                                edges.ElementAt(iterator).edge_type = SDFEdgeType.LINE;
+                                iterator = edge.nextId;
                             }
                             break;
 
@@ -212,17 +222,17 @@ namespace HarfBuzz.SDF
                             break;                            
                             //error = FT_THROW(Invalid_Argument);
                     }                    
-                } while (iterator != -1 && iterator!= nextStartID);
+                } while (iterator != -1);
             }
             return success;
         }
         static float GetDx(NativeList<SDFEdge> edgeList, int edgeID)
         {
             var quadratic = edgeList[edgeID];
-            var A = quadratic.start_pos;
-            var B = quadratic.control1;
-            var C = quadratic.end_pos;
-            var deviation = math.abs(C + A - 2 * B);
+            var start_pos = quadratic.start_pos;
+            var control1 = quadratic.control1;
+            var end_pos = quadratic.end_pos;
+            var deviation = math.abs(end_pos + start_pos - 2 * control1);
 
             if (deviation.x < deviation.y)
                 return deviation.y;
@@ -236,7 +246,6 @@ namespace HarfBuzz.SDF
             var control1 = quadratic.control1;
             var control2 = quadratic.control2;
             var end_pos = quadratic.end_pos;
-            //var deviation = math.abs(end_pos + start_pos - 2 * control1);
 
             var dx1 = math.abs(start_pos - 3 * control2 + 2 * end_pos);
             var dx2 = math.abs(2 * start_pos - 3 * control1.x + control2);
@@ -343,9 +352,11 @@ namespace HarfBuzz.SDF
             {
                 int startID = contourIDs[contourID];
                 int nextStartID = contourIDs[contourID + 1];
-                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
+
+                int interator = startID;
+                do
                 {
-                    edge = edges[edgeID];
+                    edge = edges[interator];                    
                     BBox cbox;
 
                     /* get the control box and increase it by `spread' */
@@ -413,7 +424,12 @@ namespace HarfBuzz.SDF
                             }
                         }
                     }
-                }
+                    interator = edge.nextId;
+                } while (interator != -1);
+                //for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
+                //{
+                //    edge = edges[edgeID];
+                //}
             }
 
             /* final pass */
