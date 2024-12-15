@@ -20,7 +20,6 @@ namespace TextMeshDOTS.TextProcessing
         static readonly ProfilerMarker marker = new ProfilerMarker("harfbuzz");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
 
-
         bool m_skipChangeFilter;
 
         [BurstCompile]
@@ -59,7 +58,6 @@ namespace TextMeshDOTS.TextProcessing
                 
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
                 selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
-                //fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),
                 fontEntityHandle = SystemAPI.GetBufferTypeHandle<FontEntity>(true),
                 hbFontPointerLookup = SystemAPI.GetComponentLookup<HBFontPointer>(),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),

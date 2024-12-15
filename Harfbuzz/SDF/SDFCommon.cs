@@ -1,11 +1,14 @@
 using System.IO;
 using Unity.Collections;
-using Unity.Mathematics;
 
 namespace HarfBuzz.SDF
 {
     public static class SDFCommon
     {
+        /// <summary> Max permitted deviatition of generated lines from original bezier curve. 
+        /// Sensible value is fontsize (=atlas pointsize) / 25). Lower values massively hit performance.
+        /// </summary>
+        public const float MAX_DEVIATION_SPLITTING = 2f;
         public readonly static bool USE_SQUARED_DISTANCES = false;
         public const int DEFAULT_SPREAD = 8;
         public const int MIN_SPREAD = 2;
@@ -70,8 +73,8 @@ namespace HarfBuzz.SDF
                     writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
                     //writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.control1.x} {edge.control1.y} {edge.end_pos.x} {edge.end_pos.y} {edge.edge_type}");
                 }
-                edge = edges[nextStartID - 1];
-                writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");                
+                //edge = edges[nextStartID - 1];
+                //writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
                 writer.WriteLine();
             }
             writer.Close();
@@ -94,13 +97,35 @@ namespace HarfBuzz.SDF
                 {
                     edge = edges[interator];
                     writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
-                    interator = edge.nextId;
-                } while (interator != -1);
-                edge = edges[nextStartID - 1];
-                writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
+                    //writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.control1.x} {edge.control1.y} {edge.end_pos.x} {edge.end_pos.y} {edge.edge_type}");
+                } while ((interator = edge.nextId) != -1);
+                //edge = edges[nextStartID - 1];
+                //writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
                 writer.WriteLine();
             }
             writer.Close();
         }
+        public static void WriteMinDistancesToFile(string path, in NativeList<SDFDebug> distanceHelper)
+        {
+            if (distanceHelper.Length == 0) return;
+            StreamWriter writer = new StreamWriter(path, false);
+            for (int i = 0, end = distanceHelper.Length; i < end; i++)
+            {
+                var c = distanceHelper[i];
+                writer.WriteLine($"{c.edge.edge_type} {c.x} {c.y} {c.overWrite} {c.pixelWasSet} previous: sign {c.previousPixelValue.sign} cross {c.previousPixelValue.cross} {c.previousPixelValue.distance} current: sign{c.pixelValue.sign} cross {c.pixelValue.cross} {c.pixelValue.distance}");
+            }
+            writer.WriteLine();
+            writer.Close();
+        }
+    }
+    public struct SDFDebug
+    {
+        public int x;
+        public int y;
+        public bool pixelWasSet;
+        public bool overWrite;
+        public SignedDistance previousPixelValue;
+        public SignedDistance pixelValue;
+        public SDFEdge edge;
     }
 }

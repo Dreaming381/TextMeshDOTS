@@ -33,6 +33,8 @@ namespace TextMeshDOTS.TextProcessing
         int atlasHeight;        
         NativeHashMap<int, FontTextureReference> fontTextureReferenceMap;
 
+        NativeList<uint> missingGlyphs;
+
         //[BurstCompile]
         public void OnCreate(ref SystemState state)
         {
@@ -44,18 +46,25 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<HBFontPointer>()
                 .WithAbsent<CreatedFromFontAsset>()
                 .Build();
+
             padding = 9;
             atlasSamplingPointSize = 50;
             atlasWidth = atlasHeight = 1024;
+
             texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.Alpha8, false);
             var rawTextureData = texture2D.Value.GetRawTextureData<byte>();
             for (int i = 0; i < rawTextureData.Length; i++)
                 rawTextureData[i] = 0;
             texture2D.Value.Apply();
+
             nativeAtlas = new NativeAtlas(rawTextureData, 2048, atlasWidth, atlasHeight, Allocator.Persistent);
             fontTextureReferenceMap = new NativeHashMap<int, FontTextureReference>(256, Allocator.Persistent);
             nativeFontDataArchetype = TextMeshDOTSArchetypes.GetNativeFontDataArchetype(ref state);
             LoadFont(atlasSamplingPointSize, texture2D, ref state);
+
+            //missingGlyphs = new NativeList<uint>(256, Allocator.Persistent);
+            //for (uint i = 0; i < 430; i++)
+            //    missingGlyphs.Add(i);
         }
 
         //[BurstCompile]
@@ -70,7 +79,6 @@ namespace TextMeshDOTS.TextProcessing
             var fontTextureReferenceLookup = SystemAPI.GetComponentLookup<FontTextureReference>(false);
             var glyphsInUseLookup = SystemAPI.GetBufferLookup<GlyphsInUse>(false);
             var missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false);
-            //var glyphIDs = new NativeList<uint>(256, Allocator.TempJob);
 
             for (int i = 0, ii = fontEntities.Length; i < ii; i++)
             {
@@ -81,13 +89,12 @@ namespace TextMeshDOTS.TextProcessing
                     continue;                
 
                 var fontTextureReference = fontTextureReferenceLookup[fontEntity];
+
+                //this managed call to texture object is reason why we cannot BURST compile the update method of this system
                 var textureData = fontTextureReference.texture.Value.GetRawTextureData<byte>();
 
                 var hbFontAssetRef = hbFontAssetRefLookup[fontEntity];
                 Debug.Log($"Missing {missingGlyphs.Length} glyphs for font {hbFontAssetRef.family} {hbFontAssetRef.subFamily}, populating atlas");
-                ////for (uint codepoint = 0; codepoint < 143; codepoint++)
-                //for (uint codepoint = 0; codepoint < 512; codepoint++)
-                //    glyphIDs.Add(codepoint);
 
                 var getGlyphRectsJob = new GetGlyphRectsJob()
                 {
@@ -155,6 +162,7 @@ namespace TextMeshDOTS.TextProcessing
             }
             nativeAtlas.Dispose();
             fontTextureReferenceMap.Dispose();
+            //if(missingGlyphs.IsCreated) missingGlyphs.Dispose();
         }
         void LoadFont(int pointSize, Texture2D texture2D, ref SystemState state)
         {

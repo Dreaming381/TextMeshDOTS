@@ -1,4 +1,4 @@
-using TextMeshDOTS.Rendering;
+﻿using TextMeshDOTS.Rendering;
 using TextMeshDOTS.Rendering.Authoring;
 using Unity.Burst;
 using Unity.Collections;
@@ -73,7 +73,7 @@ namespace TextMeshDOTS.Authoring
                 color = (Color32)Color.white,
                 fontStyle = FontStyles.Normal,
                 fontWeight = TextFontWeight.Regular,
-                maxLineWidth = 10,
+                maxLineWidth = 30,
                 lineJustification = HorizontalAlignmentOptions.Left,
                 verticalAlignment = VerticalAlignmentOptions.TopBase,
             };
@@ -90,8 +90,8 @@ namespace TextMeshDOTS.Authoring
 
             if (frameCount == 0)
             {
-
-                var text1 = "The quick brown fox jumps over the lazy dog\n �";
+                var text1 = "äáà aâa aâ̈a bb̂b bb̂̈b bb̧b bb͜b bb︠︡b Tota persona té dret a l'educació. L'educació serà gratuïta, si més no, en la instrucció elemental i fonamental. La instrucció elemental serà obligatòria.";
+                //var text1 = "The quick brown fox jumps over the lazy dog\n ¶";
                 //var text2 = "Test 123";
                 //var text3 = "ZYX";
                 //var kerningTest = "WAVES in my Yard YAWN AT MY LAWN Toyota AWAY PALM";
@@ -107,7 +107,7 @@ namespace TextMeshDOTS.Authoring
                 EntityManager.SetComponentData(entity, textBaseConfiguration);
                 var fontEntityBuffer = EntityManager.GetBuffer<FontEntity>(entity).Reinterpret<Entity>();
                 fontEntityBuffer.Add(fontEntity);
-                EntityManager.SetComponentData(entity, LocalTransform.FromPosition(float3.zero));
+                EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3(-10,7,0)));
                 EntityManager.SetComponentData(entity, textRenderControl);
                 EntityManager.SetComponentData(entity, materialMeshInfo);
             }

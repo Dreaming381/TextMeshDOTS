@@ -22,7 +22,7 @@ namespace HarfBuzz.SDF
         public NativeList<GlyphRect> freeRects;
 
         public int padding;
-        //[ReadOnly] public NativeList<uint> glyphIDs;
+        //public NativeList<uint> glyphIDs;
         public DynamicBuffer<uint> glyphIDs;
 
         public void Execute()

@@ -2,7 +2,6 @@ using Unity.Burst;
 using Unity.Jobs;
 using Unity.Collections;
 using Unity.Profiling;
-using UnityEngine;
 using TextMeshDOTS;
 using Unity.Entities;
 using UnityEngine.TextCore;
@@ -58,13 +57,8 @@ namespace HarfBuzz.SDF
 
             marker.Begin();
             var atlasRect = usedRects[glyphBlob.glyphID];//render SDF into the reserved padded atlas texture  window 
-            SDF.SDFGenerateSubDivision(ref bezierData, SDFOrientation.TRUETYPE, SDFCommon.DEFAULT_SPREAD, textureData, atlasRect, atlasWidth, atlasHeight);
-            //SDF.SDFGenerate(ref bezierData, SDFCommon.DEFAULT_SPREAD, textureData, atlasRect, atlasWidth, atlasHeight);
-            //SDFFixedPoint.SDFGenerateSubDivision(ref bezierData, SDFCommon.DEFAULT_SPREAD, textureData, atlasRect, atlasWidth, atlasHeight);
-            //SDFFixedPoint.SDFGenerate(bezierData.edges, SDFCommon.DEFAULT_SPREAD, textureData, atlasWidth, atlasHeight);
-            
-
-             marker.End();
+            SDF.SDFGenerateSubDivision(hbFontPointer.orientation, ref bezierData, textureData, atlasRect, atlasWidth, atlasHeight);
+            marker.End();
         }
     }    
 }

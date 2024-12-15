@@ -1,3 +1,4 @@
+
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -9,317 +10,211 @@ namespace HarfBuzz.SDF
 {
     public static class SDF
     {
+        //generates SDF directly from Bezier Data that are provided by Harfbuzz
+        //approach is inspired by FreeType 
         public static SignedDistance max_sdf => new SignedDistance { distance = int.MaxValue, sign = 0, cross = 0 };
 
         public const float CORNER_CHECK_EPSILON = 32 / (1 << 16); //The epsilon distance  used for corner
 
-        public static bool SDFGenerateSubDivision(ref BezierData bezierData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref BezierData bezierData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, bool splitBezierToLines= true, int spread = SDFCommon.DEFAULT_SPREAD)
         {
             var success = true;
             if (bezierData.contourIDs.Length < 2 || bezierData.edges.Length == 0)
                 return false;
 
-            //first ensure the last contour is correctly terminated.
-            //to-do: do this in release delegate of hb_shape?
-            bezierData.edges.ElementAt(bezierData.edges.Length - 1).nextId = -1;
-
-            //var new_edges = new NativeList<SDFEdge>(edge_list.Length, Allocator.Temp);
-            //SDFCommon.WriteGlyphOutlineToFile("BeforeSplit.txt", bezierData);
-            success = SplitSDFShape(ref bezierData);
-            //SDFCommon.WriteGlyphOutlineToFile("AfterSplit.txt", bezierData, true);
-            success = SDFGenerateBoundingBox(ref bezierData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+            //SDFCommon.WriteGlyphOutlineToFile("BeforeSplit_FOR.txt", bezierData);
+            if (splitBezierToLines)
+            {
+                success = SplitSDFShape(ref bezierData, out BezierData newBezierData);
+                success = SDFGenerateBoundingBox(ref newBezierData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+            }
+            else
+                success = SDFGenerateBoundingBox(ref bezierData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
             return success;
         }
-        public static bool SDFGenerate(ref BezierData bezierData, SDFOrientation orientation, float spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        
+        static bool SplitSDFShape(ref BezierData bezierData, out BezierData newBezierData)
         {
             var edges = bezierData.edges;
             var contourIDs = bezierData.contourIDs;
-
-            bool flip_y = true;
-            bool flip_sign = false;
-            float sp_sq;   /* `spread` [* `spread`] as a 16.16 fixed value */
-            SDFEdge edge;
-            int targetIndex;
-
-            if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
-                return false;
-
-
-            if (SDFCommon.USE_SQUARED_DISTANCES)
-                sp_sq = spread * spread;
-            else
-                sp_sq = spread;
-
-            if (atlasWidth == 0 || atlasHeight == 0)
-            {
-                Debug.Log($"sdf_generate:  Cannot render glyph with width/height == 0 (width: {atlasWidth}, height: {atlasHeight})");
-                return false;
-            }
-
-            var rectX = glyphRect.x;
-            var rectY = glyphRect.y;
-            var rectWidth = glyphRect.width;
-            var rectHeight = glyphRect.height;
-
-            //var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
-            /* loop over all rows */
-            for (int row = 0; row < rectHeight; row++)
-            {
-                /* loop over all pixels of a row */
-                for (int column = 0; column < rectWidth; column++)
-                {
-                    /* `grid_point` is the current pixel position; */
-                    /* our task is to find the shortest distance   */
-                    /* from this point to the entire shape.        */
-                    float2 grid_point;
-                    SignedDistance min_dist = max_sdf;
-                    //int index;
-                    float value;
-
-                    grid_point.x = column;
-                    grid_point.y = row;
-
-                    /* This `grid_point' is at the corner, but we */
-                    /* use the center of the pixel.               */
-                    grid_point.x += 1f / 2f;
-                    grid_point.y += 1f / 2f;
-
-                    /* iterate over all contours manually */
-                    for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
-                    {
-                        int startID = contourIDs[contourID];
-                        int nextStartID = contourIDs[contourID + 1];
-
-                        for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
-                        {
-                            edge = edges[edgeID];
-                            SignedDistance current_dist = max_sdf;
-
-                            float diff;
-                            SDFEdgeGetMinDistance(edge, grid_point, ref current_dist);
-
-                            if (current_dist.distance >= 0)
-                            {
-                                diff = current_dist.distance - min_dist.distance;
-                                if (math.abs(diff) < CORNER_CHECK_EPSILON)
-                                    min_dist = ResolveCorner(min_dist, current_dist);
-                                else if (diff < 0)
-                                    min_dist = current_dist;
-                            }
-                            else
-                                Debug.Log("sdf_contour_get_min_distance: Overflow.");
-
-                            if (current_dist.distance < min_dist.distance)
-                                min_dist = current_dist;
-                        }
-                    }
-
-                    /* [OPTIMIZATION]: if (min_dist > sp_sq) then simply clamp  */
-                    /*                 the value to spread to avoid square_root */
-                    /* clamp the values to spread */
-                    if (min_dist.distance > sp_sq)
-                        min_dist.distance = sp_sq;
-
-                    /* square_root the values and fit in a 6.10 fixed-point */
-                    if (SDFCommon.USE_SQUARED_DISTANCES)
-                        min_dist.distance = math.sqrt(min_dist.distance);
-
-                    var minRaw = min_dist.distance;
-
-                    if (orientation == SDFOrientation.FILL_LEFT)
-                        min_dist.sign = -min_dist.sign;
-                    if (flip_sign)
-                        min_dist.sign = -min_dist.sign;
-
-                    value = min_dist.distance;
-                    value *= min_dist.sign;
-
-                    if (flip_y)
-                        targetIndex = (row + rectY) * atlasWidth + (column + rectX);
-                    else
-                        targetIndex = (atlasHeight - (row + rectY) - 1) * atlasWidth + (column + rectX);//this is not correct, needs review
-
-                    var result = ((value + spread) * 16);
-                    buffer[targetIndex] = (byte)(result);
-                    //minDistances[index] = (float)min_dist.crossResult;
-                }
-            }
-            //SDFCommon.WriteMinDistancesToFile("Distances.txt", minDistances);
-            return true;
-        }
-        static bool SplitSDFShape(ref BezierData bezierData)
-        {
-            var edges = bezierData.edges;
-            var contourIDs = bezierData.contourIDs;
+            newBezierData = new BezierData(edges.Length * 16, contourIDs.Length, Allocator.Temp);
+            var newEdges = newBezierData.edges;
+            var newContourIDs = newBezierData.contourIDs;
 
             bool success = true;
             SDFEdge edge;
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
+                newContourIDs.Add(newEdges.Length);
                 int startID = contourIDs[contourID];
                 int nextStartID = contourIDs[contourID + 1];
-
-                int iterator = startID;
                 float dx;
-                int num_splits, loopIT;
-                do
+                int num_splits;
+                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
-                    edge = edges[iterator];
+                    edge = edges[edgeID];
                     switch (edge.edge_type)
                     {
                         case SDFEdgeType.LINE:
-                            iterator = edge.nextId;
+                            newEdges.Add(edge);
                             break;
                         case SDFEdgeType.QUADRATIC:
-                            dx = GetDx(edges, iterator);
-                            if (dx > 0.5f)
+                            dx = GetDeviationQuadratic(edges, edgeID);                            
+                            if (dx > SDFCommon.MAX_DEVIATION_SPLITTING)
                             {
                                 num_splits = 1;
-                                while (dx > 0.5f)
-                                {
+                                while (dx > SDFCommon.MAX_DEVIATION_SPLITTING)
+                                {                                    
                                     dx /= 4;
                                     num_splits *= 2;
                                 }
-                                loopIT = iterator;
-                                for (int i = 0; i < num_splits; i++)
-                                {
-                                    iterator = split_conic(edges, loopIT);
-                                    loopIT = edges[loopIT].nextId;
-                                }
+                                newEdges.AddRange(SplitQuadraticEdge(edge, num_splits));
                             }
                             else
                             {
-                                edges.ElementAt(iterator).edge_type=SDFEdgeType.LINE;
-                                iterator = edge.nextId;
+                                edge.edge_type = SDFEdgeType.LINE;
+                                newEdges.Add(edge);
                             }
                             break;
                         case SDFEdgeType.CUBIC:
-                            dx = GetDx2(edges, iterator);
-                            if (dx > 0.5f)
+                            dx = GetDeviationCubic(edges, edgeID);
+                            if (dx > SDFCommon.MAX_DEVIATION_SPLITTING)
                             {
                                 num_splits = 1;
-                                while (dx > 0.5f)
+                                while (dx > SDFCommon.MAX_DEVIATION_SPLITTING)
                                 {
                                     dx /= 4;
                                     num_splits *= 2;
                                 }
-                                loopIT = iterator;
-                                for (int i = 0; i < num_splits; i++)
-                                {
-                                    iterator = split_cubic(edges, loopIT);
-                                    loopIT = edges[loopIT].nextId;
-                                }
+                                newEdges.AddRange(SplitCubicEdge(edge, num_splits));
                             }
                             else
                             {
-                                edges.ElementAt(iterator).edge_type = SDFEdgeType.LINE;
-                                iterator = edge.nextId;
+                                edge.edge_type = SDFEdgeType.LINE;
+                                newEdges.Add(edge);
                             }
                             break;
 
                         default:
-                            iterator = edge.nextId;
-                            break;                            
-                            //error = FT_THROW(Invalid_Argument);
-                    }                    
-                } while (iterator != -1);
+                            break;
+                    }
+                }
             }
+            newContourIDs.Add(newEdges.Length);//close the last contour
             return success;
         }
-        static float GetDx(NativeList<SDFEdge> edgeList, int edgeID)
+        static float GetDeviationQuadratic(NativeList<SDFEdge> edgeList, int edgeID)
         {
             var quadratic = edgeList[edgeID];
-            var start_pos = quadratic.start_pos;
-            var control1 = quadratic.control1;
-            var end_pos = quadratic.end_pos;
-            var deviation = math.abs(end_pos + start_pos - 2 * control1);
+            var A = quadratic.start_pos;
+            var B = quadratic.control1;
+            var C = quadratic.end_pos;
 
-            if (deviation.x < deviation.y)
-                return deviation.y;
-            return deviation.x;
+            var d1 = math.abs(C + A - 2 * B);
+            return math.max(d1.x, d1.y);
         }
 
-        static float GetDx2(NativeList<SDFEdge> edgeList, int edgeID)
+        static float GetDeviationCubic(NativeList<SDFEdge> edgeList, int edgeID)
         {
             var quadratic = edgeList[edgeID];
-            var start_pos = quadratic.start_pos;
-            var control1 = quadratic.control1;
-            var control2 = quadratic.control2;
-            var end_pos = quadratic.end_pos;
+            var A = quadratic.start_pos;
+            var B = quadratic.control1;
+            var C = quadratic.control2;
+            var D = quadratic.end_pos;
 
-            var dx1 = math.abs(start_pos - 3 * control2 + 2 * end_pos);
-            var dx2 = math.abs(2 * start_pos - 3 * control1.x + control2);
+            var d1 = math.abs(2 * A - 3 * B + D);
+            var d2 = math.abs(A - 3 * C + 2 * D);
 
-            float maxDx1 = math.max(dx1.x, dx1.y);
-            float maxDx2 = math.max(dx2.x, dx2.y);
-
-            return math.max(maxDx1, maxDx2);
+            return math.max(math.max(d1.x, d1.y), math.max(d2.x, d2.y));
         }
 
+        
         /// <summary> This function splits a quadratic bezier into two quadratic bezier exactly half way at t = 0.5. </summary>
-        static int split_conic(NativeList<SDFEdge> edgeList, int edgeID)
+        static NativeArray<SDFEdge> SplitQuadraticEdge(SDFEdge edge, int num_splits)
         {
-            edgeList.Add(new SDFEdge());
-            var newEdgeID = edgeList.Length - 1;
-            ref var edge = ref edgeList.ElementAt(edgeID);
-            ref var newEdge = ref edgeList.ElementAt(newEdgeID);
-            var A = edge.start_pos;
-            var B = edge.control1;
-            var C = edge.end_pos;
+            int numRows = 1 << (num_splits);
+            var targetArray = new NativeArray<SDFEdge>(numRows, Allocator.Temp);
+            targetArray[0] = edge;
 
-            var D = (A + B) * 0.5f;
-            var E = (B + C) * 0.5f;
-            var F = (D + E) * 0.5f;
+            for (int split = num_splits - 1; split >= 0; split--)
+            {
+                int pairDistance = 1 << split;
 
-            edge.start_pos = A;
-            edge.control1 = D;
-            edge.end_pos = F;
+                for (int row = 0; row < numRows - pairDistance; row += 2 * pairDistance)
+                {
+                    var sourceEdge = targetArray[row];
+                    var A = sourceEdge.start_pos;
+                    var B = sourceEdge.control1;
+                    var C = sourceEdge.end_pos;
 
-            newEdge.start_pos = F;
-            newEdge.control1 = E;
-            newEdge.end_pos = C;
+                    var D = (A + B) * 0.5f;
+                    var E = (B + C) * 0.5f;
+                    var F = (D + E) * 0.5f;
 
-            newEdge.nextId = edge.nextId;
-            edge.nextId = newEdgeID;
-            edge.edge_type = SDFEdgeType.LINE;
-            newEdge.edge_type = SDFEdgeType.LINE;
-            return newEdge.nextId;
+                    sourceEdge.start_pos = A;
+                    sourceEdge.control1 = D;
+                    sourceEdge.end_pos = F;
+                    sourceEdge.edge_type = SDFEdgeType.LINE;
+                    targetArray[row]=sourceEdge;
+
+                    targetArray[row + pairDistance] = new SDFEdge
+                    {
+                        start_pos = F,
+                        control1 = E,
+                        end_pos = C,
+                        edge_type = SDFEdgeType.LINE,
+                    };
+                }
+            }
+            return targetArray;
         }
+
         /// <summary> This function splits a cubic bezier into two cubic bezier exactly half way at t = 0.5. </summary>
-        static int split_cubic(NativeList<SDFEdge> edgeList, int edgeID)
+        static NativeArray<SDFEdge> SplitCubicEdge(SDFEdge edge, int num_splits)
         {
-            edgeList.Add(new SDFEdge());
-            var newEdgeID = edgeList.Length - 1;
-            ref var edge = ref edgeList.ElementAt(edgeID);
-            ref var newEdge = ref edgeList.ElementAt(newEdgeID);
-            var A = edge.start_pos;
-            var B = edge.control1;
-            var C = edge.control2;
-            var D = edge.end_pos;
+            int numRows = 1 << (num_splits);
+            var targetArray = new NativeArray<SDFEdge>(numRows, Allocator.Temp);
+            targetArray[0] = edge;
 
-            var E = (A + B) * 0.5f;
-            var F = (B + C) * 0.5f;
-            var G = (C + D) * 0.5f;
-            var H = (E + F) * 0.5f;
-            var J = (F + G) * 0.5f;
-            var K = (H + J) * 0.5f;
+            for (int split = num_splits - 1; split >= 0; split--)
+            {
+                int pairDistance = 1 << split;
 
-            edge.start_pos = A;
-            edge.control1 = E;
-            edge.control2 = H;
-            edge.end_pos = K;
+                for (int row = 0; row < numRows - pairDistance; row += 2 * pairDistance)
+                {
+                    var sourceEdge = targetArray[row];
+                    var A = sourceEdge.start_pos;
+                    var B = sourceEdge.control1;
+                    var C = sourceEdge.control2;
+                    var D = sourceEdge.end_pos;
 
-            newEdge.start_pos = K;
-            newEdge.control1 = J;
-            newEdge.control2 = G;
-            newEdge.end_pos = D;
+                    var E = (A + B) * 0.5f;
+                    var F = (B + C) * 0.5f;
+                    var G = (C + D) * 0.5f;
+                    var H = (E + F) * 0.5f;
+                    var J = (F + G) * 0.5f;
+                    var K = (H + J) * 0.5f;
 
-            newEdge.nextId = edge.nextId;
-            edge.nextId = newEdgeID;
-            edge.edge_type = SDFEdgeType.LINE;
-            newEdge.edge_type = SDFEdgeType.LINE;
-            return newEdge.nextId;
+                    sourceEdge.start_pos = A;
+                    sourceEdge.control1 = E;
+                    sourceEdge.control2 = H;
+                    sourceEdge.end_pos = K;
+                    sourceEdge.edge_type = SDFEdgeType.LINE;
+                    targetArray[row] = sourceEdge;
+
+                    targetArray[row + pairDistance] = new SDFEdge
+                    {
+                        start_pos = K,
+                        control1 = J,
+                        control2 = G,
+                        end_pos = D,
+                        edge_type = SDFEdgeType.LINE,
+                    };
+                }
+            }
+            return targetArray;
         }
+        
         static bool SDFGenerateBoundingBox(ref BezierData bezierData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
             var edges = bezierData.edges;
@@ -328,7 +223,7 @@ namespace HarfBuzz.SDF
             bool flip_y = true;
             bool flip_sign = false;
             int overloadSign = 0;
-            float sp_sq;   /* `spread` [* `spread`] as a 16.16 fixed value */
+            float sp_sq;
             SDFEdge edge;
             var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
 
@@ -347,21 +242,17 @@ namespace HarfBuzz.SDF
             var rectWidth = glyphRect.width;
             var rectHeight = glyphRect.height;
 
-
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
                 int startID = contourIDs[contourID];
                 int nextStartID = contourIDs[contourID + 1];
-
-                int interator = startID;
-                do
+                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
-                    edge = edges[interator];                    
+                    edge = edges[edgeID];                
                     BBox cbox;
 
-                    /* get the control box and increase it by `spread' */
                     cbox = GetControlBox(edge);
-                    //cbox = GetBBox(edge);
+                    //cbox = GetBBox(edge); //BBox might be smaller--review if atlas can hold more glyphs using this 
                     cbox.Expand(spread);
 
                     /* now loop over the pixels in the control box. */
@@ -382,8 +273,7 @@ namespace HarfBuzz.SDF
                             grid_point.x = x;
                             grid_point.y = y;
 
-                            /* This `grid_point` is at the corner, but we */
-                            /* use the center of the pixel.               */
+                            // use the center of any pixel to be rendered within cbox
                             grid_point.x += 1f / 2f;
                             grid_point.y += 1f / 2f;
                             SDFEdgeGetMinDistance(edge, grid_point, ref dist);
@@ -391,12 +281,11 @@ namespace HarfBuzz.SDF
                             if (orientation == SDFOrientation.FILL_LEFT)
                                 dist.sign = -dist.sign;
 
-                            /* ignore if the distance is greater than spread;       */
-                            /* otherwise it creates artifacts due to the wrong sign */
+                            // ignore if the distance is greater than spread;
+                            // otherwise it creates artifacts due to the wrong sign
                             if (dist.distance > sp_sq)
                                 continue;
 
-                            /* take the square root of the distance if required */
                             if (SDFCommon.USE_SQUARED_DISTANCES)
                                 dist.distance = math.sqrt(dist.distance);
 
@@ -409,9 +298,8 @@ namespace HarfBuzz.SDF
                                 minIndex = index;
                             if (index > maxIndex)
                                 maxIndex = index;
-
-                            /* check whether the pixel is set or not */
-                            if (Equals(dists[index].sign, 0))
+                            
+                            if (EqualsLargeValues(dists[index].sign, 0)) // check if the pixel is already set
                                 dists[index] = dist;
                             else
                             {
@@ -424,16 +312,10 @@ namespace HarfBuzz.SDF
                             }
                         }
                     }
-                    interator = edge.nextId;
-                } while (interator != -1);
-                //for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
-                //{
-                //    edge = edges[edgeID];
-                //}
+                }
             }
 
-            /* final pass */
-            //var minDistances = new NativeArray<float>(buffer.Length, Allocator.Temp);
+            // final pass
             int outsideSign = -1;
             for (int row = 0; row < rectHeight; row++)
             {
@@ -448,31 +330,28 @@ namespace HarfBuzz.SDF
                     var sourceIndex = rectWidth * row + column;
                     var targetIndex = (atlasWidth * (row + rectY)) + (column + rectX);
 
-                    /* if the pixel is not set                     */
-                    /* its shortest distance is more than `spread` */
-                    var dist = dists[sourceIndex];
-                    if (Equals(dist.sign, 0))
+                    // if the pixel is not set, its shortest distance is more than `spread`
+                    var dist = dists[sourceIndex];                    
+                    if (EqualsLargeValues(dist.sign, 0))
                     {
                         dist.sign = outsideSign;
                         dist.distance = -spread;
                     }
                     current_sign = dist.sign;
 
-                    /* clamp the values */
+                    // clamp the distance
                     if (dist.distance > spread)
                         dist.distance = spread;
 
-                    /* flip sign if required */
+                    // flip sign if required
                     dist.distance *= flip_sign ? -current_sign : current_sign;
                     dists[sourceIndex] = dist;
 
-                    /* concatenate to appropriate format */
+                    // convert to byte range of alpha8 texture
                     var result = ((dist.distance + spread) * 16);
                     buffer[targetIndex] = (byte)result;
-                    //minDistances[sourceIndex] = result;
                 }
             }
-            //SDFCommon.WriteMinDistancesToFile("DistancesSubDivide.txt", minDistances);
             return true;
         }
         static BBox GetControlBox(SDFEdge edge)
@@ -558,15 +437,12 @@ namespace HarfBuzz.SDF
             switch (edge.edge_type)
             {
                 case SDFEdgeType.LINE:
-                    //Debug.Log("line");
                     success = GetMinDistanceLine(edge, point, ref signedDistance);
                     break;
                 case SDFEdgeType.QUADRATIC:
-                    //Debug.Log("quadratic");
                     success = GetMinDistanceQuadraticNewton(edge, point, ref signedDistance);
                     break;
                 case SDFEdgeType.CUBIC:
-                    //Debug.Log("cubic");
                     success = GetMinDistanceCubicNewton(edge, point, ref signedDistance);
                     break;
                 default:
@@ -599,145 +475,32 @@ namespace HarfBuzz.SDF
             else
                 signedDistance.distance = math.length(nearest_vector);
 
-            /* Instead of finding `cross` for checking corner we */
-            /* directly set it here.  This is more efficient     */
-            /* because if the distance is perpendicular we can   */
-            /* directly set it to 1.                             */
-            //if (factor != 0 && factor != 1)
-            if (!Equals(frac, 0) && !Equals(frac - 1, 0))
+            if (!EqualsLargeValues(frac, 0) && !EqualsLargeValues(frac, 1))
                 signedDistance.cross = 1;
             else
             {
-                /* [OPTIMIZATION]: Pre-compute this direction. */
-                /* If not perpendicular then compute `cross`.  */
                 line_segment = math.normalize(line_segment);
                 nearest_vector = math.normalize(nearest_vector);
                 signedDistance.cross = cross2D(line_segment, nearest_vector);
             }
             return true;
-        }
-        static bool GetMinDistanceQuadratic(SDFEdge quadratic, float2 point, ref SignedDistance signedDistance)
-        {
-            float min = int.MaxValue;       // shortest distance
-            float min_factor = 0;           // factor at shortest distance
-            float2 nearest_point = default;   // point on curve nearest to `point`
-            float3 roots;
-
-            var p0 = quadratic.start_pos;
-            var p1 = quadratic.control1;
-            var p2 = quadratic.end_pos;
-
-            /* compute substitution coefficients */
-            var aA = p0 - 2 * p1 + p2;
-            var bB = 2 * (p1 - p0);
-            var cC = p0;
-
-            /* compute cubic coefficients */
-            var a = math.dot(aA, aA);
-            var b = 3 * math.dot(aA, bB);
-            var c = 2 * math.dot(bB, bB) + math.dot(aA, p0) - math.dot(aA, point);
-            var d = math.dot(p0, bB) - math.dot(point, bB);
-
-            /* find the roots */
-            var num_roots = solve_cubic_equation(a, b, c, d, out roots);
-
-            if (num_roots == 0)
-            {
-                roots[0] = 0;
-                roots[1] = 1;
-                num_roots = 2;
-            }
-            /* [OPTIMIZATION]: Check the roots, clamp them and discard */
-            /*                 duplicate roots.                        */
-
-            //Debug.Log($"{num_roots} roots: {roots[0]} {roots[1]} {roots[2]}");
-            for (int i = 0; i < num_roots; i++)
-            {
-                var t = roots[i];
-                var t2 = 0f;
-                var dist = 0f;
-
-                /*
-                 * Ideally we should discard the roots which are outside the range
-                 * [0.0, 1.0] and check the endpoints of the Bezier curve, but Behdad
-                 * Esfahbod proved the following lemma.
-                 *
-                 * Lemma:
-                 *
-                 * (1) If the closest point on the curve [0, 1] is to the endpoint at
-                 *     `t` = 1 and the cubic has no real roots at `t` = 1 then the
-                 *     cubic must have a real root at some `t` > 1.
-                 *
-                 * (2) Similarly, if the closest point on the curve [0, 1] is to the
-                 *     endpoint at `t` = 0 and the cubic has no real roots at `t` = 0
-                 *     then the cubic must have a real root at some `t` < 0.
-                 *
-                 * Now because of this lemma we only need to clamp the roots and that
-                 * will take care of the endpoints.
-                 *
-                 * For more details see
-                 *
-                 *   https://lists.nongnu.org/archive/html/freetype-devel/2020-06/msg00147.html
-                 */
-
-                if (t < 0)
-                    t = 0;
-                if (t > 1)
-                    t = 1;
-
-                t2 = t * t;
-
-                /* B(t) = t^2 * A + 2t * B + p0 - p */
-                var curve_point = (aA * t2) + 2 * (bB * t) + p0;
-
-                /* `curve_point` - `p` */
-                var dist_vector = curve_point - point;
-                dist = SDFCommon.USE_SQUARED_DISTANCES ? math.lengthsq(dist_vector) : math.length(dist_vector);
-                if (dist < min)
-                {
-                    min = dist;
-                    nearest_point = curve_point;
-                    min_factor = t;
-                }
-            }
-            var direction = 2 * (aA * min_factor) + 2 * bB; /* B'(t) = 2 * (tA + B) */
-
-            /* determine the sign */
-            var nearest_vector = nearest_point - point;
-            signedDistance.cross = cross2D(nearest_vector, direction);
-
-            /* assign the values */
-            signedDistance.distance = min;
-            signedDistance.sign = signedDistance.cross < 0 ? 1 : -1;
-
-            if (min_factor != 0 && min_factor != 1)
-                signedDistance.cross = 1;   /* the two are perpendicular */
-            else
-            {
-                /* compute `cross` if not perpendicular */
-                direction = math.normalize(direction);
-                nearest_point = math.normalize(nearest_vector);
-                signedDistance.cross = cross2D(direction, nearest_vector);
-            }
-
-            return true;
-        }
+        }        
         static bool GetMinDistanceQuadraticNewton(SDFEdge quadratic, float2 point, ref SignedDistance signedDistance)
         {
-            float min = int.MaxValue;       // shortest distance
-            float min_factor = 0;           // factor at shortest distance
-            float2 nearest_point = default;   // point on curve nearest to `point`
+            float min = int.MaxValue;           // shortest distance
+            float min_factor = 0;               // factor at shortest distance
+            float2 nearest_point = default;     // point on curve nearest to `point`
 
             var p0 = quadratic.start_pos;
             var p1 = quadratic.control1;
             var p2 = quadratic.end_pos;
 
-            /* compute substitution coefficients */
+            // compute substitution coefficients
             var aA = p0 - 2 * p1 + p2;
             var bB = 2 * (p1 - p0);
             var cC = p0;
 
-            /* do Newton's iterations */
+            // do Newton's iterations
             for (int iterations = 0; iterations <= SDFCommon.MAX_NEWTON_DIVISIONS; iterations++)
             {
                 float factor = (float)iterations / SDFCommon.MAX_NEWTON_DIVISIONS;
@@ -770,15 +533,13 @@ namespace HarfBuzz.SDF
             }
             var direction = 2 * (aA * min_factor) + bB; // B'(t) = 2t * A + B
 
-            /* determine the sign */
+            // assign values, determine the sign
             var nearest_vector = nearest_point - point;
             signedDistance.cross = cross2D(nearest_vector, direction);
-
-            /* assign the values */
             signedDistance.distance = min;
             signedDistance.sign = signedDistance.cross < 0 ? 1 : -1;
 
-            if (!Equals(min_factor, 0) && !Equals(min_factor - 1, 0))
+            if (!EqualsLargeValues(min_factor, 0) && !EqualsLargeValues(min_factor, 1))
                 signedDistance.cross = 1;   // the two are perpendicular
             else
             {
@@ -791,17 +552,17 @@ namespace HarfBuzz.SDF
         }
         static bool GetMinDistanceCubicNewton(SDFEdge cubic, float2 point, ref SignedDistance signedDistance)
         {
-            float2 nearest_point = default;  /* point on curve nearest to `point`     */
-            float min_factor = 0;            /* factor at shortest distance */
-            float min_factor_sq = 0;            /* factor at shortest distance */
-            float min = int.MaxValue;   /* shortest distance          */
+            float2 nearest_point = default;  // point on curve nearest to `point`
+            float min_factor = 0;            // factor at shortest distance
+            float min_factor_sq = 0;         // factor at shortest distance
+            float min = int.MaxValue;        // shortest distance
 
             var p0 = cubic.start_pos;
             var p1 = cubic.control1;
             var p2 = cubic.control2;
             var p3 = cubic.end_pos;
 
-            /* compute substitution coefficients */
+            // compute substitution coefficients
             var aA = -p0 + 3 * (p1 - p2) + p3;
             var bB = 3 * (p0 - 2 * p1 + p2);
             var cC = 3 * (p1 - p0);
@@ -841,15 +602,13 @@ namespace HarfBuzz.SDF
             }
             var direction = aA * 3 * min_factor_sq + bB * 2 * min_factor + cC;  // B'(t) = 3t^2 * A + 2t * B + C
 
-            /* determine the sign */
+            // assign values, determine the sign
             var nearest_vector = nearest_point - point;
             signedDistance.cross = cross2D(nearest_vector, direction);
-
-            //* assign the values */
             signedDistance.distance = min;
             signedDistance.sign = signedDistance.cross < 0 ? 1 : -1;
-            if (!Equals(min_factor, 0) && !Equals(min_factor - 1, 0))
-                signedDistance.cross = 1;   /* the two are perpendicular */
+            if (!EqualsLargeValues(min_factor, 0) && !EqualsLargeValues(min_factor, 1))
+                signedDistance.cross = 1;   // the two are perpendicular
             else
             {
                 /* compute `cross` if not perpendicular */
@@ -863,13 +622,28 @@ namespace HarfBuzz.SDF
         {
             return math.abs(sdf1.cross) > math.abs(sdf2.cross) ? sdf1 : sdf2;
         }
-        const float absTol = 0.000000001f;
-        const float relTol = 0.000000001f;
+        const float absolutTolerane = 0.000000001f;
+        const float relativeTolerance = 0.000000001f;
+
+        /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Equals(float a, float b)
         {
-            return (math.abs(a - b) <= math.max(absTol, relTol * math.max(math.abs(a), math.abs(b))));
+            return (math.abs(a - b) <= math.max(absolutTolerane, relativeTolerance * math.max(math.abs(a), math.abs(b))));
         }
+
+        /// <summary>Relative tolerance comparison of x and y, fails values become small </summary>
+        public static bool EqualsSmallValues(float x, float y)
+        {
+            return math.abs(x - y) <= relativeTolerance * math.max(math.abs(x), math.abs(y));
+        }
+        /// <summary>Absolute tolerance comparison of x and y, fails values become large  </summary>
+        public static bool EqualsLargeValues(float x, float y)
+        {
+            return (math.abs(x - y) <= absolutTolerane);
+        }
+
         /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
         /// <param name="a">First vector</param>
         /// <param name="b">Second vector</param>
@@ -878,147 +652,6 @@ namespace HarfBuzz.SDF
         public static float cross2D(float2 a, float2 b)
         {
             return (a.x * b.y) - (a.y * b.x);
-        }
-        static int solve_cubic_equation(float a, float b, float c, float d, out float3 roots3)
-        {
-            roots3 = float3.zero;
-            float q = 0;      /* intermediate */
-            float r = 0;      /* intermediate */
-
-            float a2 = b;     /* x^2 coefficients */
-            float a1 = c;     /* x coefficients   */
-            float a0 = d;     /* constant         */
-
-            float q3 = 0;
-            float r2 = 0;
-            float a23 = 0;
-            float a22 = 0;
-            float a1x2 = 0;
-
-
-            var roots2 = float2.zero;
-            /* cutoff value for `a` to be a cubic, otherwise solve quadratic */
-            if (a == 0 || math.abs(a) < (16 / (1 << 6)))
-                return solve_quadratic_equation(b, c, d, out roots2);
-
-            if (d == 0)
-            {
-                roots3[0] = 0;
-
-                var numRoots = solve_quadratic_equation(a, b, c, out roots2) + 1;
-                roots3[1] = roots2[0];
-                roots3[2] = roots2[1];
-                return numRoots;
-            }
-
-            /* normalize the coefficients; this also makes them 16.16 */
-            a2 = a2 / a;
-            a1 = a1 / a;
-            a0 = a0 / a;
-
-            /* compute intermediates */
-            a1x2 = a1 * a2;
-            a22 = a2 * a2;
-            a23 = a22 * a2;
-
-            q = (3 * a1 - a22) / 9;
-            r = (9 * a1x2 - 27 * a0 - 2 * a23) / 54;
-
-            /* [BUG]: `q3` and `r2` still cause underflow. */
-
-            q3 = q * q;
-            q3 = q3 * q;
-
-            r2 = r * r;
-
-            if (q3 < 0 && r2 < -q3)
-            {
-                float t = 0f;
-
-                q3 = math.sqrt(-q3);
-                t = r / q3;
-
-                if (t > 1)
-                    t = 1;
-                if (t < -1)
-                    t = -1;
-
-                t = math.acos(t);
-
-                a2 /= 3;
-                q = 2 * math.sqrt(-q);
-
-                roots3[0] = q * math.cos(t / 3) - a2;
-                roots3[1] = q * math.cos((t + math.PI * 2) / 3) - a2;
-                roots3[2] = q * math.cos((t + math.PI * 4) / 3) - a2;
-
-                return 3;
-            }
-            else if (Equals(r2 - -q3,0))//if (r2 == -q3)
-            {
-                float s = 0f;
-
-                s = math.pow(r, 1f / 3f);
-                a2 /= -3;
-
-                roots3[0] = a2 + (2 * s);
-                roots3[1] = a2 - s;
-
-                return 2;
-            }
-
-            else
-            {
-                float s = 0f;
-                float t = 0f;
-                float dis = 0f;
-
-                if (q3 == 0)
-                    dis = math.abs(r);
-                else
-                    dis = math.sqrt(q3 + r2);
-
-                s = math.pow(r + dis, 1f / 3f);
-                t = math.pow(math.abs(r - dis), 1f / 3f);
-                a2 /= -3;
-                roots3[0] = (a2 + (s + t));
-                return 1;
-            }
-        }
-
-        static int solve_quadratic_equation(float a, float b, float c, out float2 roots)
-        {
-            roots = float2.zero;
-            if (a == 0)
-            {
-                if (b == 0)
-                    return 0;
-                else
-                {
-                    roots[0] = -c / b;
-                    return 1;
-                }
-            }
-
-            var discriminant = (b * b) - 4 * (a * c);
-
-            if (discriminant < 0)
-                return 0;
-            else if (discriminant == 0)
-            {
-                roots[0] = -b / 2 * a;
-                return 1;
-            }
-            else
-            {
-                discriminant = math.sqrt(discriminant);
-
-                roots[0] = -b + discriminant / 2 * a;
-                roots[1] = -b - discriminant / 2 * a;
-
-                return 2;
-            }
-
         }
     }
 }

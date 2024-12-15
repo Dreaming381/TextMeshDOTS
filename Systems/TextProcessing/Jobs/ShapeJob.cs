@@ -23,7 +23,6 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
         public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
 
-        //[ReadOnly] public BufferTypeHandle<FontMaterial> fontMaterialHandle;
         [ReadOnly] public BufferTypeHandle<FontEntity> fontEntityHandle;
         [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
@@ -39,11 +38,9 @@ namespace TextMeshDOTS.TextProcessing
             if (!(chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
                   chunk.DidChange(ref textSpanHandle, lastSystemVersion) ||
                 chunk.DidChange(ref fontEntityHandle, lastSystemVersion)))
-                //chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
                 return;
 
             //Debug.Log("Shape");
-            //var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
             var fontEntityBuffers = chunk.GetBufferAccessor(ref fontEntityHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
@@ -62,7 +59,6 @@ namespace TextMeshDOTS.TextProcessing
                 if (textSpans.Length == 0)
                     continue;//not ready yet
 
-                //var fontMaterialBuffer = fontMaterialBuffers[indexInChunk];
                 var fontEntityBuffer = fontEntityBuffers[indexInChunk];
                 var glyphOTFs = glyphOTFBuffers[indexInChunk];
                 var calliBytes = calliBytesBuffers[indexInChunk];
@@ -70,7 +66,6 @@ namespace TextMeshDOTS.TextProcessing
                 glyphOTFs.Clear();
                 var text = calliBytes.Reinterpret<byte>();
 
-                
                 for (int i = 0, length = textSpans.Length; i < length; i++)
                 {
                     var textSpan = textSpans[i];
