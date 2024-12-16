@@ -27,7 +27,7 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<TextSpan> textSpanHandle;
-        [ReadOnly] public BufferLookup<GlyphsInUse> glyphsInUseLookup;
+        [ReadOnly] public BufferLookup<HBGlyphsInUse> glyphsInUseLookup;
         public NativeList<FontEntityGlyph>.ParallelWriter missingGlyphs;
 
         public uint lastSystemVersion;

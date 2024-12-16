@@ -29,7 +29,7 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAll<FontEntity>()
                       .Build();
             fontEntityQ = SystemAPI.QueryBuilder()
-                  .WithAll<GlyphsInUse>()
+                  .WithAll<HBGlyphsInUse>()
                   .WithAll<FontTextureReference>()
                   //.WithAll<DynamicFontBlobReference>()
                   .Build();

@@ -4,37 +4,24 @@ using Unity.Mathematics;
 using System.Runtime.CompilerServices;
 using UnityEngine.TextCore;
 using TextMeshDOTS;
+using Unity.Entities;
 
 namespace HarfBuzz
 {    
-    public struct NativeAtlas
+    public static class NativeAtlas
     {
-        public int atlasWidth;
-        public int atlasHeight;
-        public NativeList<GlyphBlob> placedGlyphs;
-        public NativeHashMap<uint, GlyphRect> usedRects;        
-        public NativeList<GlyphRect> freeRects;
-
-        public NativeArray<byte> textureData;
-
-        public NativeAtlas(NativeArray<byte> m_textureData, int glyphCapacity, int atlasWidth, int atlasHeight, Allocator allocator)
+        public static void InitialzeFreeGlyphRects(ref DynamicBuffer<HBFreeGlyphRects> freeGlyphRectsBuffer, int atlasWidth, int atlasHeight)
         {
-            this.atlasWidth = atlasWidth;
-            this.atlasHeight = atlasHeight;
-            placedGlyphs = new NativeList<GlyphBlob>(glyphCapacity, allocator);
-            usedRects = new NativeHashMap<uint, GlyphRect>(glyphCapacity, allocator);
-            freeRects = new NativeList<GlyphRect>(glyphCapacity, allocator)
-            {
-                new GlyphRect(0, 0, atlasWidth, atlasHeight)
-            };
-            textureData = m_textureData;
+            freeGlyphRectsBuffer.Clear();
+            freeGlyphRectsBuffer.Reinterpret<GlyphRect>().Add(new GlyphRect(0, 0, atlasWidth, atlasHeight));
         }
 
         public static void AddGlyphs(int padding,
             NativeList<GlyphBlob> glyphsToPlace,
             NativeList<GlyphBlob> placedGlyphs,
-            NativeHashMap<uint, GlyphRect> usedRects,
-            NativeList<GlyphRect> freeRects)
+            DynamicBuffer<uint> glyphsInUse,
+            DynamicBuffer<GlyphRect> usedRects,
+            DynamicBuffer<GlyphRect> freeRects)
         {
             //Walk all rectsToPlace and find the one that fits the best given 
             //our current freeRect list. Then start again
@@ -69,7 +56,8 @@ namespace HarfBuzz
                     RemoveRectFromFreeList(bestRect, freeRects);
                     var currentGlyph = glyphsToPlace[bestGlyphID];
                     var glyphExtents =currentGlyph.glyphExtents;
-                    usedRects.Add(currentGlyph.glyphID, bestRect);
+                    usedRects.Add(bestRect);
+                    glyphsInUse.Add(currentGlyph.glyphID);
 
                     //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlast Texture windows.
                     //the glyph (dounded by glyphExtents) will be renderered into the center of this windows
@@ -92,29 +80,34 @@ namespace HarfBuzz
                 }
             }
         }
-        public static bool TryAddGlyph(int padding, GlyphBlob glyph, NativeList<GlyphRect> freeRects, NativeHashMap<uint, GlyphRect> usedRects, out GlyphRect outRect)
-        {
-            var doublePadding = 2 * padding;
-            int shortSideScore = int.MaxValue;
-            int longSideScore = int.MaxValue;
+        //public static bool TryAddGlyph(
+        //    int padding, 
+        //    GlyphBlob glyph, 
+        //    DynamicBuffer<GlyphRect> freeRects, 
+        //    DynamicBuffer<GlyphRect> usedRects, 
+        //    out GlyphRect outRect)
+        //{
+        //    var doublePadding = 2 * padding;
+        //    int shortSideScore = int.MaxValue;
+        //    int longSideScore = int.MaxValue;
 
-            //var glyphRect = glyph.atlasRect;
-            var glyphExtents = glyph.glyphExtents;
-            outRect = FindIdealRect(glyphExtents.width + doublePadding, glyphExtents.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
-            if (outRect.width > 0 && outRect.height > 0)
-            {
-                RemoveRectFromFreeList(outRect, freeRects);
-                usedRects.Add(glyph.glyphID, outRect);
-                return true;
-            }
-            else
-            {
-                Debug.Log($"Ran out of Space: glyph {glyphExtents} could not be placed");
-                return false; //no room left
-            }
-        }
+        //    //var glyphRect = glyph.atlasRect;
+        //    var glyphExtents = glyph.glyphExtents;
+        //    outRect = FindIdealRect(glyphExtents.width + doublePadding, glyphExtents.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
+        //    if (outRect.width > 0 && outRect.height > 0)
+        //    {
+        //        RemoveRectFromFreeList(outRect, freeRects);
+        //        usedRects.Add(outRect);
+        //        return true;
+        //    }
+        //    else
+        //    {
+        //        Debug.Log($"Ran out of Space: glyph {glyphExtents} could not be placed");
+        //        return false; //no room left
+        //    }
+        //}
 
-        private static GlyphRect FindIdealRect(int width, int height, NativeList<GlyphRect> freeRects, ref int bestShortSideFit, ref int bestLongSideFit)
+        private static GlyphRect FindIdealRect(int width, int height, DynamicBuffer<GlyphRect> freeRects, ref int bestShortSideFit, ref int bestLongSideFit)
         {
             GlyphRect bestNode =default;
             for (int i = 0; i < freeRects.Length; ++i)
@@ -139,7 +132,7 @@ namespace HarfBuzz
         }
 
         //remove a rect area from the freeRect list
-        private static void RemoveRectFromFreeList(GlyphRect rectToRemove, NativeList<GlyphRect> freeRects)
+        private static void RemoveRectFromFreeList(GlyphRect rectToRemove, DynamicBuffer<GlyphRect> freeRects)
         {
             for (int i = 0; i < freeRects.Length; ++i)
             {
@@ -210,21 +203,6 @@ namespace HarfBuzz
                     }
                 }
             }
-        }
-        public void Dispose()
-        {
-            if (freeRects.IsCreated) freeRects.Dispose();
-            if (usedRects.IsCreated) usedRects.Dispose();
-            if (placedGlyphs.IsCreated) placedGlyphs.Dispose();
-            //do not dispose textureData as the owner is Texture2D
-        }
-        public void Clear()
-        {
-            if (freeRects.IsCreated) freeRects.Clear();
-            if (usedRects.IsCreated) usedRects.Clear();
-            if (placedGlyphs.IsCreated) placedGlyphs.Clear();
-            freeRects.Add(new GlyphRect(0, 0, atlasWidth, atlasHeight));
-            //do not dispose textureData as the owner is Texture2D
         }
     };
 

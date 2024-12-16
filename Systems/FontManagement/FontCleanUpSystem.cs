@@ -21,22 +21,21 @@ namespace HarfBuzz
 
             foreach (var (hbFontPointer, entity) in SystemAPI.Query<HBFontPointer>()
                 .WithAll<HBFontPointer>()
-                .WithNone<GlyphsInUse>()
-                .WithNone<MissingGlyphs>()          
+                .WithNone<HBGlyphsInUse>()
+                .WithNone<HBMissingGlyphs>()          
                 .WithEntityAccess())
             {                
-                Debug.Log($"Destroy Harfbuzz Font {hbFontPointer.family}");
+                Debug.Log($"Destroy Harfbuzz font with ID {hbFontPointer.fontAssetRef}");
                 hbFontPointer.blob.Dispose();
                 hbFontPointer.face.Dispose();
                 hbFontPointer.font.Dispose();
-                HB.hb_draw_funcs_destroy(hbFontPointer.hbDrawFuncts);
                 ecb.RemoveComponent<HBFontPointer>(entity);
             }
 
             foreach (var (fontTextureReference, entity) in SystemAPI.Query<FontTextureReference>()
                 .WithAll<FontTextureReference>()
-                .WithNone<GlyphsInUse>()
-                .WithNone<MissingGlyphs>()         
+                .WithNone<HBGlyphsInUse>()
+                .WithNone<HBMissingGlyphs>()         
                 .WithEntityAccess())
             {
                 Debug.Log($"Destroy Font Blob");

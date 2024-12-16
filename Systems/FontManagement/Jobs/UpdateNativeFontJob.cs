@@ -1,58 +1,42 @@
 using Unity.Burst;
 using Unity.Jobs;
 using Unity.Collections;
-using UnityEngine;
 using Unity.Entities;
 using TextMeshDOTS;
 using TextMeshDOTS.Collections;
-using UnityEngine.TextCore;
 
 namespace HarfBuzz.SDF
 {
     [BurstCompile]
-    struct SpawnNativeFontJob : IJob
+    struct UpdateNativeFontJob : IJob
     {
         public ComponentLookup<FontTextureReference> fontTextureReferenceLookup;
-        public BufferLookup<GlyphsInUse> glyphsInUseLookup;
+        public BufferLookup<HBGlyphsInUse> glyphsInUseLookup;
 
         public Entity fontEntity;
         [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
         [ReadOnly] public ComponentLookup<HBFontAssetRef> hbFontAssetRefLookup;
-        public int atlasSamplingPointSize;//size of font in atlas
-        public int atlasWidth;
-        public int atlasHeight;
-        public int padding;
-        //public NativeHashMap<int, FontTextureReference> fontTextureReferenceMap;
-        //[ReadOnly] public NativeHashMap<uint, RectInt> glyphRects;
-        [ReadOnly] public NativeList<GlyphBlob> hbGlyphs;
-        //[ReadOnly] public UnityObjectRef<Texture2D> texture2D;
+        [ReadOnly] public NativeList<GlyphBlob> placedGlyphs;
 
         public void Execute()
         {
             var hbFontPointer = hbFontPointerLookup[fontEntity];
             var font = hbFontPointer.font;
             var face = hbFontPointer.face;
-            var buffer = glyphsInUseLookup[fontEntity];
+            var glyphsInUse = glyphsInUseLookup[fontEntity].Reinterpret<uint>();
             var hbFontAssetRef= hbFontAssetRefLookup[fontEntity];
-            var dynamicFontBlobRef = CreateDynamicFontData(atlasSamplingPointSize, atlasWidth, atlasHeight, padding, hbGlyphs, face, font, hbFontAssetRef, buffer.Reinterpret<uint>());
-            //var fontTextureReference = new FontTextureReference { texture = texture2D, blob = dynamicFontBlobRef };
-            //fontTextureReferenceLookup[fontEntity] = fontTextureReference;
+            var dynamicFontBlobRef = CreateDynamicFontData(ref hbFontAssetRef, placedGlyphs, face, font, ref glyphsInUse);
+
             var fontTextureReference = fontTextureReferenceLookup[fontEntity];
             fontTextureReference.blob = dynamicFontBlobRef;
             fontTextureReferenceLookup[fontEntity] = fontTextureReference;
-
-            //fontTextureReferenceMap.Add(hbFontAssetRef.fontAssetRef.familyNameHash, fontTextureReference);
         }
         public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(
-            int atlasSamplingPointSize,
-            int atlasWidth,
-            int atlasHeight,
-            int padding,
+            ref HBFontAssetRef hbFontAssetRef,
             NativeList<GlyphBlob> hbGlyphs,
             Face face, 
             Font font,
-            HBFontAssetRef hbFontAssetRef, 
-            DynamicBuffer<uint> usedGlyphs)
+            ref DynamicBuffer<uint> usedGlyphs)
         {
             //first, get all native data
             font.GetBaseline(Direction.LeftToRight, Script.Latin, out int baseLine);
@@ -82,11 +66,11 @@ namespace HarfBuzz.SDF
             fontBlobRoot.styleName = hbFontAssetRef.subFamily;
             fontBlobRoot.fontAssetRef = hbFontAssetRef.fontAssetRef;
 
-            fontBlobRoot.atlasSamplingPointSize = atlasSamplingPointSize;
-            fontBlobRoot.atlasWidth = atlasWidth;
-            fontBlobRoot.atlasHeight = atlasHeight;
+            fontBlobRoot.atlasSamplingPointSize = hbFontAssetRef.samplingPointSize;
+            fontBlobRoot.atlasWidth = hbFontAssetRef.atlasWidth;
+            fontBlobRoot.atlasHeight = hbFontAssetRef.atlasHeight;
             //fontBlobRoot.materialPadding = fontAsset.material.GetPaddingForText(false, false);
-            fontBlobRoot.materialPadding = padding;
+            fontBlobRoot.materialPadding = hbFontAssetRef.padding;
             fontBlobRoot.regularStyleSpacing = 0;
             fontBlobRoot.boldStyleSpacing = 7;
             fontBlobRoot.italicsStyleSlant = 35;

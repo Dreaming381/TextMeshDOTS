@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 namespace TextMeshDOTS.TextProcessing
 {
     //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateAfter(typeof(LoadNativeFontSystem))]
+    [UpdateAfter(typeof(NativeFontManagerSystem))]
     [RequireMatchingQueriesForUpdate]
     partial class RegisterFontMaterialSystem : SystemBase
     {
@@ -23,8 +23,8 @@ namespace TextMeshDOTS.TextProcessing
             fontEntityQ = SystemAPI.QueryBuilder()                    
                     .WithAll<HBFontAssetRef>()
                     .WithAll<FontTextureReference>()
-                    .WithAll<GlyphsInUse>()
-                    .WithAll<MissingGlyphs>()
+                    .WithAll<HBGlyphsInUse>()
+                    .WithAll<HBMissingGlyphs>()
                     .WithAll<HBFontPointer>()
                     .WithAbsent<MaterialMeshInfo>()  
                     .WithAbsent<CreatedFromFontAsset>()

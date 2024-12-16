@@ -21,23 +21,14 @@ namespace TextMeshDOTS
             };
             return new ComponentTypeSet(result);
         }
-        public static EntityArchetype GetRuntimeFontDataArchetype(ref SystemState state)
-        {
-            var componentTypeStaging = new NativeArray<ComponentType>(4, Allocator.Temp);
-            componentTypeStaging[0] = ComponentType.ReadWrite<FontBlobReference>();         // FontAsset 
-            componentTypeStaging[1] = ComponentType.ReadWrite<DynamicFontBlobReference>();  // data dynamicaly extracted from FontAsset
-            componentTypeStaging[2] = ComponentType.ReadWrite<GlyphsInUse>(); 
-            componentTypeStaging[3] = ComponentType.ReadWrite<MissingGlyphs>();
-
-            return state.EntityManager.CreateArchetype(componentTypeStaging);
-        }
         public static EntityArchetype GetNativeFontDataArchetype(ref SystemState state)
         {
-            var componentTypeStaging = new NativeArray<ComponentType>(4, Allocator.Temp);            
+            var componentTypeStaging = new NativeArray<ComponentType>(5, Allocator.Temp);            
             componentTypeStaging[0] = ComponentType.ReadWrite<HBFontAssetRef>();
-            componentTypeStaging[1] = ComponentType.ReadWrite<FontTextureReference>();
-            componentTypeStaging[2] = ComponentType.ReadWrite<GlyphsInUse>();  
-            componentTypeStaging[3] = ComponentType.ReadWrite<MissingGlyphs>();            
+            componentTypeStaging[1] = ComponentType.ReadWrite<HBMissingGlyphs>();
+            componentTypeStaging[2] = ComponentType.ReadWrite<HBGlyphsInUse>();  
+            componentTypeStaging[3] = ComponentType.ReadWrite<HBUsedGlyphRects>();
+            componentTypeStaging[4] = ComponentType.ReadWrite<HBFreeGlyphRects>();
             return state.EntityManager.CreateArchetype(componentTypeStaging);
         }
         //public static EntityArchetype GetSingleFontTextArchetype(ref SystemState state)

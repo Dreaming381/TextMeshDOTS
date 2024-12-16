@@ -22,11 +22,11 @@ namespace TextMeshDOTS.TextProcessing
             m_query = SystemAPI.QueryBuilder()
                               .WithAll<HBFontAssetRef>()
                               .WithAll<FontTextureReference>()
-                              .WithAll<GlyphsInUse>()
-                              .WithAll<MissingGlyphs>()
+                              .WithAll<HBGlyphsInUse>()
+                              .WithAll<HBMissingGlyphs>()
                               .WithAll<CreatedFromFontAsset>()
                               .Build();
-            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<MissingGlyphs>());
+            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<HBMissingGlyphs>());
             //fontAssetQ = SystemAPI.QueryBuilder()
             //                  .WithAll<FontAssetReferences>()
             //                  .Build();
@@ -43,11 +43,11 @@ namespace TextMeshDOTS.TextProcessing
             for (int i = 0, ii = entities.Length; i < ii; i++)
             {
                 var entity= entities[i];
-                var missingGlyphs = SystemAPI.GetBuffer<MissingGlyphs>(entity);
+                var missingGlyphs = SystemAPI.GetBuffer<HBMissingGlyphs>(entity);
 
                 if (missingGlyphs.Length > 0)
                 {
-                    var glyphsInUse = SystemAPI.GetBuffer<GlyphsInUse>(entity);
+                    var glyphsInUse = SystemAPI.GetBuffer<HBGlyphsInUse>(entity);
                     var fontTextureReference = SystemAPI.GetComponent<FontTextureReference>(entity);
                     var fontAsset = SystemAPI.GetComponent<CreatedFromFontAsset>(entity).fontAsset.Value;
                     Debug.Log($"Update Atlas for {fontTextureReference.blob.Value.familyName}");

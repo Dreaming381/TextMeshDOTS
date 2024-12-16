@@ -29,8 +29,8 @@ namespace TextMeshDOTS.Authoring
             fontEntityQ = SystemAPI.QueryBuilder()
                     .WithAll<HBFontAssetRef>()
                     .WithAll<FontTextureReference>()
-                    .WithAll<GlyphsInUse>()
-                    .WithAll<MissingGlyphs>()
+                    .WithAll<HBGlyphsInUse>()
+                    .WithAll<HBMissingGlyphs>()
                     .WithAll<HBFontPointer>()
                     .WithAll<MaterialMeshInfo>()
                     .Build();

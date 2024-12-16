@@ -31,7 +31,7 @@ namespace TextMeshDOTS.TextProcessing
         {
             textRendererQ = SystemAPI.QueryBuilder()
                               .WithAll<FontBlobReference>()                              
-                              .WithNone<GlyphsInUse>()
+                              .WithNone<HBGlyphsInUse>()
                               .Build();
             textRendererQ.SetChangedVersionFilter(typeof(FontBlobReference));
 
@@ -114,15 +114,15 @@ namespace TextMeshDOTS.TextProcessing
             CreateNativeFont(filePath, out Blob blob, out Face face, out Font font);
             var entity = EntityManager.CreateEntity(nativeFontDataArchetype);
             var fontAssetRef = fontBlob.Value.fontAssetRef;
-            var hbFontPointer = new HBFontPointer { family = fontBlob.Value.familyName, blob = blob, face = face, font = font };
+            var hbFontPointer = new HBFontPointer { blob = blob, face = face, font = font };
             var hbFontAssetRef = new HBFontAssetRef { family = fontBlob.Value.familyName, subFamily = fontBlob.Value.styleName, fontAssetRef = fontAssetRef };
 
             EntityManager.SetComponentData(entity, hbFontAssetRef);
             EntityManager.AddComponentData(entity, hbFontPointer);            
-            var usedGlyphs = entityManager.AddBuffer<GlyphsInUse>(entity);
+            var usedGlyphs = entityManager.AddBuffer<HBGlyphsInUse>(entity);
             var dynamicFontBlobRef = FontBlobber.CreateDynamicFontData(fontAsset, face, font, fontBlob.Value.fontAssetRef, usedGlyphs.Reinterpret<uint>());
             var fontTextureReference = new FontTextureReference { texture = (Texture2D)fontAsset.material.mainTexture, blob = dynamicFontBlobRef };
-            EntityManager.SetComponentData(entity, fontTextureReference);
+            EntityManager.AddComponentData(entity, fontTextureReference);
             EntityManager.AddComponentData(entity, new CreatedFromFontAsset { fontAsset = fontAsset });
             //Debug.Log($"Add {fontAsset.name} to FontManager");
             var fontEntity = new FontEntity { value = entity };

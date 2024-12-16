@@ -1,0 +1,73 @@
+using Unity.Burst;
+using Unity.Jobs;
+using Unity.Collections;
+using Unity.Profiling;
+using TextMeshDOTS;
+using Unity.Entities;
+using Unity.Mathematics;
+using UnityEngine.TextCore;
+using UnityEngine;
+
+
+namespace HarfBuzz.SDF
+{
+    [BurstCompile]
+    struct UpdateAtlasTextureJob : IJobParallelForDefer
+    {
+        [NativeDisableParallelForRestriction] public NativeArray<byte> textureData;
+
+        public Entity fontEntity;
+        [ReadOnly] public NativeList<GlyphBlob> placedGlyphs;
+        [ReadOnly] public ComponentLookup<HBFontAssetRef> hbFontAssetRefLookup;
+        [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
+        [ReadOnly] public BufferLookup<HBGlyphsInUse> usedGlyphsBuffer;
+        [ReadOnly] public BufferLookup<HBUsedGlyphRects> usedGlyphRectsBuffer;        
+        
+
+        public ProfilerMarker marker;
+        public void Execute(int i)
+        {
+            var hbFontAsset = hbFontAssetRefLookup[fontEntity];
+            var hbFontPointer = hbFontPointerLookup[fontEntity];
+            var usedGlyphs = usedGlyphsBuffer[fontEntity].Reinterpret<uint>();
+            var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
+
+            var glyphBlob = placedGlyphs[i];
+
+            var font = hbFontPointer.font;
+            var drawFunct = hbFontPointer.hbDrawFuncts;
+
+            var bezierData = new BezierData(256, 16, Allocator.Temp);
+            
+            HB.hb_font_draw_glyph(font.ptr, glyphBlob.glyphID, drawFunct, ref bezierData);
+            bezierData.contourIDs.Add(bezierData.edges.Length);//close the last contour
+
+            var edges = bezierData.edges;
+
+            //shift the bezier edges so that they are in the center of the reserved atlas padded texture window (usedRects)
+            var shiftx = bezierData.glyphRect.min.x - ((glyphBlob.glyphExtents.width + 2 * hbFontAsset.padding - bezierData.glyphRect.width) / 2);
+            var shifty = bezierData.glyphRect.min.y - ((glyphBlob.glyphExtents.height + 2 * hbFontAsset.padding - bezierData.glyphRect.height) / 2);
+            float2 shift = -new float2(shiftx, shifty);
+            for (int k = 0, kk = edges.Length; k < kk; k++)
+            {
+                ref var edge = ref edges.ElementAt(k);
+                edge.start_pos += shift;
+                edge.end_pos += shift;
+                edge.control1 += shift;
+                edge.control2 += shift;
+                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
+            }
+
+            marker.Begin();
+            var glyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphBlob.glyphID);
+            if (glyphIndex != -1)
+            {
+                var atlasRect = usedGlyphRects[glyphIndex]; //render SDF into the reserved padded atlas texture  window 
+                SDF.SDFGenerateSubDivision(hbFontPointer.orientation, ref bezierData, textureData, atlasRect, hbFontAsset.atlasWidth, hbFontAsset.atlasHeight);
+            }
+            else
+                Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");
+            marker.End();
+        }
+    }    
+}

@@ -35,7 +35,7 @@ namespace TextMeshDOTS.TextProcessing
     public partial struct CopyMissingGlyphsToFontEntitiesJob : IJobEntity
     {
         [ReadOnly] public NativeList<FontEntityGlyph> newMissingGlyphs;
-        public void Execute(Entity entity, ref DynamicBuffer<MissingGlyphs> missingGlyphsBuffer)
+        public void Execute(Entity entity, ref DynamicBuffer<HBMissingGlyphs> missingGlyphsBuffer)
         {
             var missingGlyphsBufferAsUint = missingGlyphsBuffer.Reinterpret<uint>();
             foreach (var glyph in newMissingGlyphs)

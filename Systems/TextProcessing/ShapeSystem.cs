@@ -33,8 +33,8 @@ namespace TextMeshDOTS.TextProcessing
                       .Build();            
 
             fontEntityQ = SystemAPI.QueryBuilder()
-                              .WithAll<GlyphsInUse>()
-                              .WithAll<MissingGlyphs>()
+                              .WithAll<HBGlyphsInUse>()
+                              .WithAll<HBMissingGlyphs>()
                               //.WithAll<DynamicFontBlobReference>()
                               .WithAll<FontTextureReference>()
                               .Build();
@@ -63,7 +63,7 @@ namespace TextMeshDOTS.TextProcessing
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
-                glyphsInUseLookup = SystemAPI.GetBufferLookup<GlyphsInUse>(true),
+                glyphsInUseLookup = SystemAPI.GetBufferLookup<HBGlyphsInUse>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             //}.Schedule(m_query, state.Dependency);

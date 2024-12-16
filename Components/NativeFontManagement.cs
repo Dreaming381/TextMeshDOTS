@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
+using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
 using Font = HarfBuzz.Font;
 
@@ -21,39 +22,76 @@ namespace TextMeshDOTS
     #endregion
 
 
-    #region Runtime Components
-    /// <summary> HarfBuzz font pointer and static font data extracted by HarfBuzz</summary>
-    [InternalBufferCapacity(1)]
-    public unsafe struct FontMaterial : IBufferElementData
+    #region Native FontAsset Components
+    
+    /// <summary> Contains  relevant data from loading and using font</summary>
+    public struct HBFontAssetRef : IComponentData
     {
-        public Entity fontEntity;//references font entity. Use to fetch additional components, such as GlyphsInUse
-        DynamicFontBlob* m_dynamicFontBlob;
-        public Blob blob;
-        public Face face;
-        public Font font;
-        public ref DynamicFontBlob dynamicFontBlob => ref *m_dynamicFontBlob;
+        public FixedString128Bytes family;
+        public FixedString128Bytes subFamily;
+        public FontAssetRef fontAssetRef;
+        public int atlasWidth;
+        public int atlasHeight;
+        public int padding;            //10% of atlas height or width
+        public int samplingPointSize;  //size of font (in pixel) in atlas
+    }
 
-        public FontMaterial(Entity fontEntity, Blob blob, Font font, Face face, ref FontBlob fontblob, BlobAssetReference<DynamicFontBlob> dynamicBlobRef)
-        {
-            this.blob = blob;
-            this.face = face;
-            this.font = font;
-            this.fontEntity = fontEntity;
-            m_dynamicFontBlob = (DynamicFontBlob*)dynamicBlobRef.GetUnsafePtr();
-        }
-    }
-    /// <summary>
-    /// The glyphs currently in use from this font. Dynamicaly changing! 
-    /// Keep in sync with Unity FontAsset! Use conversion to HashSet to accelerate lookup
-    /// </summary>
-    public struct GlyphsInUse : IBufferElementData
+    /// <summary> Glyphs requested by hb_shape (=they are guarentied to exist in font), </summary>
+    [InternalBufferCapacity(0)]
+    public struct HBMissingGlyphs : IBufferElementData
     {
         public uint glyphID;
     }
-    public struct MissingGlyphs : IBufferElementData
+    
+    /// <summary> ID's of glyphs currently placed in the texture atlas. Keep order aligend with UsedGlyphRects </summary>
+    [InternalBufferCapacity(0)]
+    public struct HBGlyphsInUse : IBufferElementData
     {
         public uint glyphID;
     }
+
+    /// <summary> GlyphsRects currently used in the texture atlas. Keep order aligend with GlyphsInUse </summary>
+    [InternalBufferCapacity(0)]
+    public struct HBUsedGlyphRects : IBufferElementData
+    {
+        public GlyphRect value;
+    }
+    /// <summary> Free GlyphsRects of texture atlas </summary>
+    public struct HBFreeGlyphRects : IBufferElementData
+    {
+        public GlyphRect value;
+    }    
+ 
+    /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
+    public struct FontTextureReference : ICleanupComponentData
+    {
+        public UnityObjectRef<Texture2D> texture;
+        public UnityObjectRef<Material> material;        
+        public BlobAssetReference<DynamicFontBlob> blob;
+    }
+    /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
+    public struct HBFontPointer: ICleanupComponentData
+    {
+        public FontAssetRef fontAssetRef;
+        public SDFOrientation orientation;
+        public Blob blob;           //destroy in cleanup system
+        public Face face;           //destroy in cleanup system
+        public Font font;           //destroy in cleanup system
+        public IntPtr hbDrawFuncts; //do not destroy this in cleanup system as those functions are needed for loading other fonts
+    }
+
+
+    
+    //Attach this component to all TextRenderer to enable use of fonts referenced in this buffer
+    public struct FontEntity : IBufferElementData
+    {
+        public Entity value;
+    }
+    public  struct CreatedFromFontAsset : IComponentData 
+    {
+        public UnityObjectRef<FontAsset> fontAsset;
+    }
+    
     public struct FontEntityGlyph
     {
         public Entity entity;
@@ -77,39 +115,5 @@ namespace TextMeshDOTS
         }
     }
 
-    public struct DynamicFontBlobReference : IComponentData
-    {
-        public BlobAssetReference<DynamicFontBlob> blob;
-    }
-    public struct FontTextureReference : ICleanupComponentData
-    {
-        public UnityObjectRef<Material> material;
-        public UnityObjectRef<Texture2D> texture;
-        public BlobAssetReference<DynamicFontBlob> blob;
-    }
-    public struct HBFontAssetRef : IComponentData
-    {
-        public FixedString128Bytes family;
-        public FixedString128Bytes subFamily;
-        public FontAssetRef fontAssetRef;
-    }
-    public struct HBFontPointer: ICleanupComponentData
-    {
-        public FixedString128Bytes family;
-        public FontAssetRef fontAssetRef;
-        public SDFOrientation orientation;
-        public Blob blob;
-        public Face face;
-        public Font font;
-        public IntPtr hbDrawFuncts;
-    }
-    public struct FontEntity : IBufferElementData
-    {
-        public Entity value;
-    }
-    public  struct CreatedFromFontAsset : IComponentData 
-    {
-        public UnityObjectRef<FontAsset> fontAsset;
-    }
     #endregion
 }
