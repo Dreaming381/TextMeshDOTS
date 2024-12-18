@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateAfter(typeof(ExtractTextSegmentsSystem))]
     [RequireMatchingQueriesForUpdate]
     [BurstCompile]
@@ -28,20 +28,17 @@ namespace TextMeshDOTS.TextProcessing
             m_query = SystemAPI.QueryBuilder()
                       .WithAllRW<GlyphOTF>()
                       .WithAll<CalliByte>()
-                      //.WithAll<FontMaterial>()
-                      .WithAll<FontEntity>()
                       .Build();            
 
             fontEntityQ = SystemAPI.QueryBuilder()
-                              .WithAll<HBGlyphsInUse>()
+                              .WithAll<HBUsedGlyphs>()
                               .WithAll<HBMissingGlyphs>()
-                              //.WithAll<DynamicFontBlobReference>()
                               .WithAll<FontTextureReference>()
                               .Build();
 
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
             //m_query.AddChangedVersionFilter(ComponentType.ReadWrite<FontMaterial>());
-
+            state.RequireForUpdate<FontHashMap>();
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
         }
 
@@ -49,6 +46,11 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
+            if (fontHashMap.fontsDirty == true)
+                return;
+            var fontEntities = fontHashMap.fontEntities;
+
             var missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.TempJob);
 
             state.Dependency = new ShapeJob
@@ -57,13 +59,17 @@ namespace TextMeshDOTS.TextProcessing
                 marker2 = marker2,
                 
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
-                selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
-                fontEntityHandle = SystemAPI.GetBufferTypeHandle<FontEntity>(true),
+
+                fontEntities = fontEntities,
+                entitesHandle = SystemAPI.GetEntityTypeHandle(),
+                additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
+                fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
+                fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 hbFontPointerLookup = SystemAPI.GetComponentLookup<HBFontPointer>(),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
-                glyphsInUseLookup = SystemAPI.GetBufferLookup<HBGlyphsInUse>(true),
+                glyphsInUseLookup = SystemAPI.GetBufferLookup<HBUsedGlyphs>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             //}.Schedule(m_query, state.Dependency);

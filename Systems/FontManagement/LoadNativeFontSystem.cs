@@ -13,8 +13,8 @@ using UnityEngine.TextCore.Text;
 namespace TextMeshDOTS.TextProcessing
 {
     //[DisableAutoCreation]
-    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    //[RequireMatchingQueriesForUpdate]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [RequireMatchingQueriesForUpdate]
     [UpdateAfter(typeof(ShapeSystem))]
     partial struct NativeFontManagerSystem : ISystem
     {
@@ -36,7 +36,7 @@ namespace TextMeshDOTS.TextProcessing
             fontEntityQ = SystemAPI.QueryBuilder()
                 .WithAll<HBFontAssetRef>()
                 .WithAll<HBMissingGlyphs>()
-                .WithAll<HBGlyphsInUse>()
+                .WithAll<HBUsedGlyphs>()
                 .WithAll<HBUsedGlyphRects>()
                 .WithAll<HBFreeGlyphRects>()
                 .WithAll<HBFontPointer>()
@@ -44,10 +44,10 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAbsent<CreatedFromFontAsset>()
                 .Build();
 
-            InitializeHarfBuzzDrawFunctions();
+            //InitializeHarfBuzzDrawFunctions();
 
-            var fontPath = "Assets\\Resources\\Notosans\\NotoSansDisplay-Regular.ttf";
-            LoadFont(fontPath, SDFOrientation.TRUETYPE, 50, ref state);
+            //var fontPath = "Assets\\Resources\\Notosans\\NotoSansDisplay-Regular.ttf";
+            //LoadFont(systemFontReferences[4].filePath, SDFOrientation.TRUETYPE, 50, ref state);
         }
 
         //[BurstCompile]
@@ -65,7 +65,7 @@ namespace TextMeshDOTS.TextProcessing
                 if (hbMissingGlyphs.Length > 0)
                 {
                     fontsRequiringUpdate.Add(entity);
-                    Debug.Log($"Missing {hbMissingGlyphs.Length} glyphs for font {hbFontAssetRef.family} {hbFontAssetRef.subFamily}, populating atlas");
+                    Debug.Log($"Missing {hbMissingGlyphs.Length} glyphs for font {hbFontAssetRef.family} (subfamily {hbFontAssetRef.subFamily}). Populating atlas...");
                 }
             }
             if(fontsRequiringUpdate.IsEmpty)
@@ -79,7 +79,7 @@ namespace TextMeshDOTS.TextProcessing
 
             var hbFontAssetRefLookup = SystemAPI.GetComponentLookup<HBFontAssetRef>(true);
             var missingGlyphsLookup = SystemAPI.GetBufferLookup<HBMissingGlyphs>(false);
-            var glyphsInUseLookup = SystemAPI.GetBufferLookup<HBGlyphsInUse>(false);
+            var glyphsInUseLookup = SystemAPI.GetBufferLookup<HBUsedGlyphs>(false);
             var usedGlyphRectsLookup = SystemAPI.GetBufferLookup<HBUsedGlyphRects>(false);
             var freeGlyphRectsLookup = SystemAPI.GetBufferLookup<HBFreeGlyphRects>(false);
 
@@ -89,7 +89,7 @@ namespace TextMeshDOTS.TextProcessing
             for (int i = 0, ii = fontsRequiringUpdate.Length; i < ii; i++)
             {
                 var fontEntity = fontsRequiringUpdate[i];
-
+                
                 //this managed call to texture object is reason why we cannot BURST compile the update method of this system
                 var fontTextureReference = fontTextureReferenceLookup[fontEntity];
                 var textureData = fontTextureReference.texture.Value.GetRawTextureData<byte>();
@@ -117,8 +117,8 @@ namespace TextMeshDOTS.TextProcessing
                     placedGlyphs = placedGlyphs,
                     hbFontAssetRefLookup = hbFontAssetRefLookup,
                     hbFontPointerLookup = hbFontPointersLookup,
-                    usedGlyphsBuffer = SystemAPI.GetBufferLookup<HBGlyphsInUse>(true),
-                    usedGlyphRectsBuffer = SystemAPI.GetBufferLookup<HBUsedGlyphRects>(true),
+                    usedGlyphsBuffer = glyphsInUseLookup,
+                    usedGlyphRectsBuffer = usedGlyphRectsLookup,
                     marker = marker2,
                 };
                 state.Dependency = updateAtlasTextureJob.Schedule(placedGlyphs, 1, state.Dependency);
@@ -126,7 +126,6 @@ namespace TextMeshDOTS.TextProcessing
                 var updateNativeFontJob = new UpdateNativeFontJob()
                 {
                     fontTextureReferenceLookup = fontTextureReferenceLookup,
-                    glyphsInUseLookup = glyphsInUseLookup,
 
                     fontEntity = fontEntity,
                     hbFontAssetRefLookup = hbFontAssetRefLookup,
@@ -136,6 +135,7 @@ namespace TextMeshDOTS.TextProcessing
                 state.Dependency = updateNativeFontJob.Schedule(state.Dependency);
 
                 state.Dependency.Complete();
+                placedGlyphs.Clear();
                 fontTextureReference.texture.Value.Apply();
             }
             fontsRequiringUpdate.Dispose(state.Dependency);
@@ -148,6 +148,7 @@ namespace TextMeshDOTS.TextProcessing
         {
             HB.hb_draw_funcs_destroy(haffBuzzDrawFunct);
         }
+
         void LoadFont(string path, SDFOrientation orientation, int samplingPointSize, ref SystemState state)
         {
             //load font
@@ -170,7 +171,7 @@ namespace TextMeshDOTS.TextProcessing
             face.GetFaceInfo(HB_OT_NAME_ID.FONT_SUBFAMILY, language, ref textSize, ref fontSubFamily);
             fontSubFamily.Length = (int)textSize;
 
-            var fontAssetRef = new FontAssetRef(TextHelper.GetHashCodeCaseInSensitive(fontFamily), TextFontWeight.Regular, fontSubFamily.Contains(italicString));
+            var fontAssetRef = new FontAssetRef(TextHelper.GetHashCodeCaseInSensitive(fontFamily), TextFontWeight.Regular, fontSubFamily.Contains(italicString) ? Style.Italic : Style.Regular);
             var hbFontAssetRef = new HBFontAssetRef
             {
                 family = fontFamily,

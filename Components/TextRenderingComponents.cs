@@ -52,6 +52,7 @@ namespace TextMeshDOTS.Rendering
     }
 
     /// <summary> 96 byte glyph data </summary>
+    [InternalBufferCapacity(0)]
     public struct RenderGlyph : IBufferElementData
     {
         public float2 blPosition;   //0

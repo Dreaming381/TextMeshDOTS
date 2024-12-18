@@ -5,7 +5,7 @@ using HarfBuzz;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
     //[UpdateAfter(typeof(UpdateAtlasSystem))]
     [UpdateAfter(typeof(NativeFontManagerSystem))]
@@ -25,9 +25,8 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAll<TextSpan>()                      
                       .WithAll<TextBaseConfiguration>()
                       .WithAllRW<TextRenderControl>()
-                      //.WithAll<FontMaterial>()
-                      .WithAll<FontEntity>()
                       .Build();
+            state.RequireForUpdate<FontHashMap>();
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
         }
 
@@ -35,6 +34,11 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
+            if (fontHashMap.fontsDirty == true)
+                return;
+            var fontEntities = fontHashMap.fontEntities;
+
             state.Dependency = new GenerateRenderGlyphsJob
             {
                 renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
@@ -42,8 +46,11 @@ namespace TextMeshDOTS.TextProcessing
                 selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
-                //fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),
-                fontEntityHandle = SystemAPI.GetBufferTypeHandle<FontEntity>(true),
+                fontEntities = fontEntities,
+                entitesHandle = SystemAPI.GetEntityTypeHandle(),
+                additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
+                fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
+                fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 fontTextureReferenceLookup = SystemAPI.GetComponentLookup<FontTextureReference>(true),
                 glyphMappingMaskHandle = SystemAPI.GetComponentTypeHandle<GlyphMappingMask>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),

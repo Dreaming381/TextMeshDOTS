@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Entities;
 using TextMeshDOTS;
 using TextMeshDOTS.Collections;
+using UnityEngine;
 
 namespace HarfBuzz.SDF
 {
@@ -11,7 +12,6 @@ namespace HarfBuzz.SDF
     struct UpdateNativeFontJob : IJob
     {
         public ComponentLookup<FontTextureReference> fontTextureReferenceLookup;
-        public BufferLookup<HBGlyphsInUse> glyphsInUseLookup;
 
         public Entity fontEntity;
         [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
@@ -23,20 +23,26 @@ namespace HarfBuzz.SDF
             var hbFontPointer = hbFontPointerLookup[fontEntity];
             var font = hbFontPointer.font;
             var face = hbFontPointer.face;
-            var glyphsInUse = glyphsInUseLookup[fontEntity].Reinterpret<uint>();
-            var hbFontAssetRef= hbFontAssetRefLookup[fontEntity];
-            var dynamicFontBlobRef = CreateDynamicFontData(ref hbFontAssetRef, placedGlyphs, face, font, ref glyphsInUse);
+            var hbFontAssetRef= hbFontAssetRefLookup[fontEntity];            
 
             var fontTextureReference = fontTextureReferenceLookup[fontEntity];
-            fontTextureReference.blob = dynamicFontBlobRef;
+            if(fontTextureReference.blob.IsCreated)
+            {
+                //Debug.Log($"Patching existing blob for font {hbFontAssetRef.family} {hbFontAssetRef.subFamily}, adding {placedGlyphs.Length} glyphs");
+                PatchDynamicFontData(ref fontTextureReference.blob, placedGlyphs);
+            }
+            else
+            {
+                fontTextureReference.blob = CreateDynamicFontData(ref hbFontAssetRef, placedGlyphs, face, font);
+                //Debug.Log($"Create new blob");
+            }            
             fontTextureReferenceLookup[fontEntity] = fontTextureReference;
         }
         public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(
             ref HBFontAssetRef hbFontAssetRef,
-            NativeList<GlyphBlob> hbGlyphs,
+            NativeList<GlyphBlob> placedGlyphs,
             Face face, 
-            Font font,
-            ref DynamicBuffer<uint> usedGlyphs)
+            Font font)
         {
             //first, get all native data
             font.GetBaseline(Direction.LeftToRight, Script.Latin, out int baseLine);
@@ -103,11 +109,10 @@ namespace HarfBuzz.SDF
             fontBlobRoot.superScriptEmXOffset = superScriptEmXOffset;
             fontBlobRoot.superScriptEmYOffset = superScriptEmYOffset;
 
-            int count = hbGlyphs.Length == 0 ? 1 : hbGlyphs.Length;
+            int count = placedGlyphs.Length == 0 ? 1 : placedGlyphs.Length;
             var characterHashMapBuilder = builder.AllocateHashMap(ref fontBlobRoot.glyphs, count);
-            foreach (var glyph in hbGlyphs)
+            foreach (var glyph in placedGlyphs)
             {
-                usedGlyphs.Add(glyph.glyphID);
                 var glyphBlob = new GlyphBlob { glyphID = glyph.glyphID, glyphExtents = glyph.glyphExtents, glyphRect = glyph.glyphRect };
                 characterHashMapBuilder.Add(glyph.glyphID, glyphBlob);
             }
@@ -116,6 +121,78 @@ namespace HarfBuzz.SDF
             builder.Dispose();
             fontBlobRoot = result.Value; //is this really needed as it was just constructed in place?
             return result;
+        }
+        public static void PatchDynamicFontData(ref BlobAssetReference<DynamicFontBlob> dynamicFontDataReference, NativeList<GlyphBlob> newGlyphs)
+        {
+            ref var dynamicFontData = ref dynamicFontDataReference.Value;
+            var builder = new BlobBuilder(Allocator.Temp);
+            ref DynamicFontBlob fontBlobRoot = ref builder.ConstructRoot<DynamicFontBlob>();
+
+            fontBlobRoot.familyName = dynamicFontData.familyName;
+            fontBlobRoot.styleName = dynamicFontData.styleName;
+            fontBlobRoot.fontAssetRef = dynamicFontData.fontAssetRef;
+
+            fontBlobRoot.atlasSamplingPointSize = dynamicFontData.atlasSamplingPointSize;
+            fontBlobRoot.atlasWidth = dynamicFontData.atlasWidth;
+            fontBlobRoot.atlasHeight = dynamicFontData.atlasHeight;
+            fontBlobRoot.materialPadding = dynamicFontData.materialPadding;
+            fontBlobRoot.regularStyleSpacing = dynamicFontData.regularStyleSpacing;
+            fontBlobRoot.boldStyleSpacing = dynamicFontData.boldStyleSpacing;
+            fontBlobRoot.italicsStyleSlant = dynamicFontData.italicsStyleSlant;
+            fontBlobRoot.tabWidth = dynamicFontData.tabWidth;
+            fontBlobRoot.tabMultiple = dynamicFontData.tabMultiple;
+
+            fontBlobRoot.ascender = dynamicFontData.ascender;
+            fontBlobRoot.descender = dynamicFontData.descender;
+            fontBlobRoot.baseLine = dynamicFontData.baseLine;
+
+            fontBlobRoot.designSize = dynamicFontData.designSize;
+            fontBlobRoot.subfamilyNameID = dynamicFontData.subfamilyNameID;
+            fontBlobRoot.rangeStart = dynamicFontData.rangeStart;
+            fontBlobRoot.rangeEnd = dynamicFontData.rangeEnd;
+            fontBlobRoot.unitsPerEm = dynamicFontData.unitsPerEm;
+            fontBlobRoot.xScale = dynamicFontData.xScale;
+            fontBlobRoot.yScale = dynamicFontData.yScale;
+
+            fontBlobRoot.capHeight = dynamicFontData.capHeight;
+            fontBlobRoot.xHeight = dynamicFontData.xHeight;
+
+            fontBlobRoot.subScriptEmXSize = dynamicFontData.subScriptEmXSize;
+            fontBlobRoot.subScriptEmYSize = dynamicFontData.subScriptEmYSize;
+            fontBlobRoot.subScriptEmXOffset = dynamicFontData.subScriptEmXOffset;
+            fontBlobRoot.subScriptEmYOffset = dynamicFontData.subScriptEmYOffset;
+
+            fontBlobRoot.superScriptEmXSize = dynamicFontData.superScriptEmXSize;
+            fontBlobRoot.superScriptEmYSize = dynamicFontData.superScriptEmYSize;
+            fontBlobRoot.superScriptEmXOffset = dynamicFontData.superScriptEmXOffset;
+            fontBlobRoot.superScriptEmYOffset = dynamicFontData.superScriptEmYOffset;
+
+            var newLength = dynamicFontData.glyphs.Count + newGlyphs.Length;
+
+            var characterHashMapBuilder = builder.AllocateHashMap(ref fontBlobRoot.glyphs, newLength);
+
+            var oldGlyphs = dynamicFontData.glyphs.GetValueArray(Allocator.Temp);
+            for (int i = 0, length = oldGlyphs.Length; i < length; i++)
+                characterHashMapBuilder.Add(oldGlyphs[i].glyphID, oldGlyphs[i]);
+
+            for (int i = 0, length = newGlyphs.Length; i < length; i++)
+                characterHashMapBuilder.Add(newGlyphs[i].glyphID, newGlyphs[i]);
+
+            var result = builder.CreateBlobAssetReference<DynamicFontBlob>(Allocator.Persistent);
+            builder.Dispose();
+
+            dynamicFontDataReference.Dispose();
+            dynamicFontDataReference = result;
+            //replace existing blob with new blob, dispose old blob
+            //unsafe
+            //{
+            //    var a = (BlobAssetReference<DynamicFontBlob>*)dynamicFontDataReference.GetUnsafePtr();
+            //    var b = (BlobAssetReference<DynamicFontBlob>*)result.GetUnsafePtr();
+            //    var temp = *a;
+            //    *a = *b;
+            //    *b = temp;
+            //}            
+            //result.Dispose();
         }
     }    
 }

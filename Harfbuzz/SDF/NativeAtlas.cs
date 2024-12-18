@@ -16,7 +16,8 @@ namespace HarfBuzz
             freeGlyphRectsBuffer.Reinterpret<GlyphRect>().Add(new GlyphRect(0, 0, atlasWidth, atlasHeight));
         }
 
-        public static void AddGlyphs(int padding,
+        public static void AddGlyphs(
+            int padding,
             NativeList<GlyphBlob> glyphsToPlace,
             NativeList<GlyphBlob> placedGlyphs,
             DynamicBuffer<uint> glyphsInUse,
@@ -71,7 +72,7 @@ namespace HarfBuzz
                     };
                     
                     placedGlyphs.Add(currentGlyph);
-                    glyphsToPlace.RemoveAt(bestGlyphID);                    
+                    glyphsToPlace.RemoveAt(bestGlyphID);
                 }
                 else
                 {
@@ -80,32 +81,49 @@ namespace HarfBuzz
                 }
             }
         }
-        //public static bool TryAddGlyph(
-        //    int padding, 
-        //    GlyphBlob glyph, 
-        //    DynamicBuffer<GlyphRect> freeRects, 
-        //    DynamicBuffer<GlyphRect> usedRects, 
-        //    out GlyphRect outRect)
-        //{
-        //    var doublePadding = 2 * padding;
-        //    int shortSideScore = int.MaxValue;
-        //    int longSideScore = int.MaxValue;
+        public static bool TryAddGlyph(
+            int padding,
+            GlyphBlob glyphToPlace,
+            out GlyphBlob placedGlyph,
+            DynamicBuffer<uint> glyphsInUse,            
+            DynamicBuffer<GlyphRect> usedRects,
+            DynamicBuffer<GlyphRect> freeRects)
+        {
+            var doublePadding = 2 * padding;
+            int shortSideScore = int.MaxValue;
+            int longSideScore = int.MaxValue;
 
-        //    //var glyphRect = glyph.atlasRect;
-        //    var glyphExtents = glyph.glyphExtents;
-        //    outRect = FindIdealRect(glyphExtents.width + doublePadding, glyphExtents.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
-        //    if (outRect.width > 0 && outRect.height > 0)
-        //    {
-        //        RemoveRectFromFreeList(outRect, freeRects);
-        //        usedRects.Add(outRect);
-        //        return true;
-        //    }
-        //    else
-        //    {
-        //        Debug.Log($"Ran out of Space: glyph {glyphExtents} could not be placed");
-        //        return false; //no room left
-        //    }
-        //}
+            //var glyphRect = glyph.atlasRect;
+            var glyphExtents = glyphToPlace.glyphExtents;
+            var idealRect = FindIdealRect(glyphExtents.width + doublePadding, glyphExtents.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
+            if (idealRect.width > 0 && idealRect.height > 0)
+            {
+                //usedRects.Add(idealRect);
+                //return true;
+                RemoveRectFromFreeList(idealRect, freeRects);
+                usedRects.Add(idealRect);
+                glyphsInUse.Add(glyphToPlace.glyphID);
+
+                //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlast Texture windows.
+                //the glyph (dounded by glyphExtents) will be renderered into the center of this windows
+                //GlyphRect needs to point to non-padded Glyph, and NOT to the entire padded atlas texture window
+                glyphToPlace.glyphRect = new GlyphRect
+                {
+                    x = idealRect.x + padding,
+                    y = idealRect.y + padding,
+                    width = glyphExtents.width,
+                    height = glyphExtents.height
+                };
+                placedGlyph = glyphToPlace;
+                return true;
+            }
+            else
+            {
+                Debug.Log($"Ran out of Space: glyph {glyphExtents} could not be placed");
+                placedGlyph = default;
+                return false; //no room left
+            }
+        }
 
         private static GlyphRect FindIdealRect(int width, int height, DynamicBuffer<GlyphRect> freeRects, ref int bestShortSideFit, ref int bestLongSideFit)
         {
@@ -205,9 +223,6 @@ namespace HarfBuzz
             }
         }
     };
-
-
-
     static class RectExtension
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

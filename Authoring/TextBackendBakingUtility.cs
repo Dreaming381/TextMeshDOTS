@@ -4,6 +4,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using Unity.Rendering;
 using UnityEngine;
+using static TextMeshDOTS.UnityFontReference;
 
 namespace TextMeshDOTS.Rendering.Authoring
 {
@@ -42,6 +43,25 @@ namespace TextMeshDOTS.Rendering.Authoring
             if(!UnityEditor.AssetDatabase.IsValidFolder(kResourcePath))
                 UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
             UnityEditor.AssetDatabase.CreateAsset(mesh, kTextBackendMeshPath);
+        }
+#endif
+
+#if UNITY_EDITOR
+        [UnityEditor.MenuItem("TextMeshDOTS/Show SystemFonts")]
+        static void SystemFonts()
+        {
+            var systemFonts = TextCoreExtensions.GetSystemFontRef();
+            systemFonts.Sort(default(UnityFontReferenceComparer));
+            for (int i = 0; i < systemFonts.Count; i++)
+            {
+                var font = systemFonts[i];
+                Debug.Log($"Family: {font.familyName} subFamily: {font.styleName}");
+            }
+            //var OSInstalledFontNames = UnityEngine.Font.GetOSInstalledFontNames();
+            //for (int i = 0; i < OSInstalledFontNames.Length; i++)
+            //{
+            //    Debug.Log(OSInstalledFontNames[i]);
+            //}
         }
 #endif
 

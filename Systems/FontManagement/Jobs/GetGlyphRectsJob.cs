@@ -20,7 +20,7 @@ namespace HarfBuzz.SDF
         [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
 
         public BufferLookup<HBMissingGlyphs> missingGlyphsBuffer;
-        public BufferLookup<HBGlyphsInUse> usedGlyphsBuffer;
+        public BufferLookup<HBUsedGlyphs> usedGlyphsBuffer;
         public BufferLookup<HBUsedGlyphRects> usedGlyphRectsBuffer;
         public BufferLookup<HBFreeGlyphRects> freeGlyphRectsBuffer;
 

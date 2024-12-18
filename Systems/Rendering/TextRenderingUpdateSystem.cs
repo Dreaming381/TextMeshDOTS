@@ -5,7 +5,7 @@ using Unity.Rendering;
 
 namespace TextMeshDOTS.Rendering
 {
-    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
     [BurstCompile]
     [UpdateAfter(typeof(GenerateGlyphsSystem))]

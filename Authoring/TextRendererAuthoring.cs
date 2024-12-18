@@ -1,16 +1,15 @@
 using HarfBuzz;
+using System;
 using System.Collections.Generic;
 using TextMeshDOTS.Rendering;
-using TextMeshDOTS.Rendering.Authoring;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Graphics;
-using Unity.Mathematics;
-using Unity.Rendering;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.TextCore.Text;
-
+using Unity.Mathematics;
+using Unity.Entities.Graphics;
+using Unity.Rendering;
+using UnityEngine.Rendering;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -20,14 +19,15 @@ namespace TextMeshDOTS.Authoring
     {
         [TextArea(5, 10)]
         public string text;
-
+        public FontStyles fontStyle = FontStyles.Normal;
         public float fontSize = 12f;
-        public bool wordWrap = true;
-        public float maxLineWidth = float.MaxValue;
+        public Color32 color = Color.white;
+
         public HorizontalAlignmentOptions horizontalAlignment = HorizontalAlignmentOptions.Left;
         public VerticalAlignmentOptions verticalAlignment = VerticalAlignmentOptions.TopAscent;
+        public bool wordWrap = true;
+        public float maxLineWidth = 30;
         public bool isOrthographic = false;
-        public FontStyles fontStyle = FontStyles.Normal;
         [Tooltip("Additional word spacing in font units where a value of 1 equals 1/100em.")]
         public float wordSpacing = 0;
         [Tooltip("Additional line spacing in font units where a value of 1 equals 1/100em.")]
@@ -35,75 +35,69 @@ namespace TextMeshDOTS.Authoring
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
 
-        public Color32 color = Color.white;
-        public List<FontAsset> fontAssets;
+        [Header("Font References")]
+        [Tooltip("First font is default regular style, additional fonts are selectable via richtext tags such a <b> <i>")]
+        public FontItem[] fonts;
+
+        [Header("System Fonts")]
+        [Tooltip("Right Click to see permissable value for fonts. Paste them as-is into font list.")]
+        [ContextMenuItem("Get SystemFonts", "GetSystemFonts")]
+        public List<string> systemFonts;
+        void GetSystemFonts()
+        {
+            //var systemFontReferences = Font.GetOSInstalledFontNames();
+            var systemFontReferences = TextCoreExtensions.GetSystemFontRef();
+            //systemFontReferences.Sort(new UnityFontReferenceComparer());
+
+            systemFonts.Clear();
+            foreach (var font in systemFontReferences)
+                systemFonts.Add($"{font.familyName} - {font.styleName}");
+            systemFonts.Sort();
+        }
     }
 
-
-    [TemporaryBakingType]
-    internal class TextRendererBaker : Baker<TextRendererAuthoring>
+    class TestAuthoringBaker : Baker<TextRendererAuthoring>
     {
         public override void Bake(TextRendererAuthoring authoring)
         {
-            var fontAsset = authoring.fontAssets[0];
-            DependsOn(fontAsset);
-            DependsOn(fontAsset.material);
-            if (authoring.fontAssets == null || authoring.fontAssets.Count == 0 || fontAsset == null)
+            if (authoring.fonts == null || authoring.fonts.Length == 0)
                 return;
 
+            for (int i = 0; i < authoring.fonts.Length; i++)
+                if (authoring.fonts[i].fontName == null || authoring.fonts[i].fontName==String.Empty)
+                    return;
+
+            var layer = GetLayer();
+
+            var renderFilterSettings = new RenderFilterSettings
+            {
+                Layer = layer,
+                RenderingLayerMask = (uint)(1 << layer),
+                ShadowCastingMode = ShadowCastingMode.Off,
+                ReceiveShadows = false,
+                MotionMode = MotionVectorGenerationMode.Object,
+                StaticShadowCaster = false,
+            };            
+
             var entity = GetEntity(TransformUsageFlags.Renderable);
-            var backEndMesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
-
-            //add MeshFilter and MeshRender on main entity to ensure it is converted to renderable entity
-            //To-Do: conver this to baking system as this current implementation does not work with incremental baking.
-            //Change in MeshRenderer is not tracked by iBaker
-            var meshRenderer = GetComponent<MeshRenderer>();
-            var meshFilter = GetComponent<MeshFilter>();
-            if (meshRenderer == null)
-                meshRenderer = authoring.gameObject.AddComponent<MeshRenderer>();
-            meshRenderer.material = fontAsset.material;
-            if (meshFilter == null)
-                meshFilter = authoring.gameObject.AddComponent<MeshFilter>();
-            meshFilter.mesh = backEndMesh;
-
-            //Fonts            
-            fontAsset.ReadFontAssetDefinition();
-
+            AddEntityGraphicsComponents(entity, renderFilterSettings);
             AddComponent(entity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
             AddComponent<TextShaderIndex>(entity);
 
             var additionalEntities = new NativeList<Entity>(16, Allocator.Temp);
-            var fontBlobReferences = new NativeList<FontBlobReference>(16, Allocator.Temp);
 
-            //add Regular FontWeight
-            var fontBlobRef = BakeFontAsset(fontAsset, TextFontWeight.Regular, false);
-            fontBlobReferences.Add(new FontBlobReference { fontBlob = fontBlobRef, fontAsset = fontAsset });
-            //add Regular FontWeight - Italic
-            var fontWeightPair = fontAsset.fontWeightTable[TextCoreExtensions.GetTextFontWeightIndex(TextFontWeight.Regular)];
-            if (fontWeightPair.italicTypeface != null)
-                AddAdditionalFontEntity(entity, fontWeightPair.italicTypeface, TextFontWeight.Regular, true, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
-
-            //add additional FontWeights. Bold is pretty much always needed and should always be set by user.
-            //Consider to parse the entire fontAsset.fontWeightTable instead of only Bold
-            //also consider this creates a lot of entities that are possibly not needed / not rendered.
-            //-->disable MaterialMeshInfo for all non used entities once this is clear after parsing TextSpans?
-            AddFontWeightPair(TextFontWeight.Bold, entity, fontAsset, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
-
-            //now do the same for all additional fonts            
-            if (authoring.fontAssets.Count > 1)
+            for (int i = 0, ii= authoring.fonts.Length; i < ii; i++)
             {
-                for (int i = 1, length = authoring.fontAssets.Count; i < length; i++)
+                var fontItem = authoring.fonts[i];                
+                if(i > 0)
+                    AddAdditionalFontEntity(fontItem, additionalEntities, renderFilterSettings);
+                else
                 {
-                    fontAsset = authoring.fontAssets[i];
-                    if (fontAsset == null)
-                        continue;
-                    AddAdditionalFontEntity(entity, fontAsset, TextFontWeight.Regular, false, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
-                    AddFontWeightPair(TextFontWeight.Regular, entity, fontAsset, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer); //for regular FontWeight, this call will just add italic
-                    AddFontWeightPair(TextFontWeight.Bold, entity, fontAsset, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
+                    var fontBlobRef = BakeFontAsset(fontItem);
+                    AddComponent(entity, new FontBlobReference { fontBlob = fontBlobRef });
                 }
             }
-            var fontReferencesBuffer = AddBuffer<FontBlobReference>(entity);
-            fontReferencesBuffer.AddRange(fontBlobReferences.AsArray());
+
             if (additionalEntities.Length > 0)
             {
                 var additionalEntitiesBuffer = AddBuffer<AdditionalFontMaterialEntity>(entity);
@@ -135,82 +129,61 @@ namespace TextMeshDOTS.Authoring
                 paragraphSpacing = authoring.paragraphSpacing,
             });
             AddBuffer<RenderGlyph>(entity);
-        }
 
-        BlobAssetReference<FontBlob> BakeFontAsset(FontAsset fontAsset, TextFontWeight textFontWeight, bool isItalic)
+        }
+        BlobAssetReference<FontBlob> BakeFontAsset(FontItem fontItem)
         {
-            var customHash = new Unity.Entities.Hash128((uint)fontAsset.GetHashCode(), 0, 0, 0);
+            var split = fontItem.fontName.Split(" - ");
+            var fontFamily = split[0];
+            var fontSubFamily = split[1];
+
+            var fontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(fontFamily);
+            var fontAssetRef = new FontAssetRef(fontFamilyHash, fontItem.fontWeight, fontItem.fontStyle);
+
+            var customHash = new Unity.Entities.Hash128((uint)fontAssetRef.GetHashCode(), 0, 0, 0);
             if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<FontBlob> blobReference))
             {
-                blobReference = FontBlobber.BakeFontBlob(fontAsset, textFontWeight, isItalic);
+                blobReference = FontBlobber.BakeFontBlob(fontItem, fontAssetRef, fontFamily, fontSubFamily);
 
                 // Register the Blob Asset to the Baker for de-duplication and reverting.
                 AddBlobAssetWithCustomHash<FontBlob>(ref blobReference, customHash);
             }
             return blobReference;
         }
-        void AddEntityGraphicsComponents(Entity entity, FontAsset fontAsset, Mesh backEndMesh)
+        void AddAdditionalFontEntity(FontItem fontItem, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
         {
-            var layer = GetLayer();
-            var renderMeshDescription = new RenderMeshDescription
-            {
-                FilterSettings = new RenderFilterSettings
-                {
-                    Layer = layer,
-                    RenderingLayerMask = (uint)(1 << layer),
-                    ShadowCastingMode = ShadowCastingMode.Off,
-                    ReceiveShadows = false,
-                    MotionMode = MotionVectorGenerationMode.Object,
-                    StaticShadowCaster = false,
-                },
-                LightProbeUsage = LightProbeUsage.Off,
-            };
-            this.BakeMeshAndMaterial(entity, renderMeshDescription, backEndMesh, fontAsset.material);
-        }
-
-        void AddFontWeightPair(TextFontWeight textFontWeight, Entity mainEntity, FontAsset mainFontAsset,
-            NativeList<FontBlobReference> fontBlobReferences,
-            NativeList<Entity> additionalEntities,
-            Mesh backEndMesh,
-            MeshRenderer meshRenderer)
-        {
-            // add fontWeight
-            var fontWeightPair = mainFontAsset.fontWeightTable[TextCoreExtensions.GetTextFontWeightIndex(textFontWeight)];
-            if (fontWeightPair.regularTypeface != null)
-                AddAdditionalFontEntity(mainEntity, fontWeightPair.regularTypeface, textFontWeight, false, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
-
-            //add fontWeight italic
-            if (fontWeightPair.italicTypeface != null)
-                AddAdditionalFontEntity(mainEntity, fontWeightPair.italicTypeface, textFontWeight, true, fontBlobReferences, additionalEntities, backEndMesh, meshRenderer);
-        }
-        void AddAdditionalFontEntity(Entity entity,
-            FontAsset fontAsset,
-            TextFontWeight textFontWeight,
-            bool isItalic,
-            NativeList<FontBlobReference> fontBlobReferences,
-            NativeList<Entity> additionalEntities,
-            Mesh backEndMesh,
-            MeshRenderer meshRenderer)
-        {
-            DependsOn(fontAsset.material);
             var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
-            fontAsset.ReadFontAssetDefinition();
-
-            AddComponent(newEntity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
-            AddComponent<TextShaderIndex>(newEntity);
-            var fontBlobRef = BakeFontAsset(fontAsset, textFontWeight, isItalic);
-            fontBlobReferences.Add(new FontBlobReference { fontBlob = fontBlobRef, fontAsset = fontAsset });
-            additionalEntities.Add(newEntity);
-
+            AddEntityGraphicsComponents(newEntity, renderFilterSettings);
             AddComponent<TextMaterialMaskShaderIndex>(newEntity);
             AddBuffer<RenderGlyphMask>(newEntity);
+            AddComponent(newEntity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
+            AddComponent<TextShaderIndex>(newEntity);
 
-            //add all components MeshRendererBaker would add to a single rendered entity 
-            AddEntityGraphicsComponents(newEntity, fontAsset, backEndMesh);
-            //add MeshRendererBakingData to trick RenderMeshPostProcessSystem to process this entity
-            //important for incremental baking to update MaterialMeshInfo
-            this.AddMeshRendererBakingData(newEntity, meshRenderer);
+            var fontBlobRef = BakeFontAsset(fontItem);
+            AddComponent(newEntity, new FontBlobReference { fontBlob = fontBlobRef });
+            additionalEntities.Add(newEntity);
+        }
+
+        //keep in sync with RenderMeshUtility.GenerateComponentTypes
+        void AddEntityGraphicsComponents(Entity entity, RenderFilterSettings renderFilterSettings)
+        {
+            AddComponent<WorldRenderBounds>(entity);
+            AddSharedComponent(entity, renderFilterSettings);
+            //AddComponent<MaterialMeshInfo>(entity); //add once font texture was generated and registered with BRG        
+            AddComponent<WorldToLocal_Tag>(entity);
+            AddComponent<RenderBounds>(entity);
+            AddComponent<PerInstanceCullingTag>(entity);
         }
     }
-}
+    
 
+    [Serializable]
+    public struct FontItem
+    {
+        [Tooltip("Copy strings from system fonts here ")]
+        public string fontName;
+        public TextFontWeight fontWeight;
+        [EnumButtons]
+        public Style fontStyle;
+    }
+}

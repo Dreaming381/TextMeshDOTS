@@ -153,47 +153,4 @@ namespace TextMeshDOTS
             superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
         }
     }
-
-
-    public struct FontAssetRef : IEquatable<FontAssetRef>
-    {
-        public int familyNameHash;
-        public TextFontWeight textFontWeight;
-        public bool isItalic;
-
-        public FontAssetRef(int familyNameHash, TextFontWeight textFontWeight, bool isItalic)
-        {
-            this.familyNameHash = familyNameHash;
-            this.textFontWeight = textFontWeight;
-            this.isItalic = isItalic;
-        }
-        public override bool Equals(object obj) => obj is FontAssetRef other && Equals(other);
-
-        public bool Equals(FontAssetRef other)
-        {
-            return familyNameHash == other.familyNameHash && textFontWeight == other.textFontWeight && isItalic == other.isItalic;
-        }
-
-        public static bool operator ==(FontAssetRef e1, FontAssetRef e2)
-        {
-            return e1.familyNameHash == e2.familyNameHash && e1.textFontWeight == e2.textFontWeight && e1.isItalic == e2.isItalic;
-        }
-        public static bool operator !=(FontAssetRef e1, FontAssetRef e2)
-        {
-            return e1.familyNameHash != e2.familyNameHash || e1.textFontWeight != e2.textFontWeight || e1.isItalic != e2.isItalic;
-        }
-        public override int GetHashCode()
-        {
-            //return HashCode.Combine(mapID, scamin, TextureName);
-            int hashCode = 2055808453;
-            hashCode = hashCode * -1521134295 + familyNameHash;
-            hashCode = hashCode * -1521134295 + textFontWeight.GetHashCode();
-            hashCode = hashCode * -1521134295 + isItalic.GetHashCode();
-            return hashCode;
-        }
-        public override string ToString()
-        {
-            return $"FamilyHash {familyNameHash} textFontWeight {textFontWeight} isItalic {isItalic}";
-        }
-    }
 }

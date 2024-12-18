@@ -21,7 +21,7 @@ namespace HarfBuzz
 
             foreach (var (hbFontPointer, entity) in SystemAPI.Query<HBFontPointer>()
                 .WithAll<HBFontPointer>()
-                .WithNone<HBGlyphsInUse>()
+                .WithNone<HBUsedGlyphs>()
                 .WithNone<HBMissingGlyphs>()          
                 .WithEntityAccess())
             {                
@@ -34,7 +34,7 @@ namespace HarfBuzz
 
             foreach (var (fontTextureReference, entity) in SystemAPI.Query<FontTextureReference>()
                 .WithAll<FontTextureReference>()
-                .WithNone<HBGlyphsInUse>()
+                .WithNone<HBUsedGlyphs>()
                 .WithNone<HBMissingGlyphs>()         
                 .WithEntityAccess())
             {

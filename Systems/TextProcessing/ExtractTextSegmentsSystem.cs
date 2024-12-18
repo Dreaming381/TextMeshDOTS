@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
     //[UpdateAfter(typeof(RegisterFontMaterialSystem))]    
     //[DisableAutoCreation]
@@ -25,13 +25,10 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAllRW<CalliByte>()
                       .WithAllRW<TextSpan>()
                       .WithAll<TextBaseConfiguration>()
-                      //.WithAll<FontMaterial>()
-                      .WithAll<FontEntity>()
                       .Build();
             fontEntityQ = SystemAPI.QueryBuilder()
-                  .WithAll<HBGlyphsInUse>()
+                  .WithAll<HBUsedGlyphs>()
                   .WithAll<FontTextureReference>()
-                  //.WithAll<DynamicFontBlobReference>()
                   .Build();
 
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
@@ -39,6 +36,7 @@ namespace TextMeshDOTS.TextProcessing
             //m_query.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
 
             state.RequireForUpdate(fontEntityQ);
+            state.RequireForUpdate<FontHashMap>();
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
         }
 
@@ -48,14 +46,21 @@ namespace TextMeshDOTS.TextProcessing
         {
             //if (m_query.IsEmpty)
             //    return;
-            //Debug.Log("Extract TextSpans");
+            var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
+            if(fontHashMap.fontsDirty == true)
+                return;
+            var fontEntities = fontHashMap.fontEntities;
+
             state.Dependency = new ExtractTextSegmentsChunkJob
-            {
+            {                
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(false),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(false),
 
-                //fontMaterialHandle = SystemAPI.GetBufferTypeHandle<FontMaterial>(true),               
-                fontEntityHandle = SystemAPI.GetBufferTypeHandle<FontEntity>(true),
+                fontEntities = fontEntities,
+                entitesHandle = SystemAPI.GetEntityTypeHandle(),
+                additionalFontMaterialEntityHandle =  SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
+                fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
+                fontBlobReferenceLookup =  SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 hbFontPointerLookup = SystemAPI.GetComponentLookup<HBFontPointer>(),
                 calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),                
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),

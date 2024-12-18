@@ -1,11 +1,11 @@
+using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
 {
-    internal static class TextHelper
+    public static class TextHelper
     {
         //public static int GetFontIndex(DynamicBuffer<FontMaterial> fontMaterial, int familyNameHashCode, TextFontWeight textFontWeight, bool isItalic)
         //{
@@ -22,19 +22,14 @@ namespace TextMeshDOTS
         //    }
         //    return -1;
         //}
-        public static int GetFontIndex(DynamicBuffer<FontEntity> fontEntities, ComponentLookup<HBFontPointer> hbFontPointerLookup, int familyNameHashCode, TextFontWeight textFontWeight, bool isItalic)
+        public static int GetFontIndex(FontAssetArray fontAssetArray, int familyNameHashCode, TextFontWeight textFontWeight, Style fontStyle)
         {
-            var fontAssetRef = new FontAssetRef(familyNameHashCode, textFontWeight, isItalic);
-
-            for (int i = 0, lenght = fontEntities.Length; i < lenght; i++)
+            var desiredFontAssetRef = new FontAssetRef(familyNameHashCode, textFontWeight, fontStyle);
+            var fontAssetRefs = fontAssetArray.fontAssetRefs;
+            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
             {
-                var fontEntity = fontEntities[i].value;
-                //Debug.Log($"Testing {fontMaterial[i].fontBlob.familyName} {fontMaterial[i].fontBlob.styleName}");
-                if (hbFontPointerLookup[fontEntity].fontAssetRef == fontAssetRef)
-                {
-                    //Debug.Log($"Match at index {i}");
+                if (fontAssetArray.fontAssetRefs[i] == desiredFontAssetRef)
                     return i;
-                }
             }
             return -1;
         }
@@ -51,4 +46,3 @@ namespace TextMeshDOTS
         }
     }
 }
-

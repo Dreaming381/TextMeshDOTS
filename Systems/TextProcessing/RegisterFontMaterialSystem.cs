@@ -3,11 +3,11 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
-using UnityEngine.Rendering;
+
 
 namespace TextMeshDOTS.TextProcessing
 {
-    //[WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateAfter(typeof(NativeFontManagerSystem))]
     [RequireMatchingQueriesForUpdate]
     partial class RegisterFontMaterialSystem : SystemBase
@@ -23,7 +23,7 @@ namespace TextMeshDOTS.TextProcessing
             fontEntityQ = SystemAPI.QueryBuilder()                    
                     .WithAll<HBFontAssetRef>()
                     .WithAll<FontTextureReference>()
-                    .WithAll<HBGlyphsInUse>()
+                    .WithAll<HBUsedGlyphs>()
                     .WithAll<HBMissingGlyphs>()
                     .WithAll<HBFontPointer>()
                     .WithAbsent<MaterialMeshInfo>()  
@@ -31,14 +31,16 @@ namespace TextMeshDOTS.TextProcessing
                     .Build();
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<FontTextureReference>());
             textMeshDOTSShader = Shader.Find("TextMeshDOTS/TextMeshDOTS-URP");
+            RequireForUpdate<FontHashMap>();
         }
 
         protected override void OnUpdate()
         {
             if (fontEntityQ.IsEmpty)
                 return;
-            var entities = fontEntityQ.ToEntityArray(Allocator.TempJob);
             
+
+            var entities = fontEntityQ.ToEntityArray(Allocator.TempJob);            
 
             foreach (var entity in entities)
             {
@@ -61,7 +63,8 @@ namespace TextMeshDOTS.TextProcessing
                 EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = brgMaterialID, MeshID= brgMeshID });
                 EntityManager.SetComponentData(entity, fontTextureReference);
             }
-
+            var fontHashMap = SystemAPI.GetSingletonRW<FontHashMap>();
+            fontHashMap.ValueRW.fontsDirty = false;
             entities.Dispose();
             //this.Enabled = false;
         }
@@ -75,6 +78,5 @@ namespace TextMeshDOTS.TextProcessing
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         }
-
     }
 }

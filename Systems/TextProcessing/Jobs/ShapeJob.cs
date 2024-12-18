@@ -21,13 +21,16 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ProfilerMarker marker2;
 
         public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
-        public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
 
-        [ReadOnly] public BufferTypeHandle<FontEntity> fontEntityHandle;
+        [ReadOnly] public NativeHashMap<FontAssetRef, Entity> fontEntities;
+        [ReadOnly] public EntityTypeHandle entitesHandle;
+        [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
+        [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
+        [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
         [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<TextSpan> textSpanHandle;
-        [ReadOnly] public BufferLookup<HBGlyphsInUse> glyphsInUseLookup;
+        [ReadOnly] public BufferLookup<HBUsedGlyphs> glyphsInUseLookup;
         public NativeList<FontEntityGlyph>.ParallelWriter missingGlyphs;
 
         public uint lastSystemVersion;
@@ -37,11 +40,11 @@ namespace TextMeshDOTS.TextProcessing
         {
             if (!(chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
                   chunk.DidChange(ref textSpanHandle, lastSystemVersion) ||
-                chunk.DidChange(ref fontEntityHandle, lastSystemVersion)))
+                  chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
                 return;
 
             //Debug.Log("Shape");
-            var fontEntityBuffers = chunk.GetBufferAccessor(ref fontEntityHandle);
+            var entities = chunk.GetNativeArray(entitesHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
@@ -52,17 +55,29 @@ namespace TextMeshDOTS.TextProcessing
             var buffer = new Buffer(true);
             var features = new NativeList<Feature>(16, Allocator.Temp);
 
+            //optional
+            var additionalFontMaterialEntityBuffers = chunk.GetBufferAccessor(ref additionalFontMaterialEntityHandle);
+
+            FontAssetArray fontAssetArray = default;
+            bool hasMultipleFonts = additionalFontMaterialEntityBuffers.Length > 0;
+
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
+                var rootFontMaterialEntity = entities[indexInChunk];
                 var textSpans = textSpanBuffers[indexInChunk];
 
                 if (textSpans.Length == 0)
                     continue;//not ready yet
 
-                var fontEntityBuffer = fontEntityBuffers[indexInChunk];
                 var glyphOTFs = glyphOTFBuffers[indexInChunk];
                 var calliBytes = calliBytesBuffers[indexInChunk];
 
+                if (hasMultipleFonts)
+                    fontAssetArray.Initialize(rootFontMaterialEntity, additionalFontMaterialEntityBuffers[indexInChunk], ref fontBlobReferenceLookup);
+                else
+                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].fontBlob);
+
+                var fontAssetRefs = fontAssetArray.fontAssetRefs;
                 glyphOTFs.Clear();
                 var text = calliBytes.Reinterpret<byte>();
 
@@ -98,10 +113,7 @@ namespace TextMeshDOTS.TextProcessing
                     buffer.AddText(text, startIndex, length);
                     buffer.SetSegmentProperties(latinLTR);
 
-
-                    //var font = fontMaterial[currentFont].font;
-                    //var fontEntity = fontMaterial[currentFont].fontEntity;
-                    var fontEntity = fontEntityBuffer[currentFont].value;
+                    var fontEntity = fontEntities[fontAssetRefs[currentFont]];
                     var font = hbFontPointerLookup[fontEntity].font;
                     var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
                     //marker.Begin();

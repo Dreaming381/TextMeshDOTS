@@ -14,10 +14,9 @@ namespace TextMeshDOTS
     #region Baking Components
     /// <summary> Reference to raw otf and ttf font data</summary>
     [InternalBufferCapacity(1)]
-    public struct FontBlobReference : IBufferElementData
+    public struct FontBlobReference : IComponentData
     {
         public BlobAssetReference<FontBlob> fontBlob;
-        public UnityObjectRef<FontAsset> fontAsset;
     }
     #endregion
 
@@ -45,7 +44,7 @@ namespace TextMeshDOTS
     
     /// <summary> ID's of glyphs currently placed in the texture atlas. Keep order aligend with UsedGlyphRects </summary>
     [InternalBufferCapacity(0)]
-    public struct HBGlyphsInUse : IBufferElementData
+    public struct HBUsedGlyphs : IBufferElementData
     {
         public uint glyphID;
     }
@@ -79,19 +78,61 @@ namespace TextMeshDOTS
         public Font font;           //destroy in cleanup system
         public IntPtr hbDrawFuncts; //do not destroy this in cleanup system as those functions are needed for loading other fonts
     }
-
-
-    
-    //Attach this component to all TextRenderer to enable use of fonts referenced in this buffer
-    public struct FontEntity : IBufferElementData
+    public enum Style:byte
     {
-        public Entity value;
+        Regular,
+        Italic,
+    }
+    public struct FontAssetRef : IEquatable<FontAssetRef>
+    {
+        public int familyNameHash;
+        public TextFontWeight textFontWeight;
+        public Style fontStyle;
+
+        public FontAssetRef(int familyNameHash, TextFontWeight textFontWeight, Style fontStyle)
+        {
+            this.familyNameHash = familyNameHash;
+            this.textFontWeight = textFontWeight;
+            this.fontStyle = fontStyle;
+        }
+        public override bool Equals(object obj) => obj is FontAssetRef other && Equals(other);
+
+        public bool Equals(FontAssetRef other)
+        {
+            return familyNameHash == other.familyNameHash && textFontWeight == other.textFontWeight && fontStyle == other.fontStyle;
+        }
+
+        public static bool operator ==(FontAssetRef e1, FontAssetRef e2)
+        {
+            return e1.familyNameHash == e2.familyNameHash && e1.textFontWeight == e2.textFontWeight && e1.fontStyle == e2.fontStyle;
+        }
+        public static bool operator !=(FontAssetRef e1, FontAssetRef e2)
+        {
+            return e1.familyNameHash != e2.familyNameHash || e1.textFontWeight != e2.textFontWeight || e1.fontStyle != e2.fontStyle;
+        }
+        public override int GetHashCode()
+        {
+            //return HashCode.Combine(mapID, scamin, TextureName);
+            int hashCode = 2055808453;
+            hashCode = hashCode * -1521134295 + familyNameHash;
+            hashCode = hashCode * -1521134295 + textFontWeight.GetHashCode();
+            hashCode = hashCode * -1521134295 + fontStyle.GetHashCode();
+            return hashCode;
+        }
+        public override string ToString()
+        {
+            return $"FamilyHash {familyNameHash} textFontWeight {textFontWeight} isItalic {fontStyle}";
+        }
+    }
+    public struct FontHashMap : IComponentData
+    {
+        public bool fontsDirty;
+        public NativeHashMap<FontAssetRef, Entity> fontEntities;
     }
     public  struct CreatedFromFontAsset : IComponentData 
     {
         public UnityObjectRef<FontAsset> fontAsset;
     }
-    
     public struct FontEntityGlyph
     {
         public Entity entity;

@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.TextCore;
 using UnityEngine.TextCore.LowLevel;
 using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
-{
+{    
     public static class TextCoreExtensions
     {
         //public static int GetHashCodeCaseInSensitive(string text)
@@ -19,52 +20,29 @@ namespace TextMeshDOTS
         {
             return font.glyphLookupTable.TryGetValue(glyphIndex, out glyph);
         }
+        public static List<UnityFontReference> GetSystemFontRef()
+        {
+            var fontReferences = FontEngine.GetSystemFontReferences();
+            var unityFontReferences = new List<UnityFontReference>(fontReferences.Length);
+            for (int i = 0; i < fontReferences.Length; i++)
+            {
+                var m_fontRef = fontReferences[i];
+                unityFontReferences.Add(new UnityFontReference {familyName= m_fontRef.familyName, styleName= m_fontRef.styleName, faceIndex= m_fontRef.faceIndex, filePath= m_fontRef.filePath } );
+            }
+            return unityFontReferences;
+        }
 
+        public static bool TryGetSystemFontReference(string familyName, string styleName, out UnityFontReference unityFontReference)
+        {
+            var success = FontEngine.TryGetSystemFontReference(familyName, styleName, out FontReference m_fontRef);
+            unityFontReference = success ? new UnityFontReference { familyName = m_fontRef.familyName, styleName = m_fontRef.styleName, faceIndex = m_fontRef.faceIndex, filePath = m_fontRef.filePath } : default;
+            return success;
+        }
 
         public static int GetTextFontWeightIndex(TextFontWeight textFontWeight)
         {
             return TextUtilities.GetTextFontWeightIndex(textFontWeight);
-        }
-        
-        //public static void ListSomeInfo(this FontAsset font)
-        //{
-        //    Debug.Log($"font.m_SourceFontFilePath {font.m_SourceFontFilePath}");
-        //    Debug.Log($"font.sourceFontFile.name {font.sourceFontFile.name}");
-        //    Debug.Log($"font.m_SourceFontFilePath {font.name}");
-        //    Debug.Log($"font.InternalDynamicOS {font.InternalDynamicOS}");
-
-        //    //FontEngine.
-
-        //    Debug.Log($"nativeFontAsset {font.nativeFontAsset != IntPtr.Zero}");
-        //    Debug.Log($"font.familyNameHashCode {font.familyNameHashCode}");
-        //    Debug.Log($"font.styleNameHashCode {font.styleNameHashCode}");
-        //}
-        //public static int GetFaceIndex(this FaceInfo faceInfo)
-        //{
-        //    return faceInfo.faceIndex;
-        //}
-
-        //public static FontEngineError LoadFontFace(this FontAsset font)
-        //{
-
-        //    if (font.atlasPopulationMode == AtlasPopulationMode.Dynamic)
-        //    {
-        //        //// Font Asset should have a valid reference to a font in the Editor.
-        //        //if (font.sourceFontFile == null)
-        //        //    font.sourceFontFile = font.SourceFont_EditorRef;
-
-        //        // Try loading the font face from source font object
-        //        if (FontEngine.LoadFontFace(font.sourceFontFile, m_FaceInfo.pointSize, m_FaceInfo.faceIndex) == FontEngineError.Success)
-        //            return FontEngineError.Success;
-
-        //        // Try loading the font face from file path
-        //        if (string.IsNullOrEmpty(font.m_SourceFontFilePath) == false)
-        //            return FontEngine.LoadFontFace(font.m_SourceFontFilePath, font.m_FaceInfo.pointSize, font.m_FaceInfo.faceIndex);
-
-        //        return FontEngineError.Invalid_Face;
-        //    }
-        //    return FontEngineError.Atlas_Generation_Cancelled;
-        //}
+        }  
 
         public static bool s_initialized = false;
 
@@ -74,6 +52,34 @@ namespace TextMeshDOTS
                 TextShaderUtilities.GetShaderPropertyIDs();
 
             return TextShaderUtilities.GetPadding(material, enableExtraPadding, isBold);
+        }
+    }
+    public struct UnityFontReference
+    {
+        public string familyName;
+
+        public string styleName;
+
+        public int faceIndex;
+
+        public string filePath;
+        public struct UnityFontReferenceComparer : IComparer<UnityFontReference>
+        {
+            public int Compare(UnityFontReference a, UnityFontReference b)
+            {
+                return a.familyName.CompareTo(b.familyName);
+                //if (a.size == b.size)
+                //{
+                //    return 0;
+                //}
+                //else
+                //{
+                //    if (a.size > b.size)
+                //        return 1;
+                //    else
+                //        return -1;
+                //}
+            }
         }
     }
 }

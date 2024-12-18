@@ -17,9 +17,11 @@ namespace TextMeshDOTS.TextProcessing
     {
         public BufferTypeHandle<CalliByte> calliByteHandle;
         public BufferTypeHandle<TextSpan> textSpanHandle;
-
-        //[ReadOnly] public BufferTypeHandle<FontMaterial> fontMaterialHandle;
-        [ReadOnly] public BufferTypeHandle<FontEntity> fontEntityHandle;
+        [ReadOnly] public NativeHashMap<FontAssetRef, Entity> fontEntities;
+        [ReadOnly] public EntityTypeHandle entitesHandle;
+        [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
+        [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
+        [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;        
         [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByteRaw> calliByteRawHandle;        
         [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
@@ -31,33 +33,39 @@ namespace TextMeshDOTS.TextProcessing
         {
             if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion) ||
                   chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref fontEntityHandle, lastSystemVersion)))
-                //chunk.DidChange(ref fontMaterialHandle, lastSystemVersion)))
+                  chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
                 return;
 
             //Debug.Log("Extract TextSegments");
-            //var fontMaterialBuffers = chunk.GetBufferAccessor(ref fontMaterialHandle);
-            var fontEntityBuffers = chunk.GetBufferAccessor(ref fontEntityHandle);
+            var entities = chunk.GetNativeArray(entitesHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var calliBytesRawBuffers = chunk.GetBufferAccessor(ref calliByteRawHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
             var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
 
+            //optional
+            var additionalFontMaterialEntityBuffers = chunk.GetBufferAccessor(ref additionalFontMaterialEntityHandle);
+
+            FontAssetArray fontAssetArray = default;
+            bool hasMultipleFonts = additionalFontMaterialEntityBuffers.Length > 0;
+            
+
             TextConfiguration textConfiguration = default;
 
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
-                //var fontMaterialBuffer = fontMaterialBuffers[indexInChunk];
-                var fontEntityBuffer = fontEntityBuffers[indexInChunk];
+                var rootFontMaterialEntity = entities[indexInChunk];
                 var calliBytesBuffer = calliBytesBuffers[indexInChunk];
                 var calliBytesRawBuffer = calliBytesRawBuffers[indexInChunk];
                 var textSpanBuffer = textSpanBuffers[indexInChunk];
                 var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
+                if (hasMultipleFonts)
+                    fontAssetArray.Initialize(rootFontMaterialEntity, additionalFontMaterialEntityBuffers[indexInChunk], ref fontBlobReferenceLookup);
+                else
+                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].fontBlob);
 
-
-                //textConfiguration.Reset(in textBaseConfiguration, fontMaterialBuffer);
-                textConfiguration.Reset(in textBaseConfiguration, fontEntityBuffer, hbFontPointerLookup);
+                textConfiguration.Reset(in textBaseConfiguration, fontAssetArray);
                 var textSpans = new NativeList<TextSpan>(16, Allocator.Temp);
                 var calliStringRaw = new CalliString(calliBytesRawBuffer);
                 var calliString = new CalliString(calliBytesBuffer);
@@ -92,8 +100,7 @@ namespace TextMeshDOTS.TextProcessing
                         }
                         startIndex = segmentEnd;
 
-                        //if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontMaterialBuffer, in textBaseConfiguration, ref textConfiguration))
-                        if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontEntityBuffer, ref hbFontPointerLookup, in textBaseConfiguration, ref textConfiguration))
+                        if (RichTextParser.ValidateHtmlTag(in calliStringRaw, ref rawCharacters, ref fontAssetArray, in textBaseConfiguration, ref textConfiguration))
                         {
                             previousRuneStartPosition = rawCharacters.NextRuneByteIndex;
                             continue;
