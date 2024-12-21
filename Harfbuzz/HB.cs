@@ -16,23 +16,23 @@ namespace HarfBuzz
         private const CallingConvention CallConvention = CallingConvention.Cdecl;
 
         #region draw
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern IntPtr hb_draw_funcs_create();
 
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_draw_funcs_destroy(IntPtr dfuncs);
 
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_draw_funcs_set_move_to_func(IntPtr dfuncs, MoveToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_draw_funcs_set_line_to_func(IntPtr dfuncs, MoveToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_draw_funcs_set_quadratic_to_func(IntPtr dfuncs, QuadraticToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_draw_funcs_set_cubic_to_func(IntPtr dfuncs, CubicToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
 
 
-        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_font_draw_glyph(IntPtr font, uint glyph, IntPtr dfuncs, ref BezierData draw_data);
         #endregion
 

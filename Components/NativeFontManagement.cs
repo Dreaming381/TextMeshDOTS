@@ -115,8 +115,8 @@ namespace TextMeshDOTS
             //return HashCode.Combine(mapID, scamin, TextureName);
             int hashCode = 2055808453;
             hashCode = hashCode * -1521134295 + familyNameHash;
-            hashCode = hashCode * -1521134295 + textFontWeight.GetHashCode();
-            hashCode = hashCode * -1521134295 + fontStyle.GetHashCode();
+            hashCode = hashCode * -1521134295 + (byte)textFontWeight;
+            hashCode = hashCode * -1521134295 + (byte)fontStyle;
             return hashCode;
         }
         public override string ToString()
