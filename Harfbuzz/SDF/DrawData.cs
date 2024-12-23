@@ -4,13 +4,13 @@ using UnityEngine.TextCore;
 
 namespace HarfBuzz.SDF
 {
-    public struct BezierData
+    public struct DrawData
     {
         public BBox glyphRect;
         public NativeList<SDFEdge> edges;
         /// <summary> list of first indices of a new contour. Use last index to store length of edges list for easier iteration</summary>
         public NativeList<int> contourIDs;
-        public BezierData(int edgeCapacity, int contourCapacity, Allocator allocator)
+        public DrawData(int edgeCapacity, int contourCapacity, Allocator allocator)
         {
             edges= new NativeList<SDFEdge>(edgeCapacity, allocator);
             contourIDs = new NativeList<int>(contourCapacity, allocator);

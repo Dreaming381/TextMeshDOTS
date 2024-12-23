@@ -18,7 +18,7 @@ namespace TextMeshDOTS.Authoring
 
             byte[] fontBytes;
 
-            var filePath = AssetDatabase.GetAssetPath(fontItem);            
+            var filePath = AssetDatabase.GetAssetPath(fontItem);
             fontBytes = File.ReadAllBytes(filePath);
 
             if (useSystemFont)

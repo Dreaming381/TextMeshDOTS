@@ -37,16 +37,16 @@ namespace HarfBuzz.SDF
             var font = nativeFontPointer.font;
             var drawFunct = nativeFontPointer.hbDrawFuncts;
 
-            var bezierData = new BezierData(256, 16, Allocator.Temp);
+            var drawData = new DrawData(256, 16, Allocator.Temp);
             
-            HB.hb_font_draw_glyph(font.ptr, glyphBlob.glyphID, drawFunct, ref bezierData);
-            bezierData.contourIDs.Add(bezierData.edges.Length);//close the last contour
+            HB.hb_font_draw_glyph(font.ptr, glyphBlob.glyphID, drawFunct, ref drawData);
+            drawData.contourIDs.Add(drawData.edges.Length);//close the last contour
 
-            var edges = bezierData.edges;
+            var edges = drawData.edges;
 
             //shift the bezier edges so that they are in the center of the reserved atlas padded texture window (usedRects)
-            var shiftx = bezierData.glyphRect.min.x - ((glyphBlob.glyphExtents.width + 2 * atlasData.padding - bezierData.glyphRect.width) / 2);
-            var shifty = bezierData.glyphRect.min.y - ((glyphBlob.glyphExtents.height + 2 * atlasData.padding - bezierData.glyphRect.height) / 2);
+            var shiftx = drawData.glyphRect.min.x - ((glyphBlob.glyphExtents.width + 2 * atlasData.padding - drawData.glyphRect.width) / 2);
+            var shifty = drawData.glyphRect.min.y - ((glyphBlob.glyphExtents.height + 2 * atlasData.padding - drawData.glyphRect.height) / 2);
             float2 shift = -new float2(shiftx, shifty);
             for (int k = 0, kk = edges.Length; k < kk; k++)
             {
@@ -63,7 +63,7 @@ namespace HarfBuzz.SDF
             if (glyphIndex != -1)
             {
                 var atlasRect = usedGlyphRects[glyphIndex]; //render SDF into the reserved padded atlas texture  window 
-                SDF.SDFGenerateSubDivision(nativeFontPointer.orientation, ref bezierData, textureData, atlasRect, atlasData.atlasWidth, atlasData.atlasHeight);
+                SDF.SDFGenerateSubDivision(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.atlasWidth, atlasData.atlasHeight);
             }
             else
                 Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");

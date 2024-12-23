@@ -1,0 +1,25 @@
+using HarfBuzz;
+using System;
+using Unity.Collections;
+using UnityEngine;
+
+namespace TextMeshDOTS
+{
+    public class FontDebug
+    {
+        public static void GetNameTags(Face face)
+        {
+            var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+            var result = new FixedString128Bytes();
+            var values = Enum.GetValues(typeof(HB_OT_NAME_ID));
+            foreach (HB_OT_NAME_ID value in values)
+            {
+                var textSize = (uint)result.Capacity;
+                face.GetFaceInfo(value, language, ref textSize, ref result);
+                result.Length = (int)textSize;
+                Debug.Log($"{value}: {result}");
+                result.Clear();
+            }
+        }
+    }
+}

@@ -32,7 +32,7 @@ namespace HarfBuzz
         {
             ReleaseDelegate releaseDelegate = null;
             //ReleaseDelegate releaseDelegate = new ReleaseDelegate(DelegateProxies.Test);
-            ptr = HB.hb_blob_create(data, length, memoryMode, (void*)IntPtr.Zero, releaseDelegate); //returned blob is immutable            
+            ptr = HB.hb_blob_create(data, length, memoryMode, IntPtr.Zero, releaseDelegate); //returned blob is immutable
         }
         public bool IsImmutable() => HB.hb_blob_is_immutable(ptr);
 

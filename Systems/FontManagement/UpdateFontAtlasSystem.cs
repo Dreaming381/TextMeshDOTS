@@ -40,16 +40,16 @@ namespace TextMeshDOTS.TextProcessing
                 return;
 
             var fontsRequiringUpdate = new NativeList<Entity>(16, Allocator.TempJob);
-            foreach (var (fontBlobReference, hbFontAssetRef, hbMissingGlyphs, entity) in SystemAPI.Query<FontBlobReference, AtlasData, DynamicBuffer<MissingGlyphs>>()
+            foreach (var (fontBlobReference, missingGlyphs, entity) in SystemAPI.Query<FontBlobReference, DynamicBuffer<MissingGlyphs>>()
                 .WithAll<FontBlobReference>()
                 .WithAll<AtlasData>()
                 .WithAll<MissingGlyphs>()
                 .WithEntityAccess())
             {
-                if (hbMissingGlyphs.Length > 0)
+                if (missingGlyphs.Length > 0)
                 {
                     fontsRequiringUpdate.Add(entity);
-                    Debug.Log($"Add {hbMissingGlyphs.Length} glyphs for {fontBlobReference.value.Value.fontFamily} {fontBlobReference.value.Value.fontSubFamily} to atlas...");
+                    Debug.Log($"Add {missingGlyphs.Length} glyphs for {fontBlobReference.value.Value.fontFamily} {fontBlobReference.value.Value.fontSubFamily} to atlas...");
                 }
             }
             if(fontsRequiringUpdate.IsEmpty)

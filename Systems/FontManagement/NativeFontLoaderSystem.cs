@@ -22,7 +22,7 @@ namespace TextMeshDOTS.TextProcessing
         EntityQuery textRendererQ, existingFontsQ;
         List<LoadRequest> newLoadRequests;
         EntityArchetype nativeFontDataArchetype;
-        IntPtr haffBuzzDrawFunct;
+        IntPtr harfBuzzDrawFunct;
 
         protected override void OnCreate()
         {
@@ -47,7 +47,7 @@ namespace TextMeshDOTS.TextProcessing
 
             SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
 
-            InitializeHarfBuzzDrawFunctions();
+            HBDrawDelegates.InitializeHarfBuzzDrawFunctions(ref harfBuzzDrawFunct);
         }
 
         //[BurstCompile]
@@ -73,13 +73,15 @@ namespace TextMeshDOTS.TextProcessing
                         {
                             if (!TextCoreExtensions.TryGetSystemFontReference(fontBlob.fontFamily.ToString(), fontBlob.fontSubFamily.ToString(), out UnityFontReference unityFontReference))
                                 Debug.Log($"Could not find system font {fontBlob.fontFamily} {fontBlob.fontSubFamily}");
-                            newLoadRequests.Add(new LoadRequest { fontBlobRef = fontBlobReference, filePath = unityFontReference.filePath });
+                            else
+                                newLoadRequests.Add(new LoadRequest { fontBlobRef = fontBlobReference, filePath = unityFontReference.filePath });
                         }
                         else
                         {
                             if (!TextCoreExtensions.TryGetSystemFontReference(fontBlob.typographicFamily.ToString(), fontBlob.typographicSubfamily.ToString(), out UnityFontReference unityFontReference))
                                 Debug.Log($"Could not find system font {fontBlob.typographicFamily} {fontBlob.typographicSubfamily}");
-                            newLoadRequests.Add(new LoadRequest { fontBlobRef = fontBlobReference, filePath = unityFontReference.filePath });
+                            else
+                                newLoadRequests.Add(new LoadRequest { fontBlobRef = fontBlobReference, filePath = unityFontReference.filePath });
                         }
                     }
                     else
@@ -114,7 +116,7 @@ namespace TextMeshDOTS.TextProcessing
             var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
             if (fontHashMap.fontEntities.IsCreated) fontHashMap.fontEntities.Dispose();
            
-            HB.hb_draw_funcs_destroy(haffBuzzDrawFunct);
+            HB.hb_draw_funcs_destroy(harfBuzzDrawFunct);
         }
         void LoadFont(LoadRequest loadRequest, int samplingPointSize,  NativeHashMap<FontAssetRef, Entity> fontEntities)
         {
@@ -143,18 +145,18 @@ namespace TextMeshDOTS.TextProcessing
 
             var sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
 
-            var hbFontAssetRef = new AtlasData
+            var atlasData = new AtlasData
             {
                 atlasHeight = 1024,
                 atlasWidth = 1024,
                 padding = 9,                //10% of atlas height or width
                 samplingPointSize = 50,    //size of font (in pixel) in atlas
             };
-            var nativeFontPointer = new NativeFontPointer { orientation = sdfOrientation, blob = blob, face = face, font = font, hbDrawFuncts = haffBuzzDrawFunct };
+            var nativeFontPointer = new NativeFontPointer { orientation = sdfOrientation, blob = blob, face = face, font = font, hbDrawFuncts = harfBuzzDrawFunct };
 
             //initialize texture. To save space, review how to initialize it with size 0
             //(as done by TextCore), and only increase once needed
-            var texture2D = new Texture2D(hbFontAssetRef.atlasWidth, hbFontAssetRef.atlasHeight, TextureFormat.Alpha8, false);
+            var texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.Alpha8, false);
             var rawTextureData = texture2D.GetRawTextureData<byte>();
 
             //initialize to black
@@ -165,29 +167,16 @@ namespace TextMeshDOTS.TextProcessing
 
             var fontEntity = EntityManager.CreateEntity(nativeFontDataArchetype);
             EntityManager.SetComponentData(fontEntity, loadRequest.fontBlobRef);
-            EntityManager.SetComponentData(fontEntity, hbFontAssetRef);
+            EntityManager.SetComponentData(fontEntity, atlasData);
             EntityManager.AddComponentData(fontEntity, fontTextureReference);
             EntityManager.AddComponentData(fontEntity, nativeFontPointer);
 
             var freeGlyphRects = EntityManager.GetBuffer<FreeGlyphRects>(fontEntity);
-            NativeAtlas.InitialzeFreeGlyphRects(ref freeGlyphRects, hbFontAssetRef.atlasWidth, hbFontAssetRef.atlasHeight);            
+            NativeAtlas.InitialzeFreeGlyphRects(ref freeGlyphRects, atlasData.atlasWidth, atlasData.atlasHeight);            
 
             fontEntities.Add(loadRequest.fontBlobRef.value.Value.fontAssetRef, fontEntity);            
         }
-        void InitializeHarfBuzzDrawFunctions()
-        {
-            haffBuzzDrawFunct = HB.hb_draw_funcs_create();
-            var moveToDelegate = (MoveToDelegate)HBDelegateProxies.HBDraw_MoveTo;
-            var lineToDelegate = (MoveToDelegate)HBDelegateProxies.HBDraw_LineTo;
-            var quadraticToDelegate = (QuadraticToDelegate)HBDelegateProxies.HBDraw_QuadraticTo;
-            var cubicToDelegate = (CubicToDelegate)HBDelegateProxies.HBDraw_CubicTo;
-            var releaseDelegate = (ReleaseDelegate)null;// HBDelegateProxies.Test;
 
-            HB.hb_draw_funcs_set_move_to_func(haffBuzzDrawFunct, moveToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_line_to_func(haffBuzzDrawFunct, lineToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_quadratic_to_func(haffBuzzDrawFunct, quadraticToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_cubic_to_func(haffBuzzDrawFunct, cubicToDelegate, IntPtr.Zero, releaseDelegate);
-        }
         public struct LoadRequest
         {
             public FontBlobReference fontBlobRef;

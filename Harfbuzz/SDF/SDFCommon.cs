@@ -54,10 +54,10 @@ namespace HarfBuzz.SDF
             writer.WriteLine();
             writer.Close();
         }
-        public static void WriteGlyphOutlineToFile(string path, BezierData bezierData)
+        public static void WriteGlyphOutlineToFile(string path, DrawData drawData)
         {
-            var edges = bezierData.edges;
-            var contourIDs= bezierData.contourIDs;
+            var edges = drawData.edges;
+            var contourIDs= drawData.contourIDs;
             if (contourIDs.Length < 2 || edges.Length == 0)
                 return;
 

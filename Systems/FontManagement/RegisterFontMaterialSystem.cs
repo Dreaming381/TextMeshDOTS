@@ -51,7 +51,6 @@ namespace TextMeshDOTS.TextProcessing
             foreach (var entity in entities)
             {
                 var fontBlobRef = EntityManager.GetComponentData<FontBlobReference>(entity);
-                var hbFontAssetRef = EntityManager.GetComponentData<AtlasData>(entity);
                 //Debug.Log($"Load texture for font {fontBlobRef.value.Value.fontFamily} {fontBlobRef.value.Value.fontSubFamily}");
                 //System.IO.File.WriteAllBytes("Assets\\Resources\\Materials\\SDFtest.png", fontTextureReference.texture.Value.EncodeToPNG());
 
@@ -64,9 +63,9 @@ namespace TextMeshDOTS.TextProcessing
                 mainTexture.Apply();
 
                 material.mainTexture = dynamicFontAssets.texture;
-                var brgMaterialID = hybridRenderer.RegisterMaterial(material);                
+                dynamicFontAssets.fontMaterialID = hybridRenderer.RegisterMaterial(material);                
 
-                EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = brgMaterialID, MeshID= brgBackendMeshID });
+                EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = dynamicFontAssets.fontMaterialID, MeshID= brgBackendMeshID });
                 EntityManager.SetComponentData(entity, dynamicFontAssets);
             }
             var fontHashMap = SystemAPI.GetSingletonRW<FontHashMap>();

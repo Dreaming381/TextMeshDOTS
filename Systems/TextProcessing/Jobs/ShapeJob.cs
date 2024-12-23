@@ -116,12 +116,9 @@ namespace TextMeshDOTS.TextProcessing
                     var fontEntity = fontEntities[fontAssetRefs[currentFont]];
                     var font = nativeFontPointerLookup[fontEntity].font;
                     var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
+
                     //marker.Begin();
-                    unsafe
-                    {
-                        var featurePointer = features.Length > 0 ? (IntPtr)features.GetUnsafePtr() : IntPtr.Zero;
-                        HB.hb_shape(font.ptr, buffer.ptr, featurePointer, (uint)features.Length);
-                    }
+                    font.Shape(buffer, features);
                     //marker.End();
 
                     var glyphInfos = buffer.GlyphInfo();

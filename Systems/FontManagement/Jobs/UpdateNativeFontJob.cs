@@ -39,7 +39,7 @@ namespace HarfBuzz.SDF
             fontTextureReferenceLookup[fontEntity] = fontTextureReference;
         }
         public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(
-            ref AtlasData hbFontAssetRef,
+            ref AtlasData atlasData,
             NativeList<GlyphBlob> placedGlyphs,
             Face face, 
             Font font)
@@ -67,16 +67,11 @@ namespace HarfBuzz.SDF
             var builder = new BlobBuilder(Allocator.Temp);
             ref DynamicFontBlob fontBlobRoot = ref builder.ConstructRoot<DynamicFontBlob>();
 
-            //second, copy over some data from FontAsset which is set by user and does not come from native font
-            //fontBlobRoot.familyName = hbFontAssetRef.fontFamily;
-            //fontBlobRoot.styleName = hbFontAssetRef.fontSubFamily;
-            //fontBlobRoot.fontAssetRef = hbFontAssetRef.fontAssetRef;
-
-            fontBlobRoot.atlasSamplingPointSize = hbFontAssetRef.samplingPointSize;
-            fontBlobRoot.atlasWidth = hbFontAssetRef.atlasWidth;
-            fontBlobRoot.atlasHeight = hbFontAssetRef.atlasHeight;
+            fontBlobRoot.atlasSamplingPointSize = atlasData.samplingPointSize;
+            fontBlobRoot.atlasWidth = atlasData.atlasWidth;
+            fontBlobRoot.atlasHeight = atlasData.atlasHeight;
             //fontBlobRoot.materialPadding = fontAsset.material.GetPaddingForText(false, false);
-            fontBlobRoot.materialPadding = hbFontAssetRef.padding;
+            fontBlobRoot.materialPadding = atlasData.padding;
             fontBlobRoot.regularStyleSpacing = 0;
             fontBlobRoot.boldStyleSpacing = 7;
             fontBlobRoot.italicsStyleSlant = 35;
@@ -127,10 +122,6 @@ namespace HarfBuzz.SDF
             ref var dynamicFontData = ref dynamicFontDataReference.Value;
             var builder = new BlobBuilder(Allocator.Temp);
             ref DynamicFontBlob fontBlobRoot = ref builder.ConstructRoot<DynamicFontBlob>();
-
-            //fontBlobRoot.familyName = dynamicFontData.familyName;
-            //fontBlobRoot.styleName = dynamicFontData.styleName;
-            //fontBlobRoot.fontAssetRef = dynamicFontData.fontAssetRef;
 
             fontBlobRoot.atlasSamplingPointSize = dynamicFontData.atlasSamplingPointSize;
             fontBlobRoot.atlasWidth = dynamicFontData.atlasWidth;

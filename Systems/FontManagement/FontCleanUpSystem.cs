@@ -19,16 +19,16 @@ namespace HarfBuzz
             var ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
             var ecb = ecbSingleton.CreateCommandBuffer(CheckedStateRef.WorldUnmanaged);
 
-            foreach (var (hbFontPointer, entity) in SystemAPI.Query<NativeFontPointer>()
+            foreach (var (nativeFontPointer, entity) in SystemAPI.Query<NativeFontPointer>()
                 .WithAll<NativeFontPointer>()
                 .WithNone<UsedGlyphs>()
                 .WithNone<MissingGlyphs>()          
                 .WithEntityAccess())
             {                
                 //Debug.Log($"Destroy Harfbuzz font with ID {hbFontPointer.d}");
-                hbFontPointer.blob.Dispose();
-                hbFontPointer.face.Dispose();
-                hbFontPointer.font.Dispose();
+                nativeFontPointer.blob.Dispose();
+                nativeFontPointer.face.Dispose();
+                nativeFontPointer.font.Dispose();
                 ecb.RemoveComponent<NativeFontPointer>(entity);
             }
 

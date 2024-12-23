@@ -16,28 +16,28 @@ namespace HarfBuzz.SDF
 
         public const float CORNER_CHECK_EPSILON = 32 / (1 << 16); //The epsilon distance  used for corner
 
-        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref BezierData bezierData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, bool splitBezierToLines= true, int spread = SDFCommon.DEFAULT_SPREAD)
+        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, bool splitBezierToLines= true, int spread = SDFCommon.DEFAULT_SPREAD)
         {
             var success = true;
-            if (bezierData.contourIDs.Length < 2 || bezierData.edges.Length == 0)
+            if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
                 return false;
 
-            //SDFCommon.WriteGlyphOutlineToFile("BeforeSplit_FOR.txt", bezierData);
+            //SDFCommon.WriteGlyphOutlineToFile("BeforeSplit_FOR.txt", drawData);
             if (splitBezierToLines)
             {
-                success = SplitSDFShape(ref bezierData, out BezierData newBezierData);
+                success = SplitSDFShape(ref drawData, out DrawData newBezierData);
                 success = SDFGenerateBoundingBox(ref newBezierData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
             }
             else
-                success = SDFGenerateBoundingBox(ref bezierData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+                success = SDFGenerateBoundingBox(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
             return success;
         }
         
-        static bool SplitSDFShape(ref BezierData bezierData, out BezierData newBezierData)
+        static bool SplitSDFShape(ref DrawData drawData, out DrawData newBezierData)
         {
-            var edges = bezierData.edges;
-            var contourIDs = bezierData.contourIDs;
-            newBezierData = new BezierData(edges.Length * 16, contourIDs.Length, Allocator.Temp);
+            var edges = drawData.edges;
+            var contourIDs = drawData.contourIDs;
+            newBezierData = new DrawData(edges.Length * 16, contourIDs.Length, Allocator.Temp);
             var newEdges = newBezierData.edges;
             var newContourIDs = newBezierData.contourIDs;
 
@@ -215,10 +215,10 @@ namespace HarfBuzz.SDF
             return targetArray;
         }
         
-        static bool SDFGenerateBoundingBox(ref BezierData bezierData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        static bool SDFGenerateBoundingBox(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
-            var edges = bezierData.edges;
-            var contourIDs = bezierData.contourIDs;
+            var edges = drawData.edges;
+            var contourIDs = drawData.contourIDs;
 
             bool flip_y = true;
             bool flip_sign = false;

@@ -1,8 +1,5 @@
 using System;
 using Unity.Collections;
-using Unity.VisualScripting.YamlDotNet.Core.Tokens;
-using UnityEngine.UIElements;
-using static PlasticGui.WorkspaceWindow.Items.LockRules.LockRuleGenerator;
 
 namespace HarfBuzz
 {
