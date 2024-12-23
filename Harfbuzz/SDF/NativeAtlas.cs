@@ -10,7 +10,7 @@ namespace HarfBuzz
 {    
     public static class NativeAtlas
     {
-        public static void InitialzeFreeGlyphRects(ref DynamicBuffer<HBFreeGlyphRects> freeGlyphRectsBuffer, int atlasWidth, int atlasHeight)
+        public static void InitialzeFreeGlyphRects(ref DynamicBuffer<FreeGlyphRects> freeGlyphRectsBuffer, int atlasWidth, int atlasHeight)
         {
             freeGlyphRectsBuffer.Clear();
             freeGlyphRectsBuffer.Reinterpret<GlyphRect>().Add(new GlyphRect(0, 0, atlasWidth, atlasHeight));

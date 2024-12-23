@@ -75,7 +75,6 @@ namespace HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_face_set_upem(IntPtr face, uint upem);
 
-
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_face_create(IntPtr blob, UInt32 index);
 
@@ -84,6 +83,8 @@ namespace HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern bool hb_ot_var_has_data(IntPtr face);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern IntPtr hb_face_reference_table(IntPtr face, uint tag);
         #endregion
 
 

@@ -23,12 +23,13 @@ namespace TextMeshDOTS
         }
         public static EntityArchetype GetNativeFontDataArchetype(ref SystemState state)
         {
-            var componentTypeStaging = new NativeArray<ComponentType>(5, Allocator.Temp);            
-            componentTypeStaging[0] = ComponentType.ReadWrite<HBFontAssetRef>();
-            componentTypeStaging[1] = ComponentType.ReadWrite<HBMissingGlyphs>();
-            componentTypeStaging[2] = ComponentType.ReadWrite<HBUsedGlyphs>();  
-            componentTypeStaging[3] = ComponentType.ReadWrite<HBUsedGlyphRects>();
-            componentTypeStaging[4] = ComponentType.ReadWrite<HBFreeGlyphRects>();
+            var componentTypeStaging = new NativeArray<ComponentType>(6, Allocator.Temp);
+            componentTypeStaging[0] = ComponentType.ReadWrite<FontBlobReference>();
+            componentTypeStaging[1] = ComponentType.ReadWrite<AtlasData>();
+            componentTypeStaging[2] = ComponentType.ReadWrite<MissingGlyphs>();
+            componentTypeStaging[3] = ComponentType.ReadWrite<UsedGlyphs>();  
+            componentTypeStaging[4] = ComponentType.ReadWrite<UsedGlyphRects>();
+            componentTypeStaging[5] = ComponentType.ReadWrite<FreeGlyphRects>();
             return state.EntityManager.CreateArchetype(componentTypeStaging);
         }
 

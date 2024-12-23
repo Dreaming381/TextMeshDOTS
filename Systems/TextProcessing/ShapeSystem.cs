@@ -31,9 +31,9 @@ namespace TextMeshDOTS.TextProcessing
                       .Build();            
 
             fontEntityQ = SystemAPI.QueryBuilder()
-                              .WithAll<HBUsedGlyphs>()
-                              .WithAll<HBMissingGlyphs>()
-                              .WithAll<FontTextureReference>()
+                              .WithAll<UsedGlyphs>()
+                              .WithAll<MissingGlyphs>()
+                              .WithAll<DynamicFontAssets>()
                               .Build();
 
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
@@ -65,11 +65,11 @@ namespace TextMeshDOTS.TextProcessing
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
-                hbFontPointerLookup = SystemAPI.GetComponentLookup<HBFontPointer>(),
+                nativeFontPointerLookup = SystemAPI.GetComponentLookup<NativeFontPointer>(),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
-                glyphsInUseLookup = SystemAPI.GetBufferLookup<HBUsedGlyphs>(true),
+                glyphsInUseLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             //}.Schedule(m_query, state.Dependency);

@@ -27,10 +27,10 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
-        [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
+        [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<TextSpan> textSpanHandle;
-        [ReadOnly] public BufferLookup<HBUsedGlyphs> glyphsInUseLookup;
+        [ReadOnly] public BufferLookup<UsedGlyphs> glyphsInUseLookup;
         public NativeList<FontEntityGlyph>.ParallelWriter missingGlyphs;
 
         public uint lastSystemVersion;
@@ -75,7 +75,7 @@ namespace TextMeshDOTS.TextProcessing
                 if (hasMultipleFonts)
                     fontAssetArray.Initialize(rootFontMaterialEntity, additionalFontMaterialEntityBuffers[indexInChunk], ref fontBlobReferenceLookup);
                 else
-                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].fontBlob);
+                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
 
                 var fontAssetRefs = fontAssetArray.fontAssetRefs;
                 glyphOTFs.Clear();
@@ -114,7 +114,7 @@ namespace TextMeshDOTS.TextProcessing
                     buffer.SetSegmentProperties(latinLTR);
 
                     var fontEntity = fontEntities[fontAssetRefs[currentFont]];
-                    var font = hbFontPointerLookup[fontEntity].font;
+                    var font = nativeFontPointerLookup[fontEntity].font;
                     var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
                     //marker.Begin();
                     unsafe

@@ -1,3 +1,4 @@
+using HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;
@@ -22,9 +23,8 @@ namespace TextMeshDOTS
         //    }
         //    return -1;
         //}
-        public static int GetFontIndex(FontAssetArray fontAssetArray, int familyNameHashCode, TextFontWeight textFontWeight, Style fontStyle)
-        {
-            var desiredFontAssetRef = new FontAssetRef(familyNameHashCode, textFontWeight, fontStyle);
+        public static int GetFontIndex(FontAssetArray fontAssetArray, FontAssetRef desiredFontAssetRef)
+        {            
             var fontAssetRefs = fontAssetArray.fontAssetRefs;
             for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
             {

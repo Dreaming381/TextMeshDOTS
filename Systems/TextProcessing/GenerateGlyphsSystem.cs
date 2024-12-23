@@ -8,7 +8,7 @@ namespace TextMeshDOTS.TextProcessing
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
     //[UpdateAfter(typeof(UpdateAtlasSystem))]
-    [UpdateAfter(typeof(NativeFontManagerSystem))]
+    [UpdateAfter(typeof(UpdateFontAtlasSystem))]
     public partial struct GenerateGlyphsSystem : ISystem
     {
         EntityQuery m_query;
@@ -51,7 +51,7 @@ namespace TextMeshDOTS.TextProcessing
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
-                fontTextureReferenceLookup = SystemAPI.GetComponentLookup<FontTextureReference>(true),
+                dynamicFontAssetsLookup = SystemAPI.GetComponentLookup<DynamicFontAssets>(true),
                 glyphMappingMaskHandle = SystemAPI.GetComponentTypeHandle<GlyphMappingMask>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),

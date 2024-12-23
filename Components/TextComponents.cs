@@ -13,8 +13,11 @@ namespace TextMeshDOTS
     {
         public float fontSize;        
         public Color32 color;
-        public FontStyles fontStyle;
-        public TextFontWeight fontWeight;
+        public FontStyles fontStyles;
+        //public int fontWeight;
+        //public float fontWidth;
+        //public bool isItalic;
+        //public float slant;
 
         public float maxLineWidth;
         public float wordSpacing;
@@ -127,16 +130,36 @@ namespace TextMeshDOTS
         MiddleTopAscentToBottomDescent,
     }
 
-    public enum FontWeight
+    public enum FontWeight : ushort
     {
-        Thin,
-        ExtraLight,
-        Light,
-        Regular,
-        Medium,
-        SemiBold,
-        Bold,
-        Heavy,
-        Black
-    };
+        //https://learn.microsoft.com/en-us/typography/opentype/spec/os2#usweightclass
+        Thin = 100,
+        ExtraLight = 200,
+        UltraLight = 200,
+        Light = 300,
+        Normal = 400,
+        Regular = 400,
+        Medium = 500,
+        SemiBold = 600,
+        DemiBold = 600,
+        Bold = 700,
+        ExtraBold = 800,
+        UltraBold = 800,
+        Black = 900,
+        Heavy = 900,
+    }
+    public enum FontWidth :byte
+    {
+        //https://learn.microsoft.com/en-us/typography/opentype/spec/os2#uswidthclass
+        UltraCondensed = 50,
+        ExtraCondensed = 63,//62.5,
+        Narrow = 75,
+        Condensed = 75,
+        SemiCondensed = 88,//87.5,
+        Normal = 100,
+        SemiExpanded = 113, //112.5,
+        Expanded = 125,
+        ExtraExpanded = 150,
+        UltraExpanded = 200,
+    }
 }

@@ -1,46 +1,50 @@
 using TextMeshDOTS;
 using Unity.Burst;
 using Unity.Entities;
+using Unity.Rendering;
 using UnityEngine;
 
 namespace HarfBuzz
 {
 
-    partial struct FontCleanupSystem : ISystem
+    partial class FontCleanupSystem : SystemBase
     {
-        [BurstCompile]
-        public void OnCreate(ref SystemState state)
+        EntitiesGraphicsSystem hybridRenderer;
+        protected override void OnCreate()
         {
-
+            hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
         }
-        [BurstCompile]
-        public void OnUpdate(ref SystemState state)
+        protected override void OnUpdate()
         {
             var ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
-            var ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged);
+            var ecb = ecbSingleton.CreateCommandBuffer(CheckedStateRef.WorldUnmanaged);
 
-            foreach (var (hbFontPointer, entity) in SystemAPI.Query<HBFontPointer>()
-                .WithAll<HBFontPointer>()
-                .WithNone<HBUsedGlyphs>()
-                .WithNone<HBMissingGlyphs>()          
+            foreach (var (hbFontPointer, entity) in SystemAPI.Query<NativeFontPointer>()
+                .WithAll<NativeFontPointer>()
+                .WithNone<UsedGlyphs>()
+                .WithNone<MissingGlyphs>()          
                 .WithEntityAccess())
             {                
-                Debug.Log($"Destroy Harfbuzz font with ID {hbFontPointer.fontAssetRef}");
+                //Debug.Log($"Destroy Harfbuzz font with ID {hbFontPointer.d}");
                 hbFontPointer.blob.Dispose();
                 hbFontPointer.face.Dispose();
                 hbFontPointer.font.Dispose();
-                ecb.RemoveComponent<HBFontPointer>(entity);
+                ecb.RemoveComponent<NativeFontPointer>(entity);
             }
 
-            foreach (var (fontTextureReference, entity) in SystemAPI.Query<FontTextureReference>()
-                .WithAll<FontTextureReference>()
-                .WithNone<HBUsedGlyphs>()
-                .WithNone<HBMissingGlyphs>()         
+            foreach (var (fontTextureReference, entity) in SystemAPI.Query<DynamicFontAssets>()
+                .WithAll<DynamicFontAssets>()
+                .WithNone<UsedGlyphs>()
+                .WithNone<MissingGlyphs>()         
                 .WithEntityAccess())
             {
-                Debug.Log($"Destroy Font Blob");
+                Debug.Log($"Destroy Font");
                 fontTextureReference.blob.Dispose();
-                ecb.RemoveComponent<FontTextureReference>(entity);
+                var fontMaterial = hybridRenderer.GetMaterial(fontTextureReference.fontMaterialID);
+                hybridRenderer.UnregisterMaterial(fontTextureReference.fontMaterialID);
+                UnityEngine.Object.Destroy(fontMaterial);
+                UnityEngine.Object.Destroy(fontTextureReference.texture);
+                ecb.RemoveComponent<DynamicFontAssets>(entity);
             }
         }        
     }

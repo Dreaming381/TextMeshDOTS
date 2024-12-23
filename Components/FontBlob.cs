@@ -1,51 +1,41 @@
-using HarfBuzz;
-using System;
-using System.Numerics;
 using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
-using UnityEngine.TextCore;
-using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
 {
+
+
     /// <summary>
     /// Purpose of FontBlob is to store reference to desired font (otf, ttf file)
     /// Any kind of dynamic data should be generated during runtime and stored elsewhere
     /// (e.g. which glyphs are currerently used, position of these glyphs in atlas texture,
     /// texture index in case multiple textures are needed) 
     /// </summary>
-    public struct FontBlob : IEquatable<FontBlob>
+    public struct FontBlob
     {
-        public FixedString128Bytes familyName;
-        public FixedString128Bytes styleName; //this is a composite of TextFontWeight and (regular/italic)
+        //NOTE:
+        // Unity FontReference.familyName can be HB_OT_NAME_ID.TYPOGRAPHIC_FAMILY or HB_OT_NAME_ID.FONT_FAMILY 
+        //Unity FontReference.styleName  = HB_OT_NAME_ID.TYPOGRAPHIC_SUBFAMILY or HB_OT_NAME_ID.FONT_SUBFAMILY
         public FontAssetRef fontAssetRef;
+        public FixedString128Bytes fontFamily;
+        public FixedString128Bytes fontSubFamily;
+        public FixedString128Bytes typographicFamily;       
+        public FixedString128Bytes typographicSubfamily;
+        public bool useSystemFont;
+        public BlobArray<byte> nativeFontFile;
 
-        public override bool Equals(object obj) => obj is FontBlob other && Equals(other);
-        public bool Equals(FontBlob other)
+        public override string ToString()
         {
-            return fontAssetRef == other.fontAssetRef;
-        }
-        public static bool operator ==(FontBlob e1, FontBlob e2)
-        {
-            return e1.fontAssetRef == e2.fontAssetRef;
-        }
-        public static bool operator !=(FontBlob e1, FontBlob e2)
-        {
-            return e1.fontAssetRef != e2.fontAssetRef;
-        }
-        public override int GetHashCode()
-        {
-            return fontAssetRef.GetHashCode();
+            return $"{fontFamily} {fontSubFamily}";
         }
     }
     /// <summary> dynamic font data from FontAsset (or extracted by HarfBuzz) </summary>
     public struct DynamicFontBlob
     {
-        public FixedString128Bytes familyName;
-        public FixedString128Bytes styleName;
-        public FontAssetRef fontAssetRef;
+        //public FixedString128Bytes familyName;
+        //public FixedString128Bytes styleName;
+        //public FontAssetRef fontAssetRef;
 
         #region data from Fontasset which is set by user
         //choose atalas parameter so that number of font glyphs fits! e.g. 60 sampling size and 2048x2048 texture

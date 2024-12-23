@@ -5,14 +5,14 @@ using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 
 
 namespace HarfBuzz
-{
+{    
     public struct Font : IDisposable
     {
         public IntPtr ptr;
 
-        public Font(IntPtr font)
+        public Font(IntPtr face)
         {
-            ptr = HB.hb_font_create(font);
+            ptr = HB.hb_font_create(face);
         }
         public float GetStyleTag(StyleTag styleTag)
         {

@@ -16,25 +16,25 @@ namespace HarfBuzz.SDF
 
         public Entity fontEntity;
 
-        [ReadOnly] public ComponentLookup<HBFontAssetRef> hbFontAssetRefLookup;
-        [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
+        [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
+        [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
 
-        public BufferLookup<HBMissingGlyphs> missingGlyphsBuffer;
-        public BufferLookup<HBUsedGlyphs> usedGlyphsBuffer;
-        public BufferLookup<HBUsedGlyphRects> usedGlyphRectsBuffer;
-        public BufferLookup<HBFreeGlyphRects> freeGlyphRectsBuffer;
+        public BufferLookup<MissingGlyphs> missingGlyphsBuffer;
+        public BufferLookup<UsedGlyphs> usedGlyphsBuffer;
+        public BufferLookup<UsedGlyphRects> usedGlyphRectsBuffer;
+        public BufferLookup<FreeGlyphRects> freeGlyphRectsBuffer;
 
         public void Execute()
         {
-            var hbFontAsset = hbFontAssetRefLookup[fontEntity];
-            var hbFontPointer = hbFontPointerLookup[fontEntity];
+            var atlasData = atlasDataLookup[fontEntity];
+            var nativeFontPointer = nativeFontPointerLookup[fontEntity];
             var missingGlyphs = missingGlyphsBuffer[fontEntity].Reinterpret<uint>();
             var usedGlyphs = usedGlyphsBuffer[fontEntity].Reinterpret<uint>();
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
             var freeGlyphRects = freeGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
 
-            var font = hbFontPointer.font;
+            var font = nativeFontPointer.font;
             var glyphBlobs = new NativeList<GlyphBlob>(256, Allocator.Temp);
 
             for (int i = 0, ii = missingGlyphs.Length; i < ii; i++)
@@ -46,7 +46,7 @@ namespace HarfBuzz.SDF
                 var hbGlyph = new GlyphBlob { glyphID = glyphID, glyphExtents = extends};
                 glyphBlobs.Add(hbGlyph);
             };
-            NativeAtlas.AddGlyphs(hbFontAsset.padding, glyphBlobs, placedGlyphs, usedGlyphs, usedGlyphRects, freeGlyphRects);
+            NativeAtlas.AddGlyphs(atlasData.padding, glyphBlobs, placedGlyphs, usedGlyphs, usedGlyphRects, freeGlyphRects);
             missingGlyphs.Clear();
         }
     }    

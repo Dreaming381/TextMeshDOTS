@@ -3,31 +3,35 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 
 namespace TextMeshDOTS.TextProcessing
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateAfter(typeof(NativeFontManagerSystem))]
+    [UpdateAfter(typeof(UpdateFontAtlasSystem))]
     [RequireMatchingQueriesForUpdate]
     partial class RegisterFontMaterialSystem : SystemBase
     {
         EntityQuery fontEntityQ;
         EntitiesGraphicsSystem hybridRenderer;
         Shader textMeshDOTSShader;
-        Mesh mesh;
+        Mesh backendMesh;
+        BatchMeshID brgBackendMeshID;
         protected override void OnCreate()
         {
-            mesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
             hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
-            fontEntityQ = SystemAPI.QueryBuilder()                    
-                    .WithAll<HBFontAssetRef>()
-                    .WithAll<FontTextureReference>()
-                    .WithAll<HBUsedGlyphs>()
-                    .WithAll<HBMissingGlyphs>()
-                    .WithAll<HBFontPointer>()
+            backendMesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
+            brgBackendMeshID = BatchMeshID.Null;
+
+            fontEntityQ = SystemAPI.QueryBuilder()
+                    .WithAll<FontBlobReference>()
+                    .WithAll<AtlasData>()
+                    .WithAll<DynamicFontAssets>()
+                    .WithAll<UsedGlyphs>()
+                    .WithAll<MissingGlyphs>()
+                    .WithAll<NativeFontPointer>()
                     .WithAbsent<MaterialMeshInfo>()  
-                    .WithAbsent<CreatedFromFontAsset>()
                     .Build();
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<FontTextureReference>());
             textMeshDOTSShader = Shader.Find("TextMeshDOTS/TextMeshDOTS-URP");
@@ -38,30 +42,32 @@ namespace TextMeshDOTS.TextProcessing
         {
             if (fontEntityQ.IsEmpty)
                 return;
-            
+
+            if(brgBackendMeshID == BatchMeshID.Null)
+                brgBackendMeshID = hybridRenderer.RegisterMesh(backendMesh);
 
             var entities = fontEntityQ.ToEntityArray(Allocator.TempJob);            
 
             foreach (var entity in entities)
             {
-                var hbFontAssetRef = EntityManager.GetComponentData<HBFontAssetRef>(entity);
-                Debug.Log($"Load texture for {hbFontAssetRef.family} {hbFontAssetRef.subFamily}");
+                var fontBlobRef = EntityManager.GetComponentData<FontBlobReference>(entity);
+                var hbFontAssetRef = EntityManager.GetComponentData<AtlasData>(entity);
+                //Debug.Log($"Load texture for font {fontBlobRef.value.Value.fontFamily} {fontBlobRef.value.Value.fontSubFamily}");
                 //System.IO.File.WriteAllBytes("Assets\\Resources\\Materials\\SDFtest.png", fontTextureReference.texture.Value.EncodeToPNG());
+
                 var material = new Material(textMeshDOTSShader);
                 material.enableInstancing = true;
                 SetupMaterialWithBlendMode(material);
 
-                var fontTextureReference = EntityManager.GetComponentData<FontTextureReference>(entity);
-                var mainTexture = fontTextureReference.texture.Value;
+                var dynamicFontAssets = EntityManager.GetComponentData<DynamicFontAssets>(entity);
+                var mainTexture = dynamicFontAssets.texture.Value;
                 mainTexture.Apply();
 
-                material.mainTexture = fontTextureReference.texture;
-                fontTextureReference.material = material;
-                var brgMaterialID = hybridRenderer.RegisterMaterial(material);
-                var brgMeshID = hybridRenderer.RegisterMesh(mesh);
+                material.mainTexture = dynamicFontAssets.texture;
+                var brgMaterialID = hybridRenderer.RegisterMaterial(material);                
 
-                EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = brgMaterialID, MeshID= brgMeshID });
-                EntityManager.SetComponentData(entity, fontTextureReference);
+                EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = brgMaterialID, MeshID= brgBackendMeshID });
+                EntityManager.SetComponentData(entity, dynamicFontAssets);
             }
             var fontHashMap = SystemAPI.GetSingletonRW<FontHashMap>();
             fontHashMap.ValueRW.fontsDirty = false;

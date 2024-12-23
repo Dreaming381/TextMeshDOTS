@@ -17,7 +17,7 @@ namespace TextMeshDOTS
         /// <summary> This function logic follows TMPro_Private.GenerateTextMesh() </summary>
         internal static unsafe void CreateRenderGlyphs(ref FontAssetArray fontAssetArray,
                                                         NativeHashMap<FontAssetRef, Entity> fontEntities,
-                                                       in ComponentLookup<FontTextureReference> fontTextureReferenceLookup,
+                                                       in ComponentLookup<DynamicFontAssets> dynamicFontAssetsLookup,
                                                        ref DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer,
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
                                                        ref GlyphMappingWriter mappingWriter,                                                       
@@ -57,8 +57,9 @@ namespace TextMeshDOTS
             float xAdvance = 0f;
 
             var previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
-            var currentFontEntity = fontEntities[fontAssetRefs[currentTextSpan.fontMaterialIndex]];
-            ref DynamicFontBlob currentFont = ref fontTextureReferenceLookup[currentFontEntity].blob.Value;
+            var currentFontAssetRef = fontAssetRefs[currentTextSpan.fontMaterialIndex];
+            var currentFontEntity = fontEntities[currentFontAssetRef];
+            ref DynamicFontBlob currentFont = ref dynamicFontAssetsLookup[currentFontEntity].blob.Value;
 
             #region AtlasFactor
             // Unity scales native Opentype metrics in GlyphRect and GlyphMetrics by 
@@ -91,8 +92,9 @@ namespace TextMeshDOTS
                     currentTextSpan = textSpans[textSpanCounter++];
                     if (previousFontMaterialIndex != currentTextSpan.fontMaterialIndex)
                     {
+                        var fontAssetRef = fontAssetRefs[currentTextSpan.fontMaterialIndex];
                         currentFontEntity = fontEntities[fontAssetRefs[currentTextSpan.fontMaterialIndex]];
-                        currentFont = ref fontTextureReferenceLookup[currentFontEntity].blob.Value;
+                        currentFont = ref dynamicFontAssetsLookup[currentFontEntity].blob.Value;
                         scaledDynamicFont.Update(ref currentFont, out xNativeToUnity, out yNativeToUnity);
                         previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
                     }
@@ -106,7 +108,7 @@ namespace TextMeshDOTS
                 if (!currentFont.glyphs.TryGetValue(glyphOTF.codepoint, out var glyphBlob))
                 {
 
-                    Debug.Log($"glyph {(char)currentRune.value} not found in {currentFont.familyName} {currentFont.styleName} entity {currentFontEntity}");
+                    Debug.Log($"glyph {(char)currentRune.value} not found in font entity {currentFontEntity}");
                     var bla = currentFont.glyphs.GetValueArray(Allocator.Temp);
                     foreach (var glyph in bla)
                     {
@@ -164,7 +166,7 @@ namespace TextMeshDOTS
                 float boldSpacingAdjustment = 0;
                 float style_padding = 0;
                 //if bold is requested and current font is not bold (=it has not been found), then simulate bold
-                bool simulateBold = (currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && currentFont.fontAssetRef.textFontWeight != TextFontWeight.Bold;
+                bool simulateBold = (currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && currentFontAssetRef.weight != (int)FontWeight.Bold;
                 if (simulateBold) 
                 {
                     style_padding = 0;
@@ -254,7 +256,7 @@ namespace TextMeshDOTS
                 #region Handle Italic & Shearing
                 float bottomShear = 0f;
                 //if italic is requested and current font is not italic (=it has not been found), then simulate italic
-                bool simulateItalic = (currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic && currentFont.fontAssetRef.fontStyle!=Style.Italic;
+                bool simulateItalic = (currentTextSpan.fontStyle & FontStyles.Italic) == FontStyles.Italic && !currentFontAssetRef.isItalic;
                 if (simulateItalic)
                 {
                     // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.

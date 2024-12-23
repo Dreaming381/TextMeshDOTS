@@ -18,11 +18,11 @@ namespace TextMeshDOTS
                                DynamicBuffer<AdditionalFontMaterialEntity> additionalFontMaterialEntities,
                                ref ComponentLookup<FontBlobReference> fontBlobReferenceLookup)
         {
-            Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].fontBlob);
+            Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
             for (int i = 0; i < additionalFontMaterialEntities.Length; i++)
             {
                 if (fontBlobReferenceLookup.TryGetComponent(additionalFontMaterialEntities[i].entity, out var blobRef))
-                    fontAssetRefs.Add(blobRef.fontBlob.Value.fontAssetRef);
+                    fontAssetRefs.Add(blobRef.value.Value.fontAssetRef);
             }
         }        
     }

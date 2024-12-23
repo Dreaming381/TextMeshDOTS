@@ -19,9 +19,8 @@ namespace TextMeshDOTS
 
         public int m_fontFamilyHash;
         public FixedStack512Bytes<int> m_fontFamilyHashStack;
+
         public FontStyles m_fontStyleInternal;
-        public TextFontWeight m_fontWeightInternal;
-        public FixedStack512Bytes<TextFontWeight> m_fontWeightInternalStack;
 
         public int m_currentFontMaterialIndex;
 
@@ -75,16 +74,15 @@ namespace TextMeshDOTS
             m_sizeStack.Clear();
             m_sizeStack.Add(m_currentFontSize);
 
-            m_fontFamilyHash = fontAssetArray.fontAssetRefs[0].familyNameHash;
+
+            m_currentFontMaterialIndex = 0; //font associated with rootFontMaterialEntity
+            //m_fontFamilyHash and  m_fontStyles are converted to FontAssetRef, which is used for font lookup
+            m_fontFamilyHash = fontAssetArray.fontAssetRefs[0].familyHash;
             m_fontFamilyHashStack.Clear();
             m_fontFamilyHashStack.Add(m_fontFamilyHash);
 
-            m_fontStyleInternal = textBaseConfiguration.fontStyle;
-            m_fontWeightInternal = textBaseConfiguration.fontWeight;
-            m_fontWeightInternalStack.Clear();
-            m_fontWeightInternalStack.Add(m_fontWeightInternal);
+            m_fontStyleInternal = textBaseConfiguration.fontStyles;        
 
-            m_currentFontMaterialIndex = 0; //font associated with rootFontMaterialEntity
             m_lineJustification = textBaseConfiguration.lineJustification;
             m_lineJustificationStack.Clear();
             m_lineJustificationStack.Add(m_lineJustification);

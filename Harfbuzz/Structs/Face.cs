@@ -1,5 +1,8 @@
 using System;
 using Unity.Collections;
+using Unity.VisualScripting.YamlDotNet.Core.Tokens;
+using UnityEngine.UIElements;
+using static PlasticGui.WorkspaceWindow.Items.LockRules.LockRuleGenerator;
 
 namespace HarfBuzz
 {
@@ -28,6 +31,30 @@ namespace HarfBuzz
             {
                 HB.hb_ot_name_get_utf8(ptr, name_id, language, ref textSize, text.GetUnsafePtr());
             }
+        }
+        public bool HasTrueTypeOutlines()
+        {
+            var glyf = HB.HB_TAG('g', 'l', 'y', 'f');
+
+            var blob = HB.hb_face_reference_table(ptr, glyf);
+            var glyfTableLength = HB.hb_blob_get_length(blob);
+            HB.hb_blob_destroy(blob);
+            return glyfTableLength > 0;
+        }
+        public bool HasPostScriptOutlines()
+        {
+            var cff = HB.HB_TAG('C', 'F', 'F', ' ');
+            var cff2 = HB.HB_TAG('C', 'F', 'F', '2');
+
+            var blob = HB.hb_face_reference_table(ptr, cff);
+            var cffTableLength = HB.hb_blob_get_length(blob);
+            HB.hb_blob_destroy(blob);
+
+            blob = HB.hb_face_reference_table(ptr, cff2);
+            var cff2TableLength = HB.hb_blob_get_length(blob);
+            HB.hb_blob_destroy(blob);
+
+            return cffTableLength > 0 || cff2TableLength > 0;
         }
         public bool IsImmutable() => HB.hb_face_is_immutable(ptr);
         public void Dispose()

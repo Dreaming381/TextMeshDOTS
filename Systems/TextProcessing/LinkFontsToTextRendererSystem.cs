@@ -1,3 +1,4 @@
+using TextMeshDOTS.TextProcessing;
 using Unity.Burst;
 using Unity.Entities;
 using Unity.Rendering;
@@ -6,6 +7,7 @@ namespace TextMeshDOTS
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
+    [UpdateAfter(typeof(RegisterFontMaterialSystem))]
     partial struct LinkMaterialsToTextSystem : ISystem
     {
         EntityQuery fontEntityQ, textQuery;
@@ -14,13 +16,13 @@ namespace TextMeshDOTS
         public void OnCreate(ref SystemState state)
         {
             fontEntityQ = SystemAPI.QueryBuilder()
-                    .WithAll<HBFontAssetRef>()
-                    .WithAll<HBMissingGlyphs>()
-                    .WithAll<HBUsedGlyphs>()
-                    .WithAll<HBUsedGlyphRects>()
-                    .WithAll<HBFreeGlyphRects>()
-                    .WithAll<HBFontPointer>()
-                    .WithAll<FontTextureReference>()
+                    .WithAll<AtlasData>()
+                    .WithAll<MissingGlyphs>()
+                    .WithAll<UsedGlyphs>()
+                    .WithAll<UsedGlyphRects>()
+                    .WithAll<FreeGlyphRects>()
+                    .WithAll<NativeFontPointer>()
+                    .WithAll<DynamicFontAssets>()
                     .WithAll<MaterialMeshInfo>()
                     .Build();
             textQuery = SystemAPI.QueryBuilder()
@@ -47,7 +49,7 @@ namespace TextMeshDOTS
                 .WithAbsent<MaterialMeshInfo>()
                 .WithEntityAccess())
             {
-                if (fontEntities.TryGetValue(fontBlobReference.fontBlob.Value.fontAssetRef, out var fontEntity))
+                if (fontEntities.TryGetValue(fontBlobReference.value.Value.fontAssetRef, out var fontEntity))
                 {
                     if (materialMeshInfoLookup.HasComponent(fontEntity))
                     {

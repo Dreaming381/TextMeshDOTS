@@ -27,15 +27,16 @@ namespace TextMeshDOTS
             for (int i = 0; i < fontReferences.Length; i++)
             {
                 var m_fontRef = fontReferences[i];
-                unityFontReferences.Add(new UnityFontReference {familyName= m_fontRef.familyName, styleName= m_fontRef.styleName, faceIndex= m_fontRef.faceIndex, filePath= m_fontRef.filePath } );
+                unityFontReferences.Add(new UnityFontReference {typographicFamily= m_fontRef.familyName, typographicSubfamily= m_fontRef.styleName, faceIndex= m_fontRef.faceIndex, filePath= m_fontRef.filePath } );
             }
+            unityFontReferences.Sort(default(UnityFontReferenceComparer));
             return unityFontReferences;
         }
 
         public static bool TryGetSystemFontReference(string familyName, string styleName, out UnityFontReference unityFontReference)
         {
             var success = FontEngine.TryGetSystemFontReference(familyName, styleName, out FontReference m_fontRef);
-            unityFontReference = success ? new UnityFontReference { familyName = m_fontRef.familyName, styleName = m_fontRef.styleName, faceIndex = m_fontRef.faceIndex, filePath = m_fontRef.filePath } : default;
+            unityFontReference = success ? new UnityFontReference { typographicFamily = m_fontRef.familyName, typographicSubfamily = m_fontRef.styleName, faceIndex = m_fontRef.faceIndex, filePath = m_fontRef.filePath } : default;
             return success;
         }
 
@@ -53,34 +54,23 @@ namespace TextMeshDOTS
 
             return TextShaderUtilities.GetPadding(material, enableExtraPadding, isBold);
         }
-    }
-    public struct UnityFontReference
-    {
-        public string familyName;
+        public struct UnityFontReference
+        {
+            public string typographicFamily;
 
-        public string styleName;
+            public string typographicSubfamily;
 
-        public int faceIndex;
+            public int faceIndex;
 
-        public string filePath;
+            public string filePath;
+        }
         public struct UnityFontReferenceComparer : IComparer<UnityFontReference>
         {
             public int Compare(UnityFontReference a, UnityFontReference b)
             {
-                return a.familyName.CompareTo(b.familyName);
-                //if (a.size == b.size)
-                //{
-                //    return 0;
-                //}
-                //else
-                //{
-                //    if (a.size > b.size)
-                //        return 1;
-                //    else
-                //        return -1;
-                //}
+                return a.typographicFamily.CompareTo(b.typographicFamily);                
             }
         }
-    }
+    }    
 }
 

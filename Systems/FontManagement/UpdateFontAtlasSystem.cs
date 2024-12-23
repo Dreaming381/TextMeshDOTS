@@ -1,0 +1,129 @@
+using Unity.Entities;
+using UnityEngine;
+using Unity.Collections;
+using Unity.Profiling;
+using HarfBuzz.SDF;
+using Unity.Jobs;
+
+
+namespace TextMeshDOTS.TextProcessing
+{
+    //[DisableAutoCreation]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [RequireMatchingQueriesForUpdate]
+    [UpdateAfter(typeof(ShapeSystem))]
+    partial struct UpdateFontAtlasSystem : ISystem
+    {
+        EntityQuery fontEntityQ;
+
+        static readonly ProfilerMarker marker = new ProfilerMarker("GlyphRect");
+        static readonly ProfilerMarker marker2 = new ProfilerMarker("SDF");
+
+        //[BurstCompile]
+        public void OnCreate(ref SystemState state)
+        {
+            fontEntityQ = SystemAPI.QueryBuilder()
+                .WithAll<AtlasData>()
+                .WithAll<MissingGlyphs>()
+                .WithAll<UsedGlyphs>()
+                .WithAll<UsedGlyphRects>()
+                .WithAll<FreeGlyphRects>()
+                .WithAll<NativeFontPointer>()
+                .WithAll<DynamicFontAssets>()
+                .Build();
+        }
+
+        //[BurstCompile]
+        public void OnUpdate(ref SystemState state)
+        {
+            if(fontEntityQ.IsEmpty) 
+                return;
+
+            var fontsRequiringUpdate = new NativeList<Entity>(16, Allocator.TempJob);
+            foreach (var (fontBlobReference, hbFontAssetRef, hbMissingGlyphs, entity) in SystemAPI.Query<FontBlobReference, AtlasData, DynamicBuffer<MissingGlyphs>>()
+                .WithAll<FontBlobReference>()
+                .WithAll<AtlasData>()
+                .WithAll<MissingGlyphs>()
+                .WithEntityAccess())
+            {
+                if (hbMissingGlyphs.Length > 0)
+                {
+                    fontsRequiringUpdate.Add(entity);
+                    Debug.Log($"Add {hbMissingGlyphs.Length} glyphs for {fontBlobReference.value.Value.fontFamily} {fontBlobReference.value.Value.fontSubFamily} to atlas...");
+                }
+            }
+            if(fontsRequiringUpdate.IsEmpty)
+            {
+                fontsRequiringUpdate.Dispose();
+                return;
+            }
+
+            state.Dependency.Complete();
+            var placedGlyphs = new NativeList<GlyphBlob> (1024, Allocator.TempJob); 
+
+            var atlasDataLookup = SystemAPI.GetComponentLookup<AtlasData>(true);
+            var missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false);
+            var usedGlyphsLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(false);
+            var usedGlyphRectsLookup = SystemAPI.GetBufferLookup<UsedGlyphRects>(false);
+            var freeGlyphRectsLookup = SystemAPI.GetBufferLookup<FreeGlyphRects>(false);
+
+            var nativeFontPointerLookup = SystemAPI.GetComponentLookup<NativeFontPointer>(true);
+            var dynamicFontAssetsLookup = SystemAPI.GetComponentLookup<DynamicFontAssets>(false);
+
+            for (int i = 0, ii = fontsRequiringUpdate.Length; i < ii; i++)
+            {
+                var fontEntity = fontsRequiringUpdate[i];
+                
+                //this managed call to texture object is reason why we cannot BURST compile the update method of this system
+                var fontTextureReference = dynamicFontAssetsLookup[fontEntity];
+                var textureData = fontTextureReference.texture.Value.GetRawTextureData<byte>();
+
+                var getGlyphRectsJob = new GetGlyphRectsJob()
+                {
+                    placedGlyphs = placedGlyphs,
+
+                    fontEntity = fontEntity,
+                    atlasDataLookup = atlasDataLookup,
+                    nativeFontPointerLookup = nativeFontPointerLookup,
+
+                    missingGlyphsBuffer = missingGlyphsLookup,
+                    usedGlyphsBuffer = usedGlyphsLookup,
+                    usedGlyphRectsBuffer = usedGlyphRectsLookup,
+                    freeGlyphRectsBuffer = freeGlyphRectsLookup,
+                };
+                state.Dependency = getGlyphRectsJob.Schedule(state.Dependency);
+
+                var updateAtlasTextureJob = new UpdateAtlasTextureJob()
+                {
+                    textureData = textureData,
+
+                    fontEntity = fontEntity,
+                    placedGlyphs = placedGlyphs,
+                    atlasDataLookup = atlasDataLookup,
+                    nativeFontPointerLookup = nativeFontPointerLookup,
+                    usedGlyphsBuffer = usedGlyphsLookup,
+                    usedGlyphRectsBuffer = usedGlyphRectsLookup,
+                    marker = marker2,
+                };
+                state.Dependency = updateAtlasTextureJob.Schedule(placedGlyphs, 1, state.Dependency);
+
+                var updateNativeFontJob = new UpdateNativeFontJob()
+                {
+                    fontTextureReferenceLookup = dynamicFontAssetsLookup,
+
+                    fontEntity = fontEntity,
+                    atlasDataLookup = atlasDataLookup,
+                    nativeFontPointerLookup = nativeFontPointerLookup,
+                    placedGlyphs = placedGlyphs,
+                };
+                state.Dependency = updateNativeFontJob.Schedule(state.Dependency);
+
+                state.Dependency.Complete();
+                placedGlyphs.Clear();
+                fontTextureReference.texture.Value.Apply();
+            }
+            fontsRequiringUpdate.Dispose(state.Dependency);
+            placedGlyphs.Dispose(state.Dependency);
+        }
+    }
+}

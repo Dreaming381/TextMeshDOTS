@@ -11,19 +11,19 @@ namespace HarfBuzz.SDF
     [BurstCompile]
     struct UpdateNativeFontJob : IJob
     {
-        public ComponentLookup<FontTextureReference> fontTextureReferenceLookup;
+        public ComponentLookup<DynamicFontAssets> fontTextureReferenceLookup;
 
         public Entity fontEntity;
-        [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
-        [ReadOnly] public ComponentLookup<HBFontAssetRef> hbFontAssetRefLookup;
+        [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
+        [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
         [ReadOnly] public NativeList<GlyphBlob> placedGlyphs;
 
         public void Execute()
         {
-            var hbFontPointer = hbFontPointerLookup[fontEntity];
-            var font = hbFontPointer.font;
-            var face = hbFontPointer.face;
-            var hbFontAssetRef= hbFontAssetRefLookup[fontEntity];            
+            var nativeFontPointer = nativeFontPointerLookup[fontEntity];
+            var font = nativeFontPointer.font;
+            var face = nativeFontPointer.face;
+            var atlasData = atlasDataLookup[fontEntity];            
 
             var fontTextureReference = fontTextureReferenceLookup[fontEntity];
             if(fontTextureReference.blob.IsCreated)
@@ -33,13 +33,13 @@ namespace HarfBuzz.SDF
             }
             else
             {
-                fontTextureReference.blob = CreateDynamicFontData(ref hbFontAssetRef, placedGlyphs, face, font);
+                fontTextureReference.blob = CreateDynamicFontData(ref atlasData, placedGlyphs, face, font);
                 //Debug.Log($"Create new blob");
             }            
             fontTextureReferenceLookup[fontEntity] = fontTextureReference;
         }
         public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(
-            ref HBFontAssetRef hbFontAssetRef,
+            ref AtlasData hbFontAssetRef,
             NativeList<GlyphBlob> placedGlyphs,
             Face face, 
             Font font)
@@ -68,9 +68,9 @@ namespace HarfBuzz.SDF
             ref DynamicFontBlob fontBlobRoot = ref builder.ConstructRoot<DynamicFontBlob>();
 
             //second, copy over some data from FontAsset which is set by user and does not come from native font
-            fontBlobRoot.familyName = hbFontAssetRef.family;
-            fontBlobRoot.styleName = hbFontAssetRef.subFamily;
-            fontBlobRoot.fontAssetRef = hbFontAssetRef.fontAssetRef;
+            //fontBlobRoot.familyName = hbFontAssetRef.fontFamily;
+            //fontBlobRoot.styleName = hbFontAssetRef.fontSubFamily;
+            //fontBlobRoot.fontAssetRef = hbFontAssetRef.fontAssetRef;
 
             fontBlobRoot.atlasSamplingPointSize = hbFontAssetRef.samplingPointSize;
             fontBlobRoot.atlasWidth = hbFontAssetRef.atlasWidth;
@@ -128,9 +128,9 @@ namespace HarfBuzz.SDF
             var builder = new BlobBuilder(Allocator.Temp);
             ref DynamicFontBlob fontBlobRoot = ref builder.ConstructRoot<DynamicFontBlob>();
 
-            fontBlobRoot.familyName = dynamicFontData.familyName;
-            fontBlobRoot.styleName = dynamicFontData.styleName;
-            fontBlobRoot.fontAssetRef = dynamicFontData.fontAssetRef;
+            //fontBlobRoot.familyName = dynamicFontData.familyName;
+            //fontBlobRoot.styleName = dynamicFontData.styleName;
+            //fontBlobRoot.fontAssetRef = dynamicFontData.fontAssetRef;
 
             fontBlobRoot.atlasSamplingPointSize = dynamicFontData.atlasSamplingPointSize;
             fontBlobRoot.atlasWidth = dynamicFontData.atlasWidth;

@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Rendering;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
 using Font = HarfBuzz.Font;
@@ -13,115 +15,121 @@ namespace TextMeshDOTS
 {
     #region Baking Components
     /// <summary> Reference to raw otf and ttf font data</summary>
-    [InternalBufferCapacity(1)]
     public struct FontBlobReference : IComponentData
     {
-        public BlobAssetReference<FontBlob> fontBlob;
+        public BlobAssetReference<FontBlob> value;
     }
     #endregion
 
 
     #region Native FontAsset Components
     
-    /// <summary> Contains  relevant data from loading and using font</summary>
-    public struct HBFontAssetRef : IComponentData
-    {
-        public FixedString128Bytes family;
-        public FixedString128Bytes subFamily;
-        public FontAssetRef fontAssetRef;
-        public int atlasWidth;
-        public int atlasHeight;
-        public int padding;            //10% of atlas height or width
-        public int samplingPointSize;  //size of font (in pixel) in atlas
-    }
+
 
     /// <summary> Glyphs requested by hb_shape (=they are guarentied to exist in font), </summary>
     [InternalBufferCapacity(0)]
-    public struct HBMissingGlyphs : IBufferElementData
+    public struct MissingGlyphs : IBufferElementData
     {
         public uint glyphID;
     }
     
     /// <summary> ID's of glyphs currently placed in the texture atlas. Keep order aligend with UsedGlyphRects </summary>
     [InternalBufferCapacity(0)]
-    public struct HBUsedGlyphs : IBufferElementData
+    public struct UsedGlyphs : IBufferElementData
     {
         public uint glyphID;
     }
 
     /// <summary> GlyphsRects currently used in the texture atlas. Keep order aligend with GlyphsInUse </summary>
     [InternalBufferCapacity(0)]
-    public struct HBUsedGlyphRects : IBufferElementData
+    public struct UsedGlyphRects : IBufferElementData
     {
         public GlyphRect value;
     }
     /// <summary> Free GlyphsRects of texture atlas </summary>
-    public struct HBFreeGlyphRects : IBufferElementData
+    public struct FreeGlyphRects : IBufferElementData
     {
         public GlyphRect value;
     }    
  
     /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
-    public struct FontTextureReference : ICleanupComponentData
+    public struct DynamicFontAssets : ICleanupComponentData
     {
         public UnityObjectRef<Texture2D> texture;
-        public UnityObjectRef<Material> material;        
+        public BatchMaterialID fontMaterialID;
         public BlobAssetReference<DynamicFontBlob> blob;
     }
     /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
-    public struct HBFontPointer: ICleanupComponentData
+    public struct NativeFontPointer: ICleanupComponentData
     {
-        public FontAssetRef fontAssetRef;
         public SDFOrientation orientation;
         public Blob blob;           //destroy in cleanup system
         public Face face;           //destroy in cleanup system
         public Font font;           //destroy in cleanup system
         public IntPtr hbDrawFuncts; //do not destroy this in cleanup system as those functions are needed for loading other fonts
     }
-    public enum Style:byte
+    /// <summary> Contains  relevant data from loading and using font</summary>
+    public struct AtlasData : IComponentData
     {
-        Regular,
-        Italic,
+        public int atlasWidth;
+        public int atlasHeight;
+        public int padding;            //10% of atlas height or width
+        public int samplingPointSize;  //size of font (in pixel) in atlas
     }
+
     public struct FontAssetRef : IEquatable<FontAssetRef>
     {
-        public int familyNameHash;
-        public TextFontWeight textFontWeight;
-        public Style fontStyle;
+        //Font selection logic: https://www.high-logic.com/font-editor/fontcreator/tutorials/font-family-settings
+        public int familyHash;    //default to typeographic family, and fall-back to family if it does not exist
+        public int weight;
+        public float width;
+        public bool isItalic;
+        public float slant;
 
-        public FontAssetRef(int familyNameHash, TextFontWeight textFontWeight, Style fontStyle)
+        public FontAssetRef(FixedString128Bytes fontFamily, FixedString128Bytes typographicFamily, int weight, float width, bool isItalic, float slant)
         {
-            this.familyNameHash = familyNameHash;
-            this.textFontWeight = textFontWeight;
-            this.fontStyle = fontStyle;
+            this.familyHash = typographicFamily.IsEmpty ? TextHelper.GetHashCodeCaseInSensitive(fontFamily) : TextHelper.GetHashCodeCaseInSensitive(typographicFamily);
+            this.weight = weight;
+            this.width = width;
+            this.isItalic = isItalic;
+            this.slant = slant;
+        }
+        public FontAssetRef(int familyNameHashCode, FontStyles fontStyles)
+        {
+            this.familyHash = familyNameHashCode;
+            this.weight = (fontStyles & FontStyles.Bold) == FontStyles.Bold ? (int)FontWeight.Bold : (int)FontWeight.Normal;
+            this.width = (int)FontWidth.Normal;
+            this.isItalic = (fontStyles & FontStyles.Italic) == FontStyles.Italic;
+            this.slant = 0;
         }
         public override bool Equals(object obj) => obj is FontAssetRef other && Equals(other);
 
         public bool Equals(FontAssetRef other)
         {
-            return familyNameHash == other.familyNameHash && textFontWeight == other.textFontWeight && fontStyle == other.fontStyle;
+            return GetHashCode() == other.GetHashCode();
         }
 
         public static bool operator ==(FontAssetRef e1, FontAssetRef e2)
         {
-            return e1.familyNameHash == e2.familyNameHash && e1.textFontWeight == e2.textFontWeight && e1.fontStyle == e2.fontStyle;
+            return e1.GetHashCode() == e2.GetHashCode();
         }
         public static bool operator !=(FontAssetRef e1, FontAssetRef e2)
         {
-            return e1.familyNameHash != e2.familyNameHash || e1.textFontWeight != e2.textFontWeight || e1.fontStyle != e2.fontStyle;
+            return e1.GetHashCode() != e2.GetHashCode();
         }
         public override int GetHashCode()
         {
-            //return HashCode.Combine(mapID, scamin, TextureName);
             int hashCode = 2055808453;
-            hashCode = hashCode * -1521134295 + familyNameHash;
-            hashCode = hashCode * -1521134295 + (byte)textFontWeight;
-            hashCode = hashCode * -1521134295 + (byte)fontStyle;
+            hashCode = hashCode * -1521134295 + familyHash;
+            hashCode = hashCode * -1521134295 + weight;
+            hashCode = hashCode * -1521134295 + width.GetHashCode();
+            hashCode = hashCode * -1521134295 + isItalic.GetHashCode();
+            hashCode = hashCode * -1521134295 + slant.GetHashCode();
             return hashCode;
         }
         public override string ToString()
         {
-            return $"FamilyHash {familyNameHash} textFontWeight {textFontWeight} isItalic {fontStyle}";
+            return $"FamilyHash {familyHash} weigth {weight} width {width} isItalic {isItalic} slant {slant}";
         }
     }
     public struct FontHashMap : IComponentData
@@ -129,10 +137,7 @@ namespace TextMeshDOTS
         public bool fontsDirty;
         public NativeHashMap<FontAssetRef, Entity> fontEntities;
     }
-    public  struct CreatedFromFontAsset : IComponentData 
-    {
-        public UnityObjectRef<FontAsset> fontAsset;
-    }
+
     public struct FontEntityGlyph
     {
         public Entity entity;

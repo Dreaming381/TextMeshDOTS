@@ -22,7 +22,7 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
 
-        [ReadOnly] public ComponentLookup<FontTextureReference> fontTextureReferenceLookup;
+        [ReadOnly] public ComponentLookup<DynamicFontAssets> dynamicFontAssetsLookup;
         [ReadOnly] public ComponentTypeHandle<GlyphMappingMask> glyphMappingMaskHandle;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
@@ -90,10 +90,10 @@ namespace TextMeshDOTS.TextProcessing
                 if (hasMultipleFonts)
                     fontAssetArray.Initialize(rootFontMaterialEntity, additionalFontMaterialEntityBuffers[indexInChunk], ref fontBlobReferenceLookup);
                 else
-                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].fontBlob);
+                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
 
                 GlyphGeneration.CreateRenderGlyphs(ref fontAssetArray, fontEntities,
-                                                    fontTextureReferenceLookup,
+                                                    dynamicFontAssetsLookup,
                                                    ref m_selectorBuffer,
                                                    ref renderGlyphs,
                                                    ref m_glyphMappingWriter,                                                   

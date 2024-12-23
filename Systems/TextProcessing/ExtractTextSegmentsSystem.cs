@@ -27,8 +27,8 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAll<TextBaseConfiguration>()
                       .Build();
             fontEntityQ = SystemAPI.QueryBuilder()
-                  .WithAll<HBUsedGlyphs>()
-                  .WithAll<FontTextureReference>()
+                  .WithAll<UsedGlyphs>()
+                  .WithAll<DynamicFontAssets>()
                   .Build();
 
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
@@ -47,8 +47,9 @@ namespace TextMeshDOTS.TextProcessing
             //if (m_query.IsEmpty)
             //    return;
             var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
-            if(fontHashMap.fontsDirty == true)
+            if (fontHashMap.fontsDirty == true)
                 return;
+            
             var fontEntities = fontHashMap.fontEntities;
 
             state.Dependency = new ExtractTextSegmentsChunkJob
@@ -61,7 +62,6 @@ namespace TextMeshDOTS.TextProcessing
                 additionalFontMaterialEntityHandle =  SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
                 fontBlobReferenceLookup =  SystemAPI.GetComponentLookup<FontBlobReference>(true),
-                hbFontPointerLookup = SystemAPI.GetComponentLookup<HBFontPointer>(),
                 calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),                
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
 

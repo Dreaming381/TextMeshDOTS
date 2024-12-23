@@ -1,6 +1,5 @@
 using HarfBuzz;
 using System;
-using System.Collections.Generic;
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;
@@ -10,6 +9,7 @@ using Unity.Mathematics;
 using Unity.Entities.Graphics;
 using Unity.Rendering;
 using UnityEngine.Rendering;
+using System.Collections.Generic;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -19,7 +19,8 @@ namespace TextMeshDOTS.Authoring
     {
         [TextArea(5, 10)]
         public string text;
-        public FontStyles fontStyle = FontStyles.Normal;
+        [EnumButtons]
+        public FontStyles fontStyles = FontStyles.Normal;
         public float fontSize = 12f;
         public Color32 color = Color.white;
 
@@ -35,25 +36,10 @@ namespace TextMeshDOTS.Authoring
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
 
-        [Header("Font References")]
-        [Tooltip("First font is default regular style, additional fonts are selectable via richtext tags such a <b> <i>")]
-        public FontItem[] fonts;
-
-        [Header("System Fonts")]
-        [Tooltip("Right Click to see permissable value for fonts. Paste them as-is into font list.")]
-        [ContextMenuItem("Get SystemFonts", "GetSystemFonts")]
-        public List<string> systemFonts;
-        void GetSystemFonts()
-        {
-            //var systemFontReferences = Font.GetOSInstalledFontNames();
-            var systemFontReferences = TextCoreExtensions.GetSystemFontRef();
-            //systemFontReferences.Sort(new UnityFontReferenceComparer());
-
-            systemFonts.Clear();
-            foreach (var font in systemFontReferences)
-                systemFonts.Add($"{font.familyName} - {font.styleName}");
-            systemFonts.Sort();
-        }
+        [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. De-select to bake font raw data in blob asset")]
+        public bool useSystemFonts = false;
+        [Tooltip("Drop here all fonts you like to use. Do not forget to include all font family members selected via Fontstyles or RichText tags such as <b> (bold), <i> (italic> or or combinations thereof!")]
+        public UnityEngine.Font[] fonts;
     }
 
     class TestAuthoringBaker : Baker<TextRendererAuthoring>
@@ -63,9 +49,24 @@ namespace TextMeshDOTS.Authoring
             if (authoring.fonts == null || authoring.fonts.Length == 0)
                 return;
 
+            HashSet<int> redundancyCheck = new HashSet<int>(authoring.fonts.Length);
             for (int i = 0; i < authoring.fonts.Length; i++)
-                if (authoring.fonts[i].fontName == null || authoring.fonts[i].fontName==String.Empty)
+            {
+                var font = authoring.fonts[i];
+                if (font == null)
+                {
+                    //Debug.Log($"List of fonts contains null reference");
                     return;
+                }
+                var hashCode = font.GetHashCode();
+                if (redundancyCheck.Contains(hashCode))
+                {
+                    //Debug.Log($"List of fonts contains redundacies");
+                    return;
+                }
+                redundancyCheck.Add(hashCode);
+            }
+
 
             var layer = GetLayer();
 
@@ -77,7 +78,7 @@ namespace TextMeshDOTS.Authoring
                 ReceiveShadows = false,
                 MotionMode = MotionVectorGenerationMode.Object,
                 StaticShadowCaster = false,
-            };            
+            };
 
             var entity = GetEntity(TransformUsageFlags.Renderable);
             AddEntityGraphicsComponents(entity, renderFilterSettings);
@@ -86,15 +87,15 @@ namespace TextMeshDOTS.Authoring
 
             var additionalEntities = new NativeList<Entity>(16, Allocator.Temp);
 
-            for (int i = 0, ii= authoring.fonts.Length; i < ii; i++)
+            for (int i = 0, ii = authoring.fonts.Length; i < ii; i++)
             {
-                var fontItem = authoring.fonts[i];                
-                if(i > 0)
-                    AddAdditionalFontEntity(fontItem, additionalEntities, renderFilterSettings);
+                var fontItem = authoring.fonts[i];
+                if (i > 0)
+                    AddAdditionalFontEntity(fontItem, authoring.useSystemFonts, additionalEntities, renderFilterSettings);
                 else
                 {
-                    var fontBlobRef = BakeFontAsset(fontItem);
-                    AddComponent(entity, new FontBlobReference { fontBlob = fontBlobRef });
+                    var fontBlobRef = BakeFontAsset(fontItem,authoring.useSystemFonts);
+                    AddComponent(entity, new FontBlobReference { value = fontBlobRef });
                 }
             }
 
@@ -122,35 +123,26 @@ namespace TextMeshDOTS.Authoring
                 lineJustification = authoring.horizontalAlignment,
                 verticalAlignment = authoring.verticalAlignment,
                 isOrthographic = authoring.isOrthographic,
-                fontStyle = authoring.fontStyle,
-                fontWeight = (authoring.fontStyle & FontStyles.Bold) == FontStyles.Bold ? TextFontWeight.Bold : TextFontWeight.Regular,
+                fontStyles = authoring.fontStyles,
                 wordSpacing = authoring.wordSpacing,
                 lineSpacing = authoring.lineSpacing,
                 paragraphSpacing = authoring.paragraphSpacing,
             });
             AddBuffer<RenderGlyph>(entity);
-
         }
-        BlobAssetReference<FontBlob> BakeFontAsset(FontItem fontItem)
-        {
-            var split = fontItem.fontName.Split(" - ");
-            var fontFamily = split[0];
-            var fontSubFamily = split[1];
-
-            var fontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(fontFamily);
-            var fontAssetRef = new FontAssetRef(fontFamilyHash, fontItem.fontWeight, fontItem.fontStyle);
-
-            var customHash = new Unity.Entities.Hash128((uint)fontAssetRef.GetHashCode(), 0, 0, 0);
+        BlobAssetReference<FontBlob> BakeFontAsset(UnityEngine.Font fontItem, bool useSystemFont)
+        {            
+            var customHash = new Unity.Entities.Hash128((uint)fontItem.GetHashCode(), (uint)useSystemFont.GetHashCode(), 0, 0);
             if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<FontBlob> blobReference))
             {
-                blobReference = FontBlobber.BakeFontBlob(fontItem, fontAssetRef, fontFamily, fontSubFamily);
+                blobReference = FontBlobber.BakeFontBlob(fontItem, useSystemFont);
 
                 // Register the Blob Asset to the Baker for de-duplication and reverting.
                 AddBlobAssetWithCustomHash<FontBlob>(ref blobReference, customHash);
             }
             return blobReference;
         }
-        void AddAdditionalFontEntity(FontItem fontItem, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
+        void AddAdditionalFontEntity(UnityEngine.Font fontItem, bool useSystemFont, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
         {
             var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
             AddEntityGraphicsComponents(newEntity, renderFilterSettings);
@@ -159,8 +151,8 @@ namespace TextMeshDOTS.Authoring
             AddComponent(newEntity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
             AddComponent<TextShaderIndex>(newEntity);
 
-            var fontBlobRef = BakeFontAsset(fontItem);
-            AddComponent(newEntity, new FontBlobReference { fontBlob = fontBlobRef });
+            var fontBlobRef = BakeFontAsset(fontItem, useSystemFont);
+            AddComponent(newEntity, new FontBlobReference { value = fontBlobRef});
             additionalEntities.Add(newEntity);
         }
 
@@ -178,12 +170,17 @@ namespace TextMeshDOTS.Authoring
     
 
     [Serializable]
-    public struct FontItem
-    {
-        [Tooltip("Copy strings from system fonts here ")]
-        public string fontName;
-        public TextFontWeight fontWeight;
-        [EnumButtons]
-        public Style fontStyle;
+    [Tooltip("Copy strings from system fonts here ")]
+    public struct FontItem    
+    {        
+        public string typographicFamily;
+        public string typographicSubfamily;
+        public override int GetHashCode()
+        {
+            int hashCode = 2055808453;
+            hashCode = hashCode * -1521134295 + TextHelper.GetHashCodeCaseInSensitive(typographicFamily);
+            hashCode = hashCode * -1521134295 + TextHelper.GetHashCodeCaseInSensitive(typographicSubfamily);
+            return hashCode;
+        }
     }
 }

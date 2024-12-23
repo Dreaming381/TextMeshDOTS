@@ -22,7 +22,6 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;        
-        [ReadOnly] public ComponentLookup<HBFontPointer> hbFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByteRaw> calliByteRawHandle;        
         [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
 
@@ -32,8 +31,8 @@ namespace TextMeshDOTS.TextProcessing
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
+                  chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion)))// ||
+                  //chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
                 return;
 
             //Debug.Log("Extract TextSegments");
@@ -63,7 +62,7 @@ namespace TextMeshDOTS.TextProcessing
                 if (hasMultipleFonts)
                     fontAssetArray.Initialize(rootFontMaterialEntity, additionalFontMaterialEntityBuffers[indexInChunk], ref fontBlobReferenceLookup);
                 else
-                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].fontBlob);
+                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
 
                 textConfiguration.Reset(in textBaseConfiguration, fontAssetArray);
                 var textSpans = new NativeList<TextSpan>(16, Allocator.Temp);
