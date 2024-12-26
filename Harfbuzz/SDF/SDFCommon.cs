@@ -1,5 +1,6 @@
 using System.IO;
 using Unity.Collections;
+using Unity.Mathematics;
 
 namespace HarfBuzz.SDF
 {
@@ -16,7 +17,25 @@ namespace HarfBuzz.SDF
         public const int MAX_NEWTON_STEPS = 4;
         public const int MAX_NEWTON_DIVISIONS = 4;
         public const int FT_TRIG_SAFE_MSB = 29;
-
+		
+		public static void CenterGlyphInGlyphRect(ref DrawData drawData, int width, int height, int padding)
+		{
+			var edges = drawData.edges;
+			var shiftx = -drawData.glyphRect.min.x + ((width - (drawData.glyphRect.width + 2 * padding)) / 2);
+            var shifty = -drawData.glyphRect.min.y + ((height -(drawData.glyphRect.height + 2 * padding)) / 2);
+            float2 shift = new float2(shiftx, shifty);
+            for (int k = 0, kk = edges.Length; k < kk; k++)
+            {
+                ref var edge = ref edges.ElementAt(k);
+                edge.start_pos += shift;
+                edge.end_pos += shift;
+                edge.control1 += shift;
+                edge.control2 += shift;
+                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
+            }
+			drawData.glyphRect.min+=shift;
+			drawData.glyphRect.max+=shift;
+		}
         public static void WriteGlyphOutlineToFile(string path, in NativeList<SDFEdge> edges)
         {
             if(edges.Length == 0) return;
@@ -54,7 +73,32 @@ namespace HarfBuzz.SDF
             writer.WriteLine();
             writer.Close();
         }
-        public static void WriteGlyphOutlineToFile(string path, DrawData drawData)
+        // public static void WriteGlyphOutlineToFile(string path, ref DrawData drawData)
+        // {
+            // var edges = drawData.edges;
+            // var contourIDs= drawData.contourIDs;
+            // if (contourIDs.Length < 2 || edges.Length == 0)
+                // return;
+
+            // StreamWriter writer = new StreamWriter(path, false);
+            // SDFEdge edge;
+            // for (int contourID = 0, end= contourIDs.Length - 1; contourID < end; contourID++) //for each contour
+            // {
+                // int startID = contourIDs[contourID];
+                // int nextStartID = contourIDs[contourID + 1];
+                // for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
+                // {
+                    // edge = edges[edgeID];
+                    // writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
+                    // //writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.control1.x} {edge.control1.y} {edge.end_pos.x} {edge.end_pos.y} {edge.edge_type}");
+                // }
+                // //edge = edges[nextStartID - 1];
+                // //writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
+                // writer.WriteLine();
+            // }
+            // writer.Close();
+        // }
+		public static void WriteGlyphOutlineToFile(string path, ref DrawData drawData)
         {
             var edges = drawData.edges;
             var contourIDs= drawData.contourIDs;
@@ -62,20 +106,16 @@ namespace HarfBuzz.SDF
                 return;
 
             StreamWriter writer = new StreamWriter(path, false);
-            SDFEdge edge;
-            for (int contourID = 0, end= contourIDs.Length - 1; contourID < end; contourID++) //for each contour
+			for (int edgeID = 0, end =drawData.edges.Length ; edgeID <end ; edgeID++) //for each edge
+			{
+				var edge = edges[edgeID];
+				writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.end_pos.x} {edge.end_pos.y}");
+			}
+			writer.WriteLine();
+            for (int contourID = 0, end= contourIDs.Length; contourID < end; contourID++) //for each contour
             {
-                int startID = contourIDs[contourID];
-                int nextStartID = contourIDs[contourID + 1];
-                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
-                {
-                    edge = edges[edgeID];
-                    writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
-                    //writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.control1.x} {edge.control1.y} {edge.end_pos.x} {edge.end_pos.y} {edge.edge_type}");
-                }
-                //edge = edges[nextStartID - 1];
-                //writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
-                writer.WriteLine();
+				var contour = contourIDs[contourID];
+                writer.WriteLine($"{contour}");               
             }
             writer.Close();
         }

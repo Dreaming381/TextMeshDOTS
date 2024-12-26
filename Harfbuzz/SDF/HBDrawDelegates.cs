@@ -6,44 +6,44 @@ using UnityEngine;
 
 namespace HarfBuzz.SDF
 {
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void ReleaseDelegate();
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void MoveToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void QuadraticToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control_x, float control_y, float to_x, float to_y, IntPtr user_data);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void CubicToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control1_x, float control1_y, float control2_x, float control2_y, float to_x, float to_y, IntPtr user_data);
-
-
-    public static class HBDrawDelegates
+    public struct DrawDelegates : IDisposable
     {
-        public static void InitializeHarfBuzzDrawFunctions(ref IntPtr harfBuzzDrawFuncts)
+        public IntPtr ptr;
+        public DrawDelegates(bool dummyProperty)
         {
-            harfBuzzDrawFuncts = HB.hb_draw_funcs_create();
+            ptr = HB.hb_draw_funcs_create();
             var moveToDelegate = (MoveToDelegate)HB_draw_move_to_func_t;
             var lineToDelegate = (MoveToDelegate)HB_draw_line_to_func_t;
             var quadraticToDelegate = (QuadraticToDelegate)HB_draw_quadratic_to_func_t;
             var cubicToDelegate = (CubicToDelegate)HB_draw_cubic_to_func_t;
+            var closeDelegate = (CloseDelegate)HB_draw_close_path_func_t;
             var releaseDelegate = (ReleaseDelegate)null;// HBDelegateProxies.Test;
 
-            HB.hb_draw_funcs_set_move_to_func(harfBuzzDrawFuncts, moveToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_line_to_func(harfBuzzDrawFuncts, lineToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_quadratic_to_func(harfBuzzDrawFuncts, quadraticToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_cubic_to_func(harfBuzzDrawFuncts, cubicToDelegate, IntPtr.Zero, releaseDelegate);
+            //HB.hb_draw_funcs_set_move_to_func(ptr, moveToDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_set_line_to_func(ptr, lineToDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_set_quadratic_to_func(ptr, quadraticToDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_set_cubic_to_func(ptr, cubicToDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_set_close_path_func(ptr, closeDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_make_immutable(ptr);
+        }
+
+        public void Dispose()
+        {
+            HB.hb_draw_funcs_destroy(ptr);
         }
         [MonoPInvokeCallback(typeof(ReleaseDelegate))]
         public static void Test()
         {
             //Debug.Log($"harfbuzz blob called this delegate upon destroying blob ");
         }
-        public static void HB_draw_move_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data )
+		
+		public static void HB_draw_close_path_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, IntPtr user_data)
         {
             data.contourIDs.Add(data.edges.Length);
+        }
+        public static void HB_draw_move_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data)
+        {
+			//data.contourIDs.Add(data.edges.Length);
         }
 
         public static void HB_draw_line_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data)
@@ -59,7 +59,7 @@ namespace HarfBuzz.SDF
             var edgeBBox = BBox.GetLineBBox(edge.start_pos, edge.end_pos);
 
             data.edges.Add(edge);
-            data.glyphRect= BBox.Union(data.glyphRect, edgeBBox);
+            data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
 
         public static void HB_draw_quadratic_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control_x, float control_y, float to_x, float to_y, IntPtr user_data)
@@ -95,5 +95,21 @@ namespace HarfBuzz.SDF
             data.edges.Add(edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
+
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void ReleaseDelegate();
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void MoveToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void QuadraticToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control_x, float control_y, float to_x, float to_y, IntPtr user_data);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void CubicToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control1_x, float control1_y, float control2_x, float control2_y, float to_x, float to_y, IntPtr user_data);
+        
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void CloseDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, IntPtr user_data);
     }
 }

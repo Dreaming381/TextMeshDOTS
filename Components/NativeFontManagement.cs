@@ -66,7 +66,7 @@ namespace TextMeshDOTS
         public Blob blob;           //destroy in cleanup system
         public Face face;           //destroy in cleanup system
         public Font font;           //destroy in cleanup system
-        public IntPtr hbDrawFuncts; //do not destroy this in cleanup system as those functions are needed for loading other fonts
+        public DrawDelegates drawFunctions; //do not destroy this in cleanup system as those functions are needed for loading other fonts
     }
     /// <summary> Contains  relevant data from loading and using font</summary>
     public struct AtlasData : IComponentData

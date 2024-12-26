@@ -7,6 +7,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine.TextCore;
 using UnityEngine;
+using static UnityEditorInternal.VersionControl.ListControl;
 
 
 namespace HarfBuzz.SDF
@@ -35,16 +36,12 @@ namespace HarfBuzz.SDF
             var glyphBlob = placedGlyphs[i];
 
             var font = nativeFontPointer.font;
-            var drawFunct = nativeFontPointer.hbDrawFuncts;
-
+            var drawDelegates = nativeFontPointer.drawFunctions;
             var drawData = new DrawData(256, 16, Allocator.Temp);
-            
-            HB.hb_font_draw_glyph(font.ptr, glyphBlob.glyphID, drawFunct, ref drawData);
-            drawData.contourIDs.Add(drawData.edges.Length);//close the last contour
-
-            var edges = drawData.edges;
+            font.DrawGlyph(glyphBlob.glyphID, drawDelegates, ref drawData);            
 
             //shift the bezier edges so that they are in the center of the reserved atlas padded texture window (usedRects)
+			var edges = drawData.edges;
             var shiftx = drawData.glyphRect.min.x - ((glyphBlob.glyphExtents.width + 2 * atlasData.padding - drawData.glyphRect.width) / 2);
             var shifty = drawData.glyphRect.min.y - ((glyphBlob.glyphExtents.height + 2 * atlasData.padding - drawData.glyphRect.height) / 2);
             float2 shift = -new float2(shiftx, shifty);

@@ -1,11 +1,9 @@
 using System;
-using System.Runtime.InteropServices;
 using TextMeshDOTS;
-using UnityEngine.LightTransport;
 using UnityEngine;
-using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using HarfBuzz.SDF;
 
 
 namespace HarfBuzz
@@ -22,29 +20,29 @@ namespace HarfBuzz
         {
             return HB.hb_style_get_value(ptr, styleTag);
         }
-        //public void GetPPEM(out uint x_ppem, out uint y_ppem)
-        //{
-        //    HB.hb_font_get_ppem(ptr, out x_ppem, out y_ppem);
-        //}
-        //public void SetPPEM(uint x_ppem, uint y_ppem)
-        //{
-        //    HB.hb_font_set_ppem(ptr, x_ppem, y_ppem);
-        //}
-        //public float GetPtEM()
-        //{
-        //    return HB.hb_font_get_ptem(ptr);
-        //}
-        //public void SetPtEM(float ptem)
-        //{
-        //    HB.hb_font_set_ptem(ptr, ptem);
-        //}
         public void GetPPEM(out uint x_ppem, out uint y_ppem)
         {
             HB.hb_font_get_ppem(ptr, out x_ppem, out y_ppem);
         }
-        public float Get_PTEM()
+        public void SetPPEM(uint x_ppem, uint y_ppem)
+        {
+            HB.hb_font_set_ppem(ptr, x_ppem, y_ppem);
+        }
+        public float GetPTEM()
         {
             return HB.hb_font_get_ptem(ptr);
+        }
+        public void SetPTEM(float ptem)
+        {
+            HB.hb_font_set_ptem(ptr, ptem);
+        }
+        public void DrawGlyph(uint glyphID, DrawDelegates drawFunctions, ref DrawData drawData)
+        {
+            HB.hb_font_draw_glyph(ptr, glyphID, drawFunctions, ref drawData);
+        }
+        public void PaintGlyph(uint glyphID, ref PaintData paintData, PaintDelegates paintFunctions, uint palette, Color32 foreground)
+        {
+            HB.hb_font_paint_glyph(ptr, glyphID, paintFunctions, ref paintData, palette, foreground);
         }
 
         public void GetSyntheticBold(out float x_embolden, out float y_embolden, out bool in_place)

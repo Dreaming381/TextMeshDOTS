@@ -22,7 +22,7 @@ namespace TextMeshDOTS.TextProcessing
         EntityQuery textRendererQ, existingFontsQ;
         List<LoadRequest> newLoadRequests;
         EntityArchetype nativeFontDataArchetype;
-        IntPtr harfBuzzDrawFunct;
+        DrawDelegates drawFunctions;
 
         protected override void OnCreate()
         {
@@ -47,7 +47,7 @@ namespace TextMeshDOTS.TextProcessing
 
             SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
 
-            HBDrawDelegates.InitializeHarfBuzzDrawFunctions(ref harfBuzzDrawFunct);
+            drawFunctions = new DrawDelegates(true);
         }
 
         //[BurstCompile]
@@ -115,8 +115,8 @@ namespace TextMeshDOTS.TextProcessing
         {
             var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
             if (fontHashMap.fontEntities.IsCreated) fontHashMap.fontEntities.Dispose();
-           
-            HB.hb_draw_funcs_destroy(harfBuzzDrawFunct);
+
+            drawFunctions.Dispose();
         }
         void LoadFont(LoadRequest loadRequest, int samplingPointSize,  NativeHashMap<FontAssetRef, Entity> fontEntities)
         {
@@ -152,7 +152,7 @@ namespace TextMeshDOTS.TextProcessing
                 padding = 9,                //10% of atlas height or width
                 samplingPointSize = 50,    //size of font (in pixel) in atlas
             };
-            var nativeFontPointer = new NativeFontPointer { orientation = sdfOrientation, blob = blob, face = face, font = font, hbDrawFuncts = harfBuzzDrawFunct };
+            var nativeFontPointer = new NativeFontPointer { orientation = sdfOrientation, blob = blob, face = face, font = font, drawFunctions = drawFunctions };
 
             //initialize texture. To save space, review how to initialize it with size 0
             //(as done by TextCore), and only increase once needed

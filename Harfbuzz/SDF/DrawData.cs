@@ -15,12 +15,14 @@ namespace HarfBuzz.SDF
             edges= new NativeList<SDFEdge>(edgeCapacity, allocator);
             contourIDs = new NativeList<int>(contourCapacity, allocator);
             glyphRect = BBox.Empty;
+			contourIDs.Add(0);
         }
         public void Clear()
         {
             glyphRect = BBox.Empty;
             edges.Clear();
             contourIDs.Clear();
+			contourIDs.Add(0);
         }
         public void Dispose()
         {

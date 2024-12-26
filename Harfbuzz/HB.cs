@@ -2,6 +2,9 @@ using HarfBuzz.SDF;
 using System;
 using System.Runtime.InteropServices;
 using TextMeshDOTS;
+using UnityEngine;
+using static HarfBuzz.SDF.DrawDelegates;
+using static HarfBuzz.SDF.PaintDelegates;
 
 namespace HarfBuzz
 {
@@ -32,13 +35,20 @@ namespace HarfBuzz
         public static extern void hb_draw_funcs_set_cubic_to_func(IntPtr drawFunctions, CubicToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_font_draw_glyph(IntPtr font, uint glyph, IntPtr drawFunctions, ref DrawData draw_data);
+        public static extern void hb_draw_funcs_set_close_path_func(IntPtr drawFunctions, CloseDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern void hb_draw_funcs_make_immutable(IntPtr drawFunctions);
+
+
         #endregion
 
         #region paint
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern IntPtr hb_paint_funcs_create();
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern void hb_paint_funcs_destroy(IntPtr paintFunctions);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_funcs_set_push_transform_func (IntPtr paintFunctions, PushTransformDelegate func, IntPtr user_data, ReleaseDelegate destroy);
@@ -82,7 +92,6 @@ namespace HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_funcs_set_custom_palette_color_func (IntPtr paintFunctions, CustomPalette_colorDelegate func, IntPtr user_data, ReleaseDelegate destroy);
 
-
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_push_clip_glyph(IntPtr paintFunctions, ref PaintData paint_data, uint glyph, IntPtr font);
 
@@ -96,6 +105,8 @@ namespace HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_image(IntPtr paintFunctions, ref PaintData paint_data, Blob image, uint width, uint height, HB_PAINT_IMAGE_FORMAT format, float slant, GlyphExtents extents);
 
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern void hb_paint_funcs_make_immutable(IntPtr paintFunctions);
         #endregion
 
         #region blob
@@ -120,6 +131,9 @@ namespace HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_face_count(IntPtr blob);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern byte* hb_blob_get_data(IntPtr blob, out uint length);
         #endregion
 
         #region face
@@ -153,6 +167,10 @@ namespace HarfBuzz
 
 
         #region font
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern void hb_font_draw_glyph(IntPtr font, uint glyph, DrawDelegates drawFunctions, ref DrawData draw_data);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern void hb_font_paint_glyph(IntPtr font, uint glyph, PaintDelegates paintFunctions, ref PaintData paint_data,uint palette_index, Color32 foreground);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_shape(IntPtr font, IntPtr buffer, IntPtr features, uint num_features);
         //[DllImport(HarfBuzz, CallingConvention = CallConvention)]

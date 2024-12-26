@@ -1,5 +1,7 @@
 using HarfBuzz.SDF;
 using System;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Collections;
 
 
 namespace HarfBuzz
@@ -30,9 +32,23 @@ namespace HarfBuzz
         }
         unsafe public Blob(void* data, uint length, MemoryMode memoryMode)
         {
-            ReleaseDelegate releaseDelegate = null;
+            DrawDelegates.ReleaseDelegate releaseDelegate = null;
             //ReleaseDelegate releaseDelegate = new ReleaseDelegate(DelegateProxies.Test);
             ptr = HB.hb_blob_create(data, length, memoryMode, IntPtr.Zero, releaseDelegate); //returned blob is immutable
+        }
+        public NativeArray<byte> GetData()
+        {
+            uint length;
+            NativeArray<byte> result;
+            unsafe
+            {
+                var bytes = HB.hb_blob_get_data(ptr, out length);
+                result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>((void*)bytes, (int)length, Allocator.Invalid);
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                NativeArrayUnsafeUtility.SetAtomicSafetyHandle<byte>(ref result, AtomicSafetyHandle.GetTempMemoryHandle());
+#endif
+            }
+            return result;
         }
         public bool IsImmutable() => HB.hb_blob_is_immutable(ptr);
 
