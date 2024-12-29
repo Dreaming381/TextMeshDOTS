@@ -8,16 +8,11 @@ namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public static class ScanlineRasterizer
     {
-        public static void Rasterize(ref DrawData drawData, NativeArray<Color32> textureData, uint color, int width, int height, bool inverse=false)
-        {
-            var r = HB.hb_color_get_red(color);
-            var g = HB.hb_color_get_green(color);
-            var b = HB.hb_color_get_blue(color);
-            var alpha = HB.hb_color_get_alpha(color);
-            Color32 textureColor = new Color32(r, g, b, alpha);
-            Debug.Log($"Rasterize with color {textureColor}");
+        public static void Rasterize(ref DrawData drawData, NativeArray<ColorARGB> textureData, ColorARGB color, int width, int height, bool inverse=false)
+        {            
+            Debug.Log($"Rasterize with color {color}");
 
-            NativeList<float2> intersectionPoints = new NativeList<float2> (256, Allocator.Temp);
+            var intersectionPoints = new NativeList<float2> (256, Allocator.Temp);
 
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
@@ -100,11 +95,127 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                         //textureData[targetIndex] = ColorRes;
 
                         int aa = 255;
-                        int fa = alpha * aa / 255;
+                        int fa = color.a * aa / 255;
 
-                        int fb = b * fa / 255;
-                        int fg = g * fa / 255;
-                        int fr = r * fa / 255;
+                        int fb = color.b * fa / 255;
+                        int fg = color.g * fa / 255;
+                        int fr = color.r * fa / 255;
+
+                        int ba2 = 255 - fa;
+
+                        var colorDest = textureData[targetIndex];
+                        int bb = colorDest.b;
+                        int bg = colorDest.g;
+                        int br = colorDest.r;
+                        int ba = colorDest.a;
+
+                        colorDest.b = (byte)(bb * ba2 / 255 + fb);
+                        colorDest.g = (byte)(bg * ba2 / 255 + fg);
+                        colorDest.r = (byte)(br * ba2 / 255 + fr);
+                        colorDest.a = (byte)(ba * ba2 / 255 + fa);
+                        textureData[targetIndex] = colorDest;
+                    }
+                }
+            }
+        }
+        public static void RasterizeLinearGradient(ref DrawData drawData, NativeArray<ColorARGB> textureData, NativeArray<ColorStop> colorStops, float2 p0, float2 p1, float2 p2,int width, int height, bool inverse = false)
+        {
+            
+            var colorA = colorStops[0].color;
+            var colorB = colorStops[1].color;
+            Debug.Log($"Rasterize with colorline from {colorA} to {colorB}");
+
+            var intersectionPoints = new NativeList<float2>(256, Allocator.Temp);
+
+            var edges = drawData.edges;
+            var contourIDs = drawData.contourIDs;
+            var step = 1;
+            var xmin = drawData.glyphRect.min.x - 1;
+            var xmax = drawData.glyphRect.max.x + 1;
+            var ymin = drawData.glyphRect.min.y;
+            var ymax = drawData.glyphRect.max.y;
+
+            var scanLineStart = new float2(xmin, ymin);
+            var scanLineEnd = new float2(xmax, ymin);
+
+            for (float y = ymin; y < ymax + 1; y += step)
+            {
+                scanLineStart.y = y; scanLineEnd.y = y;
+                intersectionPoints.Clear();
+                if (inverse)
+                    intersectionPoints.Add(new float2(xmin, y));
+                float2 previntersectPoint = float.NegativeInfinity;
+
+                for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
+                {
+                    int startID = contourIDs[contourID];
+                    int nextStartID = contourIDs[contourID + 1];
+                    for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
+                    {
+                        var edge = edges[edgeID];
+                        bool intersect = EdgesIntersect(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, true);
+                        if (intersect)
+                        {
+                            GetIntersectPt(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, out float2 intersectPoint);
+                            //Special Case Handeling
+                            // Case when intersection point is a vertex
+                            // if the prevs point is the same as current point, means the point is a vertex,
+                            // Check the prev line and current line if both ymin is the same
+                            // if same, add again
+                            if (math.all(previntersectPoint == intersectPoint))
+                            {
+                                var prevEdge = edges[edgeID - 1];
+                                var prevEdgeYmin = math.min(prevEdge.start_pos.y, prevEdge.end_pos.y);
+                                var edgeYmin = math.min(edge.start_pos.y, edge.end_pos.y);
+
+                                var prevEdgeYmax = math.max(prevEdge.start_pos.y, prevEdge.end_pos.y);
+                                var edgeYmax = math.max(edge.start_pos.y, edge.end_pos.y);
+
+                                if (prevEdgeYmin != edgeYmin && prevEdgeYmax != edgeYmax)
+                                {
+                                    continue;
+                                }
+                            }
+
+                            intersectionPoints.Add(intersectPoint);
+
+                            previntersectPoint = intersectPoint;
+                        }
+                    }
+                }
+                if (inverse)
+                    intersectionPoints.Add(new float2(xmax, y));
+                intersectionPoints.Sort(default(XComparer));
+
+                for (int i = 0; i < intersectionPoints.Length - 1; i += 2)
+                {
+                    var startX = (int)intersectionPoints[i].x;
+                    var endX = (int)intersectionPoints[i + 1].x;
+
+                    for (int column = startX; column < endX; column += step)
+                    {
+                        var t = (float)(column - p0.x) / (float)(p1.x - p0.x);
+                        var color = ColorARGB.Lerp(colorA, colorB,t);
+                        
+                        var targetIndex = width * (int)y + column;
+                        //textureData[targetIndex] = textureColor;
+
+                        //var ColorSrc = textureColor;
+                        //var colorDest = textureData[targetIndex];
+                        //float src = 0.5f, dest  = 0.5f;
+                        //Color32 ColorRes=default;
+                        //ColorRes.r = (byte)(ColorSrc.r * src + colorDest.r * dest);
+                        //ColorRes.g = (byte)(ColorSrc.g * src + colorDest.g * dest);
+                        //ColorRes.b = (byte)(ColorSrc.b * src + colorDest.b * dest);
+                        //ColorRes.a = (byte)(ColorSrc.a * src + colorDest.a * dest);
+                        //textureData[targetIndex] = ColorRes;
+
+                        int aa = 255;
+                        int fa = color.a * aa / 255;
+
+                        int fb = color.b * fa / 255;
+                        int fg = color.g * fa / 255;
+                        int fr = color.r * fa / 255;
 
                         int ba2 = 255 - fa;
 

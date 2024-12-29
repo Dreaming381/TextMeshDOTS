@@ -82,10 +82,10 @@ namespace TextMeshDOTS.HarfBuzz
         public static extern void hb_paint_funcs_set_image_func(IntPtr paintFunctions, ImageDelegate func, IntPtr user_data, ReleaseDelegate destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_linear_gradient_func (IntPtr paintFunctions, GradientDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_linear_gradient_func (IntPtr paintFunctions, LinearOrRadialGradientDelegate func, IntPtr user_data, ReleaseDelegate destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_radial_gradient_func (IntPtr paintFunctions, GradientDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_radial_gradient_func (IntPtr paintFunctions, LinearOrRadialGradientDelegate func, IntPtr user_data, ReleaseDelegate destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_funcs_set_sweep_gradient_func (IntPtr paintFunctions, SweepGradientDelegate func, IntPtr user_data, ReleaseDelegate destroy);
@@ -114,11 +114,15 @@ namespace TextMeshDOTS.HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_funcs_make_immutable(IntPtr paintFunctions);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern uint hb_color_line_get_color_stops(IntPtr color_line, uint start, ref uint count, IntPtr color_stops);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern PaintExtend hb_color_line_get_extend(IntPtr color_line);
         #endregion
 
         #region blob
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        [return: MarshalAs(UnmanagedType.I1)]        
+        [return: MarshalAs(UnmanagedType.I1)] 
         internal static extern bool hb_blob_is_immutable(IntPtr blob);
 
         
@@ -177,7 +181,7 @@ namespace TextMeshDOTS.HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_font_draw_glyph(IntPtr font, uint glyph, DrawDelegates drawFunctions, ref DrawData draw_data);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_font_paint_glyph(IntPtr font, uint glyph, PaintDelegates paintFunctions, ref PaintData paint_data,uint palette_index, uint foreground);
+        public static extern void hb_font_paint_glyph(IntPtr font, uint glyph, PaintDelegates paintFunctions, ref PaintData paint_data, uint palette_index, ColorARGB foreground);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_shape(IntPtr font, IntPtr buffer, IntPtr features, uint num_features);
         //[DllImport(HarfBuzz, CallingConvention = CallConvention)]

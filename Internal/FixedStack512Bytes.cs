@@ -2,9 +2,9 @@ using Unity.Collections;
 
 namespace TextMeshDOTS
 {
-    public struct FixedStack512Bytes<T> where T : unmanaged
+    internal struct FixedStack512Bytes<T> where T : unmanaged
     {
-        public FixedList512Bytes<T> m_buffer;
+        FixedList512Bytes<T> m_buffer;
         public bool IsEmpty => m_buffer.IsEmpty;
         public void Add(in T item) => m_buffer.Add(in item);
         public T Pop()

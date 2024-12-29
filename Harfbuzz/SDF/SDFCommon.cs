@@ -37,22 +37,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             glyphRect.min += shift;
 			glyphRect.max += shift;
 		}
-        public static void TransformGlyph(ref DrawData drawData, float2x3 transform)
-        {
-            var edges = drawData.edges;
-            for (int k = 0, kk = edges.Length; k < kk; k++)
-            {
-                ref var edge = ref edges.ElementAt(k);
-                edge.start_pos = math.mul(transform, new float3(edge.start_pos,1));
-                edge.end_pos = math.mul(transform, new float3(edge.end_pos, 1));
-                edge.control1 = math.mul(transform, new float3(edge.control1, 1));
-                edge.control2 = math.mul(transform, new float3(edge.control2, 1));
-                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
-            }
-            ref var glyphRect = ref drawData.glyphRect;
-            glyphRect.min = math.mul(transform, new float3(glyphRect.min, 1));
-            glyphRect.max = math.mul(transform, new float3(glyphRect.max, 1));
-        }
+        
 
         public static void WriteGlyphOutlineToFile(string path, in NativeList<SDFEdge> edges)
         {
