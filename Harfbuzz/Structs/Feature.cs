@@ -1,9 +1,6 @@
-using System;
 using System.Runtime.InteropServices;
-using Unity.Collections;
-using UnityEngine;
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct Feature

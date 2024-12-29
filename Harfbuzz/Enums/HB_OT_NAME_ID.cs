@@ -1,4 +1,4 @@
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     public enum HB_OT_NAME_ID
     {

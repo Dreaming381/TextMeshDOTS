@@ -1,6 +1,4 @@
-using UnityEngine;
-
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public struct SignedDistance
     {

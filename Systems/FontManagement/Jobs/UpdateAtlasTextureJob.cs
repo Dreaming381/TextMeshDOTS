@@ -2,15 +2,13 @@ using Unity.Burst;
 using Unity.Jobs;
 using Unity.Collections;
 using Unity.Profiling;
-using TextMeshDOTS;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine.TextCore;
 using UnityEngine;
-using static UnityEditorInternal.VersionControl.ListControl;
+using TextMeshDOTS.HarfBuzz.SDF;
 
-
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.TextProcessing
 {
     [BurstCompile]
     struct UpdateAtlasTextureJob : IJobParallelForDefer

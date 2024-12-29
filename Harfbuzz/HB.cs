@@ -1,12 +1,10 @@
-using HarfBuzz.SDF;
 using System;
 using System.Runtime.InteropServices;
-using TextMeshDOTS;
-using UnityEngine;
-using static HarfBuzz.SDF.DrawDelegates;
-using static HarfBuzz.SDF.PaintDelegates;
+using TextMeshDOTS.HarfBuzz.SDF;
+using static TextMeshDOTS.HarfBuzz.SDF.DrawDelegates;
+using static TextMeshDOTS.HarfBuzz.SDF.PaintDelegates;
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     public static unsafe class HB
     {
@@ -14,6 +12,15 @@ namespace HarfBuzz
         {
             return (((uint)c1 & 0xFF) << 24) | (((uint)c2 & 0xFF) << 16) | (((uint)c3 & 0xFF) << 8) | ((uint)c4 & 0xFF);
         }
+        public static uint HB_Color(byte b, byte g, byte r, byte a)
+        {
+            return (((uint)b & 0xFF) << 24) | (((uint)g & 0xFF) << 16) | (((uint)r & 0xFF) << 8) | ((uint)a & 0xFF);
+        }
+        public static byte hb_color_get_alpha(uint color)=>(byte)((color) & 0xFF);
+        public static byte hb_color_get_red(uint color) => (byte)(((color) >> 8) & 0xFF);
+        public static byte hb_color_get_green(uint color) => (byte)(((color) >> 16) & 0xFF);
+        public static byte hb_color_get_blue(uint color) => (byte)(((color) >> 24) & 0xFF);
+
 
         private const string HarfBuzz = "libharfbuzz-0.dll";
         private const CallingConvention CallConvention = CallingConvention.Cdecl;
@@ -170,7 +177,7 @@ namespace HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_font_draw_glyph(IntPtr font, uint glyph, DrawDelegates drawFunctions, ref DrawData draw_data);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_font_paint_glyph(IntPtr font, uint glyph, PaintDelegates paintFunctions, ref PaintData paint_data,uint palette_index, Color32 foreground);
+        public static extern void hb_font_paint_glyph(IntPtr font, uint glyph, PaintDelegates paintFunctions, ref PaintData paint_data,uint palette_index, uint foreground);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_shape(IntPtr font, IntPtr buffer, IntPtr features, uint num_features);
         //[DllImport(HarfBuzz, CallingConvention = CallConvention)]

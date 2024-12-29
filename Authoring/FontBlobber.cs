@@ -1,10 +1,9 @@
-using HarfBuzz;
+using TextMeshDOTS.HarfBuzz;
 using System.IO;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEditor;
-using UnityEngine;
-using Font = HarfBuzz.Font;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 
 namespace TextMeshDOTS.Authoring

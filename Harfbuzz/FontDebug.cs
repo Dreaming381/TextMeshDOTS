@@ -1,9 +1,8 @@
-using HarfBuzz;
 using System;
 using Unity.Collections;
 using UnityEngine;
 
-namespace TextMeshDOTS
+namespace TextMeshDOTS.HarfBuzz
 {
     public class FontDebug
     {

@@ -1,7 +1,7 @@
 using System;
 using Unity.Collections;
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     public struct Face : IDisposable
     {

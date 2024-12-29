@@ -1,4 +1,4 @@
-using HarfBuzz;
+using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;

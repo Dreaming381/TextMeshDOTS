@@ -1,13 +1,12 @@
 using Unity.Burst;
 using Unity.Jobs;
 using Unity.Collections;
-using UnityEngine;
 using Unity.Entities;
-using TextMeshDOTS;
 using UnityEngine.TextCore;
+using TextMeshDOTS.HarfBuzz;
 
 
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.TextProcessing
 {
     [BurstCompile]
     struct GetGlyphRectsJob : IJob

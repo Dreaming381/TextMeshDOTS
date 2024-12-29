@@ -2,7 +2,7 @@ using System.IO;
 using Unity.Collections;
 using Unity.Mathematics;
 
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public static class SDFCommon
     {
@@ -33,9 +33,27 @@ namespace HarfBuzz.SDF
                 edge.control2 += shift;
                 //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
             }
-			drawData.glyphRect.min+=shift;
-			drawData.glyphRect.max+=shift;
+            ref var glyphRect = ref drawData.glyphRect;
+            glyphRect.min += shift;
+			glyphRect.max += shift;
 		}
+        public static void TransformGlyph(ref DrawData drawData, float2x3 transform)
+        {
+            var edges = drawData.edges;
+            for (int k = 0, kk = edges.Length; k < kk; k++)
+            {
+                ref var edge = ref edges.ElementAt(k);
+                edge.start_pos = math.mul(transform, new float3(edge.start_pos,1));
+                edge.end_pos = math.mul(transform, new float3(edge.end_pos, 1));
+                edge.control1 = math.mul(transform, new float3(edge.control1, 1));
+                edge.control2 = math.mul(transform, new float3(edge.control2, 1));
+                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
+            }
+            ref var glyphRect = ref drawData.glyphRect;
+            glyphRect.min = math.mul(transform, new float3(glyphRect.min, 1));
+            glyphRect.max = math.mul(transform, new float3(glyphRect.max, 1));
+        }
+
         public static void WriteGlyphOutlineToFile(string path, in NativeList<SDFEdge> edges)
         {
             if(edges.Length == 0) return;
@@ -73,52 +91,50 @@ namespace HarfBuzz.SDF
             writer.WriteLine();
             writer.Close();
         }
-        // public static void WriteGlyphOutlineToFile(string path, ref DrawData drawData)
-        // {
-            // var edges = drawData.edges;
-            // var contourIDs= drawData.contourIDs;
-            // if (contourIDs.Length < 2 || edges.Length == 0)
-                // return;
-
-            // StreamWriter writer = new StreamWriter(path, false);
-            // SDFEdge edge;
-            // for (int contourID = 0, end= contourIDs.Length - 1; contourID < end; contourID++) //for each contour
-            // {
-                // int startID = contourIDs[contourID];
-                // int nextStartID = contourIDs[contourID + 1];
-                // for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
-                // {
-                    // edge = edges[edgeID];
-                    // writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
-                    // //writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.control1.x} {edge.control1.y} {edge.end_pos.x} {edge.end_pos.y} {edge.edge_type}");
-                // }
-                // //edge = edges[nextStartID - 1];
-                // //writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
-                // writer.WriteLine();
-            // }
-            // writer.Close();
-        // }
-		public static void WriteGlyphOutlineToFile(string path, ref DrawData drawData)
+        public static void WriteGlyphOutlineToFile(string path, ref DrawData drawData)
         {
             var edges = drawData.edges;
-            var contourIDs= drawData.contourIDs;
+            var contourIDs = drawData.contourIDs;
             if (contourIDs.Length < 2 || edges.Length == 0)
                 return;
 
             StreamWriter writer = new StreamWriter(path, false);
-			for (int edgeID = 0, end =drawData.edges.Length ; edgeID <end ; edgeID++) //for each edge
-			{
-				var edge = edges[edgeID];
-				writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.end_pos.x} {edge.end_pos.y}");
-			}
-			writer.WriteLine();
-            for (int contourID = 0, end= contourIDs.Length; contourID < end; contourID++) //for each contour
+            SDFEdge edge;
+            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
-				var contour = contourIDs[contourID];
-                writer.WriteLine($"{contour}");               
+                int startID = contourIDs[contourID];
+                int nextStartID = contourIDs[contourID + 1];
+                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
+                {
+                    edge = edges[edgeID];
+                    writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
+                    //writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.control1.x} {edge.control1.y} {edge.end_pos.x} {edge.end_pos.y} {edge.edge_type}");
+                }
+                writer.WriteLine();
             }
             writer.Close();
         }
+        //public static void WriteGlyphOutlineToFile(string path, ref DrawData drawData)
+        //      {
+        //          var edges = drawData.edges;
+        //          var contourIDs= drawData.contourIDs;
+        //          if (contourIDs.Length < 2 || edges.Length == 0)
+        //              return;
+
+        //          StreamWriter writer = new StreamWriter(path, false);
+        //	for (int edgeID = 0, end =drawData.edges.Length ; edgeID <end ; edgeID++) //for each edge
+        //	{
+        //		var edge = edges[edgeID];
+        //		writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y} {edge.end_pos.x} {edge.end_pos.y}");
+        //	}
+        //	writer.WriteLine();
+        //          for (int contourID = 0, end= contourIDs.Length; contourID < end; contourID++) //for each contour
+        //          {
+        //		var contour = contourIDs[contourID];
+        //              writer.WriteLine($"{contour}");               
+        //          }
+        //          writer.Close();
+        //      }
         public static void WriteMinDistancesToFile(string path, in NativeList<SDFDebug> distanceHelper)
         {
             if (distanceHelper.Length == 0) return;

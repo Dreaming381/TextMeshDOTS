@@ -1,7 +1,7 @@
 using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Entities;
-using HarfBuzz;
+using TextMeshDOTS.HarfBuzz;
 
 namespace TextMeshDOTS.TextProcessing
 {

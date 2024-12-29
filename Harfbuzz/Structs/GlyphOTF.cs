@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Unity.Entities;
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct GlyphOTF : IBufferElementData

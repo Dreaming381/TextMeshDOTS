@@ -2,11 +2,10 @@ using Unity.Burst;
 using Unity.Jobs;
 using Unity.Collections;
 using Unity.Entities;
-using TextMeshDOTS;
 using TextMeshDOTS.Collections;
-using UnityEngine;
+using TextMeshDOTS.HarfBuzz;
 
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.TextProcessing
 {
     [BurstCompile]
     struct UpdateNativeFontJob : IJob

@@ -3,8 +3,7 @@ using Unity.Burst.Intrinsics;
 using Unity.Burst;
 using Unity.Entities;
 using Unity.Collections;
-using HarfBuzz;
-using UnityEngine;
+using TextMeshDOTS.HarfBuzz;
 
 namespace TextMeshDOTS.TextProcessing
 {

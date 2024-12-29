@@ -1,13 +1,10 @@
-using HarfBuzz.SDF;
-using HarfBuzz;
 using System.Runtime.InteropServices;
 using System;
-using TextMeshDOTS;
 using UnityEngine;
-using AOT;
-using static HarfBuzz.SDF.DrawDelegates;
+using Unity.Mathematics;
+using static TextMeshDOTS.HarfBuzz.SDF.DrawDelegates;
 
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public struct PaintDelegates : IDisposable
     {
@@ -48,17 +45,48 @@ namespace HarfBuzz.SDF
             HB.hb_paint_funcs_set_sweep_gradient_func(ptr, sweepGradientDelegate, IntPtr.Zero, releaseDelegate);
             HB.hb_paint_funcs_set_push_group_func(ptr, pushGroupDelegate, IntPtr.Zero, releaseDelegate);
             HB.hb_paint_funcs_set_pop_group_func(ptr, popGroupDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_paint_funcs_set_custom_palette_color_func(ptr, customPaletteColorDelegate, IntPtr.Zero, releaseDelegate);
+            //HB.hb_paint_funcs_set_custom_palette_color_func(ptr, customPaletteColorDelegate, IntPtr.Zero, releaseDelegate);
             HB.hb_paint_funcs_make_immutable(ptr);
         }
 
         public static void HB_paint_push_transform_func_t (IntPtr harfBuzzPaintFunct, ref PaintData data, float xx, float yx, float xy, float yy, float dx, float dy, IntPtr user_data)
         {
-            Debug.Log("push_transform");
+            //var oldTransformM2 = data.transformStack.Peek();
+            //var oldTransform = new float3x3(
+            //    new float3(oldTransformM2.c0, 0),
+            //    new float3(oldTransformM2.c1, 0),
+            //    new float3(0, 0, 1));
+            //var newTransform = new float3x3(
+            //    new float3(xx, yx, 0),
+            //    new float3(xy, yy, 0),
+            //    new float3(0, 0, 1));
+            //var combined = math.mul(oldTransform, newTransform);
+            //var final = new float2x3
+            //{
+            //    c0 = combined.c0.xy,
+            //    c1 = combined.c1.xy,
+            //    c2 = new float2
+            //    {
+            //        x = oldTransformM2.c2.x - dx,
+            //        y = oldTransformM2.c2.y - dy,
+            //    }
+            //};
+
+            var final = new float2x3
+            {
+                c0 = new float2(xx, yx),
+                c1 = new float2(xy, yy),
+                c2 = new float2(-dx, -dy)
+            };
+
+            data.transformStack.Add(final);
+            Debug.Log($"push_transform {xx} {yx} {xy} {yy} {dx} {dy}");
+            //Debug.Log($"current transfrom xx {final.c0.x} yx {final.c0.y} xy {final.c1.x} yy {final.c1.y} dx {final.c2.x} {final.c2.y}");
         }
 
         public static void HB_paint_pop_transform_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
+            data.transformStack.Pop();
             Debug.Log("pop_transform");
         }
 
@@ -70,23 +98,41 @@ namespace HarfBuzz.SDF
 
         public static void HB_paint_push_clip_glyph_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_codepoint_t*/ uint glyph, IntPtr font, IntPtr user_data)
         {
-            Debug.Log("push_clip_glyph");
+            HB.hb_font_draw_glyph(font, glyph, data.drawDelegates, ref data.clipGlyph);
+            //SDFCommon.WriteGlyphOutlineToFile("ClipGlyph.txt", ref data.clipGlyph);
+            Debug.Log($"push_clip_glyph {glyph}");
         }
 
         public static void HB_paint_push_clip_rectangle_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, float xmin, float ymin, float xmax, float ymax, IntPtr user_data)
         {
-            Debug.Log("push_clip_rectangle");
+            data.clipRect = new BBox(new float2(xmin, ymin), new float2(xmax, ymax));
+            Debug.Log($"push_clip_rectangle {data.clipRect}");
         }
 
         public static void HB_paint_pop_clip_func_t (IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
+            data.clipGlyph.Clear();
+            data.clipRect = BBox.Empty;
             Debug.Log("pop_clip");
         }
 
         public static void HB_paint_color_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, bool is_foreground, uint color, IntPtr user_data)
         {
-            Debug.Log("color");
+            //color = data.color;
+            //SDFCommon.CenterGlyphInGlyphRect(ref data.clipGlyph, (int)data.clipGlyph.glyphRect.width, (int)data.clipGlyph.glyphRect.width, 0);
+            //SDFCommon.TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
+
+            for (int i = 0, ii=data.transformStack.m_buffer.Length; i < ii; i++)
+            //for (int i = data.transformStack.m_buffer.Length-1; i >=0 ; i--)
+            {
+                var transform = data.transformStack.m_buffer[i];
+                SDFCommon.TransformGlyph(ref data.clipGlyph, transform);
+            }
+
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, color, data.width, data.height);
+            //Debug.Log($"color {color}");            
         }
+        
 
         public static bool hb_paint_image_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_blob_t*/ Blob image, uint width, uint height, HB_PAINT_IMAGE_FORMAT format, float slant, ref GlyphExtents extents, IntPtr user_data)
         {            
@@ -112,12 +158,10 @@ namespace HarfBuzz.SDF
             Debug.Log("sweep_gradient");
         }
 
-
         public static void HB_paint_push_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
             Debug.Log("push_group");
         }
-
 
         public static void HB_paint_pop_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, HB_PAINT_COMPOSITE_MODE mode, IntPtr user_data)
         {
@@ -126,7 +170,14 @@ namespace HarfBuzz.SDF
 
         public static bool hb_paint_custom_palette_color_func_t (IntPtr harfBuzzPaintFunct, ref PaintData data, uint color_index, uint color, IntPtr user_data)
         {
-            Debug.Log("hb_paint_custom_palette_color");
+            //Debug.Log($"hb_paint_custom_palette_color color_index {color_index} color {color}");
+            data.color = color;
+            var r = HB.hb_color_get_red(color);
+            var g = HB.hb_color_get_green(color);
+            var b = HB.hb_color_get_blue(color);
+            var a = HB.hb_color_get_alpha(color);
+            Color32 textureColor = new Color32(r, g, b, a);
+            Debug.Log($"hb_paint_custom_palette_color color_index {color_index} color {textureColor}");
             return true;
         }
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]

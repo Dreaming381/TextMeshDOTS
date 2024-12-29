@@ -1,6 +1,4 @@
-using UnityEngine;
-
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     // from https://github.com/behdad/harfbuzz/blob/master/src/hb-common.h
     public enum Script

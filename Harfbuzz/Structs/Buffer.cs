@@ -1,11 +1,9 @@
 using System;
-using UnityEngine;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 
-
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     public unsafe struct Buffer : IDisposable
     {

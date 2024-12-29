@@ -1,8 +1,7 @@
 using Unity.Collections;
 using Unity.Mathematics;
-using UnityEngine.TextCore;
 
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public struct DrawData
     {

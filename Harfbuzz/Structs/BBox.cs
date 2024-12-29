@@ -1,8 +1,7 @@
-using Codice.Client.BaseCommands;
 using System;
 using Unity.Mathematics;
 
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public struct BBox: IEquatable<BBox>
     {
@@ -128,8 +127,8 @@ namespace HarfBuzz.SDF
         }
         public override string ToString()
         {
-            return $"x {min.x} y {min.y} width {width} height {height}";
-            //return $"min {min} max {max} width {width} height {height}";
+            //return $"x {min.x} y {min.y} width {width} height {height}";
+            return $"min {min} max {max}";
         }
     }
 }

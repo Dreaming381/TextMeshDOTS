@@ -1,6 +1,4 @@
-using UnityEngine;
-
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     public enum MetricTag
     {

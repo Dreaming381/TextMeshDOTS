@@ -1,10 +1,10 @@
-using HarfBuzz.SDF;
 using System;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Collections;
+using TextMeshDOTS.HarfBuzz.SDF;
 
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     public struct Blob : IDisposable
     {

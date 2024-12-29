@@ -1,11 +1,8 @@
 using System;
-using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 using System.Runtime.InteropServices;
-using Unity.Collections;
-using UnityEngine;
 
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     public struct Language
     {

@@ -1,11 +1,10 @@
 using Unity.Burst;
 using Unity.Entities;
 using Unity.Profiling;
-using HarfBuzz;
+using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Jobs;
-using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {

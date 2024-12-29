@@ -3,10 +3,9 @@ using Unity.Collections;
 using Unity.Mathematics;
 using System.Runtime.CompilerServices;
 using UnityEngine.TextCore;
-using TextMeshDOTS;
 using Unity.Entities;
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {    
     public static class NativeAtlas
     {

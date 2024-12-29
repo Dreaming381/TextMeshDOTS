@@ -1,8 +1,6 @@
-using System;
 using System.Runtime.InteropServices;
-using Unity.Entities;
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {
     [StructLayout(LayoutKind.Sequential)]
     public unsafe partial struct FontExtents

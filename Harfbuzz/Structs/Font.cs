@@ -1,12 +1,10 @@
 using System;
-using TextMeshDOTS;
-using UnityEngine;
+using TextMeshDOTS.HarfBuzz.SDF;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using HarfBuzz.SDF;
 
 
-namespace HarfBuzz
+namespace TextMeshDOTS.HarfBuzz
 {    
     public struct Font : IDisposable
     {
@@ -40,7 +38,7 @@ namespace HarfBuzz
         {
             HB.hb_font_draw_glyph(ptr, glyphID, drawFunctions, ref drawData);
         }
-        public void PaintGlyph(uint glyphID, ref PaintData paintData, PaintDelegates paintFunctions, uint palette, Color32 foreground)
+        public void PaintGlyph(uint glyphID, ref PaintData paintData, PaintDelegates paintFunctions, uint palette, uint foreground)
         {
             HB.hb_font_paint_glyph(ptr, glyphID, paintFunctions, ref paintData, palette, foreground);
         }

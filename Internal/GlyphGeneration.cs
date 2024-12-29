@@ -4,7 +4,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine.TextCore.Text;
-using HarfBuzz;
+using TextMeshDOTS.HarfBuzz;
 using Unity.Burst.CompilerServices;
 using UnityEngine;
 

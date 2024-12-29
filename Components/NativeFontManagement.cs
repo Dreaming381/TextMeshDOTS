@@ -1,5 +1,5 @@
-using HarfBuzz;
-using HarfBuzz.SDF;
+using TextMeshDOTS.HarfBuzz;
+using TextMeshDOTS.HarfBuzz.SDF;
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
-using Font = HarfBuzz.Font;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {

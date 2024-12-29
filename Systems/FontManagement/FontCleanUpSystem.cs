@@ -1,10 +1,8 @@
-using TextMeshDOTS;
-using Unity.Burst;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
 
-namespace HarfBuzz
+namespace TextMeshDOTS.TextProcessing
 {
 
     partial class FontCleanupSystem : SystemBase

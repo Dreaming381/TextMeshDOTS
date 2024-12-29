@@ -1,12 +1,9 @@
-
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
-using UnityEngine;
 using UnityEngine.TextCore;
 
-
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public static class SDF
     {

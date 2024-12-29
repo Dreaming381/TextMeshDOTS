@@ -1,14 +1,10 @@
-using UnityEngine;
 using TextMeshDOTS.RichText;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine.TextCore.Text;
-using HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Burst.Intrinsics;
-using System.Linq;
-
 
 namespace TextMeshDOTS.TextProcessing
 {

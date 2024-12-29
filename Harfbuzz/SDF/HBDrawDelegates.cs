@@ -2,9 +2,8 @@ using AOT;
 using System;
 using System.Runtime.InteropServices;
 using Unity.Mathematics;
-using UnityEngine;
 
-namespace HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public struct DrawDelegates : IDisposable
     {

@@ -2,7 +2,6 @@ using Unity.Entities;
 using UnityEngine;
 using Unity.Collections;
 using Unity.Profiling;
-using HarfBuzz.SDF;
 using Unity.Jobs;
 
 

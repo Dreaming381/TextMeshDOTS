@@ -1,9 +1,6 @@
-using HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Entities;
-using UnityEngine;
-
 
 namespace TextMeshDOTS.TextProcessing
 {
