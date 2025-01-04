@@ -3,7 +3,6 @@ using System;
 using UnityEngine;
 using Unity.Mathematics;
 using static TextMeshDOTS.HarfBuzz.SDF.DrawDelegates;
-using System.Runtime.CompilerServices;
 
 namespace TextMeshDOTS.HarfBuzz.SDF
 {
@@ -58,8 +57,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 c1 = new float2(xy, yy),
                 c2 = new float2(-dx, -dy)
             };
-            transform = mul(data.transformStack.Peek(), transform);
-
+            transform = PaintUtils.mul(data.transformStack.Peek(), transform);
             //var transform = new AffineTransform(
             //    new float3(dx, dy, 0f), 
             //    new float3x3
@@ -109,9 +107,10 @@ namespace TextMeshDOTS.HarfBuzz.SDF
 
         public static void HB_paint_color_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, bool is_foreground, ColorARGB color, IntPtr user_data)
         {
+            var solidColor = new SolidColor(color);
             //SDFCommon.CenterGlyphInGlyphRect(ref data.clipGlyph, 2048, 2048, 0);
-            TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, color, data.width, data.height);
+            PaintUtils.TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, solidColor, data.width, data.height);
             //Debug.Log($"color {color}");            
         }       
 
@@ -124,28 +123,26 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             return true;
         }
 
-        public static void HB_paint_linear_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_color_line_t*/ ColorLine color_line, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data)
+        public static void HB_paint_linear_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_color_line_t*/ ColorLine colorLine, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data)
         {
-            Debug.Log("linear_gradient");
-            var extend = color_line.GetExtend();
-            Debug.Log($"{extend} ");
-            var len = color_line.GetColorStops(0, ref data.colorStops);
-
-            for (int i = 0; i < len; i++)
+            //Do-To: make it work for vertical lines
+            x2 -= 1;
+            var lineGradient = new LineGradient(x0, y0, x1, y1, x2, y2);
+            if (!lineGradient.isValid)
             {
-                var colorStop = data.colorStops[i];
-                Debug.Log($"{colorStop.offset} {colorStop.color} {colorStop.isForeground}");
+                Debug.LogError("Linegradient is not valid");
+                return;
             }
-            var p0 = new float2(x0, y0);
-            var p1 = new float2(x1, y1);
-            var p2 = new float2(x2, y2);
-            Debug.Log($"p0: {p0}");
-            Debug.Log($"p1: {p1}");
-            Debug.Log($"p2: {p2}");
 
-            TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
-            ScanlineRasterizer.RasterizeLinearGradient(ref data.clipGlyph, data.textureData, data.colorStops, p0, p1, p2, data.width, data.height);
-            
+            lineGradient.InitializeColorLine(colorLine);
+            Debug.Log($"{x0} {y0}");
+            Debug.Log($"{x1} {y1}");
+            Debug.Log($"{x2} {y2}");
+             
+
+            var transform = data.transformStack.Peek();
+            PaintUtils.TransformGlyph(ref data.clipGlyph, transform);
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, lineGradient, data.width, data.height);
         }
 
         public static void HB_paint_radial_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_color_line_t*/ ColorLine color_line, float x0, float y0, float r0, float x1, float y1, float r1, IntPtr user_data)
@@ -173,51 +170,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             //Debug.Log($"hb_paint_custom_palette_color color_index {color_index} color {color}");
             return true;
         }
-        public static void TransformGlyph(ref DrawData drawData, AffineTransform transform)
-        {
-            var edges = drawData.edges;
-            for (int k = 0, kk = edges.Length; k < kk; k++)
-            {
-                ref var edge = ref edges.ElementAt(k);
-                edge.start_pos = math.transform(transform, new float3(edge.start_pos, 0)).xy;
-                edge.end_pos = math.transform(transform, new float3(edge.end_pos, 0)).xy;
-                edge.control1 = math.transform(transform, new float3(edge.control1, 0)).xy;
-                edge.control2 = math.transform(transform, new float3(edge.control2, 0)).xy;
-                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
-            }
-            ref var glyphRect = ref drawData.glyphRect;
-            glyphRect.min = math.transform(transform, new float3(glyphRect.min, 0)).xy;
-            glyphRect.max = math.transform(transform, new float3(glyphRect.max, 0)).xy;
-        }
-        public static void TransformGlyph(ref DrawData drawData, float2x3 transform)
-        {
-            var edges = drawData.edges;
-            for (int k = 0, kk = edges.Length; k < kk; k++)
-            {
-                ref var edge = ref edges.ElementAt(k);
-                edge.start_pos = mul(transform, edge.start_pos);
-                edge.end_pos = mul(transform, edge.end_pos);
-                edge.control1 = mul(transform, edge.control1);
-                edge.control2 = mul(transform, edge.control2);
-                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
-            }
-            ref var glyphRect = ref drawData.glyphRect;
-            glyphRect.min = mul(transform, glyphRect.min);
-            glyphRect.max = mul(transform, glyphRect.max);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2x3 mul(float2x3 a, float2x3 b)
-        {
-            return new float2x3(
-                 a.c0.x * b.c0 + a.c0.y * b.c1,
-                 a.c1.x * b.c0 + a.c1.y * b.c1,
-                 a.c2.x * b.c0 + a.c2.y * b.c1 + b.c2);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 mul(float2x3 a, float2 b)
-        {
-            return a.c0 * b.x + a.c1 * b.y + a.c2;
-        }
+        
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void PushTransformDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, float xx, float yx, float xy, float yy, float dx, float dy, IntPtr user_data);

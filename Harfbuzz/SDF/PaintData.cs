@@ -1,6 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
@@ -17,7 +15,6 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         internal FixedStack512Bytes<float2x3> transformStack;
         //internal FixedStack512Bytes<AffineTransform> transformStack;
         public uint color;
-        public NativeArray<ColorStop> colorStops;
         public NativeArray<ColorARGB> textureData;
 
         public HB_PAINT_IMAGE_FORMAT imageFormat;
@@ -40,7 +37,6 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             });
 
             color = default;
-            colorStops = new NativeArray<ColorStop>(16, allocator);
             this.textureData = textureData;
             this.width = width;
             this.height = height;

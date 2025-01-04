@@ -11,17 +11,18 @@ namespace TextMeshDOTS.HarfBuzz
     {
         IntPtr ptr;
 
-        public uint GetColorStops(uint start, ref NativeArray<ColorStop> colorStops)
+        public int GetColorStops(uint start, out NativeArray<ColorStop> colorStops)
         {
-            uint count = (uint)colorStops.Length;
+            uint count = 16;
+            colorStops = new NativeArray<ColorStop>((int)count, Allocator.Temp);
             var len = HB.hb_color_line_get_color_stops(ptr, 0, ref count, (IntPtr)colorStops.GetUnsafePtr());
             if (len > count)
             {
-                Debug.Log("capacity was not sufficient, increasing");
-                colorStops = colorStops=new NativeArray<ColorStop>((int)len, Allocator.Temp);
+                Debug.Log("capacity of 16 was not sufficient, increasing");
+                colorStops = new NativeArray<ColorStop>((int)len, Allocator.Temp);
                 HB.hb_color_line_get_color_stops(ptr, 0, ref len, (IntPtr)colorStops.GetUnsafePtr());
             }
-            return len;
+            return (int)len;
         }
 
         public PaintExtend GetExtend()
