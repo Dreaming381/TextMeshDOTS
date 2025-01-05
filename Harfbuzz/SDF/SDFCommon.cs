@@ -1,9 +1,12 @@
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
+using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
 using UnityEngine;
+using static Unity.Entities.SystemBaseDelegates;
 
 namespace TextMeshDOTS.HarfBuzz.SDF
 {
@@ -25,20 +28,26 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             return m_colorARGB;
         }
     }
-        public struct LineGradient : IPattern
+
+    //To-Do: implement this via matrix rotation. Would avoid  "gradientNotRotated" check for every pixel
+    public struct LineGradient : IPattern
     {
         NativeArray<ColorStop> m_colorStops;
         int m_colorStopCount;
         PaintExtend wrapMode;
         float x01;
+        float x0;
         public float p0p2Slope;
         public float p0p2YIntercept;
+        public bool gradientNotRotated;
         
         public bool isValid;
         public LineGradient(float x0, float y0, float x1, float y1, float x2, float y2)
         {
             if (Hint.Unlikely((x0 == x1 && y0 == y1) || (x0 == x2 && y0 == y2)))
                 isValid = false; //poins idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
+
+            this.x0 = x0;
 
             var x02 = x2 - x0;
             var y02 = y2 - y0;
@@ -48,7 +57,9 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             double det = PaintUtils.cross(x01, y01, x02, y02);
             if (Hint.Unlikely(math.abs(det) < PaintUtils.Epsilon))
                 isValid = false; //lines are parallel, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr
-
+            
+            gradientNotRotated = x02 == 0 ? true : false;
+            
             p0p2Slope = y02 / x02;
             p0p2YIntercept = y2 + (x2 * -p0p2Slope);
 
@@ -63,19 +74,21 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             wrapMode = colorLine.GetExtend();
             m_colorStopCount = colorLine.GetColorStops(0, out NativeArray<ColorStop> colorStops);
             m_colorStops = colorStops;
-            for (int i = 0; i < m_colorStopCount; i++)
-            {
-                var colorStop = colorStops[i];
-                Debug.Log($"{colorStop.offset} {colorStop.color} {colorStop.isForeground} ");
-            }
+            //for (int i = 0; i < m_colorStopCount; i++)
+            //{
+            //    var colorStop = colorStops[i];
+            //    Debug.Log($"{colorStop.offset} {colorStop.color} {colorStop.isForeground} ");
+            //}
         }
         /// <summary> Method to turn design space coordinate into UV. Line gradient only has U </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         float GetU(float x, float y)
         {
+            if (gradientNotRotated)
+               return (x - x0) / x01;
+            
             var xOnP0P2Slope = (y - p0p2YIntercept) / p0p2Slope;
-            var u = (x - xOnP0P2Slope) / x01;
-            return u;
+            return (x - xOnP0P2Slope) / x01;
         }
 
         public ColorARGB GetColor(float u)
@@ -91,13 +104,225 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, u);
         }
     }
+
+    public struct RadialGradient : IPattern
+    {
+
+        NativeArray<ColorStop> m_colorStops;
+        int m_colorStopCount;
+        PaintExtend wrapMode;
+        float width;
+        float height;
+        float2 c0;
+        float r0;
+        float2 c1;
+        float r1;
+
+        public bool isValid;
+        public RadialGradient(float x0, float y0, float r0, float x1, float y1, float r1, float width, float height)
+        {
+            if (Hint.Unlikely((x0 == x1 && y0 == y1) && (r0 == r1)))
+                isValid = false; //poins idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
+
+            this.width = width;
+            this.height = height;
+            c0 = new float2(x0, y0);
+            c0.x /= width;
+            c0.y /= height;
+            this.r0 = r0;
+            c1 = new float2(x1, y1);
+            c1.x /= width;
+            c1.y /= height;
+            this.r1 = r1;
+            m_colorStops = default;
+            m_colorStopCount = 0;
+            wrapMode = PaintExtend.PAD;
+            isValid = true;
+        }
+
+        public void InitializeColorLine(ColorLine colorLine)
+        {
+            wrapMode = colorLine.GetExtend();
+            m_colorStopCount = colorLine.GetColorStops(0, out NativeArray<ColorStop> colorStops);
+            m_colorStops = colorStops;
+            Debug.Log($"wrap: {wrapMode}");
+            for (int i = 0; i < m_colorStopCount; i++)
+            {
+                var colorStop = colorStops[i];
+                Debug.Log($"{colorStop.offset} {colorStop.color} {colorStop.isForeground}");
+            }
+        }
+        /// <summary> Method to turn design space coordinate into UV. Line gradient only has U </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        float2 GetUV(float x, float y)
+        {
+            float2 uv;
+            uv.x = x / (width - 1);
+            uv.y = y / (height - 1);
+            return uv;
+        }
+
+        //public ColorARGB GetColor(float u)
+        //{
+        //    PaintUtils.ApplyWrapMode(ref u, wrapMode);
+        //    return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, u);
+        //}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ColorARGB GetColor(float x, float y)
+        {
+            var uv = GetUV(x, y);
+            var radialAdress = PaintUtils.RadialAddress(uv, c1);
+            PaintUtils.ApplyWrapMode(ref radialAdress, PaintExtend.REPEAT);
+            return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, radialAdress);
+        }
+    }
+
+
+
+
+    public struct RadialGradientNew : IPattern
+    {
+        //https://github.com/foo123/Gradient/blob/80e362bea2cb7deb3ab4c2125bf6fa49a726e4be/README.md
+        NativeArray<ColorStop> m_colorStops;
+        int m_colorStopCount;
+        PaintExtend wrapMode;
+
+        float a;
+        float b;
+        float c;
+        float x0; float y0; float r0; float x1; float y1; float r1, height, width;
+
+
+        public bool isValid;
+        public RadialGradientNew(float x0, float y0, float r0, float x1, float y1, float r1, float width, float height)
+        {
+            if (Hint.Unlikely((x0 == x1 && y0 == y1) && (r0 == r1)))
+                isValid = false; //poins idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
+
+            a = r0 * r0 - 2 * r0 * r1 + r1 * r1 - x0 * x0 + 2 * x0 * x1 - x1 * x1 - y0 * y0 + 2 * y0 * y1 - y1 * y1;
+            b = -2 * r0 * r0 + 2 * r0 * r1 + 2 * x0 * x0 - 2 * x0 * x1 + 2 * y0 * y0 - 2 * y0 * y1;
+            c = -x0 * x0 - y0 * y0 + r0 * r0;
+            this.x0 = x0;
+            this.y0 = y0;
+            this.r0 = r0;
+            this.x1 = x1;
+            this.y1 = y1;
+            this.r1 = r1;
+            this.width = width;
+            this.height = height;
+
+            m_colorStops = default;
+            m_colorStopCount = 0;
+            wrapMode = PaintExtend.PAD;
+            isValid = true;
+        }
+
+        public void InitializeColorLine(ColorLine colorLine)
+        {
+            wrapMode = colorLine.GetExtend();
+            m_colorStopCount = colorLine.GetColorStops(0, out NativeArray<ColorStop> colorStops);
+            m_colorStops = colorStops;
+            Debug.Log($"wrap: {wrapMode}");
+            for (int i = 0; i < m_colorStopCount; i++)
+            {
+                var colorStop = colorStops[i];
+                Debug.Log($"{colorStop.offset} {colorStop.color} {colorStop.isForeground}");
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ColorARGB GetColor(float x, float y)
+        {
+            float t, px, py, pr=default, s, stop1, stop2;
+            s = QuadraticRoots(a, b - 2 * x * x0 + 2 * x * x1 - 2 * y * y0 + 2 * y * y1, c - x * x + 2 * x * x0 - y * y + 2 * y * y0, out var root1, out var root2);
+            if (s==0)
+            {
+                t = -1;
+            }
+            else if (s==2)
+            {
+                if (0 <= root1 && root1 <= 1 && 0 <= root2 && root2 <= 1) t = math.min(root1, root2);
+                else if (0 <= root1 && root1 <= 1) t = root1;
+                else if (0 <= root2 && root2 <= 1) t = root2;
+                else t = math.min(root1, root2);
+            }
+            else
+            {
+                t = root1;
+            }
+            if (0 > t || t > 1)
+            {
+                //px = x - x0; 
+                //py = y - y0;
+                px = (x - x0) / width; 
+                py = (y - y0) / height;
+                pr = math.sqrt(px * px + py * py);
+                if (pr < r0)
+                {
+                    t = 0;
+                    stop2 = stop1 = 0;
+                }
+                else
+                {
+                    t = 1;
+                    stop2 = stop1 = m_colorStopCount - 1;
+                }
+            }
+            else
+            {
+                //t = dr1/(dr2 + dr1);
+                stop2 = default;
+                for (int i = 0; i < m_colorStopCount; i++)
+                {
+                    if (t < m_colorStops[i].offset)
+                    {
+                        stop2 = i;
+                        break;
+                    }
+                }
+                stop1 = 0 == stop2 ? 0 : (stop2 - 1);
+            }
+            //pr /= 300;           
+            PaintUtils.ApplyWrapMode(ref pr, PaintExtend.REPEAT);
+            return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, pr);
+        }
+
+        int LinearRoots(float a, float b, out float root)
+        {
+            root = default;
+            if (math.abs(a) < PaintUtils.Epsilon)
+                return 0;
+            root = -b / a;
+            return 1;
+        }
+        int QuadraticRoots(float a, float b, float c, out float root1, out float root2)
+        {
+            root1 = default; root2 = default;
+            if (math.abs(a) < PaintUtils.Epsilon)
+                return LinearRoots(b,c, out root1);
+            var d = b * b - 4 * a * c;
+
+            if (math.abs(d)<PaintUtils.Epsilon)
+            {
+                root1 = -b / (2 * a);
+                return 1;
+            }
+            if (0 > d) 
+                return 0;
+            var DS = math.sqrt(d);
+            root1 = (-b - DS) / (2 * a);
+            root2 = (-b + DS) / (2 * a);
+            return 2;
+        }
+
+    }
     public static class PaintUtils
     {
         public static bool GetGradientDirection(float x0, float y0, float x1, float y1, float x2, float y2, out float2 p3)
         {
             p3 = default;
             if (Hint.Unlikely((x0 ==x1 && y0==y1)|| (x0 == x2 && y0 == y2)))
-                return false; //poins idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr
+                return false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr
             
             var x02 = x2 - x0;
             var y02 = y2 - y0;
@@ -310,7 +535,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         }
         public static float RadialAddress(float2 uv, float2 focus)
         {
-            uv = (uv - new float2(0.5f, 0.5f)) * 2.0f;
+            //uv = (uv - new float2(0.5f, 0.5f)) * 2.0f;
             //focus = (focus - new Vector2(0.5f, 0.5f)) * 2.0f;
             var pointOnPerimiter = RayUnitCircleFirstHit(focus, math.normalize(uv - focus));
 
@@ -323,6 +548,21 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 return (uv.y - focus.y) / diff.y;
             return 0.0f;
         }
+        //public static float RadialAddress(float2 uv, float2 focus)
+        //{
+        //    uv = (uv - new float2(0.5f, 0.5f)) * 2.0f;
+        //    //focus = (focus - new Vector2(0.5f, 0.5f)) * 2.0f;
+        //    var pointOnPerimiter = RayUnitCircleFirstHit(focus, math.normalize(uv - focus));
+
+        //    //return (uv - focus).magnitude / (pointOnPerimiter - focus).magnitude;
+        //    // This is faster
+        //    var diff = pointOnPerimiter - focus;
+        //    if (math.abs(diff.x) > Epsilon)
+        //        return (uv.x - focus.x) / diff.x;
+        //    if (math.abs(diff.y) > Epsilon)
+        //        return (uv.y - focus.y) / diff.y;
+        //    return 0.0f;
+        //}
     }
     public static class SDFCommon
     {
