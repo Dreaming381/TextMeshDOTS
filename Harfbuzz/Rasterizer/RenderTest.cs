@@ -1,8 +1,6 @@
 ﻿using TextMeshDOTS.HarfBuzz.SDF;
 using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS;
 using Unity.Collections;
-using Unity.Entities;
 using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
@@ -33,9 +31,9 @@ public class RenderTest : MonoBehaviour
         LoadFont(sourceFont, 50);
 
         //DrawTest(letter);
-        //PaintPNGTest("😉");
-        //PaintTest(letter);
-        PaintTest(glyphID);
+        //PaintPNGTest("😉");// 🥰 😉
+        PaintTest(letter);
+        //PaintTest(glyphID);
     }
 
     void Update()

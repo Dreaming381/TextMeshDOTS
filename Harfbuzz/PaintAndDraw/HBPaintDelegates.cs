@@ -89,7 +89,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         {
             HB.hb_font_draw_glyph(font, glyph, data.drawDelegates, ref data.clipGlyph);
             //SDFCommon.WriteGlyphOutlineToFile("ClipGlyph.txt", ref data.clipGlyph);
-            Debug.Log($"push_clip_glyph {glyph}");
+            Debug.Log($"push_clip_glyph {glyph}; clipGlyph Rect: {data.clipGlyph.glyphRect}");
         }
 
         public static void HB_paint_push_clip_rectangle_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, float xmin, float ymin, float xmax, float ymax, IntPtr user_data)
@@ -108,6 +108,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         public static void HB_paint_color_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, bool is_foreground, ColorARGB color, IntPtr user_data)
         {
             //SDFCommon.CenterGlyphInGlyphRect(ref data.clipGlyph, 2048, 2048, 0);
+            SDFCommon.AlignClipRectWithZero(ref data.clipGlyph, data.clipRect);
             var solidColor = new SolidColor(color);            
             PaintUtils.TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
             ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, solidColor, data.width, data.height);
@@ -123,11 +124,12 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             return true;
         }
 
-        public static void HB_paint_linear_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_color_line_t*/ ColorLine colorLine, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data)
+        public static void HB_paint_linear_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data)
         {
             //SDFCommon.CenterGlyphInGlyphRect(ref data.clipGlyph, 2048, 2048, 0);
+            SDFCommon.AlignClipRectWithZero(ref data.clipGlyph, data.clipRect);
             Debug.Log($"Line gradient: {x0} {y0} / {x1} {y1} / {x2} {y2}");
-            var lineGradient = new LineGradient(x0, y0, x1, y1, x2, y2);
+            var lineGradient = new LineGradient(x0, y0, x1, y1, x2, y2, colorLine.GetExtend());
             if (!lineGradient.isValid)
             {
                 Debug.LogError("Line gradient is not valid");
@@ -140,14 +142,15 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, lineGradient, data.width, data.height);
         }
 
-        public static void HB_paint_radial_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_color_line_t*/ ColorLine colorLine, float x0, float y0, float r0, float x1, float y1, float r1, IntPtr user_data)
+        public static void HB_paint_radial_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float r0, float x1, float y1, float r1, IntPtr user_data)
         {
             //SDFCommon.CenterGlyphInGlyphRect(ref data.clipGlyph, 2048, 2048, 0);
+            SDFCommon.AlignClipRectWithZero(ref data.clipGlyph, data.clipRect);
             Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");
-            var radialGradient = new RadialGradientNew(x0, y0, r0, x1, y1, r1, data.clipRect.width, data.clipRect.height);
+            var radialGradient = new RadialGradient(x0, y0, r0, x1, y1, r1, colorLine.GetExtend());
             if (!radialGradient.isValid)
             {
-                Debug.LogError("Line gradient is not valid");
+                Debug.LogError("Radial gradient is not valid");
                 return;
             }
             radialGradient.InitializeColorLine(colorLine);
@@ -156,9 +159,19 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, radialGradient, data.width, data.height);
         }
 
-        public static void HB_paint_sweep_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_color_line_t*/ IntPtr color_line, float x0, float y0, float start_angle, float end_angle, IntPtr user_data)
+        public static void HB_paint_sweep_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float startAngle, float endAngle, IntPtr user_data)
         {
-            Debug.Log("Sweep gradient");
+            Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");
+            var sweepGradient = new SweepGradient(x0, y0, startAngle, endAngle, colorLine.GetExtend());
+            sweepGradient.InitializeColorLine(colorLine);
+            if (!sweepGradient.isValid)
+            {
+                Debug.LogError("Sweep gradient is not valid");
+                return;
+            }
+            var transform = data.transformStack.Peek();
+            PaintUtils.TransformGlyph(ref data.clipGlyph, transform);
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, sweepGradient, data.width, data.height);
         }
 
         public static void HB_paint_push_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
@@ -201,10 +214,10 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         public delegate bool ImageDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_blob_t*/ Blob image, uint width, uint height, HB_PAINT_IMAGE_FORMAT format, float slant, ref GlyphExtents extents, IntPtr user_data);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate void LinearOrRadialGradientDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_color_line_t*/ ColorLine color_line, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data);
+        public delegate void LinearOrRadialGradientDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine color_line, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate void SweepGradientDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_color_line_t*/ IntPtr color_line, float x0, float y0, float start_angle, float end_angle, IntPtr user_data);
+        public delegate void SweepGradientDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine color_line, float x0, float y0, float start_angle, float end_angle, IntPtr user_data);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void PopGroupDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, HB_PAINT_COMPOSITE_MODE mode, IntPtr user_data);

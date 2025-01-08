@@ -1,7 +1,7 @@
 using System;
 using Unity.Mathematics;
 
-namespace TextMeshDOTS.HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz
 {
     public struct BBox: IEquatable<BBox>
     {

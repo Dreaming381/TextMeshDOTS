@@ -6,6 +6,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine.TextCore;
 using UnityEngine;
+using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.SDF;
 
 namespace TextMeshDOTS.TextProcessing

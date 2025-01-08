@@ -22,6 +22,13 @@ namespace TextMeshDOTS.HarfBuzz
                 colorStops = new NativeArray<ColorStop>((int)len, Allocator.Temp);
                 HB.hb_color_line_get_color_stops(ptr, 0, ref len, (IntPtr)colorStops.GetUnsafePtr());
             }
+            for (int i = 0; i < len; i++)
+            {
+                var colorStop = colorStops[i];
+                Debug.Log($"{colorStop.offset} {colorStop.color} {colorStop.isForeground}");
+            }
+            var colorStopSlice = new NativeSlice<ColorStop>(colorStops, 0, (int)len);
+            colorStopSlice.Sort(default(ColorStopComparer));
             return (int)len;
         }
 
