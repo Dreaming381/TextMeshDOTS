@@ -1,5 +1,6 @@
 using System;
 using Unity.Mathematics;
+using UnityEngine.TextCore;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -103,6 +104,18 @@ namespace TextMeshDOTS.HarfBuzz
             var max = math.max(p0, p1);
             return new BBox(min, max);
         }
+        //public void Transform(float2x3 transform)
+        //{
+        //    var bl = min;
+        //    var tl = new float2(min.x, max.y);
+        //    var tr = max;
+        //    var br = new float2(max.x, min.y);
+
+        //    min
+        //    var tl = min.y;
+        //    var rotatedMin = PaintUtils.mul(transform, glyphRect.min);
+        //    return new BBox(min, max);
+        //}
         public bool Equals(BBox other)
         {
             return this == other;
@@ -127,8 +140,8 @@ namespace TextMeshDOTS.HarfBuzz
         }
         public override string ToString()
         {
-            //return $"x {min.x} y {min.y} width {width} height {height}";
-            return $"min {min} max {max}";
+            return $"x {min.x} y {min.y} width {width} height {height}";
+            //return $"min {min} max {max}";
         }
     }
 }

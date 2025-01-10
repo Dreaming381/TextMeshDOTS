@@ -5,22 +5,25 @@ using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz.SDF
 {
+    /// <summary>
+    /// textureData and clipRect (informing about texture width and height) are the ultimate output of the paint API
+    /// use this output to blit it into target texture (atlas) at desired location
+    /// </summary>     
     public struct PaintData : IDisposable
     {
-        public int width;
-        public int height;
         public DrawDelegates drawDelegates;
         public DrawData clipGlyph;
-        public BBox clipRect;
-        internal FixedStack512Bytes<float2x3> transformStack;
-        //internal FixedStack512Bytes<AffineTransform> transformStack;
-        public uint color;
-        public NativeArray<ColorARGB> textureData;
 
+        internal FixedStack512Bytes<float2x3> transformStack; //could also use Unity AffineTransform (but this would require use of float3 vs float2)
+        public uint color;
+  
+        public BBox clipRect;
+        public NativeArray<ColorARGB> textureData;
         public HB_PAINT_IMAGE_FORMAT imageFormat;
         public Blob imageBlob;
 
-        public PaintData(DrawDelegates drawDelegates, NativeArray<ColorARGB> textureData, int width, int height, int edgeCapacity, int contourCapacity, Allocator allocator)
+
+        public PaintData(DrawDelegates drawDelegates, int edgeCapacity, int contourCapacity, Allocator allocator)
         {
             this.drawDelegates = drawDelegates;
             clipGlyph = new DrawData(edgeCapacity, contourCapacity, allocator);
@@ -37,9 +40,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             });
 
             color = default;
-            this.textureData = textureData;
-            this.width = width;
-            this.height = height;
+            this.textureData = default;
         }
         public void Clear()
         {

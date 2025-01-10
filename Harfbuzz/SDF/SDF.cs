@@ -296,7 +296,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                             if (index > maxIndex)
                                 maxIndex = index;
                             
-                            if (EqualsLargeValues(dists[index].sign, 0)) // check if the pixel is already set
+                            if (EqualsForSmallValues(dists[index].sign, 0)) // check if the pixel is already set
                                 dists[index] = dist;
                             else
                             {
@@ -329,7 +329,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
 
                     // if the pixel is not set, its shortest distance is more than `spread`
                     var dist = dists[sourceIndex];                    
-                    if (EqualsLargeValues(dist.sign, 0))
+                    if (EqualsForSmallValues(dist.sign, 0))
                     {
                         dist.sign = outsideSign;
                         dist.distance = -spread;
@@ -472,7 +472,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             else
                 signedDistance.distance = math.length(nearest_vector);
 
-            if (!EqualsLargeValues(frac, 0) && !EqualsLargeValues(frac, 1))
+            if (!EqualsForSmallValues(frac, 0) && !EqualsForSmallValues(frac, 1))
                 signedDistance.cross = 1;
             else
             {
@@ -536,7 +536,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             signedDistance.distance = min;
             signedDistance.sign = signedDistance.cross < 0 ? 1 : -1;
 
-            if (!EqualsLargeValues(min_factor, 0) && !EqualsLargeValues(min_factor, 1))
+            if (!EqualsForSmallValues(min_factor, 0) && !EqualsForSmallValues(min_factor, 1))
                 signedDistance.cross = 1;   // the two are perpendicular
             else
             {
@@ -604,7 +604,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             signedDistance.cross = cross2D(nearest_vector, direction);
             signedDistance.distance = min;
             signedDistance.sign = signedDistance.cross < 0 ? 1 : -1;
-            if (!EqualsLargeValues(min_factor, 0) && !EqualsLargeValues(min_factor, 1))
+            if (!EqualsForSmallValues(min_factor, 0) && !EqualsForSmallValues(min_factor, 1))
                 signedDistance.cross = 1;   // the two are perpendicular
             else
             {
@@ -631,12 +631,12 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         }
 
         /// <summary>Relative tolerance comparison of x and y, fails values become small </summary>
-        public static bool EqualsSmallValues(float x, float y)
+        public static bool EqualsForLargeValues(float x, float y)
         {
             return math.abs(x - y) <= relativeTolerance * math.max(math.abs(x), math.abs(y));
         }
-        /// <summary>Absolute tolerance comparison of x and y, fails values become large  </summary>
-        public static bool EqualsLargeValues(float x, float y)
+        /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
+        public static bool EqualsForSmallValues(float x, float y)
         {
             return (math.abs(x - y) <= absolutTolerane);
         }

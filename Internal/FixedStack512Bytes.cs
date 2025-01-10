@@ -25,7 +25,9 @@ namespace TextMeshDOTS
                 Pop();
             return Peek();
         }
+        public T this[int index] { get => m_buffer[index]; set => m_buffer[index] = value; }
         public void Clear() => m_buffer.Clear();
+        public readonly int Length => m_buffer.Length;        
     }
 }
 

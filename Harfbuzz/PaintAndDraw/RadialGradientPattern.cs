@@ -1,7 +1,11 @@
 using System.Runtime.CompilerServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
+using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
+using UnityEditor;
+using UnityEngine.Rendering;
+using static Unity.Entities.SystemBaseDelegates;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -52,52 +56,34 @@ namespace TextMeshDOTS.HarfBuzz
         public ColorARGB GetColor(float x, float y)
         {
             float t;
-            var s = QuadraticRoots(a, b - 2 * x * x0 + 2 * x * x1 - 2 * y * y0 + 2 * y * y1, c - x * x + 2 * x * x0 - y * y + 2 * y * y0, out var root1, out var root2);
+            var s = PaintUtils.QuadraticRoots(
+                a, 
+                b - 2 * x * x0 + 2 * x * x1 - 2 * y * y0 + 2 * y * y1, 
+                c - x * x + 2 * x * x0 - y * y + 2 * y * y0,
+                out float2 roots);
+
+            float px, py, pr;
+            px = x - x0; py = y - y0;
+            pr = math.sqrt(px * px + py * py);
             if (s == 0)
-            {
-                t = -1;
-            }
+                return new ColorARGB(255, 255, 255, 255); //outside of cone is not painted.
             else if (s == 2)
             {
-                if (0 <= root1 && root1 <= 1 && 0 <= root2 && root2 <= 1) t = math.min(root1, root2);
-                else if (0 <= root1 && root1 <= 1) t = root1;
-                else if (0 <= root2 && root2 <= 1) t = root2;
-                else t = math.min(root1, root2);
+                //if (0 <= roots[0] && roots[0] <= 1 && 0 <= roots[1] && roots[1] <= 1) t = math.min(roots[0], roots[1]);
+                //else if (0 <= roots[0] && roots[0] <= 1) t = roots[0];
+                //else if (0 <= roots[1] && roots[1] <= 1) t = roots[1];
+                //else t = math.min(roots[0], roots[1]);
+                t = math.max(roots[0], roots[1]);
+                if(t < 0 && pr > (r0+r1))
+                    return new ColorARGB(255, 255, 255, 255); //outside of cone is not painted.
             }
             else
             {
-                t = root1;
+                t = roots[0];                
             }
+
             PaintUtils.ApplyWrapMode(ref t, wrapMode);
-            return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, t);
-        }
-
-        int LinearRoots(float a, float b, out float root)
-        {
-            root = default;
-            if (math.abs(a) < PaintUtils.Epsilon)
-                return 0;
-            root = -b / a;
-            return 1;
-        }
-        int QuadraticRoots(float a, float b, float c, out float root1, out float root2)
-        {
-            root1 = default; root2 = default;
-            if (math.abs(a) < PaintUtils.Epsilon)
-                return LinearRoots(b, c, out root1);
-            var d = b * b - 4 * a * c;
-
-            if (math.abs(d) < PaintUtils.Epsilon)
-            {
-                root1 = -b / (2 * a);
-                return 1;
-            }
-            if (0 > d)
-                return 0;
-            var DS = math.sqrt(d);
-            root1 = (-b - DS) / (2 * a);
-            root2 = (-b + DS) / (2 * a);
-            return 2;
+            return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, t);            
         }
     }
 }

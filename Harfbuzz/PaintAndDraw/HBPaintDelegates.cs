@@ -3,6 +3,7 @@ using System;
 using UnityEngine;
 using Unity.Mathematics;
 using static TextMeshDOTS.HarfBuzz.SDF.DrawDelegates;
+using Unity.Collections;
 
 namespace TextMeshDOTS.HarfBuzz.SDF
 {
@@ -55,80 +56,61 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             {
                 c0 = new float2(xx, yx),
                 c1 = new float2(xy, yy),
-                c2 = new float2(-dx, -dy)
+                c2 = new float2(dx, dy)
             };
-            transform = PaintUtils.mul(data.transformStack.Peek(), transform);
-            //var transform = new AffineTransform(
-            //    new float3(dx, dy, 0f), 
-            //    new float3x3
-            //    {
-            //        c0 = new float3(xx, yx, 0),
-            //        c1 = new float3(xy, yy, 0),
-            //        c2 = new float3( 0,  0, 1)
-            //    });
-            //transform = math.mul(data.transformStack.Peek(), final);
-
+            //transform = PaintUtils.mul(data.transformStack.Peek(), transform);
+            transform = PaintUtils.mul(transform, data.transformStack.Peek());
             data.transformStack.Add(transform);
-            Debug.Log($"push_transform {xx} {yx} {xy} {yy} {dx} {dy}");
-        }
-        
+            //Debug.Log($"push transform {xx} {yx} {xy} {yy} {dx} {dy} (stack: {data.transformStack.Length}) ");
+        }        
 
         public static void HB_paint_pop_transform_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
-        {
+        {            
             data.transformStack.Pop();
-            Debug.Log("pop_transform");
+            //Debug.Log($"pop transform (stack: {data.transformStack.Length})");
         }
 
         public static bool hb_paint_color_glyph_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_codepoint_t*/ uint glyph, IntPtr font, IntPtr user_data)
         {
-            Debug.Log("hb_paint_color_glyph");
+            //Debug.Log("hb_paint_color_glyph");
             return true;
         }
 
         public static void HB_paint_push_clip_glyph_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_codepoint_t*/ uint glyph, IntPtr font, IntPtr user_data)
         {
             HB.hb_font_draw_glyph(font, glyph, data.drawDelegates, ref data.clipGlyph);
-            //SDFCommon.WriteGlyphOutlineToFile("ClipGlyph.txt", ref data.clipGlyph);
-            Debug.Log($"push_clip_glyph {glyph}; clipGlyph Rect: {data.clipGlyph.glyphRect}");
+            //SDFCommon.WriteGlyphOutlineToFile("ClipGlyph.txt", ref data.clipGlyph, false);
+            //Debug.Log($"push clip glyph {glyph}; clipGlyph Rect: {data.clipGlyph.glyphRect}");
         }
 
         public static void HB_paint_push_clip_rectangle_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, float xmin, float ymin, float xmax, float ymax, IntPtr user_data)
         {
-            data.clipRect = new BBox(new float2(xmin, ymin), new float2(xmax, ymax));
-            Debug.Log($"push_clip_rectangle {data.clipRect}");
+            var clipRect = new BBox(new float2(xmin, ymin), new float2(xmax, ymax));
+            data.clipRect = clipRect;
+            data.textureData = new NativeArray<ColorARGB>((int)(clipRect.width) * (int)clipRect.height, Allocator.Temp);
+            //data.textureData = new NativeArray<ColorARGB>(1024 * 1024, Allocator.Temp);
+            //Debug.Log($"push clip rectangle {clipRect}");
         }
 
         public static void HB_paint_pop_clip_func_t (IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
             data.clipGlyph.Clear();
-            data.clipRect = BBox.Empty;
-            Debug.Log("pop_clip");
+            //Debug.Log("pop clip glyph");
         }
 
         public static void HB_paint_color_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, bool is_foreground, ColorARGB color, IntPtr user_data)
         {
-            //SDFCommon.CenterGlyphInGlyphRect(ref data.clipGlyph, 2048, 2048, 0);
-            SDFCommon.AlignClipRectWithZero(ref data.clipGlyph, data.clipRect);
-            var solidColor = new SolidColor(color);            
-            PaintUtils.TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, solidColor, data.width, data.height);
-            Debug.Log($"paint color {color}");
+            //Debug.Log($"color {color}");
+            var solidColor = new SolidColor(color);
+
+            var transform = data.transformStack.Peek();
+            PaintUtils.TransformGlyph(ref data.clipGlyph, transform);
+            
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, solidColor, data.clipRect);            
         }       
-
-        public static bool hb_paint_image_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_blob_t*/ Blob image, uint width, uint height, HB_PAINT_IMAGE_FORMAT format, float slant, ref GlyphExtents extents, IntPtr user_data)
-        {            
-            Debug.Log("hb_paint_image");
-            data.imageBlob = image;
-            data.imageFormat = format;
-            Debug.Log($"width {width} height {height}  format {format} {image.Length}");
-            return true;
-        }
-
         public static void HB_paint_linear_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data)
         {
-            //SDFCommon.CenterGlyphInGlyphRect(ref data.clipGlyph, 2048, 2048, 0);
-            SDFCommon.AlignClipRectWithZero(ref data.clipGlyph, data.clipRect);
-            Debug.Log($"Line gradient: {x0} {y0} / {x1} {y1} / {x2} {y2}");
+            //Debug.Log($"Line gradient: {x0} {y0} / {x1} {y1} / {x2} {y2}");
             var lineGradient = new LineGradient(x0, y0, x1, y1, x2, y2, colorLine.GetExtend());
             if (!lineGradient.isValid)
             {
@@ -138,15 +120,14 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             lineGradient.InitializeColorLine(colorLine);
 
             var transform = data.transformStack.Peek();
-            PaintUtils.TransformGlyph(ref data.clipGlyph, transform);
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, lineGradient, data.width, data.height);
+            PaintUtils.TransformGlyph(ref data.clipGlyph, transform);            
+
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, lineGradient, data.clipRect);
         }
 
         public static void HB_paint_radial_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float r0, float x1, float y1, float r1, IntPtr user_data)
         {
-            //SDFCommon.CenterGlyphInGlyphRect(ref data.clipGlyph, 2048, 2048, 0);
-            SDFCommon.AlignClipRectWithZero(ref data.clipGlyph, data.clipRect);
-            Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");
+            //Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");
             var radialGradient = new RadialGradient(x0, y0, r0, x1, y1, r1, colorLine.GetExtend());
             if (!radialGradient.isValid)
             {
@@ -154,14 +135,16 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 return;
             }
             radialGradient.InitializeColorLine(colorLine);
+
             var transform = data.transformStack.Peek();
             PaintUtils.TransformGlyph(ref data.clipGlyph, transform);
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, radialGradient, data.width, data.height);
+            
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, radialGradient, data.clipRect);
         }
 
         public static void HB_paint_sweep_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float startAngle, float endAngle, IntPtr user_data)
         {
-            Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");
+            //Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");
             var sweepGradient = new SweepGradient(x0, y0, startAngle, endAngle, colorLine.GetExtend());
             sweepGradient.InitializeColorLine(colorLine);
             if (!sweepGradient.isValid)
@@ -169,19 +152,21 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 Debug.LogError("Sweep gradient is not valid");
                 return;
             }
+
             var transform = data.transformStack.Peek();
             PaintUtils.TransformGlyph(ref data.clipGlyph, transform);
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, sweepGradient, data.width, data.height);
+            
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, sweepGradient, data.clipRect);
         }
 
         public static void HB_paint_push_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
-            Debug.Log("push group");
+            //Debug.Log("push group");
         }
 
         public static void HB_paint_pop_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, HB_PAINT_COMPOSITE_MODE mode, IntPtr user_data)
         {
-            Debug.Log("pop group");
+            //Debug.Log("pop group");
         }
 
         public static bool hb_paint_custom_palette_color_func_t (IntPtr harfBuzzPaintFunct, ref PaintData data, uint color_index, ColorARGB color, IntPtr user_data)
@@ -189,7 +174,15 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             //Debug.Log($"hb_paint_custom_palette_color color_index {color_index} color {color}");
             return true;
         }
-        
+
+        public static bool hb_paint_image_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_blob_t*/ Blob image, uint width, uint height, HB_PAINT_IMAGE_FORMAT format, float slant, ref GlyphExtents extents, IntPtr user_data)
+        {
+            Debug.Log("hb_paint_image");
+            data.imageBlob = image;
+            data.imageFormat = format;
+            Debug.Log($"width {width} height {height}  format {format} {image.Length}");
+            return true;
+        }
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void PushTransformDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, float xx, float yx, float xy, float yy, float dx, float dy, IntPtr user_data);

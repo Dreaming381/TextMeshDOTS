@@ -8,6 +8,7 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public static class PaintUtils
     {
+
         public static bool GetGradientDirection(float x0, float y0, float x1, float y1, float x2, float y2, out float2 p3)
         {
             p3 = default;
@@ -37,50 +38,16 @@ namespace TextMeshDOTS.HarfBuzz
             return true;
         }
 
-        /// <summary> returns angle from -PI to PI </summary>
-        public static float Angle(float2 from, float2 to)
-        {
-            // orientation of angle matches that of the coordinate system.
-            // In a left - handed coordinate system, i.e.x pointing right and y down,
-            // this will mean you get a positive sign for clockwise angles.
-            // If the orientation of the coordinate system is mathematical with y up,
-            // you get counterclockwise angles as is the convention in mathematics.
-            // Changing the order of the inputs will change the sign,
-            // see also https://stackoverflow.com/questions/14066933/direct-way-of-computing-clockwise-angle-between-2-vectors
-            var det = cross(from, to);   //# determinant. change order to get other direction
-            var dot = math.dot(from, to);
-
-
-            //var angle = math.atan2(det, dot); //returns angle from -PI to PI (atan2(y, x) = atan2(sin, cos))
-            //if (angle < 0) { angle += math.PI2_DBL; }         //returns angle from 0 to 2PI 
-
-            var angle = math.atan2(-det, -dot) + math.PI;   //returns angle from 0 to 2PI 
-            angle = WrapAroundLimit(angle, math.PI2);
-            return angle;
-        }
+       
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float WrapAroundLimit(float val, float lim)
         {
             return math.clamp(val - math.floor(val / lim) * lim, 0f, lim);
         }
-        public static void TransformGlyph(ref DrawData drawData, AffineTransform transform)
-        {
-            var edges = drawData.edges;
-            for (int k = 0, kk = edges.Length; k < kk; k++)
-            {
-                ref var edge = ref edges.ElementAt(k);
-                edge.start_pos = math.transform(transform, new float3(edge.start_pos, 0)).xy;
-                edge.end_pos = math.transform(transform, new float3(edge.end_pos, 0)).xy;
-                edge.control1 = math.transform(transform, new float3(edge.control1, 0)).xy;
-                edge.control2 = math.transform(transform, new float3(edge.control2, 0)).xy;
-                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
-            }
-            ref var glyphRect = ref drawData.glyphRect;
-            glyphRect.min = math.transform(transform, new float3(glyphRect.min, 0)).xy;
-            glyphRect.max = math.transform(transform, new float3(glyphRect.max, 0)).xy;
-        }
         public static void TransformGlyph(ref DrawData drawData, float2x3 transform)
         {
+            //Debug.Log($"apply transform {transform.c0.x} {transform.c0.y} {transform.c1.x} {transform.c1.y} {transform.c2.x} {transform.c2.y}");
+            var newGlyphRect = BBox.Empty;
             var edges = drawData.edges;
             for (int k = 0, kk = edges.Length; k < kk; k++)
             {
@@ -89,12 +56,61 @@ namespace TextMeshDOTS.HarfBuzz
                 edge.end_pos = mul(transform, edge.end_pos);
                 edge.control1 = mul(transform, edge.control1);
                 edge.control2 = mul(transform, edge.control2);
+
+                var edgeBBox = BBox.GetLineBBox(edge.start_pos, edge.end_pos);
+                newGlyphRect = BBox.Union(newGlyphRect, edgeBBox);
+            }
+            var before = drawData.glyphRect;
+            drawData.glyphRect=newGlyphRect;
+            //SDFCommon.WriteGlyphOutlineToFile("ClipGlyph-Transformed.txt", ref drawData, false);
+        }
+        public static void CenterGlyphInClipRect(ref DrawData drawData, BBox clipRect, int padding)
+        {
+            var edges = drawData.edges;
+            var shiftx = -drawData.glyphRect.min.x + ((clipRect.width - (drawData.glyphRect.width + 2 * padding)) / 2);
+            var shifty = -drawData.glyphRect.min.y + ((clipRect.height - (drawData.glyphRect.height + 2 * padding)) / 2);
+            float2 shift = new float2(shiftx, shifty);
+            for (int k = 0, kk = edges.Length; k < kk; k++)
+            {
+                ref var edge = ref edges.ElementAt(k);
+                edge.start_pos += shift;
+                edge.end_pos += shift;
+                edge.control1 += shift;
+                edge.control2 += shift;
                 //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
             }
             ref var glyphRect = ref drawData.glyphRect;
-            glyphRect.min = mul(transform, glyphRect.min);
-            glyphRect.max = mul(transform, glyphRect.max);
+            glyphRect.min += shift;
+            glyphRect.max += shift;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int QuadraticRoots(float a, float b, float c, out float2 roots)
+        {
+            roots = default;
+            if (math.abs(a) < Epsilon)
+            {
+                if (math.abs(c) < Epsilon)
+                    return 0;
+                roots[0] = -c / b;
+                return 1;
+            }
+            var discriminant = b * b - 4 * a * c;
+
+            if (math.abs(discriminant) < Epsilon)
+            {
+                roots[0] = -b / (2 * a);
+                return 1;
+            }
+            if (discriminant < 0)
+                return 0;
+
+            var DS = math.sqrt(discriminant);
+            roots[0] = (-b - DS) / (2 * a);
+            roots[1] = (-b + DS) / (2 * a);
+            return 2;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2x3 mul(float2x3 a, float2x3 b)
         {
@@ -180,10 +196,6 @@ namespace TextMeshDOTS.HarfBuzz
                     }
                     break;
             }
-            //uv.x = (paintExtend == PaintExtend.REPEAT) ? math.fmod(uv.x, 1.0f) : uv.x; // Wrap
-            //uv.x = (paintExtend == PaintExtend.PAD) ? math.max(math.min(uv.x, 1.0f), 0.0f) : uv.x; // Clamp
-            //float w = math.fmod(uv.x, 2.0f);
-            //uv.x = (paintExtend == PaintExtend.REFLECT) ? (w > 1.0f ? 1.0f - math.fmod(w, 1.0f) : w) : uv.x; // Mirror
         }
         public static void ApplySweepWrapMode(ref float u, float minStop, float maxStop, PaintExtend paintExtend)
         {
@@ -214,7 +226,6 @@ namespace TextMeshDOTS.HarfBuzz
                     break;
             }
         }
-
         public static ColorARGB SampleGradient(NativeArray<ColorStop> stops, int colorStopCount, float u)
         {
             if (stops == null)
@@ -249,51 +260,6 @@ namespace TextMeshDOTS.HarfBuzz
                 //Debug.Log($"last stop ({stop} / {colorStopLength - 1}), color {stops[stop - 1].color} ");
                 return stops[stop - 1].color;
             }
-        }
-        public static float2 RayUnitCircleFirstHit(float2 rayStart, float2 rayDir)
-        {
-            float tca = math.dot(-rayStart, rayDir);
-            float d2 = math.dot(rayStart, rayStart) - tca * tca;
-            System.Diagnostics.Debug.Assert(d2 <= 1.0f);
-            float thc = math.sqrt(1.0f - d2);
-            // solutions for t if the ray intersects
-            float t0 = tca - thc;
-            float t1 = tca + thc;
-            float t = math.min(t0, t1);
-            if (t < 0.0f)
-                t = math.max(t0, t1);
-            System.Diagnostics.Debug.Assert(t >= 0);
-            return rayStart + rayDir * t;
-        }
-        public static float RadialAddress(float2 uv, float2 focus)
-        {
-            //uv = (uv - new float2(0.5f, 0.5f)) * 2.0f;
-            //focus = (focus - new Vector2(0.5f, 0.5f)) * 2.0f;
-            var pointOnPerimiter = RayUnitCircleFirstHit(focus, math.normalize(uv - focus));
-
-            //return (uv - focus).magnitude / (pointOnPerimiter - focus).magnitude;
-            // This is faster
-            var diff = pointOnPerimiter - focus;
-            if (math.abs(diff.x) > Epsilon)
-                return (uv.x - focus.x) / diff.x;
-            if (math.abs(diff.y) > Epsilon)
-                return (uv.y - focus.y) / diff.y;
-            return 0.0f;
-        }
-        //public static float RadialAddress(float2 uv, float2 focus)
-        //{
-        //    uv = (uv - new float2(0.5f, 0.5f)) * 2.0f;
-        //    //focus = (focus - new Vector2(0.5f, 0.5f)) * 2.0f;
-        //    var pointOnPerimiter = RayUnitCircleFirstHit(focus, math.normalize(uv - focus));
-
-        //    //return (uv - focus).magnitude / (pointOnPerimiter - focus).magnitude;
-        //    // This is faster
-        //    var diff = pointOnPerimiter - focus;
-        //    if (math.abs(diff.x) > Epsilon)
-        //        return (uv.x - focus.x) / diff.x;
-        //    if (math.abs(diff.y) > Epsilon)
-        //        return (uv.y - focus.y) / diff.y;
-        //    return 0.0f;
-        //}
+        }        
     }
 }

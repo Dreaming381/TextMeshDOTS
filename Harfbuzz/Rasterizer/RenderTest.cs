@@ -5,6 +5,7 @@ using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
 using Unity.Profiling;
+using TextMeshDOTS;
 
 
 public class RenderTest : MonoBehaviour
@@ -15,6 +16,7 @@ public class RenderTest : MonoBehaviour
     public uint glyphID;
     public int atlasWidth = 64;
     public int atlasHeight = 64;
+    public bool renderGlyphID;
 
     SDFOrientation orientation;
     public DrawDelegates drawDelegates;
@@ -32,8 +34,10 @@ public class RenderTest : MonoBehaviour
 
         //DrawTest(letter);
         //PaintPNGTest("😉");// 🥰 😉
-        PaintTest(letter);
-        //PaintTest(glyphID);
+        if(renderGlyphID)
+            PaintTest(glyphID);
+        else
+            PaintTest(letter);
     }
 
     void Update()
@@ -59,13 +63,13 @@ public class RenderTest : MonoBehaviour
         font.DrawGlyph(glyphInfos[0].codepoint, drawDelegates, ref drawData);
 
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData);
-        //var atlasRect = new GlyphRect { x = 0, y = 0, width = atlasWidth, height = atlasHeight };
-        SDFCommon.CenterGlyphInGlyphRect(ref drawData, atlasWidth, atlasHeight, 0);
+        var atlasRect = new BBox(atlasWidth, atlasHeight);
+        PaintUtils.CenterGlyphInClipRect(ref drawData, atlasRect, 0);
         // SDF.SDFGenerateSubDivision(orientation, ref drawData, textureData, atlasRect, atlasWidth, atlasHeight);
 
         marker.Begin();
         var solidColor = new SolidColor(new ColorARGB(0, 0, 0, 255));
-        ScanlineRasterizer.Rasterize(ref drawData, textureData, solidColor, atlasWidth, atlasHeight);
+        ScanlineRasterizer.Rasterize(ref drawData, textureData, solidColor, drawData.glyphRect);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();
@@ -76,13 +80,22 @@ public class RenderTest : MonoBehaviour
 
     void PaintTest(uint glyphID)
     {
-        var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.ARGB32, false);
-        var textureData = texture2D.GetRawTextureData<ColorARGB>();
-        for (int i = 0; i < textureData.Length; i++)
-            textureData[i] = (ColorARGB)Color.white;
-
-        paintData = new PaintData(drawDelegates, textureData, atlasWidth, atlasHeight, 256, 4, Allocator.Temp);
+        //var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.ARGB32, false);
+        //var textureData = texture2D.GetRawTextureData<ColorARGB>();
+        //for (int i = 0; i < textureData.Length; i++)
+        //    textureData[i] = (ColorARGB)Color.white;
+        
+        paintData = new PaintData(drawDelegates, 256, 4, Allocator.Temp);
+        font.GetGlyphExtends(glyphID, out GlyphExtents glyphExtents);
+        //Debug.Log($"glyphExtents: {glyphExtents}");
+        marker.Begin();
         font.PaintGlyph(glyphID, ref paintData, paintDelegates, 0, new ColorARGB(0, 0, 0, 255));
+        marker.End();
+        var clipRect = paintData.clipRect;
+        //var texture2D = new Texture2D((int)clipRect.max.x, (int)clipRect.max.y, TextureFormat.ARGB32, false);
+        var texture2D = new Texture2D((int)clipRect.width, (int)clipRect.height, TextureFormat.ARGB32, false);
+        //var texture2D = new Texture2D(1024, 1024, TextureFormat.ARGB32, false);
+        texture2D.SetPixelData(paintData.textureData, 0);
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
@@ -93,10 +106,10 @@ public class RenderTest : MonoBehaviour
     }
     void PaintTest(string character)
     {
-        var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.ARGB32, false);
-        var textureData = texture2D.GetRawTextureData<ColorARGB>();
-        for (int i = 0; i < textureData.Length; i++)
-            textureData[i] = (ColorARGB)Color.white;
+        //var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.ARGB32, false);
+        //var textureData = texture2D.GetRawTextureData<ColorARGB>();
+        //for (int i = 0; i < textureData.Length; i++)
+        //    textureData[i] = (ColorARGB)Color.white;
 
         var language = new Language("eng");
         var buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
@@ -104,8 +117,17 @@ public class RenderTest : MonoBehaviour
         font.Shape(buffer);
         var glyphInfos = buffer.GetGlyphInfosSpan();
 
-        paintData = new PaintData(drawDelegates, textureData, atlasWidth, atlasHeight, 256, 4, Allocator.Temp);
-        font.PaintGlyph(glyphInfos[0].codepoint, ref paintData, paintDelegates, 0, new ColorARGB(0, 0, 0, 255)); 
+        paintData = new PaintData(drawDelegates, 256, 4, Allocator.Temp);
+        font.GetGlyphExtends(glyphInfos[0].codepoint, out GlyphExtents glyphExtents);
+        //Debug.Log($"glyphExtents: {glyphExtents}");
+        marker.Begin();
+        font.PaintGlyph(glyphInfos[0].codepoint, ref paintData, paintDelegates, 0, new ColorARGB(0, 0, 0, 255));
+        marker.End();
+        var clipRect = paintData.clipRect;
+        //var texture2D = new Texture2D((int)clipRect.max.x, (int)clipRect.max.y, TextureFormat.ARGB32, false);
+        var texture2D = new Texture2D((int)clipRect.width, (int)clipRect.height, TextureFormat.ARGB32, false);
+        //var texture2D = new Texture2D(1024, 1024, TextureFormat.ARGB32, false);
+        texture2D.SetPixelData(paintData.textureData, 0);
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
