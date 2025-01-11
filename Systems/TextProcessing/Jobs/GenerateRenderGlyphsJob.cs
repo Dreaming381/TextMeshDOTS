@@ -21,7 +21,7 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
 
-        [ReadOnly] public ComponentLookup<DynamicFontAssets> dynamicFontAssetsLookup;
+        [ReadOnly] public ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup;
         [ReadOnly] public ComponentTypeHandle<GlyphMappingMask> glyphMappingMaskHandle;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
@@ -92,7 +92,7 @@ namespace TextMeshDOTS.TextProcessing
                     fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
 
                 GlyphGeneration.CreateRenderGlyphs(ref fontAssetArray, fontEntities,
-                                                    dynamicFontAssetsLookup,
+                                                   dynamicFontAssetsLookup,
                                                    ref m_selectorBuffer,
                                                    ref renderGlyphs,
                                                    ref m_glyphMappingWriter,                                                   

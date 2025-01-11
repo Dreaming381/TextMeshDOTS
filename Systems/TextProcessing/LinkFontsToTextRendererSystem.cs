@@ -22,7 +22,7 @@ namespace TextMeshDOTS
                     .WithAll<UsedGlyphRects>()
                     .WithAll<FreeGlyphRects>()
                     .WithAll<NativeFontPointer>()
-                    .WithAll<DynamicFontAssets>()
+                    .WithAll<DynamicFontAsset>()
                     .WithAll<MaterialMeshInfo>()
                     .Build();
             textQuery = SystemAPI.QueryBuilder()

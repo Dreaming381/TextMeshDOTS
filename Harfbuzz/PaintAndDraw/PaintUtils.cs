@@ -1,13 +1,32 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
-using UnityEngine;
+
 
 namespace TextMeshDOTS.HarfBuzz
 {
     public static class PaintUtils
     {
+        //175: 9811 9812 9813 9814 9815 9816 9819 9820 9799 9801 9802 9803
+        //🐢: 8534 8535 8536 8537 8538 8539
+        //😉: 13293 13288 13317 13318 13287 13319 10662
+        public static int filterGlyph = -1;//13317;
+
+        public static bool DrawGlyph(int glyphID)
+        {
+            if (filterGlyph == -1)
+                return true;
+            else if (glyphID != filterGlyph)
+                return false;
+            else 
+                return true;
+        }
+
+        public readonly static float2x3 AffinityTransformIdentity = new float2x3 {
+                c0 = new float2(1, 0),  // xx, yx
+                c1 = new float2(0, 1),  // xy, yy
+                c2 = new float2(0, 0)};   // x0, y0
 
         public static bool GetGradientDirection(float x0, float y0, float x1, float y1, float x2, float y2, out float2 p3)
         {
@@ -83,22 +102,30 @@ namespace TextMeshDOTS.HarfBuzz
             glyphRect.min += shift;
             glyphRect.max += shift;
         }
+        public static void BlitRawTexture(NativeArray<ColorARGB> src, int srcWidth, int srcHeight,  NativeArray<ColorARGB> dest, int dstWidth, int dstHeight, int destX, int destY)
+        {
+            for (int y = 0; y < srcHeight; y++)
+                NativeArray<ColorARGB>.Copy(src, y * srcWidth, dest, (destY + y) * dstWidth + destX, srcWidth);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int QuadraticRoots(float a, float b, float c, out float2 roots)
+        public static int QuadraticRoots(float a, float b, float c, out float2 roots, out bool tangent)
         {
+            tangent = false;
             roots = default;
             if (math.abs(a) < Epsilon)
             {
                 if (math.abs(c) < Epsilon)
-                    return 0;
+                    return 0;                
                 roots[0] = -c / b;
                 return 1;
             }
             var discriminant = b * b - 4 * a * c;
-
+            if(discriminant ==0)
+                tangent = true;
             if (math.abs(discriminant) < Epsilon)
             {
+               
                 roots[0] = -b / (2 * a);
                 return 1;
             }
@@ -109,7 +136,7 @@ namespace TextMeshDOTS.HarfBuzz
             roots[0] = (-b - DS) / (2 * a);
             roots[1] = (-b + DS) / (2 * a);
             return 2;
-        }
+        }        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2x3 mul(float2x3 a, float2x3 b)

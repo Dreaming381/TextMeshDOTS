@@ -11,7 +11,8 @@ namespace TextMeshDOTS.HarfBuzz
         //https://github.com/foo123/Gradient/blob/80e362bea2cb7deb3ab4c2125bf6fa49a726e4be/README.md
         NativeArray<ColorStop> m_colorStops;
         int m_colorStopCount;
-        PaintExtend wrapMode;
+        PaintExtend paintExtend;
+        float2x3 transform;
         float x0;
         float y0;
         float startAngle;
@@ -22,10 +23,10 @@ namespace TextMeshDOTS.HarfBuzz
         float minStop;
         float maxStop;
         public bool isValid;
-        public SweepGradient(float x0, float y0, float startAngle, float endAngle, PaintExtend paintExtend)
+        public SweepGradient(float x0, float y0, float startAngle, float endAngle, PaintExtend paintExtend, float2x3 transform)
         {
             if (Hint.Unlikely(startAngle == endAngle && (paintExtend == PaintExtend.REPEAT || paintExtend == PaintExtend.REFLECT)))
-                isValid = false; //poins idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
+                isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
 
             this.x0 = x0;
             this.y0 = y0;
@@ -39,7 +40,8 @@ namespace TextMeshDOTS.HarfBuzz
             minStop = default;
             maxStop = default;
             m_colorStopCount = 0;
-            wrapMode = paintExtend;
+            this.paintExtend = paintExtend;
+            this.transform = transform;
             isValid = true;
         }
 
@@ -51,23 +53,26 @@ namespace TextMeshDOTS.HarfBuzz
             minStop = colorStops[0].offset;
             maxStop = colorStops[m_colorStopCount - 1].offset;
             sectorRange = (endAngle - startAngle) / (maxStop - minStop);
-            //Debug.Log($"Angle Range: {math.degrees(sectorRange)} {(maxStop - minStop)}");
 
             startAngleScaled = startAngle + sectorRange * minStop;
             endAngleScaled = startAngle + sectorRange * maxStop;
-
-            //Debug.Log($"startAngle: {math.degrees(startAngle)} scaled: {math.degrees(startAngleScaled)}");
-            //Debug.Log($"endAngle: {math.degrees(endAngle)} scaled: {math.degrees(endAngleScaled)}");
         }
 
+        /// <summary>
+        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates the UV coordinates that 
+        /// a texture of the color gradient would have. These gradients can be rotated/scaled etc by the provided AffineTransforms. 
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ColorARGB GetColor(float x, float y)
         {
-            //To-Do: startAngle > endAngle should reverse gradient
+            var transformedPoint = PaintUtils.mul(transform, new float2(x, y));
+            x = transformedPoint.x;
+            y = transformedPoint.y;
+
             var angle = math.atan2(y - y0, x - x0);   //returns angle from 0 to 2PI 
             angle = PaintUtils.WrapAroundLimit(angle, math.PI2);
             var t = (angle / (endAngleScaled - startAngleScaled)) - startAngle / (endAngle - startAngle);
-            PaintUtils.ApplySweepWrapMode(ref t, minStop, maxStop, wrapMode);
+            PaintUtils.ApplySweepWrapMode(ref t, minStop, maxStop, paintExtend);
             return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, t);
         }
         public float Interpolate(float v1, float v2, float f)

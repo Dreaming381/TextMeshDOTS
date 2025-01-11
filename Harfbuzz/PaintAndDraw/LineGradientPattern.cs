@@ -11,7 +11,8 @@ namespace TextMeshDOTS.HarfBuzz
     {
         NativeArray<ColorStop> m_colorStops;
         int m_colorStopCount;
-        PaintExtend wrapMode;
+        PaintExtend paintExtend;
+        float2x3 transform;
         float x01;
         float y01;
         float x0;
@@ -22,7 +23,7 @@ namespace TextMeshDOTS.HarfBuzz
         public bool vertical;
 
         public bool isValid;
-        public LineGradient(float x0, float y0, float x1, float y1, float x2, float y2, PaintExtend paintExtend)
+        public LineGradient(float x0, float y0, float x1, float y1, float x2, float y2, PaintExtend paintExtend, float2x3 transform)
         {
             if (Hint.Unlikely((x0 == x1 && y0 == y1) || (x0 == x2 && y0 == y2)))
                 isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
@@ -47,7 +48,8 @@ namespace TextMeshDOTS.HarfBuzz
 
             m_colorStops = default;
             m_colorStopCount = 0;
-            wrapMode = paintExtend;
+            this.paintExtend = paintExtend;
+            this.transform = transform;
             isValid = true;
         }
 
@@ -69,16 +71,19 @@ namespace TextMeshDOTS.HarfBuzz
             return (x - xOnP0P2Slope) / x01;
         }
 
-        public ColorARGB GetColor(float u)
-        {
-            PaintUtils.ApplyWrapMode(ref u, wrapMode);
-            return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, u);
-        }
+        /// <summary>
+        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates the UV coordinates that 
+        /// a texture of the color gradient would have. These gradients can be rotated/scaled etc by the provided AffineTransforms. 
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ColorARGB GetColor(float x, float y)
         {
+            var transformedPoint = PaintUtils.mul(transform, new float2(x, y));
+            x = transformedPoint.x;
+            y = transformedPoint.y;
+
             var u = GetU(x, y);
-            PaintUtils.ApplyWrapMode(ref u, wrapMode);
+            PaintUtils.ApplyWrapMode(ref u, paintExtend);
             return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, u);
         }
     }

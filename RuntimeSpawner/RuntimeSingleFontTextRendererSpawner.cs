@@ -27,11 +27,11 @@
 //            initialized = false;
 //            textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref CheckedStateRef);
 //            fontEntityQ = SystemAPI.QueryBuilder()
-//                    .WithAll<HBFontAssetRef>()
+//                    .WithAll<FontAssetRef>()
 //                    .WithAll<FontTextureReference>()
-//                    .WithAll<HBGlyphsInUse>()
-//                    .WithAll<HBMissingGlyphs>()
-//                    .WithAll<HBFontPointer>()
+//                    .WithAll<GlyphsInUse>()
+//                    .WithAll<MissingGlyphs>()
+//                    .WithAll<FontPointer>()
 //                    .WithAll<MaterialMeshInfo>()
 //                    .Build();
 //            RequireForUpdate(fontEntityQ);
@@ -50,7 +50,7 @@
 //                return;
 
 //            var fontEntities = fontEntityQ.ToEntityArray(Allocator.TempJob);
-//            var fontEntity=fontEntities[0];
+//            var fontEntity = fontEntities[0];
 //            fontEntities.Dispose();
 //            //var fontMaterialsBuffer = SystemAPI.GetBuffer<FontMaterialRef>(fontBlobReferenceEntity);
 //            //var fontBlobReferences = SystemAPI.GetBuffer<FontBlobReference>(fontBlobReferenceEntity).ToNativeArray(Allocator.Temp);
@@ -105,9 +105,9 @@
 //                calliString.Append(text1);
 
 //                EntityManager.SetComponentData(entity, textBaseConfiguration);
-//                var fontEntityBuffer = EntityManager.GetComponent<FontBlobReference>(entity).Reinterpret<Entity>();
+//                var fontEntityBuffer = EntityManager.GetComponentData<FontBlobReference>(entity);
 //                fontEntityBuffer.Add(fontEntity);
-//                EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3(-10,7,0)));
+//                EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3(-10, 7, 0)));
 //                EntityManager.SetComponentData(entity, textRenderControl);
 //                EntityManager.SetComponentData(entity, materialMeshInfo);
 //            }

@@ -5,6 +5,7 @@ using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Jobs;
+using System.Runtime.CompilerServices;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -32,7 +33,7 @@ namespace TextMeshDOTS.TextProcessing
             fontEntityQ = SystemAPI.QueryBuilder()
                               .WithAll<UsedGlyphs>()
                               .WithAll<MissingGlyphs>()
-                              .WithAll<DynamicFontAssets>()
+                              .WithAll<DynamicFontAsset>()
                               .Build();
 
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());

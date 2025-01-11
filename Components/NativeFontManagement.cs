@@ -22,9 +22,7 @@ namespace TextMeshDOTS
     #endregion
 
 
-    #region Native FontAsset Components
-    
-
+    #region Native FontAsset Components    
 
     /// <summary> Glyphs requested by hb_shape (=they are guarentied to exist in font), </summary>
     [InternalBufferCapacity(0)]
@@ -53,9 +51,11 @@ namespace TextMeshDOTS
     }    
  
     /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
-    public struct DynamicFontAssets : ICleanupComponentData
-    {
+    public struct DynamicFontAsset : ICleanupComponentData
+    {        
+        public TextureType textureType;
         public UnityObjectRef<Texture2D> texture;
+        public UnityObjectRef<Material> materialDebug;
         public BatchMaterialID fontMaterialID;
         public BlobAssetReference<DynamicFontBlob> blob;
     }
@@ -67,6 +67,7 @@ namespace TextMeshDOTS
         public Face face;           //destroy in cleanup system
         public Font font;           //destroy in cleanup system
         public DrawDelegates drawFunctions; //do not destroy this in cleanup system as those functions are needed for loading other fonts
+        public PaintDelegates paintFunctions; //do not destroy this in cleanup system as those functions are needed for loading other fonts
     }
     /// <summary> Contains  relevant data from loading and using font</summary>
     public struct AtlasData : IComponentData
@@ -142,6 +143,11 @@ namespace TextMeshDOTS
     {
         public Entity entity;
         public uint glyphID;
+    }
+    public enum TextureType: byte
+    {
+        ARGB = 0,
+        SDF = 1,
     }
     public struct FontEntityGlyphComparer : IComparer<FontEntityGlyph>
     {

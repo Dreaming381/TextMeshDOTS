@@ -22,6 +22,7 @@ namespace TextMeshDOTS.TextProcessing
         List<LoadRequest> newLoadRequests;
         EntityArchetype nativeFontDataArchetype;
         DrawDelegates drawFunctions;
+        PaintDelegates paintFunctions;
 
         protected override void OnCreate()
         {
@@ -47,6 +48,7 @@ namespace TextMeshDOTS.TextProcessing
             SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
 
             drawFunctions = new DrawDelegates(true);
+            paintFunctions =  new PaintDelegates(true);
         }
 
         //[BurstCompile]
@@ -102,7 +104,7 @@ namespace TextMeshDOTS.TextProcessing
 
             foreach (var loadRequest in this.newLoadRequests)
             {                
-                LoadFont(loadRequest, 50, fontEntities);
+                LoadFont(loadRequest, 50, 256, fontEntities);
             }
             newLoadRequests.Clear();
 
@@ -116,8 +118,9 @@ namespace TextMeshDOTS.TextProcessing
             if (fontHashMap.fontEntities.IsCreated) fontHashMap.fontEntities.Dispose();
 
             drawFunctions.Dispose();
+            paintFunctions.Dispose();
         }
-        void LoadFont(LoadRequest loadRequest, int samplingPointSize,  NativeHashMap<FontAssetRef, Entity> fontEntities)
+        void LoadFont(LoadRequest loadRequest, int samplingPointSizeSDF, int samplingPointSizeBitmap, NativeHashMap<FontAssetRef, Entity> fontEntities)
         {
             ref var fontBlobRef = ref loadRequest.fontBlobRef.value.Value;
             var nativeFileLength = (uint)fontBlobRef.nativeFontFile.Length;
@@ -139,35 +142,68 @@ namespace TextMeshDOTS.TextProcessing
                 }
             }
             var face = new Face(blob.ptr, 0);
-            var font = new Font(face.ptr);
-            font.SetScale(samplingPointSize, samplingPointSize);
+            var font = new Font(face.ptr);            
 
             var sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
-
-            var atlasData = new AtlasData
-            {
-                atlasHeight = 1024,
-                atlasWidth = 1024,
-                padding = 9,                //10% of atlas height or width
-                samplingPointSize = 50,    //size of font (in pixel) in atlas
+            
+            var nativeFontPointer = new NativeFontPointer { 
+                orientation = sdfOrientation, 
+                blob = blob, 
+                face = face, 
+                font = font, 
+                drawFunctions = drawFunctions,
+                paintFunctions = paintFunctions,
             };
-            var nativeFontPointer = new NativeFontPointer { orientation = sdfOrientation, blob = blob, face = face, font = font, drawFunctions = drawFunctions };
 
             //initialize texture. To save space, review how to initialize it with size 0
             //(as done by TextCore), and only increase once needed
-            var texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.Alpha8, false);
-            var rawTextureData = texture2D.GetRawTextureData<byte>();
+            Texture2D texture2D;
+            DynamicFontAsset dynamicFontAsset;
+            AtlasData atlasData;
+            if (face.HasCOLR() || face.HasColorBitmap())
+            {
+                atlasData = new AtlasData
+                {
+                    atlasHeight = 1024,
+                    atlasWidth = 1024,
+                    padding = 0,                //10% of atlas height or width
+                    samplingPointSize = samplingPointSizeBitmap,    //size of font (in pixel) in atlas
+                };
 
-            //initialize to black
-            for (int i = 0; i < rawTextureData.Length; i++)
-                rawTextureData[i] = 0;
-            texture2D.Apply();
-            var fontTextureReference = new DynamicFontAssets { texture = texture2D };
+                
+                atlasData.padding = 0;
+                texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.ARGB32, false);
+                var textureData = texture2D.GetRawTextureData<ColorARGB>();
+                for (int i = 0; i < textureData.Length; i++)
+                    textureData[i] = (ColorARGB)Color.white;
+                texture2D.Apply();
+                dynamicFontAsset = new DynamicFontAsset { texture = texture2D, textureType = TextureType.ARGB };
+            }
+            else
+            {
+                atlasData = new AtlasData
+                {
+                    atlasHeight = 1024,
+                    atlasWidth = 1024,
+                    padding = 9,                //10% of atlas height or width
+                    samplingPointSize = samplingPointSizeSDF,    //size of font (in pixel) in atlas
+                };
+                texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.Alpha8, false);
+                var rawTextureData = texture2D.GetRawTextureData<byte>();
+
+                //initialize to black
+                for (int i = 0; i < rawTextureData.Length; i++)
+                    rawTextureData[i] = 0;
+                texture2D.Apply();
+                dynamicFontAsset = new DynamicFontAsset { texture = texture2D, textureType = TextureType.SDF };
+            }
+            font.SetScale(atlasData.samplingPointSize, atlasData.samplingPointSize);
+
 
             var fontEntity = EntityManager.CreateEntity(nativeFontDataArchetype);
             EntityManager.SetComponentData(fontEntity, loadRequest.fontBlobRef);
             EntityManager.SetComponentData(fontEntity, atlasData);
-            EntityManager.AddComponentData(fontEntity, fontTextureReference);
+            EntityManager.AddComponentData(fontEntity, dynamicFontAsset);
             EntityManager.AddComponentData(fontEntity, nativeFontPointer);
 
             var freeGlyphRects = EntityManager.GetBuffer<FreeGlyphRects>(fontEntity);

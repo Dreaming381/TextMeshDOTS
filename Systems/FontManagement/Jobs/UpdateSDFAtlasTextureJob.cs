@@ -12,7 +12,7 @@ using TextMeshDOTS.HarfBuzz.SDF;
 namespace TextMeshDOTS.TextProcessing
 {
     [BurstCompile]
-    struct UpdateAtlasTextureJob : IJobParallelForDefer
+    struct UpdateSDFAtlasTextureJob : IJobParallelForDefer
     {
         [NativeDisableParallelForRestriction] public NativeArray<byte> textureData;
 
@@ -35,9 +35,9 @@ namespace TextMeshDOTS.TextProcessing
             var glyphBlob = placedGlyphs[i];
 
             var font = nativeFontPointer.font;
-            var drawDelegates = nativeFontPointer.drawFunctions;
             var drawData = new DrawData(256, 16, Allocator.Temp);
-            font.DrawGlyph(glyphBlob.glyphID, drawDelegates, ref drawData);            
+            marker.Begin();
+            font.DrawGlyph(glyphBlob.glyphID, nativeFontPointer.drawFunctions, ref drawData);            
 
             //shift the bezier edges so that they are in the center of the reserved atlas padded texture window (usedRects)
 			var edges = drawData.edges;
@@ -53,8 +53,6 @@ namespace TextMeshDOTS.TextProcessing
                 edge.control2 += shift;
                 //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
             }
-
-            marker.Begin();
             var glyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphBlob.glyphID);
             if (glyphIndex != -1)
             {

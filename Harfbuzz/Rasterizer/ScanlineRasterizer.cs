@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
@@ -22,22 +23,22 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             var maxY = clipRect.max.y;
 
             var glyphRect = drawData.glyphRect;
-            //var minX = glyphRect.min.x;
-            //var maxX = glyphRect.max.x;
-            //var minY = glyphRect.min.y;
-            //var maxY = glyphRect.max.y;
+            //var minX = glyphRect.min.x-10;
+            //var maxX = glyphRect.max.x+10;
+            //var minY = glyphRect.min.y-10;
+            //var maxY = glyphRect.max.y+10;
 
-            var clipRectMinX = clipRect.min.x;            
-            var clipRectMinY = clipRect.min.y;
-            var clipRectMaxX = clipRect.max.x;
-            var width = clipRect.width;
+            var clipRectMinX = (int)clipRect.min.x;            
+            var clipRectMinY = (int)clipRect.min.y;
+            var clipRectMaxX = (int)clipRect.max.x;
+            var width = (int)clipRect.width;
             //var width = 1024;
 
             var scanLineStart = new float2(minX, minY);
             var scanLineEnd = new float2(maxX, minY);
 
             for (float y = minY; y < maxY; y += step)
-            //for (float y = 536; y < 537; y += step)
+            //for (float y = 18; y < 19; y += step)
             {
                 scanLineStart.y = y; scanLineEnd.y = y;
                 intersectionPoints.Clear();
@@ -52,15 +53,14 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                     {
                         var edge = edges[edgeID];
                         if (edge.edge_type == SDFEdgeType.QUADRATIC)
-                            IntersectQuadraticBezierAndScanline(edges, edgeID, (int)y, (int) minX, (int)maxX, intersectionPoints);
-                            //QadraticBezierLineIntersections(edges, edgeID, scanLineStart, scanLineEnd, intersectionPoints, out var roots);
+                            IntersectQuadraticBezierAndScanline(edges, edgeID, startID, nextStartID, (int)y, (int) minX, (int)maxX, intersectionPoints);
                         else
                         {
                             bool intersect = EdgesIntersect(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, true);
                             if (intersect)
                             {
-                                GetIntersectPt(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, out float2 intersectPoint);
-                                if (intersectionPoints.Length > 0 && !AddSamePointAgain(edges, edgeID, intersectionPoints[^1], intersectPoint))
+                                GetIntersectPt(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, out float2 intersectPoint);                                
+                                if (intersectionPoints.Contains(intersectPoint) && DoNotDoublicate(edges, edgeID, startID, nextStartID))
                                     continue;                                
                                 intersectionPoints.Add(intersectPoint);
                             }
@@ -80,7 +80,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                     for (int column = startX; column < endX; column += step)
                     {
                         var color = pattern.GetColor(column, y);
-                        var targetIndex = (int)((width * (y - (int)clipRectMinY)) + (column - (int)clipRectMinX)); //substracting clipRect.min results in aliging glyph with (0,0) of bitmap
+                        var targetIndex = width * ((int)y - clipRectMinY) + column - clipRectMinX; //substracting clipRect.min results in aliging glyph with (0,0) of bitmap
 
                         //var ColorSrc = textureColor;
                         //var colorDest = textureData[targetIndex];
@@ -187,7 +187,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         }
 
         /// <summary>Find the intersections (up to two) between a line and a quadratic bezier edge</summary>
-        static void IntersectQuadraticBezierAndScanline(NativeList<SDFEdge> edges, int edgeID, int ys, int minX, int maxX, NativeList<float2> intersectionPoints)
+        static void IntersectQuadraticBezierAndScanline(NativeList<SDFEdge> edges, int edgeID, int startID, int lastID, int ys, int minX, int maxX, NativeList<float2> intersectionPoints)
         {
             var edge = edges[edgeID];
             var x0 = edge.start_pos.x;
@@ -201,9 +201,12 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             var b = 2 * y1 - 2 * y0;
             var c = y0 - ys;
 
-            var rootCount = PaintUtils.QuadraticRoots(a, b, c, out float2 roots);
+            var rootCount = PaintUtils.QuadraticRoots(a, b, c, out float2 roots, out bool tangent);
 
-            if (rootCount == 0)
+            //ranges that need to be filled requiere two crossings of the scanline with the bezier
+            //if the scanline is tangent to the bezier (=not crossing, only 1 root), then do not add intersection point
+            //as there will be no pair/fill range (==>raserization artifacts)
+            if (rootCount == 0 || tangent) 
                 return;
 
             // calc the solution points
@@ -212,32 +215,94 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 var t = roots[i];
                 if (t >= 0 && t <= 1)
                 {
-                    var curvePointX = math.lerp(math.lerp(x0, x1, t), math.lerp(x1, x2, t), t);
+                    var intersectPointX = math.lerp(math.lerp(x0, x1, t), math.lerp(x1, x2, t), t);
 
                     // See if point is on line segment
-                    if (minX <= curvePointX && curvePointX <= maxX)
+                    if (minX <= intersectPointX && intersectPointX <= maxX)
                     {
-                        var curvePoint = new float2(curvePointX, ys);
-                        if (intersectionPoints.Length > 0 && !AddSamePointAgain(edges, edgeID, intersectionPoints[^1], curvePoint))
+                        var intersectPoint = new float2(intersectPointX, ys);
+                        if(intersectionPoints.Contains(intersectPoint) && DoNotDoublicate(edges, edgeID, startID, lastID))
                             continue;
-                        intersectionPoints.Add(curvePoint);
+                        intersectionPoints.Add(intersectPoint);
                     }
                 }
             }
         }
-        
-        static bool AddSamePointAgain(NativeList<SDFEdge> edges, int edgeID, float2 previntersectPoint, float2 intersectPoint )
+
+        static bool DoNotDoublicate(NativeList<SDFEdge> edges, int edgeID, int startID, int nextStartID)
         {
-            //Special Case Handeling
-            // Case when intersection point is a vertex
-            // if the prevs point is the same as current point, means the point is a vertex,
-            // Check the prev line and current line if both ymin is the same
+            // If intersecting point has already been found, it means the scanline is right at a vertex shared by two edges. 
+            // For the given bezier contour, the two egdes could be previous.end & current.start and, and in case of the last edge also
+            // LastEdge.end & FirstEdge.start (because outlines are closed polygons). Check if the two edges are identical (same ymin and same ymax).
+            // If identical, add the intersection point again (why?)            
+
+            var edge = edges[edgeID];
+            var prevEdge = edges[edgeID - 1];
+            var nextEdge = edgeID == nextStartID - 1 ? edges[startID] : edges[edgeID + 1];
+
+
+            var edgeYmin = math.min(edge.start_pos.y, edge.end_pos.y);
+            var edgeYmax = math.max(edge.start_pos.y, edge.end_pos.y);
+
+            //first figure out which two egdes share the same vertex
+            if (Hint.Likely(math.all(edge.start_pos == prevEdge.end_pos)))
+            {
+                var prevEdgeYmin = math.min(prevEdge.start_pos.y, prevEdge.end_pos.y);
+                var prevEdgeYmax = math.max(prevEdge.start_pos.y, prevEdge.end_pos.y);                
+
+                if (prevEdgeYmin == edgeYmin && prevEdgeYmax == edgeYmax)
+                    return false;
+            }
+            else if (edgeID == nextStartID - 1 && math.all(edge.end_pos == nextEdge.start_pos))
+            {
+                var nextEdgeYmin = math.min(nextEdge.start_pos.y, nextEdge.end_pos.y);
+                var nextEdgeYmax = math.max(nextEdge.start_pos.y, nextEdge.end_pos.y);
+
+                if (nextEdgeYmin == edgeYmin && nextEdgeYmax == edgeYmax)
+                    return false;
+            }
+            return true;
+        }
+        //static bool DoNotDoublicate(NativeList<SDFEdge> edges, int edgeID, int startID, int nextStartID)
+        //{
+        //    // If intersecting point has already been found, it means the scanline is right at a vertex shared by two edges. 
+        //    // For the given bezier contour, the two egdes could be current.start and previous.end, or (because outlines are closed polygons)
+        //    // FirstEdge.start and LastEdge.end. Check if the two edges are identical (same ymin and same ymax).
+        //    // If identical, add the intersection point again (why?)            
+
+        //    var edge = edges[edgeID];
+        //    var prevEdge = edges[edgeID - 1];
+        //    //var prevEdge = edgeID == nextStartID - 1 ? edges[startID] : edges[edgeID - 1];
+
+        //    var prevEdgeYmin = math.min(prevEdge.start_pos.y, prevEdge.end_pos.y);
+        //    var edgeYmin = math.min(edge.start_pos.y, edge.end_pos.y);
+
+        //    var prevEdgeYmax = math.max(prevEdge.start_pos.y, prevEdge.end_pos.y);
+        //    var edgeYmax = math.max(edge.start_pos.y, edge.end_pos.y);
+
+        //    if (prevEdgeYmin == edgeYmin && prevEdgeYmax == edgeYmax)
+        //        return false;
+
+        //    //double res1 = Orient2DFast(prevEdge.start_pos, prevEdge.end_pos, edge.end_pos);
+        //    //if (res1 < 0)
+        //    //    return false; //prevedge-->edge bends left (counter clockwise)
+
+        //    return true;
+        //}
+        static bool AddSamePointAgain(NativeList<SDFEdge> edges, int edgeID, float2 previntersectPoint, float2 intersectPoint)
+        {
+            // Special case when intersection point is a vertex
+            // If intersecting point has already been found, it means the scanline is right at a vertex shared by two edges. 
+            // The two egdes could be current.start and previous.end, or bezier curve FirstEdge.start and LastEdge.end
+
+
+            // Check the prev egde and current edge if both ymin is the same
             // if same, add again
             if (math.all(previntersectPoint == intersectPoint))
             {
                 //Debug.Log($"Identical with previous point {previntersectPoint.x},{previntersectPoint.y}");
                 var edge = edges[edgeID];
-                var prevEdge = edges[edgeID - 1]; 
+                var prevEdge = edges[edgeID - 1];
                 var prevEdgeYmin = math.min(prevEdge.start_pos.y, prevEdge.end_pos.y);
                 var edgeYmin = math.min(edge.start_pos.y, edge.end_pos.y);
 
@@ -249,44 +314,5 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             }
             return true;
         }
-
-        enum BlendMode
-        {
-            kClear,         //!< r = 0
-            kSrc,           //!< r = s
-            kDst,           //!< r = d
-            kSrcOver,       //!< r = s + (1-sa)*d
-            kDstOver,       //!< r = d + (1-da)*s
-            kSrcIn,         //!< r = s * da
-            kDstIn,         //!< r = d * sa
-            kSrcOut,        //!< r = s * (1-da)
-            kDstOut,        //!< r = d * (1-sa)
-            kSrcATop,       //!< r = s*da + d*(1-sa)
-            kDstATop,       //!< r = d*sa + s*(1-da)
-            kXor,           //!< r = s*(1-da) + d*(1-sa)
-            kPlus,          //!< r = min(s + d, 1)
-            kModulate,      //!< r = s*d
-            kScreen,        //!< r = s + d - s*d
-
-            kOverlay,       //!< multiply or screen, depending on destination
-            kDarken,        //!< rc = s + d - max(s*da, d*sa), ra = kSrcOver
-            kLighten,       //!< rc = s + d - min(s*da, d*sa), ra = kSrcOver
-            kColorDodge,    //!< brighten destination to reflect source
-            kColorBurn,     //!< darken destination to reflect source
-            kHardLight,     //!< multiply or screen, depending on source
-            kSoftLight,     //!< lighten or darken, depending on source
-            kDifference,    //!< rc = s + d - 2*(min(s*da, d*sa)), ra = kSrcOver
-            kExclusion,     //!< rc = s + d - two(s*d), ra = kSrcOver
-            kMultiply,      //!< r = s*(1-da) + d*(1-sa) + s*d
-
-            kHue,           //!< hue of source with saturation and luminosity of destination
-            kSaturation,    //!< saturation of source with hue and luminosity of destination
-            kColor,         //!< hue and saturation of source with luminosity of destination
-            kLuminosity,    //!< luminosity of source with hue and saturation of destination
-
-            kLastCoeffMode = kScreen,     //!< last porter duff blend mode
-            kLastSeparableMode = kMultiply,   //!< last blend mode operating separately on components
-            kLastMode = kLuminosity, //!< last valid value
-        };
     }
 }

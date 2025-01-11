@@ -17,7 +17,7 @@ namespace TextMeshDOTS
         /// <summary> This function logic follows TMPro_Private.GenerateTextMesh() </summary>
         internal static unsafe void CreateRenderGlyphs(ref FontAssetArray fontAssetArray,
                                                         NativeHashMap<FontAssetRef, Entity> fontEntities,
-                                                       in ComponentLookup<DynamicFontAssets> dynamicFontAssetsLookup,
+                                                       in ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup,
                                                        ref DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer,
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
                                                        ref GlyphMappingWriter mappingWriter,                                                       
@@ -107,10 +107,9 @@ namespace TextMeshDOTS
                 #region Look up Character Data
                 if (!currentFont.glyphs.TryGetValue(glyphOTF.codepoint, out var glyphBlob))
                 {
-
                     Debug.Log($"glyph {(char)currentRune.value} not found in font entity {currentFontEntity}");
-                    var bla = currentFont.glyphs.GetValueArray(Allocator.Temp);
-                    foreach (var glyph in bla)
+                    var glyphBlobs = currentFont.glyphs.GetValueArray(Allocator.Temp);
+                    foreach (var glyph in glyphBlobs)
                     {
                         Debug.Log($"glyph {glyph.glyphID}");
                     }

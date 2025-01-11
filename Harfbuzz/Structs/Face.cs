@@ -29,29 +29,35 @@ namespace TextMeshDOTS.HarfBuzz
                 HB.hb_ot_name_get_utf8(ptr, name_id, language, ref textSize, text.GetUnsafePtr());
             }
         }
+
+        bool HasReferenceTable(uint HB_TAG)
+        {
+            var blob = HB.hb_face_reference_table(ptr, HB_TAG);
+            var tableLength = HB.hb_blob_get_length(blob);
+            HB.hb_blob_destroy(blob);
+            return tableLength > 0;
+        }
+        public bool HasColorBitmap()
+        {
+            return HasReferenceTable(HB.HB_TAG('C', 'B', 'D', 'T')) || 
+                   HasReferenceTable(HB.HB_TAG('s', 'b', 'i', 'x'));
+        }
+        public bool HasSVG()
+        {
+            return HasReferenceTable(HB.HB_TAG('S', 'V', 'G', ' '));
+        }
+        public bool HasCOLR()
+        {
+            return HasReferenceTable(HB.HB_TAG('C', 'O', 'L', 'R'));
+        }
         public bool HasTrueTypeOutlines()
         {
-            var glyf = HB.HB_TAG('g', 'l', 'y', 'f');
-
-            var blob = HB.hb_face_reference_table(ptr, glyf);
-            var glyfTableLength = HB.hb_blob_get_length(blob);
-            HB.hb_blob_destroy(blob);
-            return glyfTableLength > 0;
+            return HasReferenceTable(HB.HB_TAG('g', 'l', 'y', 'f'));
         }
         public bool HasPostScriptOutlines()
         {
-            var cff = HB.HB_TAG('C', 'F', 'F', ' ');
-            var cff2 = HB.HB_TAG('C', 'F', 'F', '2');
-
-            var blob = HB.hb_face_reference_table(ptr, cff);
-            var cffTableLength = HB.hb_blob_get_length(blob);
-            HB.hb_blob_destroy(blob);
-
-            blob = HB.hb_face_reference_table(ptr, cff2);
-            var cff2TableLength = HB.hb_blob_get_length(blob);
-            HB.hb_blob_destroy(blob);
-
-            return cffTableLength > 0 || cff2TableLength > 0;
+            return HasReferenceTable(HB.HB_TAG('C', 'F', 'F', ' ')) || 
+                   HasReferenceTable(HB.HB_TAG('C', 'F', 'F', '2')); 
         }
         public bool IsImmutable() => HB.hb_face_is_immutable(ptr);
         public void Dispose()

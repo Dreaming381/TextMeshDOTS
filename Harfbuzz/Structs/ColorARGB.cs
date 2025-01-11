@@ -66,6 +66,10 @@ namespace TextMeshDOTS.HarfBuzz
             this.g = g;
             this.b = b; 
         }
+        public static implicit operator uint(ColorARGB c)
+        {
+            return (((uint)c.b & 0xFF) << 24) | (((uint)c.g & 0xFF) << 16) | (((uint)c.r & 0xFF) << 8) | ((uint)c.a & 0xFF);
+        }
 
         public static implicit operator ColorARGB(Color32 c)
         {

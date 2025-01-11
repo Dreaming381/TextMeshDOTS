@@ -30,8 +30,8 @@ namespace TextMeshDOTS.TextProcessing
                 ecb.RemoveComponent<NativeFontPointer>(entity);
             }
 
-            foreach (var (fontTextureReference, entity) in SystemAPI.Query<DynamicFontAssets>()
-                .WithAll<DynamicFontAssets>()
+            foreach (var (fontTextureReference, entity) in SystemAPI.Query<DynamicFontAsset>()
+                .WithAll<DynamicFontAsset>()
                 .WithNone<UsedGlyphs>()
                 .WithNone<MissingGlyphs>()         
                 .WithEntityAccess())
@@ -42,7 +42,7 @@ namespace TextMeshDOTS.TextProcessing
                 hybridRenderer.UnregisterMaterial(fontTextureReference.fontMaterialID);
                 UnityEngine.Object.Destroy(fontMaterial);
                 UnityEngine.Object.Destroy(fontTextureReference.texture);
-                ecb.RemoveComponent<DynamicFontAssets>(entity);
+                ecb.RemoveComponent<DynamicFontAsset>(entity);
             }
         }        
     }

@@ -10,7 +10,7 @@ namespace TextMeshDOTS.TextProcessing
     [BurstCompile]
     struct UpdateNativeFontJob : IJob
     {
-        public ComponentLookup<DynamicFontAssets> fontTextureReferenceLookup;
+        public ComponentLookup<DynamicFontAsset> fontTextureReferenceLookup;
 
         public Entity fontEntity;
         [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;

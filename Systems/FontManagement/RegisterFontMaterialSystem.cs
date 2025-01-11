@@ -16,6 +16,7 @@ namespace TextMeshDOTS.TextProcessing
         EntityQuery fontEntityQ;
         EntitiesGraphicsSystem hybridRenderer;
         Shader textMeshDOTSShader;
+        Shader urpUnlitShader;
         Mesh backendMesh;
         BatchMeshID brgBackendMeshID;
         protected override void OnCreate()
@@ -27,7 +28,7 @@ namespace TextMeshDOTS.TextProcessing
             fontEntityQ = SystemAPI.QueryBuilder()
                     .WithAll<FontBlobReference>()
                     .WithAll<AtlasData>()
-                    .WithAll<DynamicFontAssets>()
+                    .WithAll<DynamicFontAsset>()
                     .WithAll<UsedGlyphs>()
                     .WithAll<MissingGlyphs>()
                     .WithAll<NativeFontPointer>()
@@ -35,6 +36,7 @@ namespace TextMeshDOTS.TextProcessing
                     .Build();
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<FontTextureReference>());
             textMeshDOTSShader = Shader.Find("TextMeshDOTS/TextMeshDOTS-URP");
+            urpUnlitShader = Shader.Find("Universal Render Pipeline/Unlit");
             RequireForUpdate<FontHashMap>();
         }
 
@@ -53,20 +55,31 @@ namespace TextMeshDOTS.TextProcessing
                 var fontBlobRef = EntityManager.GetComponentData<FontBlobReference>(entity);
                 //Debug.Log($"Load texture for font {fontBlobRef.value.Value.fontFamily} {fontBlobRef.value.Value.fontSubFamily}");
                 //System.IO.File.WriteAllBytes("Assets\\Resources\\Materials\\SDFtest.png", fontTextureReference.texture.Value.EncodeToPNG());
-
-                var material = new Material(textMeshDOTSShader);
-                material.enableInstancing = true;
-                SetupMaterialWithBlendMode(material);
-
-                var dynamicFontAssets = EntityManager.GetComponentData<DynamicFontAssets>(entity);
-                var mainTexture = dynamicFontAssets.texture.Value;
+                
+                var dynamicFontAsset = EntityManager.GetComponentData<DynamicFontAsset>(entity);
+                var mainTexture = dynamicFontAsset.texture.Value;
                 mainTexture.Apply();
 
-                material.mainTexture = dynamicFontAssets.texture;
-                dynamicFontAssets.fontMaterialID = hybridRenderer.RegisterMaterial(material);                
+                if (dynamicFontAsset.textureType == TextureType.SDF)
+                {
+                    var material = new Material(textMeshDOTSShader);
+                    material.enableInstancing = true;
+                    SetupMaterialWithBlendMode(material);
+                    material.mainTexture = dynamicFontAsset.texture;
+                    dynamicFontAsset.materialDebug = material;
+                    dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
+                }
+                else
+                {
+                    var material = new Material(urpUnlitShader);
+                    material.enableInstancing = true;
+                    material.mainTexture = dynamicFontAsset.texture;
+                    dynamicFontAsset.materialDebug = material;
+                    dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
+                }
 
-                EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = dynamicFontAssets.fontMaterialID, MeshID= brgBackendMeshID });
-                EntityManager.SetComponentData(entity, dynamicFontAssets);
+                EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = dynamicFontAsset.fontMaterialID, MeshID= brgBackendMeshID });
+                EntityManager.SetComponentData(entity, dynamicFontAsset);
             }
             var fontHashMap = SystemAPI.GetSingletonRW<FontHashMap>();
             fontHashMap.ValueRW.fontsDirty = false;

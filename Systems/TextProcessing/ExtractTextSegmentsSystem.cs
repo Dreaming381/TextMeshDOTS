@@ -25,7 +25,7 @@ namespace TextMeshDOTS.TextProcessing
                       .Build();
             fontEntityQ = SystemAPI.QueryBuilder()
                   .WithAll<UsedGlyphs>()
-                  .WithAll<DynamicFontAssets>()
+                  .WithAll<DynamicFontAsset>()
                   .Build();
 
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
