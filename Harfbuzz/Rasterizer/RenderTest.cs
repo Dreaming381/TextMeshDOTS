@@ -22,8 +22,9 @@ public class RenderTest : MonoBehaviour
     DrawData drawData;
     PaintDelegates paintFunctions;
     PaintData paintData;
+    Blob blob;
     Face face;
-    Font font;
+    Font font;    
 
     void Start()
     {
@@ -129,11 +130,14 @@ public class RenderTest : MonoBehaviour
         drawFunctions.Dispose();
         drawData.Dispose();
         paintFunctions.Dispose();
+        font.Dispose();
+        face.Dispose();
+        blob.Dispose();
     }
     void LoadFont(UnityEngine.Font unityFont, int samplingPointSize)
     {
         var filePath = AssetDatabase.GetAssetPath(unityFont);
-        Blob blob  = new Blob(filePath);
+        blob  = new Blob(filePath);
         face = new Face(blob.ptr, 0);
         font = new Font(face.ptr);
         font.SetScale(samplingPointSize, samplingPointSize);

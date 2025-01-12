@@ -28,7 +28,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             clipGlyph = new DrawData(edgeCapacity, contourCapacity, allocator);
             glyphID = default;
             transformStack = new();
-            transformStack.Add(PaintUtils.AffinityTransformIdentity);
+            transformStack.Add(PaintUtils.AffineTransformIdentity);
             color = default;
             clipRect = BBox.Empty;
             textureData = default;
@@ -44,7 +44,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             clipGlyph.Clear();
             glyphID = default;
             transformStack.Clear();
-            transformStack.Add(PaintUtils.AffinityTransformIdentity);
+            transformStack.Add(PaintUtils.AffineTransformIdentity);
             color = default;
             clipRect = BBox.Empty;
             textureData = default;

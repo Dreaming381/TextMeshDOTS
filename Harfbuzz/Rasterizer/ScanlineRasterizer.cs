@@ -9,7 +9,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public static class ScanlineRasterizer
     {
-        public static void Rasterize(ref DrawData drawData, NativeArray<ColorARGB> textureData, IPattern pattern, BBox clipRect, bool inverse = false)
+        public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool inverse = false) where T: IPattern
         {
             var intersectionPoints = new NativeList<float2>(256, Allocator.Temp);
 
@@ -262,57 +262,6 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                     return false;
             }
             return true;
-        }
-        //static bool DoNotDoublicate(NativeList<SDFEdge> edges, int edgeID, int startID, int nextStartID)
-        //{
-        //    // If intersecting point has already been found, it means the scanline is right at a vertex shared by two edges. 
-        //    // For the given bezier contour, the two egdes could be current.start and previous.end, or (because outlines are closed polygons)
-        //    // FirstEdge.start and LastEdge.end. Check if the two edges are identical (same ymin and same ymax).
-        //    // If identical, add the intersection point again (why?)            
-
-        //    var edge = edges[edgeID];
-        //    var prevEdge = edges[edgeID - 1];
-        //    //var prevEdge = edgeID == nextStartID - 1 ? edges[startID] : edges[edgeID - 1];
-
-        //    var prevEdgeYmin = math.min(prevEdge.start_pos.y, prevEdge.end_pos.y);
-        //    var edgeYmin = math.min(edge.start_pos.y, edge.end_pos.y);
-
-        //    var prevEdgeYmax = math.max(prevEdge.start_pos.y, prevEdge.end_pos.y);
-        //    var edgeYmax = math.max(edge.start_pos.y, edge.end_pos.y);
-
-        //    if (prevEdgeYmin == edgeYmin && prevEdgeYmax == edgeYmax)
-        //        return false;
-
-        //    //double res1 = Orient2DFast(prevEdge.start_pos, prevEdge.end_pos, edge.end_pos);
-        //    //if (res1 < 0)
-        //    //    return false; //prevedge-->edge bends left (counter clockwise)
-
-        //    return true;
-        //}
-        static bool AddSamePointAgain(NativeList<SDFEdge> edges, int edgeID, float2 previntersectPoint, float2 intersectPoint)
-        {
-            // Special case when intersection point is a vertex
-            // If intersecting point has already been found, it means the scanline is right at a vertex shared by two edges. 
-            // The two egdes could be current.start and previous.end, or bezier curve FirstEdge.start and LastEdge.end
-
-
-            // Check the prev egde and current edge if both ymin is the same
-            // if same, add again
-            if (math.all(previntersectPoint == intersectPoint))
-            {
-                //Debug.Log($"Identical with previous point {previntersectPoint.x},{previntersectPoint.y}");
-                var edge = edges[edgeID];
-                var prevEdge = edges[edgeID - 1];
-                var prevEdgeYmin = math.min(prevEdge.start_pos.y, prevEdge.end_pos.y);
-                var edgeYmin = math.min(edge.start_pos.y, edge.end_pos.y);
-
-                var prevEdgeYmax = math.max(prevEdge.start_pos.y, prevEdge.end_pos.y);
-                var edgeYmax = math.max(edge.start_pos.y, edge.end_pos.y);
-
-                if (prevEdgeYmin != edgeYmin && prevEdgeYmax != edgeYmax)
-                    return false;
-            }
-            return true;
-        }
+        }        
     }
 }

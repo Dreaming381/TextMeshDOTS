@@ -4,6 +4,8 @@ using Unity.Collections;
 using Unity.Profiling;
 using Unity.Jobs;
 using TextMeshDOTS.HarfBuzz;
+using Unity.Burst;
+using TextMeshDOTS.HarfBuzz.SDF;
 
 
 namespace TextMeshDOTS.TextProcessing
@@ -19,7 +21,7 @@ namespace TextMeshDOTS.TextProcessing
         static readonly ProfilerMarker marker = new ProfilerMarker("COLR");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("SDF");
 
-        //[BurstCompile]
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             fontEntityQ = SystemAPI.QueryBuilder()

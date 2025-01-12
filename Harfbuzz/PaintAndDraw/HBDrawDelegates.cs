@@ -1,28 +1,30 @@
 using AOT;
 using System;
-using System.Runtime.InteropServices;
+using Unity.Burst;
 using Unity.Mathematics;
 
 namespace TextMeshDOTS.HarfBuzz.SDF
 {
+    [BurstCompile]
     public struct DrawDelegates : IDisposable
     {
         public IntPtr ptr;
         public DrawDelegates(bool dummyProperty)
         {
             ptr = HB.hb_draw_funcs_create();
-            var moveToDelegate = (MoveToDelegate)HB_draw_move_to_func_t;
-            var lineToDelegate = (MoveToDelegate)HB_draw_line_to_func_t;
-            var quadraticToDelegate = (QuadraticToDelegate)HB_draw_quadratic_to_func_t;
-            var cubicToDelegate = (CubicToDelegate)HB_draw_cubic_to_func_t;
-            var closeDelegate = (CloseDelegate)HB_draw_close_path_func_t;
-            var releaseDelegate = (ReleaseDelegate)null;// HBDelegateProxies.Test;
+            FunctionPointer<MoveToDelegate> moveToFunctionPointer = BurstCompiler.CompileFunctionPointer<MoveToDelegate>(HB_draw_move_to_func_t);
+            FunctionPointer<MoveToDelegate> lineToFunctionPointer = BurstCompiler.CompileFunctionPointer<MoveToDelegate>(HB_draw_move_to_func_t);
+            FunctionPointer<QuadraticToDelegate> quadraticToFunctionPointer = BurstCompiler.CompileFunctionPointer<QuadraticToDelegate>(HB_draw_quadratic_to_func_t);
+            FunctionPointer<CubicToDelegate> cubicToFunctionPointer = BurstCompiler.CompileFunctionPointer<CubicToDelegate>(HB_draw_cubic_to_func_t);
+            FunctionPointer<CloseDelegate> closeFunctionPointer = BurstCompiler.CompileFunctionPointer<CloseDelegate>(HB_draw_close_path_func_t);
+            FunctionPointer<ReleaseDelegate> releaseFunctionPointer = BurstCompiler.CompileFunctionPointer<ReleaseDelegate>(Test);
 
-            //HB.hb_draw_funcs_set_move_to_func(ptr, moveToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_line_to_func(ptr, lineToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_quadratic_to_func(ptr, quadraticToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_cubic_to_func(ptr, cubicToDelegate, IntPtr.Zero, releaseDelegate);
-            HB.hb_draw_funcs_set_close_path_func(ptr, closeDelegate, IntPtr.Zero, releaseDelegate);
+            HB.hb_draw_funcs_set_move_to_func(ptr, moveToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            HB.hb_draw_funcs_set_line_to_func(ptr, lineToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            HB.hb_draw_funcs_set_quadratic_to_func(ptr, quadraticToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            HB.hb_draw_funcs_set_cubic_to_func(ptr, cubicToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            HB.hb_draw_funcs_set_close_path_func(ptr, closeFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+
             HB.hb_draw_funcs_make_immutable(ptr);
         }
 
@@ -30,21 +32,26 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         {
             HB.hb_draw_funcs_destroy(ptr);
         }
+        [BurstCompile]
         [MonoPInvokeCallback(typeof(ReleaseDelegate))]
         public static void Test()
         {
             //Debug.Log($"harfbuzz blob called this delegate upon destroying blob ");
         }
-		
-		public static void HB_draw_close_path_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, IntPtr user_data)
+        [BurstCompile]
+        [MonoPInvokeCallback(typeof(CloseDelegate))]
+        public static void HB_draw_close_path_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, IntPtr user_data)
         {
             data.contourIDs.Add(data.edges.Length);
         }
+        [BurstCompile]
+        [MonoPInvokeCallback(typeof(MoveToDelegate))]
         public static void HB_draw_move_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data)
         {
 			//data.contourIDs.Add(data.edges.Length);
         }
-
+        [BurstCompile]
+        [MonoPInvokeCallback(typeof(MoveToDelegate))]
         public static void HB_draw_line_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data)
         {
             var edge = new SDFEdge
@@ -60,7 +67,8 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             data.edges.Add(edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
-
+        [BurstCompile]
+        [MonoPInvokeCallback(typeof(QuadraticToDelegate))]
         public static void HB_draw_quadratic_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control_x, float control_y, float to_x, float to_y, IntPtr user_data)
         {
             //Debug.Log($"Quadratic add control {control_x} {control_y}");
@@ -78,7 +86,8 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             data.edges.Add(edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
-
+        [BurstCompile]
+        [MonoPInvokeCallback(typeof(CubicToDelegate))]
         public static void HB_draw_cubic_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control1_x, float control1_y, float control2_x, float control2_y, float to_x, float to_y, IntPtr user_data)
         {
             var edge = new SDFEdge
@@ -96,19 +105,19 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         }
 
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void ReleaseDelegate();
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]        
         public delegate void MoveToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data);
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void QuadraticToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control_x, float control_y, float to_x, float to_y, IntPtr user_data);
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void CubicToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control1_x, float control1_y, float control2_x, float control2_y, float to_x, float to_y, IntPtr user_data);
         
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void CloseDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, IntPtr user_data);
     }
 }

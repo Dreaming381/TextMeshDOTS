@@ -11,7 +11,7 @@ namespace TextMeshDOTS.HarfBuzz
         //175: 9811 9812 9813 9814 9815 9816 9819 9820 9799 9801 9802 9803
         //🐢: 8534 8535 8536 8537 8538 8539
         //😉: 13293 13288 13317 13318 13287 13319 10662
-        public static int filterGlyph = -1;//13317;
+        public static readonly int filterGlyph = -1;//13317;
 
         public static bool DrawGlyph(int glyphID)
         {
@@ -23,10 +23,10 @@ namespace TextMeshDOTS.HarfBuzz
                 return true;
         }
 
-        public readonly static float2x3 AffinityTransformIdentity = new float2x3 {
+        public readonly static float2x3 AffineTransformIdentity = new float2x3 {
                 c0 = new float2(1, 0),  // xx, yx
                 c1 = new float2(0, 1),  // xy, yy
-                c2 = new float2(0, 0)};   // x0, y0
+                c2 = new float2(0, 0)}; // x0, y0
 
         public static bool GetGradientDirection(float x0, float y0, float x1, float y1, float x2, float y2, out float2 p3)
         {

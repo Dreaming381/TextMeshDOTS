@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using TextMeshDOTS.HarfBuzz.SDF;
+using Unity.Burst;
 using static TextMeshDOTS.HarfBuzz.SDF.DrawDelegates;
 using static TextMeshDOTS.HarfBuzz.SDF.PaintDelegates;
 
@@ -30,19 +31,19 @@ namespace TextMeshDOTS.HarfBuzz
         public static extern IntPtr hb_draw_funcs_create();
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_draw_funcs_destroy(IntPtr drawFunctions);
+        public static extern void hb_draw_funcs_destroy(IntPtr drawFunctions);        
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_draw_funcs_set_move_to_func(IntPtr drawFunctions, MoveToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_draw_funcs_set_move_to_func(IntPtr drawFunctions, FunctionPointer<MoveToDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_draw_funcs_set_line_to_func(IntPtr drawFunctions, MoveToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_draw_funcs_set_line_to_func(IntPtr drawFunctions, FunctionPointer<MoveToDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_draw_funcs_set_quadratic_to_func(IntPtr drawFunctions, QuadraticToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_draw_funcs_set_quadratic_to_func(IntPtr drawFunctions, FunctionPointer<QuadraticToDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_draw_funcs_set_cubic_to_func(IntPtr drawFunctions, CubicToDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_draw_funcs_set_cubic_to_func(IntPtr drawFunctions, FunctionPointer<CubicToDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_draw_funcs_set_close_path_func(IntPtr drawFunctions, CloseDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_draw_funcs_set_close_path_func(IntPtr drawFunctions, FunctionPointer<CloseDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_draw_funcs_make_immutable(IntPtr drawFunctions);
@@ -56,48 +57,47 @@ namespace TextMeshDOTS.HarfBuzz
         public static extern IntPtr hb_paint_funcs_create();
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_funcs_destroy(IntPtr paintFunctions);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern void hb_paint_funcs_set_push_transform_func(IntPtr paintFunctions, FunctionPointer<PushTransformDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_push_transform_func (IntPtr paintFunctions, PushTransformDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_pop_transform_func(IntPtr paintFunctions, FunctionPointer<PopDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_pop_transform_func(IntPtr paintFunctions, PopDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_color_glyph_func(IntPtr paintFunctions, FunctionPointer<ColorGlyphDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_color_glyph_func(IntPtr paintFunctions, ColorGlyphDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_push_clip_glyph_func(IntPtr paintFunctions, FunctionPointer<PushClipGlyphDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_push_clip_glyph_func (IntPtr paintFunctions, PushClipGlyphDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_push_clip_rectangle_func(IntPtr paintFunctions, FunctionPointer<PushClipRectangleDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_push_clip_rectangle_func (IntPtr paintFunctions, PushClipRectangleDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_pop_clip_func(IntPtr paintFunctions, FunctionPointer<PopDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_pop_clip_func(IntPtr paintFunctions, PopDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_color_func(IntPtr paintFunctions, FunctionPointer<ColorDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_color_func(IntPtr paintFunctions, ColorDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_image_func(IntPtr paintFunctions, FunctionPointer<ImageDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_image_func(IntPtr paintFunctions, ImageDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_linear_gradient_func(IntPtr paintFunctions, FunctionPointer<LinearOrRadialGradientDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_linear_gradient_func (IntPtr paintFunctions, LinearOrRadialGradientDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_radial_gradient_func(IntPtr paintFunctions, FunctionPointer<LinearOrRadialGradientDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_radial_gradient_func (IntPtr paintFunctions, LinearOrRadialGradientDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_sweep_gradient_func(IntPtr paintFunctions, FunctionPointer<SweepGradientDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_sweep_gradient_func (IntPtr paintFunctions, SweepGradientDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_push_group_func(IntPtr paintFunctions, FunctionPointer<PopDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_push_group_func(IntPtr paintFunctions, PopDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_pop_group_func(IntPtr paintFunctions, FunctionPointer<PopGroupDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_pop_group_func(IntPtr paintFunctions, PopGroupDelegate func, IntPtr user_data, ReleaseDelegate destroy);
-
-        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_funcs_set_custom_palette_color_func (IntPtr paintFunctions, CustomPalette_colorDelegate func, IntPtr user_data, ReleaseDelegate destroy);
+        public static extern void hb_paint_funcs_set_custom_palette_color_func(IntPtr paintFunctions, FunctionPointer<CustomPalette_colorDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_push_clip_glyph(IntPtr paintFunctions, ref PaintData paint_data, uint glyph, IntPtr font);
