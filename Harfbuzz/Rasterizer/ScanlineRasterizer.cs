@@ -203,8 +203,8 @@ namespace TextMeshDOTS.HarfBuzz.SDF
 
             var rootCount = PaintUtils.QuadraticRoots(a, b, c, out float2 roots, out bool tangent);
 
-            //ranges that need to be filled requiere two crossings of the scanline with the bezier
-            //if the scanline is tangent to the bezier (=not crossing, only 1 root), then do not add intersection point
+            //ranges that need to be filled require two crossings of the scanline with the bezier curve
+            //if the scanline is tangent to the bezier edge (=not crossing, only 1 root), then do not add intersection point
             //as there will be no pair/fill range (==>raserization artifacts)
             if (rootCount == 0 || tangent) 
                 return;

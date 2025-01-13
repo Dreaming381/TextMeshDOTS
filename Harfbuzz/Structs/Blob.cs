@@ -36,6 +36,18 @@ namespace TextMeshDOTS.HarfBuzz
             //ReleaseDelegate releaseDelegate = new ReleaseDelegate(DelegateProxies.Test);
             ptr = HB.hb_blob_create(data, length, memoryMode, IntPtr.Zero, releaseDelegate); //returned blob is immutable
         }
+        //public Blob(string filename, out bool success)
+        //{
+        //    ptr = HB.hb_blob_create_from_file_or_fail(filename); //returned blob is immutable
+        //    success = ptr != IntPtr.Zero;
+        //}
+        //unsafe public Blob(void* data, uint length, MemoryMode memoryMode, out bool success)
+        //{
+        //    DrawDelegates.ReleaseDelegate releaseDelegate = null;
+        //    //ReleaseDelegate releaseDelegate = new ReleaseDelegate(DelegateProxies.Test);
+        //    ptr = HB.hb_blob_create_or_fail(data, length, memoryMode, IntPtr.Zero, releaseDelegate); //returned blob is immutable
+        //    success = ptr != IntPtr.Zero;
+        //}
         public NativeArray<byte> GetData()
         {
             uint length;

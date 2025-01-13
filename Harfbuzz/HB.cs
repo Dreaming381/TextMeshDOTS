@@ -114,10 +114,15 @@ namespace TextMeshDOTS.HarfBuzz
         
         [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr hb_blob_create(void* data, uint length, MemoryMode mode, IntPtr user_data, ReleaseDelegate destroy);
+        [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr hb_blob_create_or_fail(void* data, uint length, MemoryMode mode, IntPtr user_data, ReleaseDelegate destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_blob_create_from_file([MarshalAs(UnmanagedType.LPStr)] string file_name);
         //internal static extern IntPtr hb_blob_create_from_file(byte* file_name);//do not use. big risk of not passing  NULL terminated char*
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern IntPtr hb_blob_create_from_file_or_fail([MarshalAs(UnmanagedType.LPStr)] string file_name);
 
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
@@ -223,6 +228,9 @@ namespace TextMeshDOTS.HarfBuzz
         #endregion
 
         #region buffer
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_buffer_allocation_successful(IntPtr buffer);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_buffer_set_segment_properties(IntPtr buffer, ref SegmentProperties props);
