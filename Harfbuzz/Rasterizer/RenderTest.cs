@@ -6,6 +6,7 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
+using UnityEngine.TextCore;
 
 public class RenderTest : MonoBehaviour
 {
@@ -30,7 +31,7 @@ public class RenderTest : MonoBehaviour
     {
         drawFunctions = new DrawDelegates(true);
         paintFunctions = new PaintDelegates(true);
-        LoadFont(sourceFont, 256);
+        LoadFont(sourceFont, 512);
 
         //DrawTest(letter);
         //PaintPNGTest("😉");
@@ -45,9 +46,9 @@ public class RenderTest : MonoBehaviour
     void DrawTest(string character)
     {
         var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.Alpha8, false);
-        var textureData = texture2D.GetRawTextureData<ColorARGB>();
+        var textureData = texture2D.GetRawTextureData<byte>();
         for (int i = 0; i < textureData.Length; i++)
-            textureData[i] = (ColorARGB)Color.black;
+            textureData[i] = 0;
 
         var language = new Language("eng");
         var buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
@@ -59,15 +60,9 @@ public class RenderTest : MonoBehaviour
         drawData = new DrawData(256, 16, Allocator.Persistent);
         font.DrawGlyph(glyphInfos[0].codepoint, drawFunctions, ref drawData);
 
-        //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData);
-        var atlasRect = new BBox(atlasWidth, atlasHeight);
-        PaintUtils.CenterGlyphInClipRect(ref drawData, atlasRect, 0);
-        // SDF.SDFGenerateSubDivision(orientation, ref drawData, textureData, atlasRect, atlasWidth, atlasHeight);
-
-        marker.Begin();
-        var solidColor = new SolidColor(new ColorARGB(0, 0, 0, 255));
-        ScanlineRasterizer.Rasterize(ref drawData, textureData, solidColor, drawData.glyphRect);
-        marker.End();
+        //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
+        var glyphRect = new GlyphRect(64,64, (int)drawData.glyphRect.width+10, (int)drawData.glyphRect.height+10);
+        SDF.SDFGenerateSubDivision(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight);
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;

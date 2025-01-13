@@ -5,7 +5,8 @@ namespace TextMeshDOTS.HarfBuzz
     [StructLayout(LayoutKind.Sequential)]
     public struct DrawState
     {
-        public byte path_open; //read this as bool!
+        [MarshalAs(UnmanagedType.I1)]
+        public bool path_open;
 
         public float path_start_x;
         public float path_start_y;

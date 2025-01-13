@@ -2,6 +2,7 @@ using AOT;
 using System;
 using Unity.Burst;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz.SDF
 {
@@ -42,28 +43,29 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         [MonoPInvokeCallback(typeof(CloseDelegate))]
         public static void HB_draw_close_path_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, IntPtr user_data)
         {
+            //Debug.Log($"Close Path");
             data.contourIDs.Add(data.edges.Length);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(MoveToDelegate))]
         public static void HB_draw_move_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data)
         {
-			//data.contourIDs.Add(data.edges.Length);
+            //Debug.Log($"Move from {st.current_x},{st.current_y}  to {to_x}, {to_y} (DrawState: path_open {st.path_open} {st.path_start_x} {st.path_start_y}");
+            if (st.path_open)//if path is open, a moveto operation is an implicit lineto opeation https://learn.microsoft.com/en-us/typography/opentype/spec/cff2
+            {
+                var edge = new SDFEdge(st.current_x, st.current_y, to_x, to_y);
+                var edgeBBox = BBox.GetLineBBox(edge.start_pos, edge.end_pos);
+                data.edges.Add(edge);
+                data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
+            }
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(MoveToDelegate))]
         public static void HB_draw_line_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data)
         {
-            var edge = new SDFEdge
-            {
-                start_pos = new float2(st.current_x, st.current_y),
-                end_pos = new float2(to_x, to_y),
-                control1 = default,
-                control2 = default,
-                edge_type = SDFEdgeType.LINE,
-            };
+            //Debug.Log($"Line from {st.current_x},{st.current_y}  to {to_x}, {to_y}");
+            var edge = new SDFEdge(st.current_x, st.current_y, to_x, to_y);
             var edgeBBox = BBox.GetLineBBox(edge.start_pos, edge.end_pos);
-
             data.edges.Add(edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
@@ -71,18 +73,9 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         [MonoPInvokeCallback(typeof(QuadraticToDelegate))]
         public static void HB_draw_quadratic_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control_x, float control_y, float to_x, float to_y, IntPtr user_data)
         {
-            //Debug.Log($"Quadratic add control {control_x} {control_y}");
             //Debug.Log($"Quadratic from {st.current_x},{st.current_y}  to {to_x}, {to_y}");
-            var edge = new SDFEdge
-            {
-                start_pos = new float2(st.current_x, st.current_y),
-                end_pos = new float2(to_x, to_y),
-                control1 = new float2(control_x, control_y),
-                control2 = default,
-                edge_type = SDFEdgeType.QUADRATIC,
-            };
+            var edge = new SDFEdge(st.current_x, st.current_y, control_x, control_y, to_x, to_y);
             var edgeBBox = BBox.GetQuadraticBezierBBox(edge.start_pos, edge.control1, edge.end_pos);
-
             data.edges.Add(edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
@@ -90,16 +83,9 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         [MonoPInvokeCallback(typeof(CubicToDelegate))]
         public static void HB_draw_cubic_to_func_t(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control1_x, float control1_y, float control2_x, float control2_y, float to_x, float to_y, IntPtr user_data)
         {
-            var edge = new SDFEdge
-            {
-                start_pos = new float2(st.current_x, st.current_y),
-                end_pos = new float2(to_x, to_y),
-                control1 = new float2(control1_x, control1_y),
-                control2 = new float2(control2_x, control2_y),
-                edge_type = SDFEdgeType.CUBIC,
-            };
+            //Debug.Log($"Cubic from {st.current_x},{st.current_y}  to {to_x}, {to_y}");
+            var edge = new SDFEdge(st.current_x, st.current_y, control1_x, control1_y, control2_x, control2_y, to_x, to_y);
             var edgeBBox = BBox.GetCubicBezierBBox(edge.start_pos, edge.control1, edge.control1, edge.end_pos);
-
             data.edges.Add(edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }

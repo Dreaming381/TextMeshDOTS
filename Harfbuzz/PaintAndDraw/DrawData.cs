@@ -43,13 +43,33 @@ namespace TextMeshDOTS.HarfBuzz
         public float2 control1;
         public float2 control2;
         public SDFEdgeType edge_type;
-        public SDFEdge(float2 start_pos, float2 end_pos, float2 control1, float2 control2, SDFEdgeType edge_type)
+
+        /// <summary> Line Edge </summary>        
+        public SDFEdge(float current_x, float current_y, float to_x, float to_y)
         {
-            this.start_pos = start_pos; 
-            this.end_pos = end_pos;
-            this.control1 = control1;
-            this.control2 = control2;
-            this.edge_type = edge_type;
+            start_pos = new float2(current_x, current_y);
+            end_pos = new float2(to_x, to_y);
+            control1 = default;
+            control2 = default;
+            edge_type = SDFEdgeType.LINE;
+        }
+        /// <summary> Quadratic Edge </summary>    
+        public SDFEdge(float current_x, float current_y, float control_x, float control_y, float to_x, float to_y)
+        {
+            start_pos = new float2(current_x, current_y);
+            end_pos = new float2(to_x, to_y);
+            control1 = new float2(control_x, control_y);
+            control2 = default;
+            edge_type = SDFEdgeType.QUADRATIC;
+        }
+        /// <summary> Cubic Edge </summary> 
+        public SDFEdge(float current_x, float current_y, float control1_x, float control1_y, float control2_x, float control2_y, float to_x, float to_y)
+        {
+            start_pos = new float2(current_x, current_y);
+            end_pos = new float2(to_x, to_y);
+            control1 = new float2(control1_x, control1_y);
+            control2 = new float2(control2_x, control2_y);
+            edge_type = SDFEdgeType.CUBIC;
         }
     }
     public enum SDFEdgeType : byte

@@ -9,21 +9,7 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public static unsafe class HB
     {
-        public static uint HB_TAG(char c1, char c2, char c3, char c4)
-        {
-            return (((uint)c1 & 0xFF) << 24) | (((uint)c2 & 0xFF) << 16) | (((uint)c3 & 0xFF) << 8) | ((uint)c4 & 0xFF);
-        }
-        public static uint HB_Color(byte b, byte g, byte r, byte a)
-        {
-            return (((uint)b & 0xFF) << 24) | (((uint)g & 0xFF) << 16) | (((uint)r & 0xFF) << 8) | ((uint)a & 0xFF);
-        }
-        public static byte hb_color_get_alpha(uint color)=>(byte)((color) & 0xFF);
-        public static byte hb_color_get_red(uint color) => (byte)(((color) >> 8) & 0xFF);
-        public static byte hb_color_get_green(uint color) => (byte)(((color) >> 16) & 0xFF);
-        public static byte hb_color_get_blue(uint color) => (byte)(((color) >> 24) & 0xFF);
-
-
-        private const string HarfBuzz = "libharfbuzz-0.dll";
+        private const string HarfBuzz = "harfbuzz.dll";
         private const CallingConvention CallConvention = CallingConvention.Cdecl;
 
         #region draw
@@ -176,7 +162,6 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern IntPtr hb_face_reference_table(IntPtr face, uint tag);
         #endregion
 
-
         #region font
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_font_draw_glyph(IntPtr font, uint glyph, DrawDelegates drawFunctions, ref DrawData draw_data);
@@ -236,7 +221,6 @@ namespace TextMeshDOTS.HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_font_set_scale(IntPtr font, int x_scale, int y_scale);
         #endregion
-
 
         #region buffer
 
@@ -312,18 +296,19 @@ namespace TextMeshDOTS.HarfBuzz
         #endregion
 
 
-
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_feature_from_string([MarshalAs(UnmanagedType.LPStr)] string str, int len, out Feature feature);
         //internal static extern bool hb_feature_from_string(byte* str, Int32 len, out Feature feature);
         
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern void hb_feature_to_string(Feature* feature, out byte str, uint size);
-
-        
+        internal static extern void hb_feature_to_string(Feature* feature, out byte str, uint size);        
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_ot_tag_to_language(uint tag);
+        public static uint HB_TAG(char c1, char c2, char c3, char c4)
+        {
+            return (((uint)c1 & 0xFF) << 24) | (((uint)c2 & 0xFF) << 16) | (((uint)c3 & 0xFF) << 8) | ((uint)c4 & 0xFF);
+        }
     }
 }
