@@ -27,6 +27,11 @@ namespace TextMeshDOTS.HarfBuzz
             if (Hint.Unlikely(startAngle == endAngle && (paintExtend == PaintExtend.REPEAT || paintExtend == PaintExtend.REFLECT)))
                 isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
 
+            // the object to which the gradient will be applied needs to be transformed
+            // prior to rasterization, however color is sampled DURING rasterization,
+            // which is why we need to transform the gradient definition.
+            // this will also accomodate additional transformations of the gradient
+            // relative to the object (which are possible according to the COLRv1 spec)
             var c0 = PaintUtils.mul(transform, new float2(x0, y0));
             var scale = (transform.c0.x + transform.c1.y) / 2;
 
@@ -60,8 +65,8 @@ namespace TextMeshDOTS.HarfBuzz
         }
 
         /// <summary>
-        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates the UV coordinates that 
-        /// a texture of the color gradient would have. These gradients can be rotated/scaled etc by the provided AffineTransforms. 
+        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates 
+        /// the UV coordinates that a texture of the color gradient would have. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ColorARGB GetColor(float x, float y)

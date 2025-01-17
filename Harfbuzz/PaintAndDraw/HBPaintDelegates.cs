@@ -100,8 +100,6 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             var clipRect = new BBox(new float2(xmin, ymin), new float2(xmax, ymax));
             data.clipRect = clipRect;
             data.finalTexture = new NativeArray<ColorARGB>((int)(clipRect.width) * (int)clipRect.height, Allocator.Temp);
-            //for (int i = 0; i < data.finalTexture.Length; i++)
-            //    data.finalTexture[i] = new ColorARGB(255, 255, 255, 255);
             //Debug.Log($"push clip rectangle {clipRect}");
         }
         [BurstCompile]
@@ -117,8 +115,9 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         {
             if (!PaintUtils.DrawGlyph((int)data.glyphID))
                 return;
-            Debug.Log($"color {(ColorARGB)color}");
-            var solidColor = new SolidColor((ColorARGB)color);
+            var colorARGB = (ColorARGB)color;
+            //Debug.Log($"color {colorARGB}");            
+            var solidColor = new SolidColor(colorARGB);
             ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, solidColor, data.clipRect);            
         }
         [BurstCompile]
@@ -127,13 +126,10 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         {
             if (!PaintUtils.DrawGlyph((int)data.glyphID))
                 return;
-            Debug.Log($"Line gradient: {x0} {y0} / {x1} {y1} / {x2} {y2}"); 
+            //Debug.Log($"Line gradient: {x0} {y0} / {x1} {y1} / {x2} {y2}"); 
             var lineGradient = new LineGradient(x0, y0, x1, y1, x2, y2, colorLine.GetExtend(), data.transformStack.Peek());
             if (!lineGradient.isValid)
-            {
-                Debug.LogError("Line gradient is not valid");
-                return;
-            }
+                return;            
             lineGradient.InitializeColorLine(colorLine);
             ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, lineGradient, data.clipRect);
         }
@@ -143,13 +139,11 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         {
             if (!PaintUtils.DrawGlyph((int)data.glyphID))
                 return;
-            Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");            
+            //Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");            
             var radialGradient = new RadialGradient(x0, y0, r0, x1, y1, r1, colorLine.GetExtend(), data.transformStack.Peek());
             if (!radialGradient.isValid)
-            {
-                Debug.LogError("Radial gradient is not valid");
                 return;
-            }
+            
             radialGradient.InitializeColorLine(colorLine);
             ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, radialGradient, data.clipRect);
         }
@@ -159,20 +153,19 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         {
             if (!PaintUtils.DrawGlyph((int)data.glyphID))
                 return;
-            Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");       
+            //Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");       
             var sweepGradient = new SweepGradient(x0, y0, startAngle, endAngle, colorLine.GetExtend(), data.transformStack.Peek());
             sweepGradient.InitializeColorLine(colorLine);
             if (!sweepGradient.isValid)
-            {
-                Debug.LogError("Sweep gradient is not valid");
                 return;
-            }
+            
             ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, sweepGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
         public static void HB_paint_push_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
+            //return;
             //logic for pushing / poping groups explained here: https://github.com/harfbuzz/harfbuzz/issues/3931
             // COMPOSITE: 
             // push_group()
@@ -193,19 +186,17 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 if (data.backDrop.IsCreated) data.backDrop.Dispose();                
                 data.backDrop = data.finalTexture;
                 data.finalTexture = new NativeArray<ColorARGB>(data.backDrop.Length, Allocator.Temp);                
-                Debug.Log($"push backdrop group, new: {data.group + 1})");
+                //Debug.Log($"push backdrop group, new: {data.group + 1}");
             }
             else if (data.group == 1)
             {
                 if (data.foreGround.IsCreated) data.foreGround.Dispose();
                 data.foreGround = data.finalTexture;
                 data.finalTexture = new NativeArray<ColorARGB>(data.foreGround.Length, Allocator.Temp);
-                Debug.Log($"push foreground group, new: {data.group + 1})");
+                //Debug.Log($"push foreground group, new: {data.group + 1}");
             }
-            else if (data.group == 2)
-            {
-                Debug.Log($"push unexpected group, new: {data.group + 1})");
-            }
+            else
+                Debug.Log($"push unexpected group, new: {data.group + 1}");            
 
             data.group++;            
         }
@@ -213,30 +204,32 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         [MonoPInvokeCallback(typeof(PopGroupDelegate))]
         public static void HB_paint_pop_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, HB_PAINT_COMPOSITE_MODE mode, IntPtr user_data)
         {
+            //return;
             //logic for pushing / poping groups explained here: https://github.com/harfbuzz/harfbuzz/issues/3931
-            NativeArray<ColorARGB> result;
-            NativeArray<ColorARGB> source;
-            NativeArray<ColorARGB> destination;
+            NativeArray<ColorARGB> result, source, destination = default;
             if (data.group == 1)
             {
+                //finalTexture contains freshly rasterized glyph or a prior blend result (foreground or background)
+                //Use this as source, and merge with backdrop (destination), store result in  finalTexture
                 result = data.finalTexture;
                 source = data.finalTexture;
                 destination = data.backDrop;
-                Debug.Log($"pop group (new: {data.group - 1}), use {mode} to combine backdrop with final texture");
+                //Debug.Log($"pop group (new: {data.group - 1}), use {mode} to combine backdrop with final texture (result in finalTexture)");
             }
             else if (data.group == 2)
             {
-                result = data.backDrop;
-                source = data.foreGround;
-                destination = data.backDrop;
-                Debug.Log($"pop group (new: {data.group - 1}), use {mode} to combine backdrop with foreground");
+                // finalTexture contains freshly rasterized glyph
+                // Use this as source, and merge with foreground (destination), store result in finalTexture
+                result = data.finalTexture;
+                source = data.finalTexture;
+                destination = data.foreGround;
+                //Debug.Log($"pop group (new: {data.group - 1}), use {mode} to combine backdrop with foreground (result in finalTexture)");
             }
             else
             {
-                result = data.finalTexture;
-                source = data.finalTexture;
-                destination = data.finalTexture;
-                Debug.Log("unexpected group");
+                Debug.Log("pop unexpected group");
+                data.group--;
+                return;
             }
 
             switch (mode)
@@ -251,7 +244,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                     break;
                 case HB_PAINT_COMPOSITE_MODE.SRC_OVER:
                     for (int i = 0; i < result.Length; i++)
-                        result[i] = Blending.Normal(source[i], destination[i]);
+                        result[i] = Blending.SrcOver(source[i], destination[i]);
                     break;
                 case HB_PAINT_COMPOSITE_MODE.DEST_OVER:
                     for (int i = 0; i < result.Length; i++)
@@ -305,9 +298,12 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                     for (int i = 0; i < result.Length; i++)
                         result[i] = Blending.ColorBurn(source[i], destination[i]);
                     break;
+                default:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.SrcOver(source[i], destination[i]);
+                    break;
             }
-            data.group--;
-            
+            data.group--;            
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(CustomPalette_colorDelegate))]
@@ -377,6 +373,5 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         PNG = ('p' << 24) | ('n' << 16) | ('g' << 8) | ' ', //better would be HB.HB_TAG('c', 'p', 'c', 't'), but this does not work in C Sharp,
         SVG = ('s' << 24) | ('v' << 16) | ('g' << 8) | ' ',
         BGRA = ('B' << 24) | ('G' << 16) | ('R' << 8) | 'A',
-
     }
 }

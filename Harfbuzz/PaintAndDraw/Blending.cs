@@ -1,50 +1,58 @@
+using Unity.Collections;
 using Unity.Mathematics;
-using UnityEngine.UIElements;
 
 namespace TextMeshDOTS.HarfBuzz.SDF
 {
     public static class Blending
     {
-        public static ColorARGB Normal(ColorARGB source, ColorARGB destination)
-        {
-            int4 tmp = (int4)source * source.a / 255;
-            tmp[0] = source.a;
-
-            var result = tmp + (int4)destination * (255 - source.a) / 255;
-
-            // r = s * sa + d*(1-sa)
-            //var result = (ColorARGB)((int4)source * source.a / 255 + (int4)destination * (255 - source.a) / 255);
-            return (ColorARGB)result;
-        }
         public static ColorARGB SrcOver(ColorARGB source, ColorARGB destination)
         {
-            // r = s + (1-sa)*d
-            var result = (int4)source + (255 - source.a) * (int4)destination / 255;
-
+            // r = s*sa + (1-sa)*d*da
+            var result = ((int4)source * source.a / 255) + (255 - source.a) * ((int4)destination * destination.a / 255) / 255;
             var alpha = source.a + destination.a * (255 - source.a) / 255;
             result[0] = alpha;
             return (ColorARGB)result;
-        }       
-
-
+        }
         public static ColorARGB DstOver(ColorARGB source, ColorARGB destination)
         {
-            // r = d + (1-da)*s
-            var result = (int4)destination + (255 - destination.a) * (int4)source / 255;
+            // r = d*da + (1-da)*s*sa
+            var result = ((int4)destination * destination.a / 255) + (255 - destination.a) * ((int4)source * source.a / 255) / 255;
+            var alpha = destination.a + source.a * (255 - destination.a) / 255;
+            result[0] = alpha;
             return (ColorARGB)result;
         }
+
+        //public static ColorARGB SrcIn(ColorARGB source, ColorARGB destination)
+        //{
+        //    // r = s * da
+        //    var result = (int4)source * destination.a / 255;
+        //    return (ColorARGB)result;
+        //}
+        //public static ColorARGB DstIn(ColorARGB source, ColorARGB destination)
+        //{
+        //    // r = d * sa
+        //    var result = (int4)destination * source.a / 255;
+        //    return (ColorARGB)result;
+        //}
         public static ColorARGB SrcIn(ColorARGB source, ColorARGB destination)
         {
-            // r = s * da
-            var result = (int4)source * destination.a / 255;
+            // r = s *sa * da
+            //alpha = sa * da
+            var result = (int4)source * source.a / 255 * destination.a / 255;
+            var alpha = source.a * destination.a / 255;
+            result[0] = alpha;
             return (ColorARGB)result;
         }
         public static ColorARGB DstIn(ColorARGB source, ColorARGB destination)
         {
-            // r = d * sa
-            var result = (int4)destination * source.a / 255;
+            // r = s *sa * da
+            //alpha = sa * da
+            var result = (int4)destination * destination.a / 255 * source.a / 255;
+            var alpha = destination.a * source.a / 255;
+            result[0] = alpha;
             return (ColorARGB)result;
         }
+
         public static ColorARGB SrcOut(ColorARGB source, ColorARGB destination)
         {
             // r = s * (1 - da)
@@ -117,6 +125,11 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                                     (int4)source < 127);
             return (ColorARGB)result;
         }
+        public static void SetWhite(NativeArray<ColorARGB> result)
+        {
+            for (int i = 0; i < result.Length; i++)
+                result[i] = new ColorARGB(255,255,255,255);
+        }
 
     }
     public enum HB_PAINT_COMPOSITE_MODE
@@ -140,8 +153,8 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         OVERLAY,    // multiply or screen, depending on destination
         DARKEN,     // rc = s + d - max(s*da, d*sa), ra = kSrcOver
         LIGHTEN,    // rc = s + d - min(s*da, d*sa), ra = kSrcOver
-        COLOR_DODGE,// a / (1 - b) brighten destination to reflect source
-        COLOR_BURN, // 1 - (1 - a) / b darken destination to reflect source
+        COLOR_DODGE,// s / (1 - d)      brighten destination to reflect source
+        COLOR_BURN, // 1 - (1 - s) / d darken destination to reflect source
         HARD_LIGHT, // multiply or screen, depending on source
         SOFT_LIGHT, // lighten or darken, depending on source
         DIFFERENCE, // rc = s + d - 2*(min(s*da, d*sa)), ra = kSrcOver

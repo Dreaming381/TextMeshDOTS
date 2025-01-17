@@ -35,7 +35,7 @@ public class RenderTest : MonoBehaviour
 
         //DrawTest(letter);
         //PaintPNGTest("😉");
-        PaintTest(letter, glyphID); //😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
+        PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
     }
 
     void Update()
@@ -110,6 +110,10 @@ public class RenderTest : MonoBehaviour
         else if (paintData.finalTexture.Length > 0) // render COLR, sbix, CBDT
         {
             var clipRect = paintData.clipRect;
+            //var canvas = new NativeArray<ColorARGB>(paintData.finalTexture.Length, Allocator.Temp);
+            //Blending.SetWhite(canvas);
+            //for (int i = 0; i < paintData.finalTexture.Length; i++)
+            //    paintData.finalTexture[i] = Blending.SrcOver(paintData.finalTexture[i], canvas[i]);
             PaintUtils.BlitRawTexture(paintData.finalTexture, (int)clipRect.width, (int)clipRect.height, textureData, atlasWidth, atlasHeight, 0, 0);
         }        
 

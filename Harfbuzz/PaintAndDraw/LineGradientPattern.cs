@@ -12,7 +12,6 @@ namespace TextMeshDOTS.HarfBuzz
         NativeArray<ColorStop> m_colorStops;
         int m_colorStopCount;
         PaintExtend paintExtend;
-        float2x3 transform;
         float x01;
         float y01;
         float x0;
@@ -27,6 +26,22 @@ namespace TextMeshDOTS.HarfBuzz
         {
             if (Hint.Unlikely((x0 == x1 && y0 == y1) || (x0 == x2 && y0 == y2)))
                 isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
+
+            // the object to which the gradient will be applied needs to be transformed
+            // prior to rasterization, however color is sampled DURING rasterization,
+            // which is why we need to transform the gradient definition.
+            // this will also accomodate additional transformations of the gradient
+            // relative to the object (which are possible according to the COLRv1 spec)
+            var p0 = PaintUtils.mul(transform, new float2(x0, y0));
+            var p1 = PaintUtils.mul(transform, new float2(x1, y1));
+            var p2 = PaintUtils.mul(transform, new float2(x2, y2));
+            var scale = (transform.c0.x + transform.c1.y) / 2;
+            x0 = p0.x;
+            y0 = p0.y;
+            x1 = p1.x;
+            y1 = p1.y;
+            x2 = p2.x;
+            y2 = p2.y;
 
             this.x0 = x0;
             this.y0 = y0;
@@ -49,7 +64,6 @@ namespace TextMeshDOTS.HarfBuzz
             m_colorStops = default;
             m_colorStopCount = 0;
             this.paintExtend = paintExtend;
-            this.transform = transform;
             isValid = true;
         }
 
@@ -72,16 +86,12 @@ namespace TextMeshDOTS.HarfBuzz
         }
 
         /// <summary>
-        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates the UV coordinates that 
-        /// a texture of the color gradient would have. These gradients can be rotated/scaled etc by the provided AffineTransforms. 
+        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates 
+        /// the UV coordinates that a texture of the color gradient would have. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ColorARGB GetColor(float x, float y)
         {
-            var transformedPoint = PaintUtils.mul(transform, new float2(x, y));
-            x = transformedPoint.x;
-            y = transformedPoint.y;
-
             var u = GetU(x, y);
             PaintUtils.ApplyWrapMode(ref u, paintExtend);
             return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, u);

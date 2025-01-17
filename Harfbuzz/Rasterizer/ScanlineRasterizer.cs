@@ -10,7 +10,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
     {
         public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool inverse = false) where T: IPattern
         {
-            Debug.Log("Rasterize");
+            //Debug.Log("Rasterize");
             var intersectionPoints = new NativeList<float2>(256, Allocator.Temp);
 
             var edges = drawData.edges;
@@ -87,7 +87,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
 
                         var colorDest = textureData[targetIndex];
                         textureData[targetIndex] = color;
-                        //textureData[targetIndex] = Blending.Normal(color, colorDest);
+                        //textureData[targetIndex] = Blending.SrcOver(color, colorDest);
                     }
                 }
             }
