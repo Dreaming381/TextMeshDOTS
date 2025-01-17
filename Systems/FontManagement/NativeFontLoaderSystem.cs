@@ -71,7 +71,8 @@ namespace TextMeshDOTS.TextProcessing
                 if (!fontEntities.ContainsKey(fontBlob.fontAssetRef))
                 {                    
                     if (fontBlob.useSystemFont)
-                    {                        
+                    {
+                        //loading rules: https://www.high-logic.com/fontcreator/manual15/fonttype.html
                         if (fontBlob.typographicFamily.IsEmpty || fontBlob.typographicSubfamily.IsEmpty)
                         {
                             if (!TextCoreExtensions.TryGetSystemFontReference(fontBlob.fontFamily.ToString(), fontBlob.fontSubFamily.ToString(), out UnityFontReference unityFontReference))

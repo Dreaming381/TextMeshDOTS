@@ -79,7 +79,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         [MonoPInvokeCallback(typeof(ColorGlyphDelegate))]
         public static bool hb_paint_color_glyph_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, uint glyphID, IntPtr font, IntPtr user_data)
         {
-            //Debug.Log("hb_paint_color_glyph");
+            Debug.Log("hb_paint_color_glyph");
             return true;
         }
         [BurstCompile]
@@ -88,11 +88,10 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         {
             data.glyphID = glyphID;
             HB.hb_font_draw_glyph(font, glyphID, data.drawDelegates, ref data.clipGlyph);
-            //SDFCommon.WriteGlyphOutlineToFile("ClipGlyph.txt", ref data.clipGlyph, false);
-
-            var transform = data.transformStack.Peek();
-            PaintUtils.TransformGlyph(ref data.clipGlyph, transform);
+            //if (PaintUtils.filterGlyphs.Contains((int)glyphID))
+            //    SDFCommon.WriteGlyphOutlineToFile($"ClipGlyph_{glyphID}.txt", ref data.clipGlyph, true);
             //Debug.Log($"push clip glyph {glyphID}; clipGlyph Rect: {data.clipGlyph.glyphRect}");
+            PaintUtils.TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PushClipRectangleDelegate))]
@@ -100,7 +99,9 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         {
             var clipRect = new BBox(new float2(xmin, ymin), new float2(xmax, ymax));
             data.clipRect = clipRect;
-            data.textureData = new NativeArray<ColorARGB>((int)(clipRect.width) * (int)clipRect.height, Allocator.Temp);
+            data.finalTexture = new NativeArray<ColorARGB>((int)(clipRect.width) * (int)clipRect.height, Allocator.Temp);
+            //for (int i = 0; i < data.finalTexture.Length; i++)
+            //    data.finalTexture[i] = new ColorARGB(255, 255, 255, 255);
             //Debug.Log($"push clip rectangle {clipRect}");
         }
         [BurstCompile]
@@ -114,15 +115,19 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         [MonoPInvokeCallback(typeof(ColorDelegate))]
         public static void HB_paint_color_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, bool is_foreground, uint color, IntPtr user_data)
         {
-            //Debug.Log($"color {color}");
+            if (!PaintUtils.DrawGlyph((int)data.glyphID))
+                return;
+            Debug.Log($"color {(ColorARGB)color}");
             var solidColor = new SolidColor((ColorARGB)color);
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, solidColor, data.clipRect);            
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, solidColor, data.clipRect);            
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
         public static void HB_paint_linear_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data)
         {
-            //Debug.Log($"Line gradient: {x0} {y0} / {x1} {y1} / {x2} {y2}"); 
+            if (!PaintUtils.DrawGlyph((int)data.glyphID))
+                return;
+            Debug.Log($"Line gradient: {x0} {y0} / {x1} {y1} / {x2} {y2}"); 
             var lineGradient = new LineGradient(x0, y0, x1, y1, x2, y2, colorLine.GetExtend(), data.transformStack.Peek());
             if (!lineGradient.isValid)
             {
@@ -130,13 +135,15 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 return;
             }
             lineGradient.InitializeColorLine(colorLine);
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, lineGradient, data.clipRect);
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, lineGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
         public static void HB_paint_radial_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float r0, float x1, float y1, float r1, IntPtr user_data)
         {
-            //Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");      
+            if (!PaintUtils.DrawGlyph((int)data.glyphID))
+                return;
+            Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");            
             var radialGradient = new RadialGradient(x0, y0, r0, x1, y1, r1, colorLine.GetExtend(), data.transformStack.Peek());
             if (!radialGradient.isValid)
             {
@@ -144,13 +151,15 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 return;
             }
             radialGradient.InitializeColorLine(colorLine);
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, radialGradient, data.clipRect);
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, radialGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(SweepGradientDelegate))]
         public static void HB_paint_sweep_gradient_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine colorLine, float x0, float y0, float startAngle, float endAngle, IntPtr user_data)
         {
-            //Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");       
+            if (!PaintUtils.DrawGlyph((int)data.glyphID))
+                return;
+            Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");       
             var sweepGradient = new SweepGradient(x0, y0, startAngle, endAngle, colorLine.GetExtend(), data.transformStack.Peek());
             sweepGradient.InitializeColorLine(colorLine);
             if (!sweepGradient.isValid)
@@ -158,19 +167,147 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 Debug.LogError("Sweep gradient is not valid");
                 return;
             }
-            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.textureData, sweepGradient, data.clipRect);
+            ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, sweepGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
         public static void HB_paint_push_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
-            //Debug.Log("push group");
+            //logic for pushing / poping groups explained here: https://github.com/harfbuzz/harfbuzz/issues/3931
+            // COMPOSITE: 
+            // push_group()
+            // // recurse for backdrop
+            // push_group()
+            // // recurse for source
+            // pop_group_and_composite(composite_mode)
+            // pop_group_and_composite(OVER)
+
+            // layers:
+            //foreach layer
+            //    push_group()
+            //    // recurse for layer paint
+            //    pop_group_and_composite(OVER)
+
+            if (data.group == 0)
+            {
+                if (data.backDrop.IsCreated) data.backDrop.Dispose();                
+                data.backDrop = data.finalTexture;
+                data.finalTexture = new NativeArray<ColorARGB>(data.backDrop.Length, Allocator.Temp);                
+                Debug.Log($"push backdrop group, new: {data.group + 1})");
+            }
+            else if (data.group == 1)
+            {
+                if (data.foreGround.IsCreated) data.foreGround.Dispose();
+                data.foreGround = data.finalTexture;
+                data.finalTexture = new NativeArray<ColorARGB>(data.foreGround.Length, Allocator.Temp);
+                Debug.Log($"push foreground group, new: {data.group + 1})");
+            }
+            else if (data.group == 2)
+            {
+                Debug.Log($"push unexpected group, new: {data.group + 1})");
+            }
+
+            data.group++;            
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopGroupDelegate))]
         public static void HB_paint_pop_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, HB_PAINT_COMPOSITE_MODE mode, IntPtr user_data)
         {
-            //Debug.Log("pop group");
+            //logic for pushing / poping groups explained here: https://github.com/harfbuzz/harfbuzz/issues/3931
+            NativeArray<ColorARGB> result;
+            NativeArray<ColorARGB> source;
+            NativeArray<ColorARGB> destination;
+            if (data.group == 1)
+            {
+                result = data.finalTexture;
+                source = data.finalTexture;
+                destination = data.backDrop;
+                Debug.Log($"pop group (new: {data.group - 1}), use {mode} to combine backdrop with final texture");
+            }
+            else if (data.group == 2)
+            {
+                result = data.backDrop;
+                source = data.foreGround;
+                destination = data.backDrop;
+                Debug.Log($"pop group (new: {data.group - 1}), use {mode} to combine backdrop with foreground");
+            }
+            else
+            {
+                result = data.finalTexture;
+                source = data.finalTexture;
+                destination = data.finalTexture;
+                Debug.Log("unexpected group");
+            }
+
+            switch (mode)
+            {
+                case HB_PAINT_COMPOSITE_MODE.SRC:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = source[i];
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.DEST:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = destination[i];
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.SRC_OVER:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.Normal(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.DEST_OVER:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.DstOver(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.SRC_IN:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.SrcIn(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.DEST_IN:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.DstIn(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.SRC_OUT:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.SrcOut(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.DEST_OUT:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.DstOut(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.SRC_ATOP:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.SrcAtop(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.DEST_ATOP:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.DstAtop(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.XOR:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.Xor(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.PLUS:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.Plus(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.SCREEN:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.Screen(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.MULTIPLY:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.Multiply(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.COLOR_DODGE:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.ColorDodge(source[i], destination[i]);
+                    break;
+                case HB_PAINT_COMPOSITE_MODE.COLOR_BURN:
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = Blending.ColorBurn(source[i], destination[i]);
+                    break;
+            }
+            data.group--;
+            
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(CustomPalette_colorDelegate))]
@@ -200,7 +337,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 int count = 0;
                 for (int i = 0, ii = rawBytes.Length; i < ii; i += 4)
                     textureData[count++] = new ColorARGB(rawBytes[i+3], rawBytes[i+2], rawBytes[i+1], rawBytes[i]);
-                data.textureData = textureData;
+                data.finalTexture = textureData;
             }
             else // HB_PAINT_IMAGE_FORMAT.PNG, HB_PAINT_IMAGE_FORMAT.SVG To-Do: find BURST compatible decoder
                 data.imageData = rawBytes;
@@ -209,39 +346,28 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             return true;
         }
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void PushTransformDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, float xx, float yx, float xy, float yy, float dx, float dy, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void PopDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         public delegate bool ColorGlyphDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_codepoint_t*/ uint glyph, IntPtr font, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void PushClipGlyphDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_codepoint_t*/ uint glyph, IntPtr font, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void PushClipRectangleDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, float xmin, float ymin, float xmax, float ymax, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void ColorDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, bool is_foreground, uint color, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         public delegate bool ImageDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, /*hb_blob_t*/ Blob image, uint width, uint height, HB_PAINT_IMAGE_FORMAT format, float slant, ref GlyphExtents extents, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void LinearOrRadialGradientDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine color_line, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void SweepGradientDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, ColorLine color_line, float x0, float y0, float start_angle, float end_angle, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void PopGroupDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, HB_PAINT_COMPOSITE_MODE mode, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         public delegate bool CustomPalette_colorDelegate(IntPtr harfBuzzPaintFunct, ref PaintData data, uint color_index, uint color, IntPtr user_data);
 
@@ -253,36 +379,4 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         BGRA = ('B' << 24) | ('G' << 16) | ('R' << 8) | 'A',
 
     }
-    public enum HB_PAINT_COMPOSITE_MODE
-    {
-        CLEAR,      //!< r = 0
-        SRC,        //!< r = s
-        DEST,       //!< r = d
-        SRC_OVER,   //!< r = s + (1-sa)*d
-        DEST_OVER,  //!< r = d + (1-da)*s
-        SRC_IN,     //!< r = s * da
-        DEST_IN,    //!< r = d * sa
-        SRC_OUT,    //!< r = s * (1-da)
-        DEST_OUT,   //!< r = d * (1-sa)
-        SRC_ATOP,   //!< r = s*da + d*(1-sa)
-        DEST_ATOP,  //!< r = d*sa + s*(1-da)
-        XOR,        //!< r = s*(1-da) + d*(1-sa)
-        PLUS,       //!< r = min(s + d, 1)
-        //MODULATE,      //!< r = s*d
-        SCREEN,     //!< r = s + d - s*d
-        OVERLAY,    //!< multiply or screen, depending on destination
-        DARKEN,     //!< rc = s + d - max(s*da, d*sa), ra = kSrcOver
-        LIGHTEN,    //!< rc = s + d - min(s*da, d*sa), ra = kSrcOver
-        COLOR_DODGE,//!< brighten destination to reflect source
-        COLOR_BURN, //!< darken destination to reflect source
-        HARD_LIGHT, //!< multiply or screen, depending on source
-        SOFT_LIGHT, //!< lighten or darken, depending on source
-        DIFFERENCE, //!< rc = s + d - 2*(min(s*da, d*sa)), ra = kSrcOver
-        EXCLUSION,  //!< rc = s + d - 2*(min(s*da, d*sa)), ra = kSrcOver
-        MULTIPLY,   //!< r = s*(1-da) + d*(1-sa) + s*d
-        HSL_HUE,        //!< hue of source with saturation and luminosity of destination
-        HSL_SATURATION, //!< saturation of source with hue and luminosity of destination
-        HSL_COLOR,      //!< hue and saturation of source with luminosity of destination
-        HSL_LUMINOSITY  //!< luminosity of source with hue and saturation of destination
-    }    
 }

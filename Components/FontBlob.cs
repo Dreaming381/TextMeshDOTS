@@ -14,9 +14,9 @@ namespace TextMeshDOTS
     /// </summary>
     public struct FontBlob
     {
-        //NOTE:
         // Unity FontReference.familyName can be HB_OT_NAME_ID.TYPOGRAPHIC_FAMILY or HB_OT_NAME_ID.FONT_FAMILY 
-        //Unity FontReference.styleName  = HB_OT_NAME_ID.TYPOGRAPHIC_SUBFAMILY or HB_OT_NAME_ID.FONT_SUBFAMILY
+        // Unity FontReference.styleName  = HB_OT_NAME_ID.TYPOGRAPHIC_SUBFAMILY or HB_OT_NAME_ID.FONT_SUBFAMILY
+        // https://www.high-logic.com/fontcreator/manual15/fonttype.html
         public FontAssetRef fontAssetRef;
         public FixedString128Bytes fontFamily;
         public FixedString128Bytes fontSubFamily;

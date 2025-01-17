@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System;
 using UnityEngine;
+using Unity.Mathematics;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -73,6 +74,14 @@ namespace TextMeshDOTS.HarfBuzz
         public static implicit operator ColorARGB(uint c)
         {
             return new ColorARGB { argb= (int)c };
+        }
+        public static explicit operator ColorARGB(int4 c)
+        {
+            return new ColorARGB { a = (byte)c[0], r = (byte)c[1], g = (byte)c[2], b = (byte)c[3] };
+        }
+        public static explicit operator int4(ColorARGB c)
+        {
+            return new int4 (c.a,c.r,c.g,c.b);
         }
 
         public static implicit operator ColorARGB(Color32 c)

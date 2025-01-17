@@ -1,8 +1,6 @@
 using AOT;
 using System;
 using Unity.Burst;
-using Unity.Mathematics;
-using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz.SDF
 {
@@ -91,19 +89,15 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         }
 
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void ReleaseDelegate();
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]        
+  
         public delegate void MoveToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void QuadraticToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control_x, float control_y, float to_x, float to_y, IntPtr user_data);
 
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void CubicToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float control1_x, float control1_y, float control2_x, float control2_y, float to_x, float to_y, IntPtr user_data);
         
-        //[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void CloseDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, IntPtr user_data);
     }
 }

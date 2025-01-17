@@ -15,8 +15,11 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         public uint glyphID;
         internal FixedStack512Bytes<float2x3> transformStack; //could also use Unity AffineTransform (but this would require use of float3 vs float2)
         public uint color;  
-        public BBox clipRect;
-        public NativeArray<ColorARGB> textureData;
+        public BBox clipRect;        
+        public NativeArray<ColorARGB> finalTexture;
+        public NativeArray<ColorARGB> backDrop;
+        public NativeArray<ColorARGB> foreGround; 
+        public int group;
         public NativeArray<byte> imageData;
         public HB_PAINT_IMAGE_FORMAT imageFormat;
         public int imageWidth;
@@ -31,7 +34,10 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             transformStack.Add(PaintUtils.AffineTransformIdentity);
             color = default;
             clipRect = BBox.Empty;
-            textureData = default;
+            finalTexture = default;
+            backDrop = default;
+            foreGround = default;
+            group = 0;
             imageData = default;
             imageFormat = default;
             imageWidth = -1;
@@ -47,7 +53,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             transformStack.Add(PaintUtils.AffineTransformIdentity);
             color = default;
             clipRect = BBox.Empty;
-            textureData = default;
+            finalTexture = default;
             imageData = default;
             imageFormat = default;
             imageWidth = -1;

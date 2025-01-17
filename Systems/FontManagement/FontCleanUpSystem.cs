@@ -23,7 +23,7 @@ namespace TextMeshDOTS.TextProcessing
                 .WithNone<MissingGlyphs>()          
                 .WithEntityAccess())
             {                
-                //Debug.Log($"Destroy Harfbuzz font with ID {hbFontPointer.d}");
+                Debug.Log($"Destroy Harfbuzz font pointer");
                 nativeFontPointer.blob.Dispose();
                 nativeFontPointer.face.Dispose();
                 nativeFontPointer.font.Dispose();
@@ -36,7 +36,7 @@ namespace TextMeshDOTS.TextProcessing
                 .WithNone<MissingGlyphs>()         
                 .WithEntityAccess())
             {
-                Debug.Log($"Destroy Font");
+                Debug.Log($"Destroy font material");
                 fontTextureReference.blob.Dispose();
                 var fontMaterial = hybridRenderer.GetMaterial(fontTextureReference.fontMaterialID);
                 hybridRenderer.UnregisterMaterial(fontTextureReference.fontMaterialID);

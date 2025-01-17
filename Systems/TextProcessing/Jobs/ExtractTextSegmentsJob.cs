@@ -26,10 +26,10 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            //if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion) ||
-            //      chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion)))// ||
-            //      //chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
-            //    return;
+            if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion) ||
+                  chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
+                  chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
+                return;
 
             //Debug.Log("Extract TextSegments");
             var entities = chunk.GetNativeArray(entitesHandle);

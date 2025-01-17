@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
@@ -11,6 +10,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
     {
         public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool inverse = false) where T: IPattern
         {
+            Debug.Log("Rasterize");
             var intersectionPoints = new NativeList<float2>(256, Allocator.Temp);
 
             var edges = drawData.edges;
@@ -38,7 +38,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             var scanLineEnd = new float2(maxX, minY);
 
             for (float y = minY; y < maxY; y += step)
-            //for (float y = 18; y < 19; y += step)
+            //for (float y = 250; y < 251; y += step)
             {
                 scanLineStart.y = y; scanLineEnd.y = y;
                 intersectionPoints.Clear();
@@ -59,8 +59,11 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                             bool intersect = EdgesIntersect(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, true);
                             if (intersect)
                             {
-                                GetIntersectPt(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, out float2 intersectPoint);                                
-                                if (intersectionPoints.Contains(intersectPoint) && DoNotDoublicate(edges, edgeID, startID, nextStartID))
+                                GetIntersectPt(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, out float2 intersectPoint);
+                                if (IntersectionAtExposedVertex(edge.start_pos.y == y, edge.end_pos.y == y, edgeID, startID, nextStartID, edges, new float2(minX, y), intersectPoint))
+                                    continue;
+                                
+                                if (intersectionPoints.Contains(intersectPoint) && DoNotDoublicateIntersectionPoint(edge.start_pos.y == y, edge.end_pos.y == y, edgeID, startID, nextStartID, edges))
                                     continue;                                
                                 intersectionPoints.Add(intersectPoint);
                             }
@@ -82,36 +85,9 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                         var color = pattern.GetColor(column, y);
                         var targetIndex = width * ((int)y - clipRectMinY) + column - clipRectMinX; //substracting clipRect.min results in aliging glyph with (0,0) of bitmap
 
-                        //var ColorSrc = textureColor;
-                        //var colorDest = textureData[targetIndex];
-                        //float src = 0.5f, dest  = 0.5f;
-                        //Color32 ColorRes=default;
-                        //ColorRes.r = (byte)(ColorSrc.r * src + colorDest.r * dest);
-                        //ColorRes.g = (byte)(ColorSrc.g * src + colorDest.g * dest);
-                        //ColorRes.b = (byte)(ColorSrc.b * src + colorDest.b * dest);
-                        //ColorRes.a = (byte)(ColorSrc.a * src + colorDest.a * dest);
-                        //textureData[targetIndex] = ColorRes;
-
-                        int aa = 255;
-                        int fa = color.a * aa / 255;
-
-                        int fb = color.b * fa / 255;
-                        int fg = color.g * fa / 255;
-                        int fr = color.r * fa / 255;
-
-                        int ba2 = 255 - fa;
-
                         var colorDest = textureData[targetIndex];
-                        int bb = colorDest.b;
-                        int bg = colorDest.g;
-                        int br = colorDest.r;
-                        int ba = colorDest.a;
-
-                        colorDest.b = (byte)(bb * ba2 / 255 + fb);
-                        colorDest.g = (byte)(bg * ba2 / 255 + fg);
-                        colorDest.r = (byte)(br * ba2 / 255 + fr);
-                        colorDest.a = (byte)(ba * ba2 / 255 + fa);
-                        textureData[targetIndex] = colorDest;
+                        textureData[targetIndex] = color;
+                        //textureData[targetIndex] = Blending.Normal(color, colorDest);
                     }
                 }
             }
@@ -187,7 +163,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         }
 
         /// <summary>Find the intersections (up to two) between a line and a quadratic bezier edge</summary>
-        static void IntersectQuadraticBezierAndScanline(NativeList<SDFEdge> edges, int edgeID, int startID, int lastID, int ys, int minX, int maxX, NativeList<float2> intersectionPoints)
+        static void IntersectQuadraticBezierAndScanline(NativeList<SDFEdge> edges, int edgeID, int startID, int nextStartID, int ys, int minX, int maxX, NativeList<float2> intersectionPoints)
         {
             var edge = edges[edgeID];
             var x0 = edge.start_pos.x;
@@ -221,15 +197,19 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                     if (minX <= intersectPointX && intersectPointX <= maxX)
                     {
                         var intersectPoint = new float2(intersectPointX, ys);
-                        if(intersectionPoints.Contains(intersectPoint) && DoNotDoublicate(edges, edgeID, startID, lastID))
+
+                        if(IntersectionAtExposedVertex(t == 0, t == 1, edgeID, startID, nextStartID, edges, new float2(minX, ys), intersectPoint))
+                            continue;
+
+                        if (intersectionPoints.Contains(intersectPoint) && DoNotDoublicateIntersectionPoint(t == 0, t == 1, edgeID, startID, nextStartID, edges))
                             continue;
                         intersectionPoints.Add(intersectPoint);
                     }
                 }
             }
         }
-
-        static bool DoNotDoublicate(NativeList<SDFEdge> edges, int edgeID, int startID, int nextStartID)
+        
+        static bool DoNotDoublicateIntersectionPoint(bool intersectAtStartPos, bool intersectAtEndPos, int edgeID, int startID, int nextStartID, NativeList<SDFEdge> edges)
         {
             // If intersecting point has already been found, it means the scanline is right at a vertex shared by two edges. 
             // For the given bezier contour, the two egdes could be previous.end & current.start and, and in case of the last edge also
@@ -237,23 +217,22 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             // If identical, add the intersection point again (why?)            
 
             var edge = edges[edgeID];
-            var prevEdge = edges[edgeID - 1];
+            var prevEdge = edgeID == startID ? edges[nextStartID - 1] : edges[edgeID - 1];
             var nextEdge = edgeID == nextStartID - 1 ? edges[startID] : edges[edgeID + 1];
 
 
             var edgeYmin = math.min(edge.start_pos.y, edge.end_pos.y);
             var edgeYmax = math.max(edge.start_pos.y, edge.end_pos.y);
 
-            //first figure out which two egdes share the same vertex
-            if (Hint.Likely(math.all(edge.start_pos == prevEdge.end_pos)))
+            if (intersectAtStartPos)
             {
                 var prevEdgeYmin = math.min(prevEdge.start_pos.y, prevEdge.end_pos.y);
-                var prevEdgeYmax = math.max(prevEdge.start_pos.y, prevEdge.end_pos.y);                
+                var prevEdgeYmax = math.max(prevEdge.start_pos.y, prevEdge.end_pos.y);
 
                 if (prevEdgeYmin == edgeYmin && prevEdgeYmax == edgeYmax)
                     return false;
             }
-            else if (edgeID == nextStartID - 1 && math.all(edge.end_pos == nextEdge.start_pos))
+            else if (intersectAtEndPos)
             {
                 var nextEdgeYmin = math.min(nextEdge.start_pos.y, nextEdge.end_pos.y);
                 var nextEdgeYmax = math.max(nextEdge.start_pos.y, nextEdge.end_pos.y);
@@ -262,6 +241,31 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                     return false;
             }
             return true;
-        }        
+        }
+        static bool IntersectionAtExposedVertex(bool intersectAtStartPos, bool intersectAtEndPos, int edgeID, int startID, int nextStartID, NativeList<SDFEdge> edges, float2 scanLineStart, float2 intersectPoint)
+        {
+            //additional check needed for even-odd filling when intersectPoint is a vertex
+            //https://www.geeksforgeeks.org/even-odd-method-winding-number-method-inside-outside-test-of-a-polygon/
+            //needs additional work because it can currently not discriminate all scenarios
+
+            var edge = edges[edgeID];
+            if (intersectAtStartPos)
+            {
+                var prevEdge = edgeID == startID ? edges[nextStartID - 1] : edges[edgeID - 1];
+                double res1 = Orient2DFast(prevEdge.start_pos, scanLineStart, intersectPoint);
+                double res2 = Orient2DFast(edge.end_pos, scanLineStart, intersectPoint);
+                if (res1 * res2 > 0) // scanline is just touching prevEdge-->Edge and not crossing
+                    return true;
+            }
+            else if (intersectAtEndPos)
+            {
+                var nextEdge = edgeID == nextStartID - 1 ? edges[startID] : edges[edgeID + 1];
+                double res1 = Orient2DFast(nextEdge.end_pos, scanLineStart, intersectPoint);
+                double res2 = Orient2DFast(edge.start_pos, scanLineStart, intersectPoint);
+                if (res1 * res2 > 0) // scanline is just touching Edge-->nextedge and not crossing
+                   return true;
+            }
+            return false;
+        }
     }
 }

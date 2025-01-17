@@ -11,13 +11,17 @@ namespace TextMeshDOTS.HarfBuzz
         //175: 9811 9812 9813 9814 9815 9816 9819 9820 9799 9801 9802 9803
         //🐢: 8534 8535 8536 8537 8538 8539
         //😉: 13293 13288 13317 13318 13287 13319 10662
-        public static readonly int filterGlyph = -1;//13317;
-
+        //🥰: 14483, 14483, 15667, 16927, 16928, 16929, 16930, 16931, 16931, 16932, 16933, 16934, 16935, 16936, 16937, 16938, 16939, 16940, 16941, 
+        //13: 6767, 6768, 6769, 6770, 6771, 6772, 6773, 6774, 6775, 6776, 6777, 6778, 6779, 6780, 6781,  6782, 6783, 6784, 6785, 6786, 6787, 6788, 6789, 6790, 6791, 6792,
+        public static readonly int filterGlyph = 6767;//13317;
+        public static FixedList4096Bytes<int> filterGlyphs = new()
+        {
+            14483, 15667
+        };
         public static bool DrawGlyph(int glyphID)
         {
-            if (filterGlyph == -1)
-                return true;
-            else if (glyphID != filterGlyph)
+            return true;
+            if(!filterGlyphs.Contains(glyphID))
                 return false;
             else 
                 return true;

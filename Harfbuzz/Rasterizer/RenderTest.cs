@@ -107,10 +107,10 @@ public class RenderTest : MonoBehaviour
                 //could use com.unity.vectorgraphics if it would not be a class (designed to parse, tesselate and render svg)
             }
         }
-        else if (paintData.textureData.Length > 0) // render COLR, sbix, CBDT
+        else if (paintData.finalTexture.Length > 0) // render COLR, sbix, CBDT
         {
             var clipRect = paintData.clipRect;
-            PaintUtils.BlitRawTexture(paintData.textureData, (int)clipRect.width, (int)clipRect.height, textureData, atlasWidth, atlasHeight, 0, 0);
+            PaintUtils.BlitRawTexture(paintData.finalTexture, (int)clipRect.width, (int)clipRect.height, textureData, atlasWidth, atlasHeight, 0, 0);
         }        
 
         var meshRenderer = GetComponent<MeshRenderer>();
@@ -136,8 +136,8 @@ public class RenderTest : MonoBehaviour
         face = new Face(blob.ptr, 0);
         font = new Font(face.ptr);
         font.SetScale(samplingPointSize, samplingPointSize);
-        Debug.Log($"Has COLR outlines? {face.HasCOLR()}");
-        Debug.Log($"Has Color Bitmap? {face.HasColorBitmap()}");
+        //Debug.Log($"Has COLR outlines? {face.HasCOLR()}");
+        //Debug.Log($"Has Color Bitmap? {face.HasColorBitmap()}");
 
         orientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
     }

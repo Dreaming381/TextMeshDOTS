@@ -12,7 +12,6 @@ namespace TextMeshDOTS.HarfBuzz
         NativeArray<ColorStop> m_colorStops;
         int m_colorStopCount;
         PaintExtend paintExtend;
-        float2x3 transform;
         float x0;
         float y0;
         float startAngle;
@@ -28,8 +27,11 @@ namespace TextMeshDOTS.HarfBuzz
             if (Hint.Unlikely(startAngle == endAngle && (paintExtend == PaintExtend.REPEAT || paintExtend == PaintExtend.REFLECT)))
                 isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
 
-            this.x0 = x0;
-            this.y0 = y0;
+            var c0 = PaintUtils.mul(transform, new float2(x0, y0));
+            var scale = (transform.c0.x + transform.c1.y) / 2;
+
+            this.x0 = c0.x;
+            this.y0 = c0.y;
             this.startAngle = startAngle;
             this.endAngle = endAngle;
             sectorRange = (endAngle - startAngle);
@@ -41,7 +43,6 @@ namespace TextMeshDOTS.HarfBuzz
             maxStop = default;
             m_colorStopCount = 0;
             this.paintExtend = paintExtend;
-            this.transform = transform;
             isValid = true;
         }
 
@@ -65,10 +66,6 @@ namespace TextMeshDOTS.HarfBuzz
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ColorARGB GetColor(float x, float y)
         {
-            var transformedPoint = PaintUtils.mul(transform, new float2(x, y));
-            x = transformedPoint.x;
-            y = transformedPoint.y;
-
             var angle = math.atan2(y - y0, x - x0);   //returns angle from 0 to 2PI 
             angle = PaintUtils.WrapAroundLimit(angle, math.PI2);
             var t = (angle / (endAngleScaled - startAngleScaled)) - startAngle / (endAngle - startAngle);
