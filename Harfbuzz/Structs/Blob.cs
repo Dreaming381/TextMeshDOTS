@@ -1,7 +1,7 @@
 using System;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Collections;
-using TextMeshDOTS.HarfBuzz.SDF;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 
 
 namespace TextMeshDOTS.HarfBuzz

@@ -1,6 +1,7 @@
 using TextMeshDOTS.RichText;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
 
@@ -74,14 +75,16 @@ namespace TextMeshDOTS
             m_sizeStack.Clear();
             m_sizeStack.Add(m_currentFontSize);
 
-
-            m_currentFontMaterialIndex = 0; //font associated with rootFontMaterialEntity
-            //m_fontFamilyHash and  m_fontStyles are converted to FontAssetRef, which is used for font lookup
             m_fontFamilyHash = fontAssetArray.fontAssetRefs[0].familyHash;
+            m_fontStyleInternal = textBaseConfiguration.fontStyles;
+
+            //find font Entity requested by combination of font family and style
+            var desiredFontAssetRef = new FontAssetRef(m_fontFamilyHash, textBaseConfiguration.fontStyles);
+            var fontIndex = TextHelper.GetFontIndex(fontAssetArray, desiredFontAssetRef);            
+            m_currentFontMaterialIndex = fontIndex == -1 ? 0 : fontIndex; 
+
             m_fontFamilyHashStack.Clear();
             m_fontFamilyHashStack.Add(m_fontFamilyHash);
-
-            m_fontStyleInternal = textBaseConfiguration.fontStyles;        
 
             m_lineJustification = textBaseConfiguration.lineJustification;
             m_lineJustificationStack.Clear();

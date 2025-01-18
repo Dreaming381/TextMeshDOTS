@@ -3,7 +3,7 @@ using Unity.Entities;
 using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 using Unity.Collections;
-using TextMeshDOTS.HarfBuzz.SDF;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 using System.Collections.Generic;
 using Unity.Rendering;
 using static TextMeshDOTS.TextCoreExtensions;

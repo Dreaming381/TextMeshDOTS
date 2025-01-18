@@ -1,6 +1,8 @@
 using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
+using UnityEngine.UIElements;
 
 namespace TextMeshDOTS
 {
@@ -63,8 +65,7 @@ namespace TextMeshDOTS
         public float rangeStart;
         public float rangeEnd;
         public float unitsPerEm;
-        public float xScale;
-        public float yScale;
+        public float2 scale;
 
         public float capHeight;
         public float xHeight;
@@ -110,8 +111,8 @@ namespace TextMeshDOTS
 
         public ScaledDynamicFont(ref DynamicFontBlob dynamicFont, out float xNativeToUnity, out float yNativeToUnity)
         {
-            xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.yScale;
-            yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.xScale;
+            xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.x;
+            yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.y;
 
             ascender = dynamicFont.ascender * xNativeToUnity;
             descender = dynamicFont.descender * xNativeToUnity;
@@ -120,15 +121,15 @@ namespace TextMeshDOTS
             capHeight = dynamicFont.capHeight * xNativeToUnity;
             xHeight = dynamicFont.xHeight * xNativeToUnity;
 
-            subScriptEmXSize = dynamicFont.subScriptEmXSize / dynamicFont.xScale;
-            superScriptEmXSize = dynamicFont.superScriptEmXSize / dynamicFont.xScale;
+            subScriptEmXSize = dynamicFont.subScriptEmXSize / dynamicFont.scale.x;
+            superScriptEmXSize = dynamicFont.superScriptEmXSize / dynamicFont.scale.x;
             subScriptEmYOffset = dynamicFont.subScriptEmYOffset * yNativeToUnity;
             superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
         }
         public void Update(ref DynamicFontBlob dynamicFont, out float xNativeToUnity, out float yNativeToUnity)
         {
-            xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.yScale;
-            yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.xScale;
+            xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.x;
+            yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.y;
 
             ascender = dynamicFont.ascender * xNativeToUnity;
             descender = dynamicFont.descender * xNativeToUnity;
@@ -137,8 +138,8 @@ namespace TextMeshDOTS
             capHeight = dynamicFont.capHeight * xNativeToUnity;
             xHeight = dynamicFont.xHeight * xNativeToUnity;
 
-            subScriptEmXSize = dynamicFont.subScriptEmXSize / dynamicFont.xScale;
-            superScriptEmXSize = dynamicFont.superScriptEmXSize / dynamicFont.xScale;
+            subScriptEmXSize = dynamicFont.subScriptEmXSize / dynamicFont.scale.x;
+            superScriptEmXSize = dynamicFont.superScriptEmXSize / dynamicFont.scale.x;
             subScriptEmYOffset = dynamicFont.subScriptEmYOffset * yNativeToUnity;
             superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
         }

@@ -1,4 +1,4 @@
-﻿using TextMeshDOTS.HarfBuzz.SDF;
+﻿using TextMeshDOTS.HarfBuzz.Bitmap;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using UnityEngine;
@@ -18,6 +18,7 @@ public class RenderTest : MonoBehaviour
     public int atlasHeight = 64;
     public bool renderGlyphID;
 
+    float maxDeviation;
     SDFOrientation orientation;
     public DrawDelegates drawFunctions;
     DrawData drawData;
@@ -57,12 +58,12 @@ public class RenderTest : MonoBehaviour
         font.Shape(buffer);
         var glyphInfos = buffer.GetGlyphInfosSpan();
 
-        drawData = new DrawData(256, 16, Allocator.Persistent);
+        drawData = new DrawData(256, 16, maxDeviation, Allocator.Persistent);
         font.DrawGlyph(glyphInfos[0].codepoint, drawFunctions, ref drawData);
 
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
         var glyphRect = new GlyphRect(64,64, (int)drawData.glyphRect.width+10, (int)drawData.glyphRect.height+10);
-        SDF.SDFGenerateSubDivision(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight);
+        SDF.SDFGenerateSubDivision(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight, maxDeviation);
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
@@ -86,7 +87,7 @@ public class RenderTest : MonoBehaviour
             glyphID = glyphInfos[0].codepoint;
         }
 
-        paintData = new PaintData(drawFunctions, 256, 4, Allocator.Temp);
+        paintData = new PaintData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
         font.GetGlyphExtends(glyphID, out GlyphExtents glyphExtents);
         //Debug.Log($"glyphExtents: {glyphExtents}");
         marker.Begin();
@@ -139,7 +140,12 @@ public class RenderTest : MonoBehaviour
         blob  = new Blob(filePath);
         face = new Face(blob.ptr, 0);
         font = new Font(face.ptr);
+
+        //var scale = font.GetScale();        
         font.SetScale(samplingPointSize, samplingPointSize);
+        //Debug.Log($"scale: {scale}");
+
+        maxDeviation = SDFCommon.GetMaxDeviation(font.GetScale().x);
         //Debug.Log($"Has COLR outlines? {face.HasCOLR()}");
         //Debug.Log($"Has Color Bitmap? {face.HasColorBitmap()}");
 

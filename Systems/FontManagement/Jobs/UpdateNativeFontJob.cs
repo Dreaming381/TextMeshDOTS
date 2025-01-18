@@ -48,7 +48,6 @@ namespace TextMeshDOTS.TextProcessing
             font.GetFontExtentsForDirection(Direction.LeftToRight, out FontExtents fontExtents);
 
             face.GetSizeParams(out uint design_size, out uint subfamily_id, out uint subfamily_name_id, out uint range_start, out uint range_end);
-            font.GetScale(out int x_scale, out int y_scale);
 
             font.GetMetrics(MetricTag.CapHeight, out int capHeight);
             font.GetMetrics(MetricTag.XHeight, out int xHeight);
@@ -74,7 +73,7 @@ namespace TextMeshDOTS.TextProcessing
             fontBlobRoot.regularStyleSpacing = 0;
             fontBlobRoot.boldStyleSpacing = 7;
             fontBlobRoot.italicsStyleSlant = 35;
-            fontBlobRoot.tabWidth = face.UnitsPerEM/100; //review what to set here
+            fontBlobRoot.tabWidth = face.GetUnitsPerEM/100; //review what to set here
             fontBlobRoot.tabMultiple = 10;
 
             //third, copy over native font data
@@ -86,9 +85,8 @@ namespace TextMeshDOTS.TextProcessing
             fontBlobRoot.subfamilyNameID = subfamily_name_id;
             fontBlobRoot.rangeStart = range_start;
             fontBlobRoot.rangeEnd = range_end;
-            fontBlobRoot.unitsPerEm = face.UnitsPerEM;
-            fontBlobRoot.xScale = x_scale;
-            fontBlobRoot.yScale = y_scale;
+            fontBlobRoot.unitsPerEm = face.GetUnitsPerEM;
+            fontBlobRoot.scale = font.GetScale(); 
 
             fontBlobRoot.capHeight = capHeight;
             fontBlobRoot.xHeight = xHeight;
@@ -141,8 +139,7 @@ namespace TextMeshDOTS.TextProcessing
             fontBlobRoot.rangeStart = dynamicFontData.rangeStart;
             fontBlobRoot.rangeEnd = dynamicFontData.rangeEnd;
             fontBlobRoot.unitsPerEm = dynamicFontData.unitsPerEm;
-            fontBlobRoot.xScale = dynamicFontData.xScale;
-            fontBlobRoot.yScale = dynamicFontData.yScale;
+            fontBlobRoot.scale = dynamicFontData.scale;
 
             fontBlobRoot.capHeight = dynamicFontData.capHeight;
             fontBlobRoot.xHeight = dynamicFontData.xHeight;

@@ -1,7 +1,8 @@
 using System;
-using TextMeshDOTS.HarfBuzz.SDF;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Mathematics;
 
 
 namespace TextMeshDOTS.HarfBuzz
@@ -18,13 +19,14 @@ namespace TextMeshDOTS.HarfBuzz
         {
             return HB.hb_style_get_value(ptr, styleTag);
         }
-        public void GetPPEM(out uint x_ppem, out uint y_ppem)
+        public uint2 GetPPEM()
         {
-            HB.hb_font_get_ppem(ptr, out x_ppem, out y_ppem);
+            HB.hb_font_get_ppem(ptr, out uint x_ppem, out uint y_ppem);
+            return new uint2(x_ppem, y_ppem);
         }
-        public void SetPPEM(uint x_ppem, uint y_ppem)
+        public void SetPPEM(uint2 ppem)
         {
-            HB.hb_font_set_ppem(ptr, x_ppem, y_ppem);
+            HB.hb_font_set_ppem(ptr, ppem.x, ppem.y);
         }
         public float GetPTEM()
         {
@@ -51,9 +53,10 @@ namespace TextMeshDOTS.HarfBuzz
         {
             return HB.hb_font_get_synthetic_slant(ptr);
         }
-        public void GetScale(out int x_scale, out int y_scale)
+        public int2 GetScale()
         {
-            HB.hb_font_get_scale(ptr, out x_scale, out y_scale);
+            HB.hb_font_get_scale(ptr, out int x_scale, out int y_scale);
+            return new int2(x_scale, y_scale);
         }
         public void SetScale(int x_scale, int y_scale)
         {

@@ -1,5 +1,5 @@
 using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.HarfBuzz.SDF;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -118,6 +118,7 @@ namespace TextMeshDOTS
         {
             return e1.GetHashCode() != e2.GetHashCode();
         }
+        
         public override int GetHashCode()
         {
             int hashCode = 2055808453;
@@ -125,12 +126,13 @@ namespace TextMeshDOTS
             hashCode = hashCode * -1521134295 + weight;
             hashCode = hashCode * -1521134295 + width.GetHashCode();
             hashCode = hashCode * -1521134295 + isItalic.GetHashCode();
-            hashCode = hashCode * -1521134295 + slant.GetHashCode();
+            //fonts are search at runtime via FontAssetRef match. As slant angle cannot be guessed, do not inlcude this in hash
+            //hashCode = hashCode * -1521134295 + slant.GetHashCode();
             return hashCode;
         }
         public override string ToString()
         {
-            return $"FamilyHash {familyHash} weigth {weight} width {width} isItalic {isItalic} slant {slant}";
+            return $"FamilyHash {familyHash} weigth {weight} width {width} isItalic {isItalic}";
         }
     }
     public struct FontHashMap : IComponentData

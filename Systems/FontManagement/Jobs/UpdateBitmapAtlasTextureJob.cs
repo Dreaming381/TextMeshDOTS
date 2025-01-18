@@ -6,7 +6,7 @@ using Unity.Entities;
 using UnityEngine.TextCore;
 using UnityEngine;
 using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.HarfBuzz.SDF;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -34,7 +34,8 @@ namespace TextMeshDOTS.TextProcessing
             var glyphBlob = placedGlyphs[i];
 
             var font = nativeFontPointer.font;
-            var paintData = new PaintData(nativeFontPointer.drawFunctions, 256, 4, Allocator.Temp);
+            var maxDeviation = SDFCommon.GetMaxDeviation(font.GetScale().x);
+            var paintData = new PaintData(nativeFontPointer.drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
             marker.Begin();
             font.PaintGlyph(glyphBlob.glyphID, ref paintData, nativeFontPointer.paintFunctions, 0, new ColorARGB(0, 0, 0, 255));
 

@@ -3,7 +3,7 @@ using Unity.Jobs;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine.TextCore;
-using TextMeshDOTS.HarfBuzz;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 
 
 namespace TextMeshDOTS.TextProcessing

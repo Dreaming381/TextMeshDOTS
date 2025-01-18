@@ -1,9 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
-using TextMeshDOTS.HarfBuzz.SDF;
 using Unity.Burst;
-using static TextMeshDOTS.HarfBuzz.SDF.DrawDelegates;
-using static TextMeshDOTS.HarfBuzz.SDF.PaintDelegates;
+using static TextMeshDOTS.HarfBuzz.DrawDelegates;
+using static TextMeshDOTS.HarfBuzz.PaintDelegates;
 
 namespace TextMeshDOTS.HarfBuzz
 {

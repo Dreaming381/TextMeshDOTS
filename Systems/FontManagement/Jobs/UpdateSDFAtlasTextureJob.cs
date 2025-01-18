@@ -7,7 +7,7 @@ using Unity.Mathematics;
 using UnityEngine.TextCore;
 using UnityEngine;
 using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.HarfBuzz.SDF;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -35,7 +35,9 @@ namespace TextMeshDOTS.TextProcessing
             var glyphBlob = placedGlyphs[i];
 
             var font = nativeFontPointer.font;
-            var drawData = new DrawData(256, 16, Allocator.Temp);
+            var maxDeviation = SDFCommon.GetMaxDeviation(font.GetScale().x);
+
+            var drawData = new DrawData(256, 16, maxDeviation, Allocator.Temp);
             marker.Begin();
             font.DrawGlyph(glyphBlob.glyphID, nativeFontPointer.drawFunctions, ref drawData);            
 
@@ -57,7 +59,7 @@ namespace TextMeshDOTS.TextProcessing
             if (glyphIndex != -1)
             {
                 var atlasRect = usedGlyphRects[glyphIndex]; //render SDF into the reserved padded atlas texture  window 
-                SDF.SDFGenerateSubDivision(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.atlasWidth, atlasData.atlasHeight);
+                SDF.SDFGenerateSubDivision(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.atlasWidth, atlasData.atlasHeight, maxDeviation);
             }
             else
                 Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");

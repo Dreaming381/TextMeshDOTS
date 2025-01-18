@@ -3,7 +3,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.TextCore;
 
-namespace TextMeshDOTS.HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
     public static class SDF
     {
@@ -13,7 +13,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
 
         public const float CORNER_CHECK_EPSILON = 32 / (1 << 16); //The epsilon distance  used for corner
 
-        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, bool splitBezierToLines= true, int spread = SDFCommon.DEFAULT_SPREAD)
+        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, float maxDeviation, bool splitBezierToLines = true, int spread = SDFCommon.DEFAULT_SPREAD)
         {
             var success = true;
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
@@ -22,7 +22,7 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             //SDFCommon.WriteGlyphOutlineToFile("BeforeSplit_FOR.txt", drawData);
             if (splitBezierToLines)
             {
-                success = SplitSDFShape(ref drawData, out DrawData newBezierData);
+                success = SplitSDFShape(ref drawData, maxDeviation, out DrawData newBezierData);
                 success = SDFGenerateBoundingBox(ref newBezierData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
             }
             else
@@ -30,11 +30,11 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             return success;
         }
         
-        static bool SplitSDFShape(ref DrawData drawData, out DrawData newBezierData)
+        public static bool SplitSDFShape(ref DrawData drawData, float maxDeviation, out DrawData newBezierData)
         {
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
-            newBezierData = new DrawData(edges.Length * 16, contourIDs.Length, Allocator.Temp);
+            newBezierData = new DrawData(edges.Length * 16, contourIDs.Length, maxDeviation, Allocator.Temp);
             var newEdges = newBezierData.edges;
             var newContourIDs = newBezierData.contourIDs;
 
@@ -57,10 +57,10 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                             break;
                         case SDFEdgeType.QUADRATIC:
                             dx = GetDeviationQuadratic(edges, edgeID);                            
-                            if (dx > SDFCommon.MAX_DEVIATION_SPLITTING)
+                            if (dx > maxDeviation)
                             {
                                 num_splits = 1;
-                                while (dx > SDFCommon.MAX_DEVIATION_SPLITTING)
+                                while (dx > maxDeviation)
                                 {                                    
                                     dx /= 4;
                                     num_splits *= 2;
@@ -75,10 +75,10 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                             break;
                         case SDFEdgeType.CUBIC:
                             dx = GetDeviationCubic(edges, edgeID);
-                            if (dx > SDFCommon.MAX_DEVIATION_SPLITTING)
+                            if (dx > maxDeviation)
                             {
                                 num_splits = 1;
-                                while (dx > SDFCommon.MAX_DEVIATION_SPLITTING)
+                                while (dx > maxDeviation)
                                 {
                                     dx /= 4;
                                     num_splits *= 2;

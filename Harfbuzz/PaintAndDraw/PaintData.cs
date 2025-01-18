@@ -2,7 +2,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace TextMeshDOTS.HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz
 {
     /// <summary>
     /// textureData and clipRect (informing about texture width and height) are the ultimate output of the paint API
@@ -25,10 +25,10 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         public int imageWidth;
         public int imageHeight;
 
-        public PaintData(DrawDelegates drawDelegates, int edgeCapacity, int contourCapacity, Allocator allocator)
+        public PaintData(DrawDelegates drawDelegates, int edgeCapacity, int contourCapacity, float maxDeviation, Allocator allocator)
         {
             this.drawDelegates = drawDelegates;
-            clipGlyph = new DrawData(edgeCapacity, contourCapacity, allocator);
+            clipGlyph = new DrawData(edgeCapacity, contourCapacity, maxDeviation, allocator);
             glyphID = default;
             transformStack = new();
             transformStack.Add(PaintUtils.AffineTransformIdentity);

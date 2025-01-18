@@ -7,9 +7,7 @@ using Unity.Collections;
 using TextMeshDOTS.HarfBuzz;
 using System;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
-using UnityEngine.TextCore.Text;
 using TextMeshDOTS.Rendering;
-using System.Linq;
 using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing

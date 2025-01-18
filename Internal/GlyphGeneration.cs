@@ -92,7 +92,7 @@ namespace TextMeshDOTS
                     currentTextSpan = textSpans[textSpanCounter++];
                     if (previousFontMaterialIndex != currentTextSpan.fontMaterialIndex)
                     {
-                        var fontAssetRef = fontAssetRefs[currentTextSpan.fontMaterialIndex];
+                        currentFontAssetRef = fontAssetRefs[currentTextSpan.fontMaterialIndex];
                         currentFontEntity = fontEntities[fontAssetRefs[currentTextSpan.fontMaterialIndex]];
                         currentFont = ref dynamicFontAssetsLookup[currentFontEntity].blob.Value;
                         scaledDynamicFont.Update(ref currentFont, out xNativeToUnity, out yNativeToUnity);
@@ -168,6 +168,7 @@ namespace TextMeshDOTS
                 bool simulateBold = (currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && currentFontAssetRef.weight != (int)FontWeight.Bold;
                 if (simulateBold) 
                 {
+                    Debug.Log($"Simulate Bold {currentFontAssetRef.weight} {(int)FontWeight.Bold}");
                     style_padding = 0;
                     boldSpacingAdjustment = currentFont.boldStyleSpacing;
                 }

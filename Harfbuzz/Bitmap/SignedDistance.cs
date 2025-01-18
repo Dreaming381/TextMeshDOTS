@@ -1,4 +1,4 @@
-namespace TextMeshDOTS.HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
     public struct SignedDistance
     {

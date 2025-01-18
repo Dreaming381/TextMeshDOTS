@@ -13,7 +13,7 @@ namespace TextMeshDOTS.HarfBuzz
         {
             ptr = HB.hb_face_create(blob, index);
         }
-        public uint UnitsPerEM
+        public uint GetUnitsPerEM
         {
             get { return HB.hb_face_get_upem(ptr); }
             set { HB.hb_face_set_upem(ptr, value); }

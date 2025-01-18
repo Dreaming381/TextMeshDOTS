@@ -25,7 +25,7 @@ namespace TextMeshDOTS.RichText
             in CalliString calliString,
             ref CalliString.Enumerator enumerator,
             ref FontAssetArray fontAssetArray,    
-            in TextBaseConfiguration baseConfiguration,
+            in TextBaseConfiguration textBaseConfiguration,
             ref TextConfiguration textConfiguration)  //this is just a cache to avoid allocation
         {
             ref var richTextTagIndentifiers = ref textConfiguration.richTextTagIndentifiers;
@@ -442,10 +442,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_xAdvance = value * (baseConfiguration.isOrthographic ? 1.0f : 0.1f);
+                                textConfiguration.m_xAdvance = value * (textBaseConfiguration.isOrthographic ? 1.0f : 0.1f);
                                 return true;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_xAdvance = value * textConfiguration.m_currentFontSize * (baseConfiguration.isOrthographic ? 1.0f : 0.1f);
+                                textConfiguration.m_xAdvance = value * textConfiguration.m_currentFontSize * (textBaseConfiguration.isOrthographic ? 1.0f : 0.1f);
                                 return true;
                             case TagUnitType.Percentage:
                                 textConfiguration.m_xAdvance = textConfiguration.m_marginWidth * value / 100;
@@ -465,10 +465,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_baselineOffset = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_baselineOffset = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 return true;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_baselineOffset = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_baselineOffset = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 return true;
                             case TagUnitType.Percentage:
                                 //m_baselineOffset = m_marginHeight * val / 100;
@@ -515,13 +515,13 @@ namespace TextMeshDOTS.RichText
                             case TagUnitType.Pixels:
                                 if (calliString[5] == 43)  // <size=+00>
                                 {
-                                    textConfiguration.m_currentFontSize = baseConfiguration.fontSize + value;
+                                    textConfiguration.m_currentFontSize = textBaseConfiguration.fontSize + value;
                                     textConfiguration.m_sizeStack.Add(textConfiguration.m_currentFontSize);
                                     return true;
                                 }
                                 else if (calliString[5] == 45)  // <size=-00>
                                 {
-                                    textConfiguration.m_currentFontSize = baseConfiguration.fontSize + value;
+                                    textConfiguration.m_currentFontSize = textBaseConfiguration.fontSize + value;
                                     textConfiguration.m_sizeStack.Add(textConfiguration.m_currentFontSize);
                                     return true;
                                 }
@@ -532,11 +532,11 @@ namespace TextMeshDOTS.RichText
                                     return true;
                                 }
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_currentFontSize = baseConfiguration.fontSize * value;
+                                textConfiguration.m_currentFontSize = textBaseConfiguration.fontSize * value;
                                 textConfiguration.m_sizeStack.Add(textConfiguration.m_currentFontSize);
                                 return true;
                             case TagUnitType.Percentage:
-                                textConfiguration.m_currentFontSize = baseConfiguration.fontSize * value / 100;
+                                textConfiguration.m_currentFontSize = textBaseConfiguration.fontSize * value / 100;
                                 textConfiguration.m_sizeStack.Add(textConfiguration.m_currentFontSize);
                                 return true;
                         }
@@ -654,10 +654,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_xAdvance += value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_xAdvance += value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 return true;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_xAdvance += value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_xAdvance += value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 return true;
                             case TagUnitType.Percentage:
                                 // Not applicable
@@ -748,7 +748,7 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_width = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_width = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 break;
                             case TagUnitType.FontUnits:
                                 return false;
@@ -907,10 +907,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_cSpacing = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_cSpacing = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 break;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_cSpacing = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_cSpacing = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 break;
                             case TagUnitType.Percentage:
                                 return false;
@@ -936,10 +936,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_monoSpacing = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_monoSpacing = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 break;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_monoSpacing = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_monoSpacing = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 break;
                             case TagUnitType.Percentage:
                                 return false;
@@ -966,10 +966,10 @@ namespace TextMeshDOTS.RichText
                         {
                             case TagUnitType.Pixels:
                                 if (ConvertToFloat(ref textConfiguration.m_htmlTag, out value) != ParseError.None)
-                                    textConfiguration.m_tagIndent = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                    textConfiguration.m_tagIndent = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 break;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_tagIndent = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_tagIndent = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 break;
                             case TagUnitType.Percentage:
                                 textConfiguration.m_tagIndent = textConfiguration.m_marginWidth * value / 100;
@@ -995,10 +995,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_tagLineIndent = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_tagLineIndent = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 break;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_tagLineIndent = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_tagLineIndent = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 break;
                             case TagUnitType.Percentage:
                                 textConfiguration.m_tagLineIndent = textConfiguration.m_marginWidth * value / 100;
@@ -1203,10 +1203,10 @@ namespace TextMeshDOTS.RichText
                                 switch (tagUnitType)
                                 {
                                     case TagUnitType.Pixels:
-                                        textConfiguration.m_marginLeft = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                        textConfiguration.m_marginLeft = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                         break;
                                     case TagUnitType.FontUnits:
-                                        textConfiguration.m_marginLeft = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                        textConfiguration.m_marginLeft = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                         break;
                                     case TagUnitType.Percentage:
                                         textConfiguration.m_marginLeft =
@@ -1236,10 +1236,10 @@ namespace TextMeshDOTS.RichText
                                             switch (richTextTagIndentifiers[i].unitType)
                                             {
                                                 case TagUnitType.Pixels:
-                                                    textConfiguration.m_marginLeft = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                                    textConfiguration.m_marginLeft = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                                     break;
                                                 case TagUnitType.FontUnits:
-                                                    textConfiguration.m_marginLeft = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) *
+                                                    textConfiguration.m_marginLeft = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) *
                                                                                           textConfiguration.m_currentFontSize;
                                                     break;
                                                 case TagUnitType.Percentage:
@@ -1261,10 +1261,10 @@ namespace TextMeshDOTS.RichText
                                             switch (richTextTagIndentifiers[i].unitType)
                                             {
                                                 case TagUnitType.Pixels:
-                                                    textConfiguration.m_marginRight = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                                    textConfiguration.m_marginRight = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                                     break;
                                                 case TagUnitType.FontUnits:
-                                                    textConfiguration.m_marginRight = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) *
+                                                    textConfiguration.m_marginRight = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) *
                                                                                            textConfiguration.m_currentFontSize;
                                                     break;
                                                 case TagUnitType.Percentage:
@@ -1296,10 +1296,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_marginLeft = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_marginLeft = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 break;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_marginLeft = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_marginLeft = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 break;
                             case TagUnitType.Percentage:
                                 textConfiguration.m_marginLeft =
@@ -1318,10 +1318,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_marginRight = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_marginRight = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 break;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_marginRight = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_marginRight = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 break;
                             case TagUnitType.Percentage:
                                 textConfiguration.m_marginRight =
@@ -1340,10 +1340,10 @@ namespace TextMeshDOTS.RichText
                         switch (tagUnitType)
                         {
                             case TagUnitType.Pixels:
-                                textConfiguration.m_lineHeight = value * (baseConfiguration.isOrthographic ? 1 : 0.1f);
+                                textConfiguration.m_lineHeight = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                                 break;
                             case TagUnitType.FontUnits:
-                                textConfiguration.m_lineHeight = value * (baseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
+                                textConfiguration.m_lineHeight = value * (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * textConfiguration.m_currentFontSize;
                                 break;
                             case TagUnitType.Percentage:
                                 //fontScale = (richtextAdjustments.m_currentFontSize / m_currentFontAsset.faceInfo.pointSize * m_currentFontAsset.faceInfo.scale * (richtextAdjustments.m_isOrthographic ? 1 : 0.1f));

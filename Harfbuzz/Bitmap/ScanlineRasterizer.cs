@@ -4,7 +4,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace TextMeshDOTS.HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
     public static class ScanlineRasterizer
     {
@@ -37,8 +37,9 @@ namespace TextMeshDOTS.HarfBuzz.SDF
             var scanLineStart = new float2(minX, minY);
             var scanLineEnd = new float2(maxX, minY);
 
-            for (float y = minY; y < maxY; y += step)
-            //for (float y = 250; y < 251; y += step)
+            //for (float y = minY; y < maxY; y += step)
+            //for (float y = 155; y < 170; y += step)
+            for (float y = 10; y < 195; y += step)
             {
                 scanLineStart.y = y; scanLineEnd.y = y;
                 intersectionPoints.Clear();
@@ -52,9 +53,9 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                     for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                     {
                         var edge = edges[edgeID];
-                        if (edge.edge_type == SDFEdgeType.QUADRATIC)
-                            IntersectQuadraticBezierAndScanline(edges, edgeID, startID, nextStartID, (int)y, (int) minX, (int)maxX, intersectionPoints);
-                        else
+                        //if (edge.edge_type == SDFEdgeType.QUADRATIC)
+                        //    IntersectQuadraticBezierAndScanline(edges, edgeID, startID, nextStartID, (int)y, (int) minX, (int)maxX, intersectionPoints);
+                        //else
                         {
                             bool intersect = EdgesIntersect(scanLineStart, scanLineEnd, edge.start_pos, edge.end_pos, true);
                             if (intersect)
@@ -73,7 +74,8 @@ namespace TextMeshDOTS.HarfBuzz.SDF
                 if (inverse)
                     intersectionPoints.Add(new float2(clipRectMaxX, y));
 
-                intersectionPoints.Sort(default(XComparer));
+                intersectionPoints.Sort(default(XComparer));                
+               
 
                 for (int i = 0; i < intersectionPoints.Length - 1; i += 2)
                 {                    

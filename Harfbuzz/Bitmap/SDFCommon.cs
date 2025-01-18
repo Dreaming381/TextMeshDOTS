@@ -1,16 +1,11 @@
 using System.IO;
 using Unity.Collections;
 using Unity.Mathematics;
-using UnityEngine;
 
-namespace TextMeshDOTS.HarfBuzz.SDF
+namespace TextMeshDOTS.HarfBuzz.Bitmap
 {  
     public static class SDFCommon
     {
-        /// <summary> Max permitted deviatition of generated lines from original bezier curve. 
-        /// Sensible value is fontsize (=atlas pointsize) / 25). Lower values massively hit performance.
-        /// </summary>
-        public const float MAX_DEVIATION_SPLITTING = 2f;
         public readonly static bool USE_SQUARED_DISTANCES = false;
         public const int DEFAULT_SPREAD = 8;
         public const int MIN_SPREAD = 2;
@@ -19,17 +14,40 @@ namespace TextMeshDOTS.HarfBuzz.SDF
         public const int MAX_NEWTON_DIVISIONS = 4;
         public const int FT_TRIG_SAFE_MSB = 29;
 
-        public static void WriteGlyphOutlineToFile(string path, in NativeList<SDFEdge> edges)
+        /// <summary> Max permitted deviatition of generated lines from original bezier curve. 
+        /// Sensible value is fontscale / 25). Too low values massively hit performance.
+        /// </summary>
+        public static float GetMaxDeviation(float upem)
+        {
+            return math.max (2, upem / 96);
+        }
+
+        public static void WriteGlyphOutlineToFile(string path, NativeList<SDFEdge> edges)
         {
             if(edges.Length == 0) return;
             StreamWriter writer = new StreamWriter(path, false);
-            SDFEdge edge;
-            edge = edges[0];
+            var edge = edges[0];
             writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
             for (int i = 0, end = edges.Length; i < end; i++)
             {
                 edge = edges[i];
                 writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");              
+            }
+            writer.WriteLine();
+            writer.Close();
+        }
+        public static void WriteGlyphOutlineToFile(string path, NativeList<Edge> edges)
+        {
+            if (edges.Length == 0) return;
+            StreamWriter writer = new StreamWriter(path, false);
+            var edge = edges[0];
+            
+            for (int i = 0, end = edges.Length; i < end; i++)
+            {
+                edge = edges[i];
+                writer.WriteLine($"{edge.x0} {edge.y0} {edge.invert}");
+                writer.WriteLine($"{edge.x1} {edge.y1}");
+                writer.WriteLine();
             }
             writer.WriteLine();
             writer.Close();

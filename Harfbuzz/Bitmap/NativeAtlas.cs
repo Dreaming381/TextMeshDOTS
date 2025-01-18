@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using UnityEngine.TextCore;
 using Unity.Entities;
 
-namespace TextMeshDOTS.HarfBuzz
+namespace TextMeshDOTS.HarfBuzz.Bitmap
 {    
     public static class NativeAtlas
     {

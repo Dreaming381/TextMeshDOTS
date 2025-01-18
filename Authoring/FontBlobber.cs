@@ -83,7 +83,7 @@ namespace TextMeshDOTS.Authoring
                     isItalic = false;
                     break;
             }
-            var slant = font.GetStyleTag(StyleTag.SlantAngle);
+            var slant = font.GetStyleTag(StyleTag.SlantAngle); 
 
             fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, (int)weight, width, isItalic, slant);
 

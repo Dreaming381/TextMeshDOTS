@@ -14,11 +14,12 @@ namespace TextMeshDOTS.HarfBuzz
         //🥰: 14483, 15667, 16927, 16928, 16929, 16930, 16931, 16932, 16933, 16934, 16935, 16936, 16937, 16938, 16939, 16940, 16941, 
         //😰: 13293, 13381, 13437, 13438, 13439, 13440, 13443, 13488, 13508, 13509, 
         //13: 6767, 6768, 6769, 6770, 6771, 6772, 6773, 6774, 6775, 6776, 6777, 6778, 6779, 6780, 6781,  6782, 6783, 6784, 6785, 6786, 6787, 6788, 6789, 6790, 6791, 6792,
+        //😱 (push+pop group error)
 
         public static readonly int filterGlyph = 6767;//13317;
         public static FixedList4096Bytes<int> filterGlyphs = new()
         {
-            3
+           15667
         };
         public static bool DrawGlyph(int glyphID)
         {
