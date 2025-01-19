@@ -130,5 +130,10 @@ namespace TextMeshDOTS.HarfBuzz
             for (int i = 0; i < result.Length; i++)
                 result[i] = new ColorARGB(255,255,255,255);
         }
+        public static void Clear(NativeArray<ColorARGB> result)
+        {
+            for (int i = 0; i < result.Length; i++)
+                result[i] = 0;
+        }
     }    
 }

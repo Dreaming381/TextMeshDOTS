@@ -4,7 +4,6 @@ using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 using Unity.Collections;
 using TextMeshDOTS.HarfBuzz.Bitmap;
-using System.Collections.Generic;
 using Unity.Rendering;
 using static TextMeshDOTS.TextCoreExtensions;
 using System.IO;
@@ -107,7 +106,7 @@ namespace TextMeshDOTS.TextProcessing
 
             foreach (var loadRequest in this.newLoadRequests)
             {                
-                LoadFont(loadRequest, 50, 256, fontEntities, ref state);
+                LoadFont(loadRequest, 48, 128, fontEntities, ref state);
             }
             newLoadRequests.Clear();
 

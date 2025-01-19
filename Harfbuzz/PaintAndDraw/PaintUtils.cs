@@ -2,6 +2,7 @@
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.Profiling;
 
 
 namespace TextMeshDOTS.HarfBuzz
@@ -29,6 +30,8 @@ namespace TextMeshDOTS.HarfBuzz
             else 
                 return true;
         }
+        public static readonly ProfilerMarker rasterizeMarker = new ProfilerMarker("Rasterize");
+        public static readonly ProfilerMarker blendMarker = new ProfilerMarker("Blend");
 
         public readonly static float2x3 AffineTransformIdentity = new float2x3 {
                 c0 = new float2(1, 0),  // xx, yx

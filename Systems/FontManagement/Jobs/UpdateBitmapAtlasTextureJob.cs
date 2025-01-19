@@ -58,12 +58,12 @@ namespace TextMeshDOTS.TextProcessing
                     //    //consider use of com.unity.vectorgraphics (which designed to render svg)
                     //}
                 }
-                else if (paintData.finalTexture.Length > 0) // render COLR, sbix, CBDT
+                else if (paintData.paintSurface.Length > 0) // render COLR, sbix, CBDT
                 {
                     var clipRect = paintData.clipRect;
                     if (atlasRect.width != (int)clipRect.width || atlasRect.height != (int)clipRect.height)
                         Debug.LogWarning($"Dimensions of glyphRect reserved in atlas ({atlasRect.width},{atlasRect.height}) and painted GlyphRect ({clipRect.width},{clipRect.height}) do not match");
-                    PaintUtils.BlitRawTexture(paintData.finalTexture, (int)clipRect.width, (int)clipRect.height, textureData, atlasData.atlasWidth, atlasData.atlasHeight, atlasRect.x, atlasRect.y);
+                    PaintUtils.BlitRawTexture(paintData.paintSurface, (int)clipRect.width, (int)clipRect.height, textureData, atlasData.atlasWidth, atlasData.atlasHeight, atlasRect.x, atlasRect.y);
                 }
             }
             else

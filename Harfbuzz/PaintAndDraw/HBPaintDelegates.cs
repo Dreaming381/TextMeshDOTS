@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System;
 using UnityEngine;
 using Unity.Mathematics;
@@ -80,7 +80,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(ColorGlyphDelegate))]
         public static bool hb_paint_color_glyph_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, uint glyphID, IntPtr font, IntPtr user_data)
         {
-            Debug.Log("hb_paint_color_glyph");
+            //Debug.Log("hb_paint_color_glyph");
             return true;
         }
         [BurstCompile]
@@ -100,7 +100,7 @@ namespace TextMeshDOTS.HarfBuzz
         {
             var clipRect = new BBox(new float2(xmin, ymin), new float2(xmax, ymax));
             data.clipRect = clipRect;
-            data.finalTexture = new NativeArray<ColorARGB>((int)(clipRect.width) * (int)clipRect.height, Allocator.Temp);
+            data.paintSurface = new NativeArray<ColorARGB>((int)(clipRect.width) * (int)clipRect.height, Allocator.Temp);
             //Debug.Log($"push clip rectangle {clipRect}");
         }
         [BurstCompile]
@@ -120,7 +120,7 @@ namespace TextMeshDOTS.HarfBuzz
             //Debug.Log($"color {colorARGB}");
             var solidColor = new SolidColor(colorARGB);
             //ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, solidColor, data.clipRect);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, solidColor, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, solidColor, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -134,7 +134,7 @@ namespace TextMeshDOTS.HarfBuzz
                 return;            
             lineGradient.InitializeColorLine(colorLine);
             //ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, lineGradient, data.clipRect);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, lineGradient, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, lineGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -149,7 +149,7 @@ namespace TextMeshDOTS.HarfBuzz
             
             radialGradient.InitializeColorLine(colorLine);
             //ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, radialGradient, data.clipRect);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, radialGradient, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, radialGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(SweepGradientDelegate))]
@@ -164,14 +164,15 @@ namespace TextMeshDOTS.HarfBuzz
                 return;
             
             //ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, sweepGradient, data.clipRect);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, sweepGradient, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, sweepGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
         public static void HB_paint_push_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
-            //return;
-            //logic for pushing / poping groups explained here: https://github.com/harfbuzz/harfbuzz/issues/3931
+            //according to https://github.com/harfbuzz/harfbuzz/issues/3931, there should only be two intermediate surfaces requiered
+            //to build COMPOSITE glyphs (foreground, background)...but emperically we find sometimes need for three (e.g. in 😱). Not clear why
+            //
             // COMPOSITE: 
             // push_group()
             // // recurse for backdrop
@@ -186,57 +187,48 @@ namespace TextMeshDOTS.HarfBuzz
             //    // recurse for layer paint
             //    pop_group_and_composite(OVER)
 
-            if (data.group == 0)
+            data.group++;
+
+            if (data.group == 1)
             {
-                if (data.backDrop.IsCreated) data.backDrop.Dispose();                
-                data.backDrop = data.finalTexture;
-                data.finalTexture = new NativeArray<ColorARGB>(data.backDrop.Length, Allocator.Temp);                
-                //Debug.Log($"push backdrop group, new: {data.group + 1}");
+                if(!data.tempSurface1.IsCreated)
+                    data.tempSurface1 = new NativeArray<ColorARGB>(data.paintSurface, Allocator.Temp);
+                (data.paintSurface, data.tempSurface1) = (data.tempSurface1, data.paintSurface);
             }
-            else if (data.group == 1)
+            else if (data.group == 2)
             {
-                if (data.foreGround.IsCreated) data.foreGround.Dispose();
-                data.foreGround = data.finalTexture;
-                data.finalTexture = new NativeArray<ColorARGB>(data.foreGround.Length, Allocator.Temp);
-                //Debug.Log($"push foreground group, new: {data.group + 1}");
+                if (!data.tempSurface2.IsCreated)
+                    data.tempSurface2 = new NativeArray<ColorARGB>(data.paintSurface, Allocator.Temp);
+                (data.paintSurface, data.tempSurface2) = (data.tempSurface2, data.paintSurface);
+            }
+            else if(data.group == 3)
+            {
+                if (!data.tempSurface3.IsCreated)
+                    data.tempSurface3 = new NativeArray<ColorARGB>(data.paintSurface, Allocator.Temp);
+                (data.paintSurface, data.tempSurface3) = (data.tempSurface3, data.paintSurface);
             }
             else
-                Debug.Log($"push unexpected group, new: {data.group + 1}");            
-
-            data.group++;            
+                Debug.Log($"No more intermediate surfaces available");
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopGroupDelegate))]
         public static void HB_paint_pop_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, PaintCompositeMode mode, IntPtr user_data)
         {
-            //return;
-            //logic for pushing / poping groups explained here: https://github.com/harfbuzz/harfbuzz/issues/3931
             NativeArray<ColorARGB> result, source, destination = default;
-            if (data.group == 1)
-            {
-                //finalTexture contains freshly rasterized glyph or a prior blend result (foreground or background)
-                //Use this as source, and merge with backdrop (destination), store result in  finalTexture
-                result = data.finalTexture;
-                source = data.finalTexture;
-                destination = data.backDrop;
-                //Debug.Log($"pop group (new: {data.group - 1}), use {mode} to combine backdrop with final texture (result in finalTexture)");
-            }
-            else if (data.group == 2)
-            {
-                // finalTexture contains freshly rasterized glyph
-                // Use this as source, and merge with foreground (destination), store result in finalTexture
-                result = data.finalTexture;
-                source = data.finalTexture;
-                destination = data.foreGround;
-                //Debug.Log($"pop group (new: {data.group - 1}), use {mode} to combine backdrop with foreground (result in finalTexture)");
-            }
-            else
-            {
-                Debug.Log("pop unexpected group");
-                data.group--;
-                return;
-            }
 
+            result = data.paintSurface;
+            source = data.paintSurface;
+
+            if (data.group == 1)
+                destination = data.tempSurface1;
+            else if (data.group == 2)
+                destination = data.tempSurface2;
+            else if (data.group == 3)
+                destination = data.tempSurface3;
+            else
+                Debug.Log($"Unknown destination surface ");
+
+            PaintUtils.blendMarker.Begin();
             switch (mode)
             {
                 case PaintCompositeMode.SRC:
@@ -308,6 +300,14 @@ namespace TextMeshDOTS.HarfBuzz
                         result[i] = Blending.SrcOver(source[i], destination[i]);
                     break;
             }
+            PaintUtils.blendMarker.End();
+            if (data.group == 1)
+                Blending.Clear(data.tempSurface1);
+            else if (data.group == 2)
+                Blending.Clear(data.tempSurface2);
+            else if (data.group == 3)
+                Blending.Clear(data.tempSurface3);
+            
             data.group--;            
         }
         [BurstCompile]
@@ -319,8 +319,9 @@ namespace TextMeshDOTS.HarfBuzz
         }
 
         /// <summary>
-        /// This callback converts the image data found for a given glyph either to a NativeArray or colors that can be directly applied to a texture 
-        /// (for Apple sbix, and Google CDBT), or to the raw PNG and SVG bytes. PNG can SVG can currently not be converted to color in a BURST compatible way.
+        /// This callback converts the image data found for a given glyph either to a NativeArray of colors that can be directly applied to a texture 
+        /// (in case of raw BRGA data stored in Apple sbix or Google CDBT), or to the raw PNG and SVG bytes. PNG can SVG can currently not be converted 
+        /// to a NativeArray of colors in a BURST compatible way.
         /// </summary>
         [BurstCompile]
         [MonoPInvokeCallback(typeof(ImageDelegate))]
@@ -338,7 +339,7 @@ namespace TextMeshDOTS.HarfBuzz
                 int count = 0;
                 for (int i = 0, ii = rawBytes.Length; i < ii; i += 4)
                     textureData[count++] = new ColorARGB(rawBytes[i+3], rawBytes[i+2], rawBytes[i+1], rawBytes[i]);
-                data.finalTexture = textureData;
+                data.paintSurface = textureData;
             }
             else // HB_PAINT_IMAGE_FORMAT.PNG, HB_PAINT_IMAGE_FORMAT.SVG To-Do: find BURST compatible decoder
                 data.imageData = rawBytes;

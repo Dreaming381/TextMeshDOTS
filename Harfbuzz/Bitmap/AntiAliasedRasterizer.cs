@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
@@ -32,14 +33,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         SOFTWARE.
     */
     public static class AntiAliasedRasterizer
-    {
+    {        
         public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool invert = false) where T : IPattern
-        {
-            var minX = (int)clipRect.min.x;
-            var maxX = (int)clipRect.max.x;
-            var minY = (int)clipRect.min.y;
-            var maxY = (int)clipRect.max.y;
-            
+        {            
+            PaintUtils.rasterizeMarker.Begin();
             var success = SDF.SplitSDFShape(ref drawData, drawData.maxDeviation, out DrawData newBezierData);
             var edgeCountBeforeFlattening = drawData.edges.Length;
             var edgeCountAfterFlattening = newBezierData.edges.Length;
@@ -78,16 +75,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     edges.Add(edge);
                 }
             }
-
             edges.Sort(default(EdgeYMaxComparer));
-            //stbtt__sort_edges_quicksort(edges, 0, edges.Length);
-            //stbtt__sort_edges_ins_sort(edges, edges.Length);
-
-            //SDFCommon.WriteGlyphOutlineToFile($"Sorted_Edges.txt", edges);
-
-            var intersectionPoints = new NativeList<float2>(256, Allocator.Temp);
-
-            RasterizeSortedEdges(textureData, pattern, (int)clipRect.width, (int)clipRect.height, edges, minX, minY);
+            RasterizeSortedEdges(textureData, pattern, (int)clipRect.width, (int)clipRect.height, edges, (int)clipRect.min.x, (int)clipRect.min.y);
+            PaintUtils.rasterizeMarker.End();
         }
 
 
@@ -105,7 +95,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             //edges.ElementAt(n).y0 = (float)(off_y + textureHeight) + 1;
 
             while (j < textureHeight)
-            //while (j < 71)
             {
                 float scanYTop = y + 0.0f;
                 float scanYBottom = y + 1.0f;
@@ -124,8 +113,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             activeID = step.nextID;
                         else
                             actives.ElementAt(previousStepID).nextID = step.nextID; //skip current active (effectivly deletes it)
-                        //if (stepID == activeID)
-                        //    activeID = -1;
                         stepID = step.nextID; 
                         step.direction = 0;
                     }
@@ -138,7 +125,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                 while (edgeID <= n && edges[edgeID].y0 <= scanYBottom)
                 {
-                    var zID = stbtt__new_active(actives, edges[edgeID], off_x, scanYTop);
+                    var zID = AddActiveEdge(actives, edges[edgeID], off_x, scanYTop);
                     if (zID != -1)
                     {
                         ref var z = ref actives.ElementAt(zID);
@@ -162,7 +149,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 //}
                 //Debug.Log($"count: {count} activeID:{activeID}");
                 //if(count>1)                
-                StbttFillActiveEdgesNew(scanline, scanline2, textureWidth, actives, activeID, scanYTop);
+                FillActiveEdges(scanline, scanline2, textureWidth, actives, activeID, scanYTop);
 
                 float sum = 0;
                 for (int i = 0; i < textureWidth; ++i)
@@ -175,12 +162,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     m = (int)k;
                     if (m > 255) m = 255;
 
-
-                    //result.pixels[j * result.stride + i] = (byte)m;
                     var color = pattern.GetColor(i + off_x, y);
-                    //var targetIndex = textureWidth * ((int)y - off_y) + i - off_x; //substracting clipRect.min results in aliging glyph with (0,0) of bitmap
-                    var targetIndex = textureWidth * (y - off_y) + i; //substracting clipRect.min results in aliging glyph with (0,0) of bitmap
-                    //var targetIndex = textureWidth * y + i; //substracting clipRect.min results in aliging glyph with (0,0) of bitmap
+                    var targetIndex = textureWidth * (y - off_y) + i; //(why not (i - off_x)?; substracting clipRect.min results in aliging glyph with (0,0) of bitmap
                     color.a = (byte)(color.a * (byte)m / 255);
                     textureData[targetIndex] = color;
                 }
@@ -197,7 +180,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 j++;
             }
         }
-        static void StbttFillActiveEdgesNew(NativeArray<float> scanline, NativeArray<float> scanline_fill, int len, NativeList<ActiveEdge> actvies, int eID, float y_top)
+        static void FillActiveEdges(NativeArray<float> scanline, NativeArray<float> scanline_fill, int len, NativeList<ActiveEdge> actvies, int eID, float y_top)
         {
             float y_bottom = y_top + 1;
 
@@ -216,12 +199,12 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     {
                         if (x0 >= 0)
                         {
-                            stbtt__handle_clipped_edge(scanline, (int)x0, ref e, x0, y_top, x0, y_bottom);
-                            stbtt__handle_clipped_edge(scanline_fill, (int)x0 + 1, ref e, x0, y_top, x0, y_bottom);
+                            HandleClippedEdge(scanline, (int)x0, ref e, x0, y_top, x0, y_bottom);
+                            HandleClippedEdge(scanline_fill, (int)x0 + 1, ref e, x0, y_top, x0, y_bottom);
                         }
                         else
                         {
-                            stbtt__handle_clipped_edge(scanline_fill, 0, ref e, x0, y_top, x0, y_bottom);
+                            HandleClippedEdge(scanline_fill, 0, ref e, x0, y_top, x0, y_bottom);
                         }
                     }
                 }
@@ -270,7 +253,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             int x = (int)x_top;
                             height = (sy1 - sy0) * e.direction;
                             //Debug.Assert(x >= 0 && x < len);
-                            scanline[x] += stbtt__position_trapezoid_area(height, x_top, x + 1.0f, x_bottom, x + 1.0f);
+                            scanline[x] += PositionTrapezoidArea(height, x_top, x + 1.0f, x_bottom, x + 1.0f);
                             scanline_fill[x + 1] += height; // everything right of this pixel is filled
                         }
                         else
@@ -329,7 +312,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             area = sign * (y_crossing - sy0);
 
                             // area of the triangle (x_top,sy0), (x1+1,sy0), (x1+1,y_crossing)
-                            scanline[x1] += stbtt__sized_triangle_area(area, x1 + 1 - x_top);
+                            scanline[x1] += SizedTriangleArea(area, x1 + 1 - x_top);
 
                             // check if final y_crossing is blown up; no test case for this
                             if (y_final > y_bottom)
@@ -362,7 +345,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                             // area covered in the last pixel is the rectangle from all the pixels to the left,
                             // plus the trapezoid filled by the line segment in this pixel all the way to the right edge
-                            scanline[x2] += area + sign * stbtt__position_trapezoid_area(sy1 - y_final, (float)x2, x2 + 1.0f, x_bottom, x2 + 1.0f);
+                            scanline[x2] += area + sign * PositionTrapezoidArea(sy1 - y_final, (float)x2, x2 + 1.0f, x_bottom, x2 + 1.0f);
 
                             // the rest of the line is filled based on the total height of the line segment in this pixel
                             scanline_fill[x2 + 1] += sign * (sy1 - sy0);
@@ -408,39 +391,39 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                             if (x0 < x1 && x3 > x2)
                             {         // three segments descending down-right
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x0, y0, x1, y1);
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x1, y1, x2, y2);
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x2, y2, x3, y3);
+                                HandleClippedEdge(scanline, x, ref e, x0, y0, x1, y1);
+                                HandleClippedEdge(scanline, x, ref e, x1, y1, x2, y2);
+                                HandleClippedEdge(scanline, x, ref e, x2, y2, x3, y3);
                             }
                             else if (x3 < x1 && x0 > x2)
                             {  // three segments descending down-left
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x0, y0, x2, y2);
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x2, y2, x1, y1);
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x1, y1, x3, y3);
+                                HandleClippedEdge(scanline, x, ref e, x0, y0, x2, y2);
+                                HandleClippedEdge(scanline, x, ref e, x2, y2, x1, y1);
+                                HandleClippedEdge(scanline, x, ref e, x1, y1, x3, y3);
                             }
                             else if (x0 < x1 && x3 > x1)
                             {  // two segments across x, down-right
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x0, y0, x1, y1);
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x1, y1, x3, y3);
+                                HandleClippedEdge(scanline, x, ref e, x0, y0, x1, y1);
+                                HandleClippedEdge(scanline, x, ref e, x1, y1, x3, y3);
                             }
                             else if (x3 < x1 && x0 > x1)
                             {  // two segments across x, down-left
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x0, y0, x1, y1);
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x1, y1, x3, y3);
+                                HandleClippedEdge(scanline, x, ref e, x0, y0, x1, y1);
+                                HandleClippedEdge(scanline, x, ref e, x1, y1, x3, y3);
                             }
                             else if (x0 < x2 && x3 > x2)
                             {  // two segments across x+1, down-right
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x0, y0, x2, y2);
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x2, y2, x3, y3);
+                                HandleClippedEdge(scanline, x, ref e, x0, y0, x2, y2);
+                                HandleClippedEdge(scanline, x, ref e, x2, y2, x3, y3);
                             }
                             else if (x3 < x2 && x0 > x2)
                             {  // two segments across x+1, down-left
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x0, y0, x2, y2);
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x2, y2, x3, y3);
+                                HandleClippedEdge(scanline, x, ref e, x0, y0, x2, y2);
+                                HandleClippedEdge(scanline, x, ref e, x2, y2, x3, y3);
                             }
                             else
                             {  // one segment
-                                stbtt__handle_clipped_edge(scanline, x, ref e, x0, y0, x3, y3);
+                                HandleClippedEdge(scanline, x, ref e, x0, y0, x3, y3);
                             }
                         }
                     }
@@ -450,7 +433,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         }
         // the edge passed in here does not cross the vertical line at x or the vertical line at x+1
         // (i.e. it has already been clipped to those)
-        static void stbtt__handle_clipped_edge(NativeArray<float> scanline, int x, ref ActiveEdge e, float x0, float y0, float x1, float y1)
+        static void HandleClippedEdge(NativeArray<float> scanline, int x, ref ActiveEdge e, float x0, float y0, float x1, float y1)
         {
             if (y0 == y1) return;
             //Debug.Assert(y0 < y1);
@@ -492,106 +475,22 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
         }
 
-        static float stbtt__sized_trapezoid_area(float height, float top_width, float bottom_width)
+        static float SizedTrapezoidArea(float height, float top_width, float bottom_width)
         {
             //Debug.Assert(top_width >= 0);
             //Debug.Assert(bottom_width >= 0);
             return (top_width + bottom_width) / 2.0f * height;
         }
 
-        static float stbtt__position_trapezoid_area(float height, float tx0, float tx1, float bx0, float bx1)
+        static float PositionTrapezoidArea(float height, float tx0, float tx1, float bx0, float bx1)
         {
-            return stbtt__sized_trapezoid_area(height, tx1 - tx0, bx1 - bx0);
+            return SizedTrapezoidArea(height, tx1 - tx0, bx1 - bx0);
         }
 
-        static float stbtt__sized_triangle_area(float height, float width)
+        static float SizedTriangleArea(float height, float width)
         {
             return height * width / 2;
-        }
-        static void stbtt__sort_edges_ins_sort(NativeList<Edge> edges, int n)
-        {
-            EdgeYMaxComparer edgeYMaxComparer = new EdgeYMaxComparer();
-            for (int i = 1; i < n; i++)
-            {
-                int j = i;
-                while (j > 0 && edgeYMaxComparer.Compare(edges[j - 1], edges[j]) > 0)
-                {
-                    (edges[j], edges[j - 1]) = (edges[j - 1], edges[j]);
-                    j--;
-                }
-            }
-        }
-
-        static void stbtt__sort_edges_quicksort(NativeList<Edge> edges, int p, int n)
-        {
-            EdgeYMaxComparer edgeYMaxComparer = new EdgeYMaxComparer();
-            /* threshold for transitioning to insertion sort */
-            while (n > 12)
-            {
-                Edge t;
-                int c01, c12, c, m, i, j;
-
-                /* compute median of three */
-                m = n >> 1;
-                c01 = edgeYMaxComparer.Compare(edges[0], edges[m]);
-                c12 = edgeYMaxComparer.Compare(edges[m], edges[n - 1]);
-                /* if 0 >= mid >= end, or 0 < mid < end, then use mid */
-                if (c01 != c12)
-                {
-                    /* otherwise, we'll need to swap something else to middle */
-                    int z;
-                    c = edgeYMaxComparer.Compare(edges[0], edges[n - 1]);
-                    /* 0>mid && mid<n:  0>n => n; 0<n => 0 */
-                    /* 0<mid && mid>n:  0>n => 0; 0<n => n */
-                    z = (c == c12) ? 0 : n - 1;
-                    t = edges[z];
-                    edges[z] = edges[m];
-                    edges[m] = t;
-                }
-                /* now p[m] is the median-of-three */
-                /* swap it to the beginning so it won't move around */
-                t = edges[0];
-                edges[0] = edges[m];
-                edges[m] = t;
-
-                /* partition loop */
-                i = 1;
-                j = n - 1;
-                for (; ; )
-                {
-                    /* handling of equality is crucial here */
-                    /* for sentinels & efficiency with duplicates */
-                    for (; ; ++i)
-                    {
-                        if (edgeYMaxComparer.Compare(edges[i], edges[0])==0) break;
-                    }
-                    for (; ; --j)
-                    {
-                        if (edgeYMaxComparer.Compare(edges[0], edges[j])==0) break;
-                    }
-                    /* make sure we haven't crossed */
-                    if (i >= j) break;
-                    t = edges[i];
-                    edges[i] = edges[j];
-                    edges[j] = t;
-
-                    ++i;
-                    --j;
-                }
-                /* recurse on smaller side, iterate on larger */
-                if (j < (n - i))
-                {
-                    stbtt__sort_edges_quicksort(edges, p, j);
-                    p = p + i;
-                    n = n - i;
-                }
-                else
-                {
-                    stbtt__sort_edges_quicksort(edges, p + 1, n - i);
-                    n = j;
-                }
-            }
-        }
+        }  
 
         static void ClearArray<T>(NativeArray<T> array, int start, int end) where T : struct
         {
@@ -600,7 +499,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 array[i] = default(T);
         }
 
-        static int stbtt__new_active(NativeList<ActiveEdge> hh, Edge e, int off_x, float start_point)
+        static int AddActiveEdge(NativeList<ActiveEdge> hh, Edge e, int off_x, float start_point)
         {
             var z = new ActiveEdge();
             float dxdy = (e.x1 - e.x0) / (e.y1 - e.y0);

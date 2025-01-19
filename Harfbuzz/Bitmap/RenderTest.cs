@@ -32,7 +32,7 @@ public class RenderTest : MonoBehaviour
     {
         drawFunctions = new DrawDelegates(true);
         paintFunctions = new PaintDelegates(true);
-        LoadFont(sourceFont, 512);
+        LoadFont(sourceFont, 256);
 
         //DrawTest(letter);
         //PaintPNGTest("😉");
@@ -77,10 +77,11 @@ public class RenderTest : MonoBehaviour
         for (int i = 0; i < textureData.Length; i++)
             textureData[i] = (ColorARGB)Color.white;
 
+        Buffer buffer=default;
         if (!renderGlyphID)
         {
             var language = new Language("eng");
-            var buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
+            buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
             buffer.AddText(character);
             font.Shape(buffer);
             var glyphInfos = buffer.GetGlyphInfosSpan();
@@ -105,24 +106,24 @@ public class RenderTest : MonoBehaviour
             }
             if (paintData.imageFormat == HB_PAINT_IMAGE_FORMAT.SVG)
             {
-                //could use com.unity.vectorgraphics if it would not be a class (designed to parse, tesselate and render svg)
+                //could use com.unity.vectorgraphics (designed to parse, tesselate and render svg) if it would not be a class 
             }
         }
-        else if (paintData.finalTexture.Length > 0) // render COLR, sbix, CBDT
+        else if (paintData.paintSurface.Length > 0) // content from COLR, or raw BGRA data from sbix, CBDT
         {
             var clipRect = paintData.clipRect;
             //var canvas = new NativeArray<ColorARGB>(paintData.finalTexture.Length, Allocator.Temp);
             //Blending.SetWhite(canvas);
             //for (int i = 0; i < paintData.finalTexture.Length; i++)
             //    paintData.finalTexture[i] = Blending.SrcOver(paintData.finalTexture[i], canvas[i]);
-            PaintUtils.BlitRawTexture(paintData.finalTexture, (int)clipRect.width, (int)clipRect.height, textureData, atlasWidth, atlasHeight, 0, 0);
+            PaintUtils.BlitRawTexture(paintData.paintSurface, (int)clipRect.width, (int)clipRect.height, textureData, atlasWidth, atlasHeight, 0, 0);
         }        
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
         texture2D.Apply(false);
-
-        //buffer.Dispose();
+        if (!renderGlyphID)
+            buffer.Dispose();
     }
 
     private void OnDestroy()
