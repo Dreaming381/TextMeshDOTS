@@ -88,6 +88,8 @@ namespace TextMeshDOTS.HarfBuzz
         public static void HB_paint_push_clip_glyph_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, uint glyphID, IntPtr font, IntPtr user_data)
         {
             data.glyphID = glyphID;
+            if (!PaintUtils.DrawGlyph((int)data.glyphID))
+                return;
             HB.hb_font_draw_glyph(font, glyphID, data.drawDelegates, ref data.clipGlyph);
             //if (PaintUtils.filterGlyphs.Contains((int)glyphID))
             //    SDFCommon.WriteGlyphOutlineToFile($"ClipGlyph_{glyphID}.txt", ref data.clipGlyph, true);

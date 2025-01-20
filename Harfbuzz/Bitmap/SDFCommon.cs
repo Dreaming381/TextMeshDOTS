@@ -1,6 +1,5 @@
 using System.IO;
 using Unity.Collections;
-using Unity.Mathematics;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {  
@@ -13,14 +12,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         public const int MAX_NEWTON_STEPS = 4;
         public const int MAX_NEWTON_DIVISIONS = 4;
         public const int FT_TRIG_SAFE_MSB = 29;
-
-        /// <summary> Max permitted deviatition of generated lines from original bezier curve. 
-        /// Sensible value is fontscale / 25). Too low values massively hit performance.
-        /// </summary>
-        public static float GetMaxDeviation(float upem)
-        {
-            return math.max (2, upem / 96);
-        }
 
         public static void WriteGlyphOutlineToFile(string path, NativeList<SDFEdge> edges)
         {
@@ -41,7 +32,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             if (edges.Length == 0) return;
             StreamWriter writer = new StreamWriter(path, false);
             var edge = edges[0];
-            
+
             for (int i = 0, end = edges.Length; i < end; i++)
             {
                 edge = edges[i];

@@ -20,7 +20,7 @@ namespace TextMeshDOTS.HarfBuzz
         public static readonly int filterGlyph = 6767;//13317;
         public static FixedList4096Bytes<int> filterGlyphs = new()
         {
-           15667
+           16938
         };
         public static bool DrawGlyph(int glyphID)
         {
@@ -86,7 +86,7 @@ namespace TextMeshDOTS.HarfBuzz
                 edge.control1 = mul(transform, edge.control1);
                 edge.control2 = mul(transform, edge.control2);
 
-                var edgeBBox = BBox.GetLineBBox(edge.start_pos, edge.end_pos);
+                var edgeBBox = BezierMath.GetLineBBox(edge.start_pos, edge.end_pos);
                 newGlyphRect = BBox.Union(newGlyphRect, edgeBBox);
             }
             var before = drawData.glyphRect;

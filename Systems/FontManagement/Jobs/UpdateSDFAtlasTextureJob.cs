@@ -35,7 +35,7 @@ namespace TextMeshDOTS.TextProcessing
             var glyphBlob = placedGlyphs[i];
 
             var font = nativeFontPointer.font;
-            var maxDeviation = SDFCommon.GetMaxDeviation(font.GetScale().x);
+            var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);
 
             var drawData = new DrawData(256, 16, maxDeviation, Allocator.Temp);
             marker.Begin();
@@ -59,7 +59,8 @@ namespace TextMeshDOTS.TextProcessing
             if (glyphIndex != -1)
             {
                 var atlasRect = usedGlyphRects[glyphIndex]; //render SDF into the reserved padded atlas texture  window 
-                SDF.SDFGenerateSubDivision(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.atlasWidth, atlasData.atlasHeight, maxDeviation);
+                //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
+                SDF.SDFGenerateSubDivision(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.atlasWidth, atlasData.atlasHeight);
             }
             else
                 Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");

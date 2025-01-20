@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.TextCore;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
@@ -9,209 +10,18 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
     {
         //generates SDF directly from Bezier Data that are provided by Harfbuzz
         //approach is inspired by FreeType 
-        public static SignedDistance max_sdf => new SignedDistance { distance = int.MaxValue, sign = 0, cross = 0 };
+        public static SignedDistance max_sdf => new SignedDistance { distance = int.MaxValue, sign = 0, cross = 0 };        
 
-        public const float CORNER_CHECK_EPSILON = 32 / (1 << 16); //The epsilon distance  used for corner
-
-        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, float maxDeviation, bool splitBezierToLines = true, int spread = SDFCommon.DEFAULT_SPREAD)
+        //Converts a glyph into a SDF bitmap. While function accepts all kinds of edges found in font files
+        // (quadratic beziers, cubic beziers, lines) consider to generates lines before using this function for performance reasons
+        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
         {
-            var success = true;
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
                 return false;
 
-            //SDFCommon.WriteGlyphOutlineToFile("BeforeSplit_FOR.txt", drawData);
-            if (splitBezierToLines)
-            {
-                success = SplitSDFShape(ref drawData, maxDeviation, out DrawData newBezierData);
-                success = SDFGenerateBoundingBox(ref newBezierData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
-            }
-            else
-                success = SDFGenerateBoundingBox(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
-            return success;
-        }
-        
-        public static bool SplitSDFShape(ref DrawData drawData, float maxDeviation, out DrawData newBezierData)
-        {
-            var edges = drawData.edges;
-            var contourIDs = drawData.contourIDs;
-            newBezierData = new DrawData(edges.Length * 16, contourIDs.Length, maxDeviation, Allocator.Temp);
-            var newEdges = newBezierData.edges;
-            var newContourIDs = newBezierData.contourIDs;
+            return SDFGenerateBoundingBox(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+        }         
 
-            bool success = true;
-            SDFEdge edge;
-            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
-            {
-                newContourIDs.Add(newEdges.Length);
-                int startID = contourIDs[contourID];
-                int nextStartID = contourIDs[contourID + 1];
-                float dx;
-                int num_splits;
-                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
-                {
-                    edge = edges[edgeID];
-                    switch (edge.edge_type)
-                    {
-                        case SDFEdgeType.LINE:
-                            newEdges.Add(edge);
-                            break;
-                        case SDFEdgeType.QUADRATIC:
-                            dx = GetDeviationQuadratic(edges, edgeID);                            
-                            if (dx > maxDeviation)
-                            {
-                                num_splits = 1;
-                                while (dx > maxDeviation)
-                                {                                    
-                                    dx /= 4;
-                                    num_splits *= 2;
-                                }
-                                newEdges.AddRange(SplitQuadraticEdge(edge, num_splits));
-                            }
-                            else
-                            {
-                                edge.edge_type = SDFEdgeType.LINE;
-                                newEdges.Add(edge);
-                            }
-                            break;
-                        case SDFEdgeType.CUBIC:
-                            dx = GetDeviationCubic(edges, edgeID);
-                            if (dx > maxDeviation)
-                            {
-                                num_splits = 1;
-                                while (dx > maxDeviation)
-                                {
-                                    dx /= 4;
-                                    num_splits *= 2;
-                                }
-                                newEdges.AddRange(SplitCubicEdge(edge, num_splits));
-                            }
-                            else
-                            {
-                                edge.edge_type = SDFEdgeType.LINE;
-                                newEdges.Add(edge);
-                            }
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-            }
-            newContourIDs.Add(newEdges.Length);//close the last contour
-            return success;
-        }
-        static float GetDeviationQuadratic(NativeList<SDFEdge> edgeList, int edgeID)
-        {
-            var quadratic = edgeList[edgeID];
-            var A = quadratic.start_pos;
-            var B = quadratic.control1;
-            var C = quadratic.end_pos;
-
-            var d1 = math.abs(C + A - 2 * B);
-            return math.max(d1.x, d1.y);
-        }
-
-        static float GetDeviationCubic(NativeList<SDFEdge> edgeList, int edgeID)
-        {
-            var quadratic = edgeList[edgeID];
-            var A = quadratic.start_pos;
-            var B = quadratic.control1;
-            var C = quadratic.control2;
-            var D = quadratic.end_pos;
-
-            var d1 = math.abs(2 * A - 3 * B + D);
-            var d2 = math.abs(A - 3 * C + 2 * D);
-
-            return math.max(math.max(d1.x, d1.y), math.max(d2.x, d2.y));
-        }
-
-        
-        /// <summary> This function splits a quadratic bezier into two quadratic bezier exactly half way at t = 0.5. </summary>
-        static NativeArray<SDFEdge> SplitQuadraticEdge(SDFEdge edge, int num_splits)
-        {
-            int numRows = 1 << (num_splits);
-            var targetArray = new NativeArray<SDFEdge>(numRows, Allocator.Temp);
-            targetArray[0] = edge;
-
-            for (int split = num_splits - 1; split >= 0; split--)
-            {
-                int pairDistance = 1 << split;
-
-                for (int row = 0; row < numRows - pairDistance; row += 2 * pairDistance)
-                {
-                    var sourceEdge = targetArray[row];
-                    var A = sourceEdge.start_pos;
-                    var B = sourceEdge.control1;
-                    var C = sourceEdge.end_pos;
-
-                    var D = (A + B) * 0.5f;
-                    var E = (B + C) * 0.5f;
-                    var F = (D + E) * 0.5f;
-
-                    sourceEdge.start_pos = A;
-                    sourceEdge.control1 = D;
-                    sourceEdge.end_pos = F;
-                    sourceEdge.edge_type = SDFEdgeType.LINE;
-                    targetArray[row]=sourceEdge;
-
-                    targetArray[row + pairDistance] = new SDFEdge
-                    {
-                        start_pos = F,
-                        control1 = E,
-                        end_pos = C,
-                        edge_type = SDFEdgeType.LINE,
-                    };
-                }
-            }
-            return targetArray;
-        }
-
-        /// <summary> This function splits a cubic bezier into two cubic bezier exactly half way at t = 0.5. </summary>
-        static NativeArray<SDFEdge> SplitCubicEdge(SDFEdge edge, int num_splits)
-        {
-            int numRows = 1 << (num_splits);
-            var targetArray = new NativeArray<SDFEdge>(numRows, Allocator.Temp);
-            targetArray[0] = edge;
-
-            for (int split = num_splits - 1; split >= 0; split--)
-            {
-                int pairDistance = 1 << split;
-
-                for (int row = 0; row < numRows - pairDistance; row += 2 * pairDistance)
-                {
-                    var sourceEdge = targetArray[row];
-                    var A = sourceEdge.start_pos;
-                    var B = sourceEdge.control1;
-                    var C = sourceEdge.control2;
-                    var D = sourceEdge.end_pos;
-
-                    var E = (A + B) * 0.5f;
-                    var F = (B + C) * 0.5f;
-                    var G = (C + D) * 0.5f;
-                    var H = (E + F) * 0.5f;
-                    var J = (F + G) * 0.5f;
-                    var K = (H + J) * 0.5f;
-
-                    sourceEdge.start_pos = A;
-                    sourceEdge.control1 = E;
-                    sourceEdge.control2 = H;
-                    sourceEdge.end_pos = K;
-                    sourceEdge.edge_type = SDFEdgeType.LINE;
-                    targetArray[row] = sourceEdge;
-
-                    targetArray[row + pairDistance] = new SDFEdge
-                    {
-                        start_pos = K,
-                        control1 = J,
-                        control2 = G,
-                        end_pos = D,
-                        edge_type = SDFEdgeType.LINE,
-                    };
-                }
-            }
-            return targetArray;
-        }
-        
         static bool SDFGenerateBoundingBox(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
             var edges = drawData.edges;
@@ -260,7 +70,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             float2 grid_point;
                             SignedDistance dist = max_sdf;
                             int index = 0;
-                            float diff = 0;
 
                             if (x < 0 || x >= rectWidth)
                                 continue;
@@ -296,13 +105,13 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             if (index > maxIndex)
                                 maxIndex = index;
                             
-                            if (EqualsForSmallValues(dists[index].sign, 0)) // check if the pixel is already set
+                            if (BezierMath.EqualsForSmallValues(dists[index].sign, 0)) // check if the pixel is already set
                                 dists[index] = dist;
                             else
                             {
-                                diff = math.abs(dists[index].distance - dist.distance);
-
-                                if (diff <= CORNER_CHECK_EPSILON)
+                                //diff = math.abs(dists[index].distance - dist.distance);
+                                //if (diff <= CORNER_CHECK_EPSILON)
+                                if (BezierMath.EqualsForLargeValues(dists[index].distance, dist.distance))
                                     dists[index] = ResolveCorner(dists[index], dist);
                                 else if (dists[index].distance > dist.distance)
                                     dists[index] = dist;
@@ -329,7 +138,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                     // if the pixel is not set, its shortest distance is more than `spread`
                     var dist = dists[sourceIndex];                    
-                    if (EqualsForSmallValues(dist.sign, 0))
+                    if (BezierMath.EqualsForSmallValues(dist.sign, 0))
                     {
                         dist.sign = outsideSign;
                         dist.distance = -spread;
@@ -418,11 +227,11 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             switch (edge.edge_type)
             {
                 case SDFEdgeType.CUBIC:
-                    return BBox.GetCubicBezierBBox(edge.start_pos, edge.control1, edge.control2, edge.end_pos);
+                    return BezierMath.GetCubicBezierBBox(edge.start_pos, edge.control1, edge.control2, edge.end_pos);
                 case SDFEdgeType.QUADRATIC:
-                    return BBox.GetQuadraticBezierBBox(edge.start_pos, edge.control1, edge.end_pos);
+                    return BezierMath.GetQuadraticBezierBBox(edge.start_pos, edge.control1, edge.end_pos);
                 case SDFEdgeType.LINE:
-                    return BBox.GetLineBBox(edge.start_pos, edge.end_pos);
+                    return BezierMath.GetLineBBox(edge.start_pos, edge.end_pos);
                 default:
                     break;
             }
@@ -463,7 +272,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var nearest_point = a + line_segment * frac;
 
             var nearest_vector = nearest_point - point;
-            signedDistance.cross = cross2D(nearest_vector, line_segment);
+            signedDistance.cross = BezierMath.cross2D(nearest_vector, line_segment);
 
             /* assign the output */
             signedDistance.sign = signedDistance.cross < 0 ? 1 : -1;
@@ -472,13 +281,13 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             else
                 signedDistance.distance = math.length(nearest_vector);
 
-            if (!EqualsForSmallValues(frac, 0) && !EqualsForSmallValues(frac, 1))
+            if (!BezierMath.EqualsForSmallValues(frac, 0) && !BezierMath.EqualsForSmallValues(frac, 1))
                 signedDistance.cross = 1;
             else
             {
                 line_segment = math.normalize(line_segment);
                 nearest_vector = math.normalize(nearest_vector);
-                signedDistance.cross = cross2D(line_segment, nearest_vector);
+                signedDistance.cross = BezierMath.cross2D(line_segment, nearest_vector);
             }
             return true;
         }        
@@ -532,18 +341,18 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             // assign values, determine the sign
             var nearest_vector = nearest_point - point;
-            signedDistance.cross = cross2D(nearest_vector, direction);
+            signedDistance.cross = BezierMath.cross2D(nearest_vector, direction);
             signedDistance.distance = min;
             signedDistance.sign = signedDistance.cross < 0 ? 1 : -1;
 
-            if (!EqualsForSmallValues(min_factor, 0) && !EqualsForSmallValues(min_factor, 1))
+            if (!BezierMath.EqualsForSmallValues(min_factor, 0) && !BezierMath.EqualsForSmallValues(min_factor, 1))
                 signedDistance.cross = 1;   // the two are perpendicular
             else
             {
                 /* compute `cross` if not perpendicular */
                 direction = math.normalize(direction);
                 nearest_point = math.normalize(nearest_vector);
-                signedDistance.cross = cross2D(direction, nearest_vector);
+                signedDistance.cross = BezierMath.cross2D(direction, nearest_vector);
             }
             return true;
         }
@@ -601,17 +410,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             // assign values, determine the sign
             var nearest_vector = nearest_point - point;
-            signedDistance.cross = cross2D(nearest_vector, direction);
+            signedDistance.cross = BezierMath.cross2D(nearest_vector, direction);
             signedDistance.distance = min;
             signedDistance.sign = signedDistance.cross < 0 ? 1 : -1;
-            if (!EqualsForSmallValues(min_factor, 0) && !EqualsForSmallValues(min_factor, 1))
+            if (!BezierMath.EqualsForSmallValues(min_factor, 0) && !BezierMath.EqualsForSmallValues(min_factor, 1))
                 signedDistance.cross = 1;   // the two are perpendicular
             else
             {
                 /* compute `cross` if not perpendicular */
                 direction = math.normalize(direction);
                 nearest_point = math.normalize(nearest_vector);
-                signedDistance.cross = cross2D(direction, nearest_vector);
+                signedDistance.cross = BezierMath.cross2D(direction, nearest_vector);
             }
             return true;
         }
@@ -619,36 +428,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         {
             return math.abs(sdf1.cross) > math.abs(sdf2.cross) ? sdf1 : sdf2;
         }
-        const float absolutTolerane = 0.000000001f;
-        const float relativeTolerance = 0.000000001f;
-
-        /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Equals(float a, float b)
-        {
-            return (math.abs(a - b) <= math.max(absolutTolerane, relativeTolerance * math.max(math.abs(a), math.abs(b))));
-        }
-
-        /// <summary>Relative tolerance comparison of x and y, fails values become small </summary>
-        public static bool EqualsForLargeValues(float x, float y)
-        {
-            return math.abs(x - y) <= relativeTolerance * math.max(math.abs(x), math.abs(y));
-        }
-        /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
-        public static bool EqualsForSmallValues(float x, float y)
-        {
-            return (math.abs(x - y) <= absolutTolerane);
-        }
-
-        /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
-        /// <param name="a">First vector</param>
-        /// <param name="b">Second vector</param>
-        /// <returns>The magnitude of the cross product</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float cross2D(float2 a, float2 b)
-        {
-            return (a.x * b.y) - (a.y * b.x);
-        }
+        
     }
 }

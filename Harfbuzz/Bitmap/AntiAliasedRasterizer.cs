@@ -33,16 +33,14 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         SOFTWARE.
     */
     public static class AntiAliasedRasterizer
-    {        
+    {
         public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool invert = false) where T : IPattern
-        {            
+        {
             PaintUtils.rasterizeMarker.Begin();
-            var success = SDF.SplitSDFShape(ref drawData, drawData.maxDeviation, out DrawData newBezierData);
-            var edgeCountBeforeFlattening = drawData.edges.Length;
-            var edgeCountAfterFlattening = newBezierData.edges.Length;
+            //var success = BezierMath.SplitCuvesToLines(ref drawData, drawData.maxDeviation, out DrawData newBezierData);
 
-            var sdfEdges = newBezierData.edges;
-            var contourIDs = newBezierData.contourIDs;
+            var sdfEdges = drawData.edges;
+            var contourIDs = drawData.contourIDs;
             var edges = new NativeList<Edge>(sdfEdges.Length, Allocator.Temp);
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
@@ -113,7 +111,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             activeID = step.nextID;
                         else
                             actives.ElementAt(previousStepID).nextID = step.nextID; //skip current active (effectivly deletes it)
-                        stepID = step.nextID; 
+                        stepID = step.nextID;
                         step.direction = 0;
                     }
                     else
@@ -465,9 +463,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             if (x0 <= x && x1 <= x)
                 scanline[x] += e.direction * (y1 - y0);
             else if (x0 >= x + 1 && x1 >= x + 1)
-            { 
-            
-            }            
+            {
+
+            }
             else
             {
                 //Debug.Assert(x0 >= x && x0 <= x + 1 && x1 >= x && x1 <= x + 1);
@@ -490,7 +488,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         static float SizedTriangleArea(float height, float width)
         {
             return height * width / 2;
-        }  
+        }
 
         static void ClearArray<T>(NativeArray<T> array, int start, int end) where T : struct
         {

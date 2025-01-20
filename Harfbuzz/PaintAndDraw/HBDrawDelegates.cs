@@ -1,6 +1,7 @@
 using AOT;
 using System;
 using Unity.Burst;
+using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -52,7 +53,7 @@ namespace TextMeshDOTS.HarfBuzz
             if (st.path_open)//if path is open, a moveto operation is an implicit lineto opeation https://learn.microsoft.com/en-us/typography/opentype/spec/cff2
             {
                 var edge = new SDFEdge(st.current_x, st.current_y, to_x, to_y);
-                var edgeBBox = BBox.GetLineBBox(edge.start_pos, edge.end_pos);
+                var edgeBBox = BezierMath.GetLineBBox(edge.start_pos, edge.end_pos);
                 data.edges.Add(edge);
                 data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
             }
@@ -63,7 +64,7 @@ namespace TextMeshDOTS.HarfBuzz
         {
             //Debug.Log($"Line from {st.current_x},{st.current_y}  to {to_x}, {to_y}");
             var edge = new SDFEdge(st.current_x, st.current_y, to_x, to_y);
-            var edgeBBox = BBox.GetLineBBox(edge.start_pos, edge.end_pos);
+            var edgeBBox = BezierMath.GetLineBBox(edge.start_pos, edge.end_pos);
             data.edges.Add(edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
@@ -73,8 +74,9 @@ namespace TextMeshDOTS.HarfBuzz
         {
             //Debug.Log($"Quadratic from {st.current_x},{st.current_y}  to {to_x}, {to_y}");
             var edge = new SDFEdge(st.current_x, st.current_y, control_x, control_y, to_x, to_y);
-            var edgeBBox = BBox.GetQuadraticBezierBBox(edge.start_pos, edge.control1, edge.end_pos);
-            data.edges.Add(edge);
+            var edgeBBox = BezierMath.GetQuadraticBezierBBox(edge.start_pos, edge.control1, edge.end_pos);
+            //data.edges.Add(edge);
+            BezierMath.SplitQuadraticEdge(data.edges, ref edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
         [BurstCompile]
@@ -83,14 +85,14 @@ namespace TextMeshDOTS.HarfBuzz
         {
             //Debug.Log($"Cubic from {st.current_x},{st.current_y}  to {to_x}, {to_y}");
             var edge = new SDFEdge(st.current_x, st.current_y, control1_x, control1_y, control2_x, control2_y, to_x, to_y);
-            var edgeBBox = BBox.GetCubicBezierBBox(edge.start_pos, edge.control1, edge.control1, edge.end_pos);
-            data.edges.Add(edge);
+            var edgeBBox = BezierMath.GetCubicBezierBBox(edge.start_pos, edge.control1, edge.control1, edge.end_pos);
+            //data.edges.Add(edge);
+            BezierMath.SplitCubicEdge(data.edges, ref edge);
             data.glyphRect = BBox.Union(data.glyphRect, edgeBBox);
         }
 
 
         public delegate void ReleaseDelegate();
-
   
         public delegate void MoveToDelegate(IntPtr dfuncs, ref DrawData data, ref DrawState st, float to_x, float to_y, IntPtr user_data);
 
