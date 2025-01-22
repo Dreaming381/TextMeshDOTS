@@ -20,28 +20,12 @@ namespace TextMeshDOTS.HarfBuzz
         public float p0p2YIntercept;
         public bool horizontal;
         public bool vertical;
-
+        float2x3 inverseTransform;
         public bool isValid;
         public LineGradient(float x0, float y0, float x1, float y1, float x2, float y2, PaintExtend paintExtend, float2x3 transform)
         {
             if (Hint.Unlikely((x0 == x1 && y0 == y1) || (x0 == x2 && y0 == y2)))
                 isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
-
-            // the object to which the gradient will be applied needs to be transformed
-            // prior to rasterization, however color is sampled DURING rasterization,
-            // which is why we need to transform the gradient definition.
-            // this will also accomodate additional transformations of the gradient
-            // relative to the object (which are possible according to the COLRv1 spec)
-            var p0 = PaintUtils.mul(transform, new float2(x0, y0));
-            var p1 = PaintUtils.mul(transform, new float2(x1, y1));
-            var p2 = PaintUtils.mul(transform, new float2(x2, y2));
-            var scale = (transform.c0.x + transform.c1.y) / 2;
-            x0 = p0.x;
-            y0 = p0.y;
-            x1 = p1.x;
-            y1 = p1.y;
-            x2 = p2.x;
-            y2 = p2.y;
 
             this.x0 = x0;
             this.y0 = y0;
@@ -54,6 +38,13 @@ namespace TextMeshDOTS.HarfBuzz
             double det = PaintUtils.cross(x01, y01, x02, y02);
             if (Hint.Unlikely(math.abs(det) < PaintUtils.Epsilon))
                 isValid = false; //lines are parallel, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr
+
+            // the object to which the gradient will be applied needs to be transformed
+            // prior to rasterization. Furthermore, additional transformation can be applied just to the gradient (and not to the obejct)
+            // so we need to apply the inverse gradient transfrom to the bitmap coordinates when calling GetColor().
+            var success = PaintUtils.Inverse(transform, out inverseTransform);
+            if (!success)
+                Debug.Log($"Failed to create inverse transform");
 
             horizontal = x02 == 0 ? true : false;
             vertical = y02 == 0 ? true : false;
@@ -86,12 +77,15 @@ namespace TextMeshDOTS.HarfBuzz
         }
 
         /// <summary>
-        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates 
+        /// For a given pixel within the rendered glyph, this method calculates 
         /// the UV coordinates that a texture of the color gradient would have. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ColorARGB GetColor(float x, float y)
+        public ColorARGB GetColor(float2 bitmapCoordinates)
         {
+            var designSpaceCoordinates = PaintUtils.mul(inverseTransform, bitmapCoordinates);
+            var x = designSpaceCoordinates.x;
+            var y = designSpaceCoordinates.y;
             var u = GetU(x, y);
             PaintUtils.ApplyWrapMode(ref u, paintExtend);
             return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, u);

@@ -12,6 +12,7 @@ namespace TextMeshDOTS.HarfBuzz
     {
         public DrawDelegates drawDelegates;
         public DrawData clipGlyph;
+        public float2x3 inverseGlyphTransform;
         public uint glyphID;
         internal FixedStack512Bytes<float2x3> transformStack; //could also use Unity AffineTransform (but this would require use of float3 vs float2)
         public uint color;  
@@ -34,6 +35,7 @@ namespace TextMeshDOTS.HarfBuzz
             this.drawDelegates = drawDelegates;
             clipGlyph = new DrawData(edgeCapacity, contourCapacity, maxDeviation, allocator);
             glyphID = default;
+            inverseGlyphTransform = default;
             transformStack = new();
             transformStack.Add(PaintUtils.AffineTransformIdentity);
             color = default;

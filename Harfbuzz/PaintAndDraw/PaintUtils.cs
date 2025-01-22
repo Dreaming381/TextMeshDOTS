@@ -1,8 +1,10 @@
 ﻿using System.Runtime.CompilerServices;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Profiling;
+using UnityEngine;
 
 
 namespace TextMeshDOTS.HarfBuzz
@@ -10,17 +12,18 @@ namespace TextMeshDOTS.HarfBuzz
     public static class PaintUtils
     {
         //175: 9811 9812 9813 9814 9815 9816 9819 9820 9799 9801 9802 9803
-        //🐢: 8534 8535 8536 8537 8538 8539
-        //😉: 13293 13288 13317 13318 13287 13319 10662
+        //🐢: 8534, 8535, 8536, 8537, 8538, 8539,
+        //😉: 13293, 13288, 13317, 13318, 13287, 13319, 10662
         //🥰: 14483, 15667, 16927, 16928, 16929, 16930, 16931, 16932, 16933, 16934, 16935, 16936, 16937, 16938, 16939, 16940, 16941, 
         //😰: 13293, 13381, 13437, 13438, 13439, 13440, 13443, 13488, 13508, 13509, 
         //13: 6767, 6768, 6769, 6770, 6771, 6772, 6773, 6774, 6775, 6776, 6777, 6778, 6779, 6780, 6781,  6782, 6783, 6784, 6785, 6786, 6787, 6788, 6789, 6790, 6791, 6792,
-        //😱 (push+pop group error)
+        //😱: (push+pop group error)
+        //🌁: 3941,  4009, 4010, 4011, 4012, 4013, 4014, 4015, 4016, 4017, 4018, 4019, 4020, 4021, 4022, 4023, 4024, 4025, 4026, 
 
         public static readonly int filterGlyph = 6767;//13317;
         public static FixedList4096Bytes<int> filterGlyphs = new()
         {
-           16938
+            4025,
         };
         public static bool DrawGlyph(int glyphID)
         {
@@ -187,6 +190,29 @@ namespace TextMeshDOTS.HarfBuzz
                 new float2(c, s),
                 new float2(-s, c),
                 new float2(0, 0));
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Inverse(float2x3 m, out float2x3 inverse)
+        {
+            inverse = default;
+            var c0 = m.c0;
+            var c1 = m.c1;
+            var c2 = m.c2;
+            var det = m.c0.x * m.c1.y - m.c0.y * m.c1.x;
+            if (det == 0)
+                return false;
+
+            var ic0x = c1.y / det;
+            var ic0y = -c0.y / det;
+            var ic1x = -c1.x / det;
+            var ic1y = c0.x / det;
+            var ic2x = -ic0x * c2.x - ic0y * c2.y;
+            var ic2y = -ic1x * c2.x - ic1y * c2.y;
+            inverse = new float2x3(
+                new float2(ic0x, ic0y),
+                new float2(ic1x, ic1y),
+                new float2(ic2x, ic2y));
+            return true;
         }
         /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
         /// <param name="a">First vector</param>

@@ -84,7 +84,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                     for (int column = startX; column < endX; column += step)
                     {
-                        var color = pattern.GetColor(column, y);
+                        var color = pattern.GetColor(new float2(column, y));
                         var targetIndex = width * ((int)y - clipRectMinY) + column - clipRectMinX; //substracting clipRect.min results in aliging glyph with (0,0) of bitmap
 
                         var colorDest = textureData[targetIndex];

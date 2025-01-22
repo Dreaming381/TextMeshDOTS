@@ -3,6 +3,7 @@ using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -21,33 +22,27 @@ namespace TextMeshDOTS.HarfBuzz
         float x1;
         float y1;
         float r1;
+        float2x3 inverseTransform;
         public bool isValid;
         public RadialGradient(float x0, float y0, float r0, float x1, float y1, float r1, PaintExtend paintExtend, float2x3 transform)
         {
             if (Hint.Unlikely((x0 == x1 && y0 == y1) && (r0 == r1)))
-                isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
-
+                isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr 
+            
+            
             // the object to which the gradient will be applied needs to be transformed
-            // prior to rasterization, however color is sampled DURING rasterization,
-            // which is why we need to transform the gradient definition.
-            // this will also accomodate additional transformations of the gradient
-            // relative to the object (which are possible according to the COLRv1 spec)
-            var c0 = PaintUtils.mul(transform, new float2(x0, y0));
-            var c1 = PaintUtils.mul(transform, new float2(x1, y1));
-            var scale = (transform.c0.x + transform.c1.y) / 2;
-            x0 = c0.x;
-            y0 = c0.y;
-            x1 = c1.x;
-            y1 = c1.y;
-            r0 = r0 * scale;
-            r1 = r1 * scale;
+            // prior to rasterization. Furthermore, additional transformation can be applied just to the gradient (and not to the obejct)
+            // so we need to apply the inverse gradient transfrom to the bitmap coordinates when calling GetColor().
+            var success = PaintUtils.Inverse(transform, out inverseTransform);
+            if (!success)
+                Debug.Log($"Failed to create inverse transform");
 
-            this.x0 = c0.x;
-            this.y0 = c0.y;
-            this.x1 = c1.x;
-            this.y1 = c1.y;
-            this.r0 = r0 * scale;
-            this.r1 = r1 * scale;
+            this.x0 = x0;
+            this.y0 = y0;
+            this.x1 = x1;
+            this.y1 = y1;
+            this.r0 = r0;
+            this.r1 = r1;            
 
             a = r0 * r0 - 2 * r0 * r1 + r1 * r1 - x0 * x0 + 2 * x0 * x1 - x1 * x1 - y0 * y0 + 2 * y0 * y1 - y1 * y1;
             b = -2 * r0 * r0 + 2 * r0 * r1 + 2 * x0 * x0 - 2 * x0 * x1 + 2 * y0 * y0 - 2 * y0 * y1;
@@ -66,12 +61,15 @@ namespace TextMeshDOTS.HarfBuzz
         }
 
         /// <summary>
-        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates 
+        /// For a given pixel within the rendered glyph, this method calculates 
         /// the UV coordinates that a texture of the color gradient would have. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ColorARGB GetColor(float x, float y)
+        public ColorARGB GetColor(float2 bitmapCoordinates)
         {
+            var designSpaceCoordinates = PaintUtils.mul(inverseTransform, bitmapCoordinates);
+            var x = designSpaceCoordinates.x;
+            var y = designSpaceCoordinates.y;
             float t;
             var s = PaintUtils.QuadraticRoots(
                 a,

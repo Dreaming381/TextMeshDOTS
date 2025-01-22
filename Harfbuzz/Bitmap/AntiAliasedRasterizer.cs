@@ -34,7 +34,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
     */
     public static class AntiAliasedRasterizer
     {
-        public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool invert = false) where T : IPattern
+        public static void Rasterize<T>(ref DrawData drawData, float2x3 iTransform, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool invert = false) where T : IPattern
         {
             PaintUtils.rasterizeMarker.Begin();
             //var success = BezierMath.SplitCuvesToLines(ref drawData, drawData.maxDeviation, out DrawData newBezierData);
@@ -74,12 +74,12 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 }
             }
             edges.Sort(default(EdgeYMaxComparer));
-            RasterizeSortedEdges(textureData, pattern, (int)clipRect.width, (int)clipRect.height, edges, (int)clipRect.min.x, (int)clipRect.min.y);
+            RasterizeSortedEdges(textureData, pattern, (int)clipRect.width, (int)clipRect.height, edges, iTransform, (int)clipRect.min.x, (int)clipRect.min.y);
             PaintUtils.rasterizeMarker.End();
         }
 
 
-        static void RasterizeSortedEdges<T>(NativeArray<ColorARGB> textureData, T pattern, int textureWidth, int textureHeight, NativeList<Edge> edges, int off_x, int off_y) where T : IPattern
+        static void RasterizeSortedEdges<T>(NativeArray<ColorARGB> textureData, T pattern, int textureWidth, int textureHeight, NativeList<Edge> edges, float2x3 iTransform, int off_x, int off_y) where T : IPattern
         {
             var actives = new NativeList<ActiveEdge>(16, Allocator.Temp);
             int activeID = -1;
@@ -160,10 +160,13 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     m = (int)k;
                     if (m > 255) m = 255;
 
-                    var color = pattern.GetColor(i + off_x, y);
-                    var targetIndex = textureWidth * (y - off_y) + i; //(why not (i - off_x)?; substracting clipRect.min results in aliging glyph with (0,0) of bitmap
-                    color.a = (byte)(color.a * (byte)m / 255);
-                    textureData[targetIndex] = color;
+                    if (m > 1)
+                    {
+                        var color = pattern.GetColor(new float2(i + off_x, y));
+                        var targetIndex = textureWidth * (y - off_y) + i; //(why not (i - off_x)?; substracting clipRect.min results in aliging glyph with (0,0) of bitmap
+                        color.a = (byte)(color.a * (byte)m / 255);
+                        textureData[targetIndex] = color;
+                    }
                 }
 
                 stepID = activeID;

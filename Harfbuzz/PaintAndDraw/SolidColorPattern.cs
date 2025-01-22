@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz
@@ -11,11 +12,11 @@ namespace TextMeshDOTS.HarfBuzz
             m_colorARGB = colorARGB;
         }
         /// <summary>
-        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates the UV coordinates that 
+        /// For a given pixel within the rendered glyph, this method calculates the UV coordinates that 
         /// a texture of the color gradient would have. 'Solid fill' has same color for for every UV, so can do shortcut here.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ColorARGB GetColor(float x, float y)
+        public ColorARGB GetColor(float2 bitmapCoordinate)
         {
             return m_colorARGB;
         }

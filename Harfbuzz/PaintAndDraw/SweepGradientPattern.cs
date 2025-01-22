@@ -21,6 +21,7 @@ namespace TextMeshDOTS.HarfBuzz
         float endAngleScaled;
         float minStop;
         float maxStop;
+        float2x3 inverseTransform;
         public bool isValid;
         public SweepGradient(float x0, float y0, float startAngle, float endAngle, PaintExtend paintExtend, float2x3 transform)
         {
@@ -28,15 +29,14 @@ namespace TextMeshDOTS.HarfBuzz
                 isValid = false; //points idential, gradient ill formed, draw nothing https://learn.microsoft.com/en-us/typography/opentype/spec/colr            
 
             // the object to which the gradient will be applied needs to be transformed
-            // prior to rasterization, however color is sampled DURING rasterization,
-            // which is why we need to transform the gradient definition.
-            // this will also accomodate additional transformations of the gradient
-            // relative to the object (which are possible according to the COLRv1 spec)
-            var c0 = PaintUtils.mul(transform, new float2(x0, y0));
-            var scale = (transform.c0.x + transform.c1.y) / 2;
+            // prior to rasterization. Furthermore, additional transformation can be applied just to the gradient (and not to the obejct)
+            // so we need to apply the inverse gradient transfrom to the bitmap coordinates when calling GetColor().
+            var success = PaintUtils.Inverse(transform, out inverseTransform);
+            if(!success)
+                Debug.Log($"Failed to create inverse transform");
 
-            this.x0 = c0.x;
-            this.y0 = c0.y;
+            this.x0 = x0;
+            this.y0 = y0;
             this.startAngle = startAngle;
             this.endAngle = endAngle;
             sectorRange = (endAngle - startAngle);
@@ -65,12 +65,15 @@ namespace TextMeshDOTS.HarfBuzz
         }
 
         /// <summary>
-        /// For a given vertex (/object space pixel) of the rendered glyph, this method calculates 
+        /// For a given pixel within the rendered glyph, this method calculates 
         /// the UV coordinates that a texture of the color gradient would have. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ColorARGB GetColor(float x, float y)
+        public ColorARGB GetColor(float2 bitmapCoordinates)
         {
+            var designSpaceCoordinates = PaintUtils.mul(inverseTransform, bitmapCoordinates);
+            var x = designSpaceCoordinates.x;
+            var y = designSpaceCoordinates.y;
             var angle = math.atan2(y - y0, x - x0);   //returns angle from 0 to 2PI 
             angle = PaintUtils.WrapAroundLimit(angle, math.PI2);
             var t = (angle / (endAngleScaled - startAngleScaled)) - startAngle / (endAngle - startAngle);

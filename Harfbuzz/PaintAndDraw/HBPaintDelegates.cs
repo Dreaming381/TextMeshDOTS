@@ -7,6 +7,7 @@ using Unity.Collections;
 using Unity.Burst;
 using AOT;
 using TextMeshDOTS.HarfBuzz.Bitmap;
+using log4net.Util;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -68,6 +69,15 @@ namespace TextMeshDOTS.HarfBuzz
             transform = PaintUtils.mul(transform, data.transformStack.Peek());
             data.transformStack.Add(transform);
             //Debug.Log($"push transform {xx} {yx} {xy} {yy} {dx} {dy} (stack: {data.transformStack.Length}) ");
+            //if (PaintUtils.Inverse(transform, out float2x3 iTransform))
+            //{
+            //    data.inverseGlyphTransform = iTransform;
+            //    //var r  = PaintUtils.mul(iTransform, transform);
+            //    //Debug.Log($"result: {r.c0.x} {r.c0.y} {r.c1.x} {r.c1.y} {r.c2.x} {r.c2.y}");
+            //}
+            //else
+            //    Debug.Log($"Failed to create inverse transform");
+            
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
@@ -121,8 +131,7 @@ namespace TextMeshDOTS.HarfBuzz
             var colorARGB = (ColorARGB)color;
             //Debug.Log($"color {colorARGB}");
             var solidColor = new SolidColor(colorARGB);
-            //ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, solidColor, data.clipRect);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, solidColor, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.inverseGlyphTransform, data.paintSurface, solidColor, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -133,10 +142,10 @@ namespace TextMeshDOTS.HarfBuzz
             //Debug.Log($"Line gradient: {x0} {y0} / {x1} {y1} / {x2} {y2}"); 
             var lineGradient = new LineGradient(x0, y0, x1, y1, x2, y2, colorLine.GetExtend(), data.transformStack.Peek());
             if (!lineGradient.isValid)
-                return;            
+                return;
+
             lineGradient.InitializeColorLine(colorLine);
-            //ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, lineGradient, data.clipRect);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, lineGradient, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.inverseGlyphTransform, data.paintSurface, lineGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -144,14 +153,13 @@ namespace TextMeshDOTS.HarfBuzz
         {
             if (!PaintUtils.DrawGlyph((int)data.glyphID))
                 return;
-            //Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");            
+            //Debug.Log($"Radial gradient: {x0} {y0} {r0} / {x1} {y1} {r1}");
             var radialGradient = new RadialGradient(x0, y0, r0, x1, y1, r1, colorLine.GetExtend(), data.transformStack.Peek());
             if (!radialGradient.isValid)
                 return;
-            
+
             radialGradient.InitializeColorLine(colorLine);
-            //ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, radialGradient, data.clipRect);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, radialGradient, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.inverseGlyphTransform, data.paintSurface, radialGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(SweepGradientDelegate))]
@@ -159,14 +167,13 @@ namespace TextMeshDOTS.HarfBuzz
         {
             if (!PaintUtils.DrawGlyph((int)data.glyphID))
                 return;
-            //Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");       
+            //Debug.Log($"Sweep gradient {x0} {y0} {math.degrees(startAngle)} {math.degrees(endAngle)}");
             var sweepGradient = new SweepGradient(x0, y0, startAngle, endAngle, colorLine.GetExtend(), data.transformStack.Peek());
             sweepGradient.InitializeColorLine(colorLine);
             if (!sweepGradient.isValid)
                 return;
-            
-            //ScanlineRasterizer.Rasterize(ref data.clipGlyph, data.finalTexture, sweepGradient, data.clipRect);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, sweepGradient, data.clipRect);
+
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.inverseGlyphTransform, data.paintSurface, sweepGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]

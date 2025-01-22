@@ -19,10 +19,145 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
                 return false;
 
-            return SDFGenerateBoundingBox(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
-        }         
+            return SDFGenerateBoundingBoxAllEdgeTypes(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+        }
 
-        static bool SDFGenerateBoundingBox(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        static bool SDFGenerateBoundingBoxLineEdges(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        {
+            var edges = drawData.edges;
+            var contourIDs = drawData.contourIDs;
+
+            bool flip_y = true;
+            bool flip_sign = false;
+            int overloadSign = 0;
+            float sp_sq;
+            SDFEdge edge;
+            var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
+
+            if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
+                return false;
+
+            if (SDFCommon.USE_SQUARED_DISTANCES)
+                sp_sq = spread * spread;
+            else
+                sp_sq = spread;
+
+            int maxIndex = int.MinValue;
+            int minIndex = int.MaxValue;
+            var rectX = glyphRect.x;
+            var rectY = glyphRect.y;
+            var rectWidth = glyphRect.width;
+            var rectHeight = glyphRect.height;
+
+            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
+            {
+                int startID = contourIDs[contourID];
+                int nextStartID = contourIDs[contourID + 1];
+                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
+                {
+                    edge = edges[edgeID];
+                    BBox cbox;
+
+                    cbox = BezierMath.GetLineBBox(edge.start_pos, edge.end_pos);
+                    //cbox = GetBBox(edge); //BBox might be smaller--review if atlas can hold more glyphs using this 
+                    cbox.Expand(spread);
+
+                    /* now loop over the pixels in the control box. */
+                    for (int y = (int)cbox.min.y, yEnd = (int)cbox.max.y; y < yEnd; y++)
+                    {
+                        for (int x = (int)cbox.min.x, xEnd = (int)cbox.max.x; x < xEnd; x++)
+                        {
+                            float2 grid_point;
+                            SignedDistance dist = max_sdf;
+                            int index = 0;
+
+                            if (x < 0 || x >= rectWidth)
+                                continue;
+                            if (y < 0 || y >= rectHeight)
+                                continue;
+
+                            // use the center of any pixel to be rendered within cbox
+                            grid_point.x = x + 0.5f;
+                            grid_point.y = y + 0.5f;
+
+                            GetMinDistanceLine(edge, grid_point, ref dist);
+
+                            if (orientation == SDFOrientation.FILL_LEFT)
+                                dist.sign = -dist.sign;
+
+                            // ignore if the distance is greater than spread;
+                            // otherwise it creates artifacts due to the wrong sign
+                            if (dist.distance > sp_sq)
+                                continue;
+
+                            if (SDFCommon.USE_SQUARED_DISTANCES)
+                                dist.distance = math.sqrt(dist.distance);
+
+                            if (flip_y)
+                                index = y * rectWidth + x;
+                            else
+                                index = (rectHeight - y - 1) * rectWidth + x;
+
+                            if (index < minIndex)
+                                minIndex = index;
+                            if (index > maxIndex)
+                                maxIndex = index;
+
+                            if (BezierMath.EqualsForSmallValues(dists[index].sign, 0)) // check if the pixel is already set
+                                dists[index] = dist;
+                            else
+                            {
+                                if (BezierMath.EqualsForLargeValues(dists[index].distance, dist.distance))
+                                    dists[index] = ResolveCorner(dists[index], dist);
+                                else if (dists[index].distance > dist.distance)
+                                    dists[index] = dist;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // final pass
+            int outsideSign = -1;
+            for (int row = 0; row < rectHeight; row++)
+            {
+                /* We assume the starting pixel of each row is outside. */
+                int current_sign = outsideSign;
+
+                if (overloadSign != 0)
+                    current_sign = overloadSign < 0 ? -1 : 1;
+
+                for (int column = 0; column < rectWidth; column++)
+                {
+                    var sourceIndex = rectWidth * row + column;
+                    var targetIndex = (atlasWidth * (row + rectY)) + (column + rectX);
+
+                    // if the pixel is not set, its shortest distance is more than `spread`
+                    var dist = dists[sourceIndex];
+                    if (BezierMath.EqualsForSmallValues(dist.sign, 0))
+                    {
+                        dist.sign = outsideSign;
+                        dist.distance = -spread;
+                    }
+                    current_sign = dist.sign;
+
+                    // clamp the distance
+                    if (dist.distance > spread)
+                        dist.distance = spread;
+
+                    // flip sign if required
+                    dist.distance *= flip_sign ? -current_sign : current_sign;
+                    dists[sourceIndex] = dist;
+
+                    // convert to byte range of alpha8 texture
+                    var result = ((dist.distance + spread) * 16);
+                    buffer[targetIndex] = (byte)result;
+                }
+            }
+            return true;
+        }
+
+        static bool SDFGenerateBoundingBoxAllEdgeTypes(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
