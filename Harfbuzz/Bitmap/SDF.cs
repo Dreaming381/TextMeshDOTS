@@ -10,10 +10,12 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
     {
         //generates SDF directly from Bezier Data that are provided by Harfbuzz
         //approach is inspired by FreeType 
-        public static SignedDistance max_sdf => new SignedDistance { distance = int.MaxValue, sign = 0, cross = 0 };        
+        public static SignedDistance max_sdf => new SignedDistance { distance = int.MaxValue, sign = 0, cross = 0 };
 
-        //Converts a glyph into a SDF bitmap. While function accepts all kinds of edges found in font files
-        // (quadratic beziers, cubic beziers, lines) consider to generates lines before using this function for performance reasons
+        /// <summary>
+        /// Converts a glyph into a SDF bitmap. While function accepts all kinds of edges found in font files
+        /// (quadratic beziers, cubic beziers, lines) consider to generates lines before using this function for performance reasons
+        /// </summary>
         public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
         {
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
@@ -22,6 +24,20 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             return SDFGenerateBoundingBoxAllEdgeTypes(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
         }
 
+        /// <summary>
+        /// Converts a glyph into a SDF bitmap. When using this function, ensure all bezier edges have been split into line edges first 
+        /// </summary>
+        public static bool SDFGenerateSubDivisionLineEdges(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
+        {
+            if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
+                return false;
+
+            return SDFGenerateBoundingBoxLineEdges(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>        
         static bool SDFGenerateBoundingBoxLineEdges(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
         {
             var edges = drawData.edges;

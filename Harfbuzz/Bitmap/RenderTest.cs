@@ -64,7 +64,7 @@ public class RenderTest : MonoBehaviour
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
         var glyphRect = new GlyphRect(64,64, (int)drawData.glyphRect.width+10, (int)drawData.glyphRect.height+10);
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-        SDF.SDFGenerateSubDivision(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight);
+        SDF.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight);
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
