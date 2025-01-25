@@ -34,9 +34,9 @@ public class RenderTest : MonoBehaviour
         paintFunctions = new PaintDelegates(true);
         LoadFont(sourceFont, 256);
 
-        //DrawTest(letter);
+        DrawTest(letter);
         //PaintPNGTest("😉");
-        PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
+        //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
     }
 
     void Update()
@@ -62,7 +62,7 @@ public class RenderTest : MonoBehaviour
         font.DrawGlyph(glyphInfos[0].codepoint, drawFunctions, ref drawData);
 
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
-        var glyphRect = new GlyphRect(64,64, (int)drawData.glyphRect.width+10, (int)drawData.glyphRect.height+10);
+        var glyphRect = new GlyphRect(32,32, (int)drawData.glyphRect.width+64, (int)drawData.glyphRect.height+64);
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         SDF.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight);
 

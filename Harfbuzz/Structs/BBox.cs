@@ -27,6 +27,11 @@ namespace TextMeshDOTS.HarfBuzz
             min -= padding;
             max += padding;
         }
+        /// <summary>   Query if this aabb contains the given point. </summary>
+        public bool Contains(float2 point)
+        {
+            return math.all(point >= min & point <= max);
+        }
 
         public BBox(float2 min, float2 max)
         {
