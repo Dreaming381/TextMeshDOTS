@@ -75,11 +75,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             var x4 = new int4(x+0, x+1, x+2, x+3);                            
                             gridPointx = x4;
                             gridPointx += 0.5f; // use the center of any pixel to be rendered within cbox
-
-                            gridPointx[0] = x + 0.5f; 
-                            gridPointx[1] = x + 0.5f + 1; 
-                            gridPointx[2] = x + 0.5f + 2; 
-                            gridPointx[3] = x + 0.5f + 3;
                             GetMinDistanceLineToPoint(ax, ay, bx, by, gridPointx, gridPointy, ref dist);
 
                             dist.sign = math.select(dist.sign, -dist.sign, orientation == SDFOrientation.FILL_LEFT);
@@ -139,7 +134,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     dist.distance = math.clamp(dist.distance, -spread, spread);
 
                     // flip sign if required
-                    //dist.distance = flip_sign ? dist.distance * -current_sign : dist.distance * current_sign;
                     dist.distance *= flip_sign ? -current_sign : current_sign;
                     dists[sourceIndex] = dist;
 
@@ -159,8 +153,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var aby = by - ay;                          // Vector from A to B
             var apx = px - ax;                          // Vector from A to P
             var apy = py - ay;                          // Vector from A to P
-            var abLengthSq = abx*abx+ aby*aby;
-            var frac = abx*apx + aby * apy;
+            var abLengthSq = abx*abx + aby*aby;
+            var frac = abx*apx + aby*apy;
             frac = math.max(frac, 0.0f);                // Check if P projection is over vectorAB 
             frac = math.min(frac, abLengthSq);          // Check if P projection is over vectorAB 
 
