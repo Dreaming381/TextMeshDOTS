@@ -95,7 +95,7 @@ namespace TextMeshDOTS.Authoring
                 var hashCode = font.GetHashCode();
                 if (redundancyCheck.Contains(hashCode))
                 {
-                    //Debug.Log($"List of fonts contains redundacies");
+                    //Debug.Log($"List of fonts contains redundancies");
                     return;
                 }
                 redundancyCheck.Add(hashCode);

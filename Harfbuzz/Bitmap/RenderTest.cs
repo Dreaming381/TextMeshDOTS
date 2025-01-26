@@ -7,12 +7,13 @@ using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
 using UnityEngine.TextCore;
+using System.IO;
 
-#if UNITY_EDITOR
 public class RenderTest : MonoBehaviour
 {
     static readonly ProfilerMarker marker = new ProfilerMarker("Rasterize");
     public Object sourceFont;
+    [SerializeField] private string fontPath;
     public string letter;
     public uint glyphID;
     public int atlasWidth = 64;
@@ -31,9 +32,14 @@ public class RenderTest : MonoBehaviour
 
     void Start()
     {
+#if UNITY_EDITOR
+        fontPath = AssetDatabase.GetAssetPath(sourceFont);
+#endif
+        if (fontPath == null)
+            return;
         drawFunctions = new DrawDelegates(true);
         paintFunctions = new PaintDelegates(true);
-        LoadFont(sourceFont, 256);
+        LoadFont(fontPath, 256);
 
         //DrawTest(letter);
         //PaintPNGTest("😉");
@@ -137,9 +143,9 @@ public class RenderTest : MonoBehaviour
         face.Dispose();
         blob.Dispose();
     }
-    void LoadFont(Object unityFont, int samplingPointSize)
+    void LoadFont(string filePath, int samplingPointSize)
     {
-        var filePath = AssetDatabase.GetAssetPath(unityFont);
+        
         bool isTrueType = filePath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
         bool isOpentype = filePath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
         if (!(isOpentype || isTrueType))
@@ -163,4 +169,3 @@ public class RenderTest : MonoBehaviour
         orientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
     }
 }
-#endif

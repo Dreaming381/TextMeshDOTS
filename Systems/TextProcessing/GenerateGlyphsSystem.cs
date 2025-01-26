@@ -2,8 +2,6 @@ using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Entities;
 using TextMeshDOTS.HarfBuzz;
-using Codice.Client.BaseCommands;
-using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
