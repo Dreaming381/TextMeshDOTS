@@ -18,9 +18,9 @@ namespace TextMeshDOTS.TextProcessing
     //[UpdateAfter(typeof(ShapeSystem))]
     partial struct NativeFontLoaderSystem : ISystem
     {
-        EntityQuery textRendererQ, existingFontsQ;
+        EntityQuery textRendererQ, existingFontsQ, fontsQ;
         NativeList<LoadRequest> newLoadRequests;
-        EntityArchetype nativeFontDataArchetype;
+        EntityArchetype nativeFontDataArchetype, fontStateArchetype;
         DrawDelegates drawFunctions;
         PaintDelegates paintFunctions;
 
@@ -29,6 +29,11 @@ namespace TextMeshDOTS.TextProcessing
         {
             newLoadRequests = new NativeList<LoadRequest>(16, Allocator.Persistent);
             nativeFontDataArchetype = TextMeshDOTSArchetypes.GetNativeFontDataArchetype(ref state);
+            fontStateArchetype = TextMeshDOTSArchetypes.GetFontStateArchetype(ref state);
+            state.EntityManager.CreateEntity(fontStateArchetype);
+            fontsQ = SystemAPI.QueryBuilder()
+                      .WithAll<FontState>()
+                      .Build();
             textRendererQ = SystemAPI.QueryBuilder()
                 .WithAll<FontBlobReference>()
                 .WithAll<TextRenderControl>()
@@ -44,12 +49,12 @@ namespace TextMeshDOTS.TextProcessing
             {
                 fontEntities = new NativeHashMap<FontAssetRef, Entity>(16, Allocator.Persistent),
             };
-            state.EntityManager.AddComponentData(state.SystemHandle, fontHashMap);
-
-            SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
+            state.EntityManager.AddComponentData(state.SystemHandle, fontHashMap);            
 
             drawFunctions = new DrawDelegates(true);
             paintFunctions =  new PaintDelegates(true);
+            state.RequireForUpdate(fontsQ);
+            SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
         }
 
         //[BurstCompile]
@@ -57,14 +62,16 @@ namespace TextMeshDOTS.TextProcessing
         {
             var fontHashMap = SystemAPI.GetSingletonRW<FontHashMap>();
             var fontEntities = fontHashMap.ValueRO.fontEntities;
+            var fontStateEntity = fontsQ.GetSingletonEntity();
+            var isfontStateDirty  = SystemAPI.HasComponent<FontsDirtyTag>(fontStateEntity);
 
             foreach (var (fontBlobReference, entity) in SystemAPI.Query<FontBlobReference>()
                 .WithAll<FontBlobReference>()
                 .WithAll<TextRenderControl>()
                 .WithEntityAccess()
-                .WithChangeFilter<FontBlobReference>())
-                
+                .WithChangeFilter<FontBlobReference>())                
             {
+                //Debug.Log($"Font Reference has changed!");
                 ref var fontBlob = ref fontBlobReference.value.Value;
 
                 if (!fontEntities.ContainsKey(fontBlob.fontAssetRef))
@@ -88,14 +95,25 @@ namespace TextMeshDOTS.TextProcessing
                         }
                     }
                     else
-                        newLoadRequests.Add(new LoadRequest { fontBlobRef = fontBlobReference });
+                        newLoadRequests.Add(new LoadRequest { fontBlobRef = fontBlobReference, filePath = fontBlob .fontAssetPath});
                 }                
             }
             if (this.newLoadRequests.Length == 0)
-                return;
+            {
 
-            fontHashMap.ValueRW.fontsDirty = true;
+                if (fontEntities.Count == 0 && !isfontStateDirty)
+                {
+                    Debug.LogError($"Unexpected: while fonts did not change, the count is {fontEntities.Count}");
+                    state.EntityManager.AddComponent<FontsDirtyTag>(fontStateEntity);
+                }
+                return;
+            }
+
+            //Debug.Log($"Destroy existing font entities");            
+            
             state.EntityManager.DestroyEntity(existingFontsQ);
+           
+
             //new fonts likely means that all MaterialReferences are wrong...so regenerate them
             state.EntityManager.RemoveComponent<MaterialMeshInfo>(textRendererQ);
             Debug.Log($"Regenerating all MaterialMeshInfo");
@@ -125,30 +143,21 @@ namespace TextMeshDOTS.TextProcessing
         }
         void LoadFont(LoadRequest loadRequest, int samplingPointSizeSDF, int samplingPointSizeBitmap, NativeHashMap<FontAssetRef, Entity> fontEntities, ref SystemState state)
         {
+            //as we are loading fonts in a loop, check if the font has already been loaded
+            if (fontEntities.ContainsKey(loadRequest.fontBlobRef.value.Value.fontAssetRef))
+                return;                
+
             ref var fontBlobRef = ref loadRequest.fontBlobRef.value.Value;
-            var nativeFileLength = (uint)fontBlobRef.nativeFontFile.Length;
-            Blob blob;
-            if (fontBlobRef.useSystemFont && loadRequest.filePath!=null && File.Exists(loadRequest.filePath.ToString()))
-            {
-                blob = new Blob(loadRequest.filePath.ToString());
-            }
-            else
-            {
-                if (nativeFileLength == 0)
-                {
-                    Debug.Log("Font could neither be loaded from system nor from blob");
-                    return;
-                }
-                unsafe
-                {                    
-                    blob = new Blob(fontBlobRef.nativeFontFile.GetUnsafePtr(), (uint)fontBlobRef.nativeFontFile.Length, MemoryMode.Readonly);
-                }
-            }
+            
+            if (!File.Exists(loadRequest.filePath.ToString()))
+                return;
+
+            var blob = new Blob(loadRequest.filePath.ToString());
             var face = new Face(blob.ptr, 0);
             var font = new Font(face.ptr);            
 
-            var sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
-            
+            var sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;            
+
             var nativeFontPointer = new NativeFontPointer { 
                 orientation = sdfOrientation, 
                 blob = blob, 
@@ -201,7 +210,6 @@ namespace TextMeshDOTS.TextProcessing
                 dynamicFontAsset = new DynamicFontAsset { texture = texture2D, textureType = TextureType.SDF };
             }
             font.SetScale(atlasData.samplingPointSize, atlasData.samplingPointSize);
-
 
             var fontEntity = state.EntityManager.CreateEntity(nativeFontDataArchetype);
             state.EntityManager.SetComponentData(fontEntity, loadRequest.fontBlobRef);

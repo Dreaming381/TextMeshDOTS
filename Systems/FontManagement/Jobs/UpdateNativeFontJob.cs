@@ -10,7 +10,7 @@ namespace TextMeshDOTS.TextProcessing
     [BurstCompile]
     struct UpdateNativeFontJob : IJob
     {
-        public ComponentLookup<DynamicFontAsset> fontTextureReferenceLookup;
+        public ComponentLookup<DynamicFontAsset> dynamicFontAssetLookup;
 
         public Entity fontEntity;
         [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
@@ -24,7 +24,7 @@ namespace TextMeshDOTS.TextProcessing
             var face = nativeFontPointer.face;
             var atlasData = atlasDataLookup[fontEntity];            
 
-            var fontTextureReference = fontTextureReferenceLookup[fontEntity];
+            var fontTextureReference = dynamicFontAssetLookup[fontEntity];
             if(fontTextureReference.blob.IsCreated)
             {
                 //Debug.Log($"Patching existing blob for font {hbFontAssetRef.family} {hbFontAssetRef.subFamily}, adding {placedGlyphs.Length} glyphs");
@@ -35,7 +35,7 @@ namespace TextMeshDOTS.TextProcessing
                 fontTextureReference.blob = CreateDynamicFontData(ref atlasData, placedGlyphs, face, font);
                 //Debug.Log($"Create new blob");
             }            
-            fontTextureReferenceLookup[fontEntity] = fontTextureReference;
+            dynamicFontAssetLookup[fontEntity] = fontTextureReference;
         }
         public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(
             ref AtlasData atlasData,

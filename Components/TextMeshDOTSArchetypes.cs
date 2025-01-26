@@ -21,6 +21,13 @@ namespace TextMeshDOTS
             };
             return new ComponentTypeSet(result);
         }
+        public static EntityArchetype GetFontStateArchetype(ref SystemState state)
+        {
+            var componentTypeStaging = new NativeArray<ComponentType>(2, Allocator.Temp);
+            componentTypeStaging[0] = ComponentType.ReadWrite<FontState>();
+            componentTypeStaging[1] = ComponentType.ReadWrite<FontsDirtyTag>(); //initialize Font state to `dirty` to prevent premature system updates
+            return state.EntityManager.CreateArchetype(componentTypeStaging);
+        }
         public static EntityArchetype GetNativeFontDataArchetype(ref SystemState state)
         {
             var componentTypeStaging = new NativeArray<ComponentType>(6, Allocator.Temp);

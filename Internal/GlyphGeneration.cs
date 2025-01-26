@@ -59,13 +59,20 @@ namespace TextMeshDOTS
             var previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
             var currentFontAssetRef = fontAssetRefs[currentTextSpan.fontMaterialIndex];
             var currentFontEntity = fontEntities[currentFontAssetRef];
-            ref DynamicFontBlob currentFont = ref dynamicFontAssetsLookup[currentFontEntity].blob.Value;
+            var dynamicFontBlobReference = dynamicFontAssetsLookup[currentFontEntity].blob;
+            if (!dynamicFontBlobReference.IsCreated)
+            {
+                Debug.LogError($"Unexpected: dynamicFontBlob is missing");
+                return;
+            }
+            ref var currentFont = ref dynamicFontBlobReference.Value;
 
             #region AtlasFactor
             // Unity scales native Opentype metrics in GlyphRect and GlyphMetrics by 
             // (unit * atlasSamplingPointSize / Opentype.xScale)
             // So raw values from Opentype font need to be scaled like that as well.
-            var scaledDynamicFont = new ScaledDynamicFont(ref currentFont, out float xNativeToUnity, out float yNativeToUnity);
+
+            var  scaledDynamicFont = new ScaledDynamicFont(dynamicFontBlobReference, out float xNativeToUnity, out float yNativeToUnity);
             #endregion
 
 
@@ -94,8 +101,14 @@ namespace TextMeshDOTS
                     {
                         currentFontAssetRef = fontAssetRefs[currentTextSpan.fontMaterialIndex];
                         currentFontEntity = fontEntities[fontAssetRefs[currentTextSpan.fontMaterialIndex]];
-                        currentFont = ref dynamicFontAssetsLookup[currentFontEntity].blob.Value;
-                        scaledDynamicFont.Update(ref currentFont, out xNativeToUnity, out yNativeToUnity);
+                        dynamicFontBlobReference = dynamicFontAssetsLookup[currentFontEntity].blob;
+                        if (!dynamicFontBlobReference.IsCreated)
+                        {
+                            Debug.LogError($"Unexpected: dynamicFontBlob is missing");
+                            return;
+                        }
+                        currentFont = ref dynamicFontBlobReference.Value;
+                        scaledDynamicFont.Update(dynamicFontBlobReference, out xNativeToUnity, out yNativeToUnity);
                         previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
                     }
                 }

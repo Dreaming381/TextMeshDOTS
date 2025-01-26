@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TextCore;
@@ -137,9 +136,10 @@ namespace TextMeshDOTS
     }
     public struct FontHashMap : IComponentData
     {
-        public bool fontsDirty;
         public NativeHashMap<FontAssetRef, Entity> fontEntities;
     }
+    public struct FontState : IComponentData { };
+    public struct FontsDirtyTag : IComponentData { }
 
     public struct FontEntityGlyph
     {

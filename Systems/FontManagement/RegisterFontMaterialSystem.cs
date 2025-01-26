@@ -1,3 +1,5 @@
+using Codice.Client.BaseCommands;
+using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering.Authoring;
 using Unity.Collections;
 using Unity.Entities;
@@ -13,7 +15,7 @@ namespace TextMeshDOTS.TextProcessing
     [RequireMatchingQueriesForUpdate]
     partial class RegisterFontMaterialSystem : SystemBase
     {
-        EntityQuery fontEntityQ;
+        EntityQuery fontEntityQ, fontsQ;
         EntitiesGraphicsSystem hybridRenderer;
         Shader textMeshDOTSShader;
         Shader urpUnlitShader;
@@ -21,10 +23,14 @@ namespace TextMeshDOTS.TextProcessing
         BatchMeshID brgBackendMeshID;
         protected override void OnCreate()
         {
+
             hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
             backendMesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
             brgBackendMeshID = BatchMeshID.Null;
-
+            fontsQ = SystemAPI.QueryBuilder()
+                      .WithAll<FontState>()
+                      .WithAll<FontsDirtyTag>()
+                      .Build();
             fontEntityQ = SystemAPI.QueryBuilder()
                     .WithAll<FontBlobReference>()
                     .WithAll<AtlasData>()
@@ -37,7 +43,8 @@ namespace TextMeshDOTS.TextProcessing
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<FontTextureReference>());
             textMeshDOTSShader = Shader.Find("TextMeshDOTS/TextMeshDOTS-URP");
             urpUnlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-            RequireForUpdate<FontHashMap>();
+            RequireForUpdate(fontsQ);
+            SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
         }
 
         protected override void OnUpdate()
@@ -48,6 +55,7 @@ namespace TextMeshDOTS.TextProcessing
             if(brgBackendMeshID == BatchMeshID.Null)
                 brgBackendMeshID = hybridRenderer.RegisterMesh(backendMesh);
 
+            var fontStateEntity = fontsQ.GetSingletonEntity();
             var entities = fontEntityQ.ToEntityArray(Allocator.TempJob);            
 
             foreach (var entity in entities)
@@ -81,8 +89,10 @@ namespace TextMeshDOTS.TextProcessing
                 EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = dynamicFontAsset.fontMaterialID, MeshID= brgBackendMeshID });
                 EntityManager.SetComponentData(entity, dynamicFontAsset);
             }
-            var fontHashMap = SystemAPI.GetSingletonRW<FontHashMap>();
-            fontHashMap.ValueRW.fontsDirty = false;
+            
+            EntityManager.RemoveComponent<FontsDirtyTag>(fontStateEntity);
+            //EntityManager.AddComponent<RebuildTextRenderTag>(fontStateEntity);
+
             entities.Dispose();
             //this.Enabled = false;
         }

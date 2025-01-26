@@ -5,6 +5,7 @@ using Unity.Entities;
 using UnityEngine.TextCore.Text;
 using TextMeshDOTS.Rendering;
 using Unity.Burst.Intrinsics;
+using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -13,7 +14,6 @@ namespace TextMeshDOTS.TextProcessing
     {
         public BufferTypeHandle<CalliByte> calliByteHandle;
         public BufferTypeHandle<TextSpan> textSpanHandle;
-        [ReadOnly] public NativeHashMap<FontAssetRef, Entity> fontEntities;
         [ReadOnly] public EntityTypeHandle entitesHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
@@ -26,12 +26,12 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            //if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion) ||
-            //      chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
-            //      chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
-            //    return;
+            if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion) ||
+                  chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
+                  chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
+                return;
 
-            //Debug.Log("Extract TextSegments");
+            //Debug.Log("Extract text segments job");
             var entities = chunk.GetNativeArray(entitesHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var calliBytesRawBuffers = chunk.GetBufferAccessor(ref calliByteRawHandle);
@@ -67,7 +67,6 @@ namespace TextMeshDOTS.TextProcessing
                 calliBytesBuffer.Clear();
                 textSpanBuffer.Clear();
                 var rawCharacters = calliStringRaw.GetEnumerator();
-                var characters = calliString.GetEnumerator();
                 uint startIndex = 0;
                 var previousRuneStartPosition = 0;
                 while (rawCharacters.MoveNext())

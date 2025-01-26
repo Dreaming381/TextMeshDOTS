@@ -12,7 +12,7 @@ using UnityEngine.TextCore;
 public class RenderTest : MonoBehaviour
 {
     static readonly ProfilerMarker marker = new ProfilerMarker("Rasterize");
-    public UnityEngine.Font sourceFont;
+    public Object sourceFont;
     public string letter;
     public uint glyphID;
     public int atlasWidth = 64;
@@ -35,9 +35,9 @@ public class RenderTest : MonoBehaviour
         paintFunctions = new PaintDelegates(true);
         LoadFont(sourceFont, 256);
 
-        DrawTest(letter);
+        //DrawTest(letter);
         //PaintPNGTest("😉");
-        //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
+        PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
     }
 
     void Update()
@@ -76,8 +76,8 @@ public class RenderTest : MonoBehaviour
     {
         var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.ARGB32, false);
         var textureData = texture2D.GetRawTextureData<ColorARGB>();
-        for (int i = 0; i < textureData.Length; i++)
-            textureData[i] = (ColorARGB)Color.white;
+        //for (int i = 0; i < textureData.Length; i++)
+        //    textureData[i] = (ColorARGB)Color.white;
 
         Buffer buffer=default;
         if (!renderGlyphID)
@@ -137,9 +137,17 @@ public class RenderTest : MonoBehaviour
         face.Dispose();
         blob.Dispose();
     }
-    void LoadFont(UnityEngine.Font unityFont, int samplingPointSize)
+    void LoadFont(Object unityFont, int samplingPointSize)
     {
         var filePath = AssetDatabase.GetAssetPath(unityFont);
+        bool isTrueType = filePath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
+        bool isOpentype = filePath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
+        if (!(isOpentype || isTrueType))
+        { 
+            Debug.LogWarning("Ensure you only have files ending with 'ttf' or 'otf' (case insensitiv) in font list");
+            return;
+        }
+
         blob  = new Blob(filePath);
         face = new Face(blob.ptr, 0);
         font = new Font(face.ptr);

@@ -10,7 +10,7 @@
         "Unity.Burst",
         "Unity.Entities.Graphics",
         "Unity.Transforms",
-        "HarfBuzz"
+        "Unity.Scenes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

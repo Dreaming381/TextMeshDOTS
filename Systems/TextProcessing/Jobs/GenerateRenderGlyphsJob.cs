@@ -43,7 +43,7 @@ namespace TextMeshDOTS.TextProcessing
                   chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
                 return;
 
-            //Debug.Log("Generate Glyphs");
+            //Debug.Log("Generate glyphs job");
             var entities = chunk.GetNativeArray(entitesHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);

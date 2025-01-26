@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
@@ -24,8 +25,8 @@ namespace TextMeshDOTS
         public FixedString128Bytes fontSubFamily;
         public FixedString128Bytes typographicFamily;       
         public FixedString128Bytes typographicSubfamily;
-        public bool useSystemFont;
-        public BlobArray<byte> nativeFontFile;
+        public bool useSystemFont;        
+        public FixedString512Bytes fontAssetPath; //To-Do: ensure this points to streamingAssets folder or Application persistent data path
 
         public override string ToString()
         {
@@ -35,10 +36,6 @@ namespace TextMeshDOTS
     /// <summary> dynamic font data from FontAsset (or extracted by HarfBuzz) </summary>
     public struct DynamicFontBlob
     {
-        //public FixedString128Bytes familyName;
-        //public FixedString128Bytes styleName;
-        //public FontAssetRef fontAssetRef;
-
         #region data from Fontasset which is set by user
         //choose atalas parameter so that number of font glyphs fits! e.g. 60 sampling size and 2048x2048 texture
         public float atlasSamplingPointSize; 
@@ -109,8 +106,9 @@ namespace TextMeshDOTS
         //public float superScriptEmXOffset;
         public float superScriptEmYOffset;
 
-        public ScaledDynamicFont(ref DynamicFontBlob dynamicFont, out float xNativeToUnity, out float yNativeToUnity)
+        public ScaledDynamicFont(BlobAssetReference<DynamicFontBlob> dynamicFontBlobReference, out float xNativeToUnity, out float yNativeToUnity)
         {
+            ref var dynamicFont = ref dynamicFontBlobReference.Value;
             xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.x;
             yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.y;
 
@@ -126,8 +124,9 @@ namespace TextMeshDOTS
             subScriptEmYOffset = dynamicFont.subScriptEmYOffset * yNativeToUnity;
             superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
         }
-        public void Update(ref DynamicFontBlob dynamicFont, out float xNativeToUnity, out float yNativeToUnity)
+        public void Update(BlobAssetReference<DynamicFontBlob> dynamicFontBlobReference, out float xNativeToUnity, out float yNativeToUnity)
         {
+            ref var dynamicFont = ref dynamicFontBlobReference.Value;
             xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.x;
             yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.y;
 

@@ -2,36 +2,19 @@ using TextMeshDOTS.HarfBuzz;
 using System.IO;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEditor;
 using Font = TextMeshDOTS.HarfBuzz.Font;
-
 
 namespace TextMeshDOTS.Authoring
 {
     public static class FontBlobber
     {
-        public static BlobAssetReference<FontBlob> BakeFontBlob(UnityEngine.Font fontItem, bool useSystemFont)
+        public static BlobAssetReference<FontBlob> BakeFontBlob(string fontItem, bool useSystemFont)
         {
             var builder = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot = ref builder.ConstructRoot<FontBlob>();
-
-            byte[] fontBytes;
-
-            var filePath = AssetDatabase.GetAssetPath(fontItem);
-            fontBytes = File.ReadAllBytes(filePath);
-
-            if (useSystemFont)
-            {
-                fontBlobRoot.useSystemFont = useSystemFont;
-                BlobBuilderArray<byte> nativeFontFileBytes = builder.Allocate(ref fontBlobRoot.nativeFontFile, 0);
-            }
-            else
-            {
-                fontBlobRoot.useSystemFont = useSystemFont;
-                BlobBuilderArray<byte> nativeFontFileBytes = builder.Allocate(ref fontBlobRoot.nativeFontFile, fontBytes.Length);
-                for (int i = 0, length = fontBytes.Length; i < length; i++)
-                    nativeFontFileBytes[i] = fontBytes[i];                
-            }
+            fontBlobRoot.useSystemFont = useSystemFont;
+            fontBlobRoot.fontAssetPath = fontItem;
+            var fontBytes = File.ReadAllBytes(fontItem);
 
             Blob blob;
             unsafe
@@ -67,7 +50,7 @@ namespace TextMeshDOTS.Authoring
             fontBlobRoot.typographicSubfamily = new FixedString128Bytes();
             textSize = initialCapacity;
             face.GetFaceInfo(HB_OT_NAME_ID.TYPOGRAPHIC_SUBFAMILY, language, ref textSize, ref fontBlobRoot.typographicSubfamily);
-            fontBlobRoot.typographicSubfamily.Length = (int)textSize;
+            fontBlobRoot.typographicSubfamily.Length = (int)textSize;            
 
             var weight = font.GetStyleTag(StyleTag.Weight);
             var width = font.GetStyleTag(StyleTag.Width);

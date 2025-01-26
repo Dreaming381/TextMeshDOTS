@@ -41,14 +41,14 @@ namespace TextMeshDOTS.TextProcessing
                   chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
                 return;
 
-            //Debug.Log("Shape");
+            //Debug.Log("Shape job");
             var entities = chunk.GetNativeArray(entitesHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
 
-            //var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
-            var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
+            var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+            //var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
             var latinLTR = new SegmentProperties(Direction.LeftToRight, Script.Latin, language);
             var buffer = new Buffer(true);
             var features = new NativeList<Feature>(16, Allocator.Temp);
@@ -77,20 +77,7 @@ namespace TextMeshDOTS.TextProcessing
 
                 var fontAssetRefs = fontAssetArray.fontAssetRefs;
                 glyphOTFs.Clear();
-                var text = calliBytes.Reinterpret<byte>();
-
-                //To-Do: carefull with adding features. Will crash application if features are not supported by font.
-                //for (int i = 0, length = textSpans.Length; i < length; i++)
-                //{
-                //    var textSpan = textSpans[i];
-                //    if ((textSpan.fontStyle & FontStyles.SmallCaps) == FontStyles.SmallCaps)
-                //        features.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, textSpan.startIndex, textSpan.endIndex));
-                //    if ((textSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
-                //        features.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, textSpan.startIndex, textSpan.endIndex));
-                //    if ((textSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
-                //        features.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, textSpan.startIndex, textSpan.endIndex));
-                //}
-                //features.Add(new Feature() { tag = HB.HB_TAG('f', 'r', 'a', 'c'), value = 1, start = 0, end = (uint)calliBytes.Length, });
+                var text = calliBytes.Reinterpret<byte>();                
 
                 int cur = 0;
                 var currentSpan = textSpans[cur];
@@ -99,7 +86,6 @@ namespace TextMeshDOTS.TextProcessing
                 do
                 {
                     startIndex = currentSpan.startIndex;
-                    endIndex = currentSpan.endIndex;
                     int currentFont;
                     do
                     {
@@ -112,12 +98,29 @@ namespace TextMeshDOTS.TextProcessing
                     buffer.AddText(text, startIndex, length);
                     buffer.SetSegmentProperties(latinLTR);
 
+                    //To-Do: revisit how to add features per textSpan
+                    //for (int i = 0, length = textSpans.Length; i < length; i++)
+                    //{
+                    //    var textSpan = textSpans[i];
+                    //    if ((textSpan.fontStyle & FontStyles.SmallCaps) == FontStyles.SmallCaps)
+                    //        features.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, textSpan.startIndex, textSpan.endIndex));
+                    //    if ((textSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
+                    //        features.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, textSpan.startIndex, textSpan.endIndex));
+                    //    if ((textSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
+                    //        features.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, textSpan.startIndex, textSpan.endIndex));
+                    //}
+                    //features.Add(new Feature() { tag = HB.HB_TAG('f', 'r', 'a', 'c'), value = 1, start = 0, end = (uint)calliBytes.Length, });
+
+
                     var fontEntity = fontEntities[fontAssetRefs[currentFont]];
-                    var font = nativeFontPointerLookup[fontEntity].font;
-                    var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();                    
+                    var nativeFontPointer = nativeFontPointerLookup[fontEntity];
+                    var font = nativeFontPointer.font;
+
+                    var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
                     
+
+
                     font.Shape(buffer, features);
-                    //marker.End();
 
                     //var glyphInfos = buffer.GlyphInfo();
                     //var glyphPositions = buffer.GlyphPositions();
@@ -143,7 +146,6 @@ namespace TextMeshDOTS.TextProcessing
                     buffer.ClearContent();
                     features.Clear();
                 } while (cur < textSpans.Length);
-                features.Clear();
             }
             buffer.Dispose();
         }

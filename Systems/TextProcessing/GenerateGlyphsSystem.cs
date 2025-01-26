@@ -2,6 +2,8 @@ using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Entities;
 using TextMeshDOTS.HarfBuzz;
+using Codice.Client.BaseCommands;
+using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -11,13 +13,17 @@ namespace TextMeshDOTS.TextProcessing
     [UpdateAfter(typeof(UpdateFontAtlasSystem))]
     public partial struct GenerateGlyphsSystem : ISystem
     {
-        EntityQuery m_query;
+        EntityQuery m_query, fontsQ;
 
         bool m_skipChangeFilter;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
+            fontsQ = SystemAPI.QueryBuilder()
+                      .WithAll<FontState>()
+                      .WithNone<FontsDirtyTag>()
+                      .Build();
             m_query = SystemAPI.QueryBuilder()
                       .WithAllRW<RenderGlyph>()
                       .WithAll<CalliByte>()
@@ -26,18 +32,21 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAll<TextBaseConfiguration>()
                       .WithAllRW<TextRenderControl>()
                       .Build();
-            state.RequireForUpdate<FontHashMap>();
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
+            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<GlyphOTF>());
+            state.RequireForUpdate(fontsQ);
+            SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
         }
 
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
-            if (fontHashMap.fontsDirty == true)
+            if (m_query.IsEmpty)
                 return;
-            var fontEntities = fontHashMap.fontEntities;
+            //Debug.Log("Generate glyphs system");
+            
+            var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
 
             state.Dependency = new GenerateRenderGlyphsJob
             {
@@ -46,7 +55,7 @@ namespace TextMeshDOTS.TextProcessing
                 selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
-                fontEntities = fontEntities,
+                fontEntities = fontHashMap.fontEntities,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),

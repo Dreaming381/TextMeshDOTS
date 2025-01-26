@@ -1,5 +1,4 @@
 using TextMeshDOTS.HarfBuzz;
-using System;
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;
@@ -10,6 +9,7 @@ using Unity.Entities.Graphics;
 using Unity.Rendering;
 using UnityEngine.Rendering;
 using System.Collections.Generic;
+using UnityEditor;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -38,26 +38,60 @@ namespace TextMeshDOTS.Authoring
 
         [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. De-select to bake font raw data in blob asset")]
         public bool useSystemFonts = false;
+#if UNITY_EDITOR
         [Tooltip("Drop here all fonts you like to use. Do not forget to include all font family members selected via Fontstyles or RichText tags such as <b> (bold), <i> (italic> or combinations thereof!")]
-        public UnityEngine.Font[] fonts;
+        public Object[] fonts;
+#endif
+        public List<string> streamingAssets;
+
+#if UNITY_EDITOR
+        [MenuItem("TextMeshDOTS/Extract font path's")]
+        static void ExtractFileNames()
+        {
+            var activeObject = Selection.activeObject;
+            if (activeObject == null || !(activeObject.GetType() == typeof(GameObject) && ((GameObject)activeObject).TryGetComponent(out TextRendererAuthoring textRendererAuthoring)))
+            {
+                Debug.LogError($"{activeObject.GetType()} is not Gameobject");
+                return;
+            }
+            var gameObject = activeObject as GameObject;
+            
+
+            var fonts = textRendererAuthoring.fonts;
+            var streamingAssets = textRendererAuthoring.streamingAssets;
+            if(streamingAssets != null )
+                streamingAssets.Clear();
+            else
+                streamingAssets = new List<string>();
+            for (int i = 0, ii = fonts.Length; i < ii; i++)
+            {
+                var filePath = AssetDatabase.GetAssetPath(fonts[i]);
+                bool isTrueType = filePath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
+                bool isOpentype = filePath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
+                if (isOpentype || isTrueType)
+                    streamingAssets.Add(filePath);
+                else
+                {
+                    Debug.LogWarning("Ensure you only have files ending with 'ttf' or 'otf' (case insensitiv) in font list");
+                    streamingAssets.Clear();
+                    return;
+                }
+            }
+        }
+#endif
     }
 
     class TestAuthoringBaker : Baker<TextRendererAuthoring>
     {
         public override void Bake(TextRendererAuthoring authoring)
         {
-            if (authoring.fonts == null || authoring.fonts.Length == 0)
+            if (authoring.streamingAssets == null || authoring.streamingAssets.Count == 0)
                 return;
 
-            HashSet<int> redundancyCheck = new HashSet<int>(authoring.fonts.Length);
-            for (int i = 0; i < authoring.fonts.Length; i++)
+            HashSet<int> redundancyCheck = new HashSet<int>(authoring.streamingAssets.Count);
+            for (int i = 0; i < authoring.streamingAssets.Count; i++)
             {
-                var font = authoring.fonts[i];
-                if (font == null)
-                {
-                    //Debug.Log($"List of fonts contains null reference");
-                    return;
-                }
+                var font = authoring.streamingAssets[i];
                 var hashCode = font.GetHashCode();
                 if (redundancyCheck.Contains(hashCode))
                 {
@@ -87,9 +121,9 @@ namespace TextMeshDOTS.Authoring
 
             var additionalEntities = new NativeList<Entity>(16, Allocator.Temp);
 
-            for (int i = 0, ii = authoring.fonts.Length; i < ii; i++)
+            for (int i = 0, ii = authoring.streamingAssets.Count; i < ii; i++)
             {
-                var fontItem = authoring.fonts[i];
+                var fontItem = authoring.streamingAssets[i];
                 if (i > 0)
                     AddAdditionalFontEntity(fontItem, authoring.useSystemFonts, additionalEntities, renderFilterSettings);
                 else
@@ -130,7 +164,7 @@ namespace TextMeshDOTS.Authoring
             });
             AddBuffer<RenderGlyph>(entity);
         }
-        BlobAssetReference<FontBlob> BakeFontAsset(UnityEngine.Font fontItem, bool useSystemFont)
+        BlobAssetReference<FontBlob> BakeFontAsset(string fontItem, bool useSystemFont)
         {            
             var customHash = new Unity.Entities.Hash128((uint)fontItem.GetHashCode(), (uint)useSystemFont.GetHashCode(), 0, 0);
             if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<FontBlob> blobReference))
@@ -142,7 +176,7 @@ namespace TextMeshDOTS.Authoring
             }
             return blobReference;
         }
-        void AddAdditionalFontEntity(UnityEngine.Font fontItem, bool useSystemFont, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
+        void AddAdditionalFontEntity(string fontItem, bool useSystemFont, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
         {
             var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
             AddEntityGraphicsComponents(newEntity, renderFilterSettings);
@@ -169,7 +203,7 @@ namespace TextMeshDOTS.Authoring
     }
     
 
-    [Serializable]
+    [System.Serializable]
     [Tooltip("Copy strings from system fonts here ")]
     public struct FontItem    
     {        

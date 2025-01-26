@@ -6,6 +6,7 @@ using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Jobs;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -16,7 +17,7 @@ namespace TextMeshDOTS.TextProcessing
     //[DisableAutoCreation]
     public partial struct ShapeSystem : ISystem
     {
-        EntityQuery m_query, fontEntityQ;
+        EntityQuery m_query, fontEntityQ, fontsQ;
         static readonly ProfilerMarker marker = new ProfilerMarker("harfbuzz");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
 
@@ -25,9 +26,16 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
+            fontsQ = SystemAPI.QueryBuilder()
+                      .WithAll<FontState>()
+                      .WithNone<FontsDirtyTag>()
+                      .Build();
             m_query = SystemAPI.QueryBuilder()
                       .WithAllRW<GlyphOTF>()
                       .WithAll<CalliByte>()
+                      .WithAll<TextSpan>()
+                      .WithAll<TextBaseConfiguration>()
+                      .WithAll<FontBlobReference>()
                       .Build();            
 
             fontEntityQ = SystemAPI.QueryBuilder()
@@ -36,23 +44,24 @@ namespace TextMeshDOTS.TextProcessing
                               .WithAll<DynamicFontAsset>()
                               .Build();
 
-            //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
-            //m_query.AddChangedVersionFilter(ComponentType.ReadWrite<FontMaterial>());
-            state.RequireForUpdate<FontHashMap>();
+            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<TextSpan>());
+            m_query.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
+            state.RequireForUpdate(fontsQ);
+            SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
         }
 
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
-            if (fontHashMap.fontsDirty == true)
+            if (m_query.IsEmpty)
                 return;
-            var fontEntities = fontHashMap.fontEntities;
+            //Debug.Log("Shape system");
 
+            var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
             var missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.TempJob);
-
+            
             state.Dependency = new ShapeJob
             {
                 marker = marker,
@@ -60,7 +69,7 @@ namespace TextMeshDOTS.TextProcessing
                 
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
 
-                fontEntities = fontEntities,
+                fontEntities = fontHashMap.fontEntities,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),

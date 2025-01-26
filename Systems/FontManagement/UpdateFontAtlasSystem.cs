@@ -130,7 +130,7 @@ namespace TextMeshDOTS.TextProcessing
 
                 var updateNativeFontJob = new UpdateNativeFontJob()
                 {
-                    fontTextureReferenceLookup = dynamicFontAssetsLookup,
+                    dynamicFontAssetLookup = dynamicFontAssetsLookup,
 
                     fontEntity = fontEntity,
                     atlasDataLookup = atlasDataLookup,

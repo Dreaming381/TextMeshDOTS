@@ -1,7 +1,10 @@
 using System;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Collections;
-using TextMeshDOTS.HarfBuzz.Bitmap;
+using static TextMeshDOTS.HarfBuzz.DrawDelegates;
+using Unity.Burst;
+using AOT;
+using UnityEngine;
 
 
 namespace TextMeshDOTS.HarfBuzz
@@ -32,8 +35,8 @@ namespace TextMeshDOTS.HarfBuzz
         }
         unsafe public Blob(void* data, uint length, MemoryMode memoryMode)
         {
-            DrawDelegates.ReleaseDelegate releaseDelegate = null;
-            //ReleaseDelegate releaseDelegate = new ReleaseDelegate(DelegateProxies.Test);
+            //FunctionPointer<ReleaseDelegate> releaseFunctionPointer = BurstCompiler.CompileFunctionPointer<ReleaseDelegate>(OnBlobDisposed);
+            ReleaseDelegate releaseDelegate = new ReleaseDelegate(OnBlobDisposed);
             ptr = HB.hb_blob_create(data, length, memoryMode, IntPtr.Zero, releaseDelegate); //returned blob is immutable
         }
         //public Blob(string filename, out bool success)
@@ -67,6 +70,12 @@ namespace TextMeshDOTS.HarfBuzz
         public void Dispose()
         {
             HB.hb_blob_destroy(ptr);
+        }
+
+        [MonoPInvokeCallback(typeof(ReleaseDelegate))]
+        public static void OnBlobDisposed()
+        {
+            //Debug.Log($"harfbuzz: blob was disposed");
         }
     }
 }
