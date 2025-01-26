@@ -8,6 +8,7 @@ using Unity.Profiling;
 using TextMeshDOTS;
 using UnityEngine.TextCore;
 
+#if UNITY_EDITOR
 public class RenderTest : MonoBehaviour
 {
     static readonly ProfilerMarker marker = new ProfilerMarker("Rasterize");
@@ -64,7 +65,7 @@ public class RenderTest : MonoBehaviour
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
         var glyphRect = new GlyphRect(32,32, (int)drawData.glyphRect.width+64, (int)drawData.glyphRect.height+64);
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-        SDF.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight);
+        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight);
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
@@ -154,3 +155,4 @@ public class RenderTest : MonoBehaviour
         orientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
     }
 }
+#endif

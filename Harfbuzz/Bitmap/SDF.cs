@@ -256,7 +256,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             bool flip_y = true;
             bool flip_sign = false;
-            int overloadSign = 0;
+            int outsideSign = -1;
             float sp_sq;
             SDFEdge edge;
             var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
@@ -289,17 +289,11 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     SignedDistance dist = maxSDF;
 
                     /* now loop over the pixels in the control box. */
-                    for (int y = (int)cbox.min.y, yEnd = (int)cbox.max.y; y < yEnd; y++)
-                    {
-                        if (y < 0 || y >= rectHeight)
-                            continue;
-
+                    for (int y = math.max((int)cbox.min.y, 0), yEnd = math.min((int)cbox.max.y, rectHeight); y < yEnd; y++)
+                    {                        
                         gridPoint.y = y + 0.5f;     // use the center of any pixel to be rendered within cbox
-                        for (int x = (int)cbox.min.x, xEnd = (int)cbox.max.x; x < xEnd; x++)
-                        {   
-                            if (x < 0 || x >= rectWidth)
-                                continue;
-                            
+                        for (int x = math.max((int)cbox.min.x,0), xEnd = math.min((int)cbox.max.x, rectWidth); x < xEnd; x++)
+                        { 
                             gridPoint.x = x + 0.5f; // use the center of any pixel to be rendered within cbox
                             GetMinDistanceLineToPoint(a,b, gridPoint, ref dist);
                             if (!ValidateAndSaveDistance(dists, ref dist, x, y, rectWidth, rectHeight, orientation, sp_sq, flip_y))
@@ -310,14 +304,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
 
             // final pass
-            int outsideSign = -1;
             for (int row = 0; row < rectHeight; row++)
             {
                 /* We assume the starting pixel of each row is outside. */
                 int current_sign = outsideSign;
-
-                if (overloadSign != 0)
-                    current_sign = overloadSign < 0 ? -1 : 1;
 
                 for (int column = 0; column < rectWidth; column++)
                 {
@@ -326,17 +316,15 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                     // if the pixel is not set, its shortest distance is more than `spread`
                     var dist = dists[sourceIndex];
-                    if (BezierMath.EqualsForSmallValues(dist.sign, 0))
+                    if (dist.sign==0)
                     {
                         dist.sign = outsideSign;
                         dist.distance = -spread;
                     }
-                    current_sign = dist.sign;
+                    else
+                        current_sign = dist.sign;
 
-                    // clamp the distance
-                    if (dist.distance > spread)
-                        dist.distance = spread;
-
+                    dist.distance = math.clamp(dist.distance, -spread, spread);
                     // flip sign if required
                     dist.distance *= flip_sign ? -current_sign : current_sign;
                     dists[sourceIndex] = dist;
@@ -355,7 +343,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             bool flip_y = true;
             bool flip_sign = false;
-            int overloadSign = 0;
+            int outsideSign = -1;
             float sp_sq;
             SDFEdge edge;
             var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
@@ -410,14 +398,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
 
             // final pass
-            int outsideSign = -1;
             for (int row = 0; row < rectHeight; row++)
             {
                 /* We assume the starting pixel of each row is outside. */
                 int current_sign = outsideSign;
-
-                if (overloadSign != 0)
-                    current_sign = overloadSign < 0 ? -1 : 1;
 
                 for (int column = 0; column < rectWidth; column++)
                 {
@@ -431,12 +415,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         dist.sign = outsideSign;
                         dist.distance = -spread;
                     }
-                    current_sign = dist.sign;
+                    else
+                        current_sign = dist.sign;
 
-                    // clamp the distance
-                    if (dist.distance > spread)
-                        dist.distance = spread;
-
+                    dist.distance = math.clamp(dist.distance, -spread, spread);
                     // flip sign if required
                     dist.distance *= flip_sign ? -current_sign : current_sign;
                     dists[sourceIndex] = dist;
@@ -553,10 +535,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var cross = BezierMath.cross2D(pn, ab);
 
             dist.sign = cross < 0 ? 1 : -1;
-            if (SDFCommon.USE_SQUARED_DISTANCES)
-                dist.distance = pnLengthSq;
-            else
-                dist.distance = math.sqrt(pnLengthSq);
+            dist.distance = SDFCommon.USE_SQUARED_DISTANCES ? pnLengthSq : math.sqrt(pnLengthSq);
+
+            //dist.sign = math.select(-1,1, cross < 0);
+            //dist.distance = math.select( math.sqrt(pnLengthSq), pnLengthSq, SDFCommon.USE_SQUARED_DISTANCES);
 
             if (Hint.Unlikely(isEndPoint))
             {
@@ -585,10 +567,11 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var cross = BezierMath.cross2D(pn, ab);
 
             dist.sign = cross < 0 ? 1 : -1;
-            if (SDFCommon.USE_SQUARED_DISTANCES)
-                dist.distance = pnLengthSq;
-            else
-                dist.distance = math.sqrt(pnLengthSq);
+            dist.distance = SDFCommon.USE_SQUARED_DISTANCES ? pnLengthSq : math.sqrt(pnLengthSq);
+
+            //dist.sign = math.select(-1,1, cross < 0);
+            //dist.distance = math.select( math.sqrt(pnLengthSq), pnLengthSq, SDFCommon.USE_SQUARED_DISTANCES);
+
 
             bool nIsEndPoint = BezierMath.EqualsForSmallValues(frac, 0) || BezierMath.EqualsForSmallValues(frac, 1);            
             if (Hint.Unlikely(nIsEndPoint))

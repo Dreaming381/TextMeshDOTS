@@ -12,20 +12,32 @@ namespace TextMeshDOTS.HarfBuzz
         const float relativeTolerance = 32 / (1 << 16); //The epsilon distance  used for corner
 
         /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool GenericEquals(float a, float b)
         {
             return (math.abs(a - b) <= math.max(absolutTolerane, relativeTolerance * math.max(math.abs(a), math.abs(b))));
         }
-
         /// <summary>Relative tolerance comparison of x and y, fails values become small </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool EqualsForLargeValues(float x, float y)
         {
             return math.abs(x - y) <= relativeTolerance * math.max(math.abs(x), math.abs(y));
         }
         /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool EqualsForSmallValues(float x, float y)
+        {
+            return (math.abs(x - y) <= absolutTolerane);
+        }
+        /// <summary>Relative tolerance comparison of x and y, fails values become small </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool4 EqualsForLargeValues(float4 x, float4 y)
+        {
+            return math.abs(x - y) <= relativeTolerance * math.max(math.abs(x), math.abs(y));
+        }
+        /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool4 EqualsForSmallValues(float4 x, float4 y)
         {
             return (math.abs(x - y) <= absolutTolerane);
         }
@@ -38,6 +50,25 @@ namespace TextMeshDOTS.HarfBuzz
         public static float cross2D(float2 a, float2 b)
         {
             return (a.x * b.y) - (a.y * b.x);
+        }
+
+        /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
+        /// <param name="a">First vector</param>
+        /// <param name="b">Second vector</param>
+        /// <returns>The magnitude of the cross product</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float4 cross2D(float4 ax, float4 ay, float4 bx, float4 by)
+        {
+            return (ax * by) - (ay * bx);
+        }
+        /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
+        /// <param name="a">First vector</param>
+        /// <param name="b">Second vector</param>
+        /// <returns>The magnitude of the cross product</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float cross2D(float ax, float ay, float bx, float by)
+        {
+            return (ax * by) - (ay * bx);
         }
         /// <summary> Max permitted deviatition of generated lines from original bezier curve. 
         /// Sensible value is fontscale / 25). Too low values massively hit performance.
@@ -69,6 +100,7 @@ namespace TextMeshDOTS.HarfBuzz
 
             return math.max(math.max(d1.x, d1.y), math.max(d2.x, d2.y));
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SplitQuadraticEdge(NativeList<SDFEdge> edges, ref SDFEdge edge)
         {
             var p0 = edge.start_pos;
@@ -113,6 +145,7 @@ namespace TextMeshDOTS.HarfBuzz
             }
             //edges.Add(new SDFEdge { start_pos = p, end_pos = p2, edge_type = SDFEdgeType.UNDEFINED });
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SplitCubicEdge(NativeList<SDFEdge> edges, ref SDFEdge edge)
         {
             var p0 = edge.start_pos;
@@ -314,6 +347,7 @@ namespace TextMeshDOTS.HarfBuzz
             }
             return new BBox(min, max);
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BBox GetLineBBox(float2 p0, float2 p1)
         {
             var min = math.min(p0, p1);

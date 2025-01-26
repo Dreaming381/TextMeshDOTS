@@ -7,7 +7,6 @@ using Unity.Collections;
 using Unity.Burst;
 using AOT;
 using TextMeshDOTS.HarfBuzz.Bitmap;
-using log4net.Util;
 
 namespace TextMeshDOTS.HarfBuzz
 {

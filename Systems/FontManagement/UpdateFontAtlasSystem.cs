@@ -5,7 +5,6 @@ using Unity.Profiling;
 using Unity.Jobs;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Burst;
-using TextMeshDOTS.HarfBuzz.Bitmap;
 
 
 namespace TextMeshDOTS.TextProcessing
