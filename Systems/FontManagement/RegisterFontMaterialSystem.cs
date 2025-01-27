@@ -15,16 +15,21 @@ namespace TextMeshDOTS.TextProcessing
     {
         EntityQuery fontEntityQ, fontsQ;
         EntitiesGraphicsSystem hybridRenderer;
-        Shader textMeshDOTSShader;
-        Shader urpUnlitShader;
+
+        Material textMeshDOTSMaterial;
+        Material urpUnlitMaterial;
         Mesh backendMesh;
-        BatchMeshID brgBackendMeshID;
+        BatchMeshID backendMeshID;
+        
         protected override void OnCreate()
         {
 
             hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
             backendMesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
-            brgBackendMeshID = BatchMeshID.Null;
+            backendMeshID = BatchMeshID.Null;
+            textMeshDOTSMaterial = Resources.Load<Material>(TextMaterialUtility.ktextMeshDOTS_URP_material);
+            urpUnlitMaterial = Resources.Load<Material>(TextMaterialUtility.kUnlit_material);
+
             fontsQ = SystemAPI.QueryBuilder()
                       .WithAll<FontState>()
                       .WithAll<FontsDirtyTag>()
@@ -39,8 +44,7 @@ namespace TextMeshDOTS.TextProcessing
                     .WithAbsent<MaterialMeshInfo>()  
                     .Build();
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<FontTextureReference>());
-            textMeshDOTSShader = Shader.Find("TextMeshDOTS/TextMeshDOTS-URP");
-            urpUnlitShader = Shader.Find("Universal Render Pipeline/Unlit");
+            
             RequireForUpdate(fontsQ);
             SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
         }
@@ -50,8 +54,8 @@ namespace TextMeshDOTS.TextProcessing
             if (fontEntityQ.IsEmpty)
                 return;
 
-            if(brgBackendMeshID == BatchMeshID.Null)
-                brgBackendMeshID = hybridRenderer.RegisterMesh(backendMesh);
+            if (backendMeshID == BatchMeshID.Null)
+                backendMeshID = hybridRenderer.RegisterMesh(backendMesh);
 
             var fontStateEntity = fontsQ.GetSingletonEntity();
             var entities = fontEntityQ.ToEntityArray(Allocator.TempJob);            
@@ -68,23 +72,20 @@ namespace TextMeshDOTS.TextProcessing
 
                 if (dynamicFontAsset.textureType == TextureType.SDF)
                 {
-                    var material = new Material(textMeshDOTSShader);
-                    material.enableInstancing = true;
-                    SetupMaterialWithBlendMode(material);
+                    var material = Object.Instantiate(textMeshDOTSMaterial);
                     material.mainTexture = dynamicFontAsset.texture;
                     dynamicFontAsset.materialDebug = material;
                     dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
                 }
                 else
                 {
-                    var material = new Material(urpUnlitShader);
-                    material.enableInstancing = true;
+                    var material = Object.Instantiate(urpUnlitMaterial);
                     material.mainTexture = dynamicFontAsset.texture;
                     dynamicFontAsset.materialDebug = material;
                     dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
                 }
 
-                EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = dynamicFontAsset.fontMaterialID, MeshID= brgBackendMeshID });
+                EntityManager.AddComponentData(entity, new MaterialMeshInfo { MaterialID = dynamicFontAsset.fontMaterialID, MeshID= backendMeshID });
                 EntityManager.SetComponentData(entity, dynamicFontAsset);
             }
             
@@ -93,16 +94,6 @@ namespace TextMeshDOTS.TextProcessing
 
             entities.Dispose();
             //this.Enabled = false;
-        }
-        public static void SetupMaterialWithBlendMode(Material material)
-        {
-            material.SetOverrideTag("RenderType", "Transparent");
-            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            material.SetInt("_ZWrite", 0);
-            material.EnableKeyword("_ALPHATEST_ON");
-            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         }
     }
 }

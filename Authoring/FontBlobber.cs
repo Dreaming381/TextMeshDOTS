@@ -3,18 +3,24 @@ using System.IO;
 using Unity.Collections;
 using Unity.Entities;
 using Font = TextMeshDOTS.HarfBuzz.Font;
+using UnityEditor;
+using UnityEngine;
 
 namespace TextMeshDOTS.Authoring
 {
     public static class FontBlobber
     {
-        public static BlobAssetReference<FontBlob> BakeFontBlob(string fontItem, bool useSystemFont)
+        public static BlobAssetReference<FontBlob> BakeFontBlob(Object fontItem, bool useSystemFont)
         {
+            string fontPath = default;
+#if UNITY_EDITOR
+            fontPath = AssetDatabase.GetAssetPath(fontItem);
+#endif
             var builder = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot = ref builder.ConstructRoot<FontBlob>();
             fontBlobRoot.useSystemFont = useSystemFont;
-            fontBlobRoot.fontAssetPath = fontItem;
-            var fontBytes = File.ReadAllBytes(fontItem);
+            fontBlobRoot.fontAssetPath = fontPath;
+            var fontBytes = File.ReadAllBytes(fontPath);
 
             Blob blob;
             unsafe
