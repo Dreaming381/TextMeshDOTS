@@ -248,8 +248,24 @@ namespace TextMeshDOTS.HarfBuzz
                         result[i] = destination[i];
                     break;
                 case PaintCompositeMode.SRC_OVER:
-                    for (int i = 0; i < result.Length; i++)
-                        result[i] = Blending.SrcOver(source[i], destination[i]);
+                    {
+                        // used for pretty much all blend operations, so make it fast
+                        // main loop: proccess 4 pixel in each blend operation
+                        int i, ii = result.Length / 4 * 4;
+                        for (i = 0;  i < ii; i += 4)
+                        {
+                            var s = new uint4(source[i].argb, source[i + 1].argb, source[i + 2].argb, source[i + 3].argb);
+                            var d = new uint4(destination[i].argb, destination[i + 1].argb, destination[i + 2].argb, destination[i + 3].argb);
+                            var r = Blending.SrcOver(s, d);
+                            result[i] = r[0];
+                            result[i + 1] = r[1];
+                            result[i + 2] = r[2];
+                            result[i + 3] = r[3];
+                        }
+                        // remainder loop
+                        for ( ; i < result.Length; i++)
+                            result[i] = Blending.SrcOver(source[i], destination[i]);
+                    }
                     break;
                 case PaintCompositeMode.DEST_OVER:
                     for (int i = 0; i < result.Length; i++)
@@ -315,7 +331,7 @@ namespace TextMeshDOTS.HarfBuzz
                 Blending.Clear(data.tempSurface2);
             else if (data.group == 3)
                 Blending.Clear(data.tempSurface3);
-            
+
             data.group--;            
         }
         [BurstCompile]

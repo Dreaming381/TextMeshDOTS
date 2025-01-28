@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 
@@ -5,130 +6,221 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public static class Blending
     {
-        public static ColorARGB SrcOver(ColorARGB source, ColorARGB destination)
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ColorARGB SrcOver(ColorARGB s, ColorARGB d)
         {
             // r = s*sa + (1-sa)*d*da
-            var result = ((int4)source * source.a / 255) + (255 - source.a) * ((int4)destination * destination.a / 255) / 255;
-            var alpha = source.a + destination.a * (255 - source.a) / 255;
-            result[0] = alpha;
-            return (ColorARGB)result;
+            var oneMinusAlpha = 255 - s.a;
+            var ra = s.a + d.a * oneMinusAlpha / 255;
+            var rr = (s.r * s.a / 255) + oneMinusAlpha * (d.r * d.a / 255) / 255;
+            var rg = (s.g * s.a / 255) + oneMinusAlpha * (d.g * d.a / 255) / 255;
+            var rb = (s.b * s.a / 255) + oneMinusAlpha * (d.b * d.a / 255) / 255;
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB DstOver(ColorARGB source, ColorARGB destination)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint4 SrcOver(uint4 s, uint4 d)
+        {
+            //extract individual color components into uint4 vectors for subsequent SIMD math
+            //expects ColorARGB byte layout
+            var sa = s & 0xff;
+            var sr = (s >> 8) & 0xff;
+            var sg = (s >> 16) & 0xff;
+            var sb = (s >> 24) & 0xff;
+
+            var da = d & 0xff;
+            var dr = (d >> 8) & 0xff;
+            var dg = (d >> 16) & 0xff;
+            var db = (d >> 24) & 0xff;
+
+            //r = s * sa + (1 - sa) * d * da
+            var oneMinusAlpha = 255 - sa;
+            var ra = sa + da * oneMinusAlpha / 255;
+            var rr = (sr * sa / 255) + oneMinusAlpha * (dr * da / 255) / 255;
+            var rg = (sg * sa / 255) + oneMinusAlpha * (dg * da / 255) / 255;
+            var rb = (sb * sa / 255) + oneMinusAlpha * (db * da / 255) / 255;
+            return ra & 0xFF | (rr & 0xFF) << 8 | (rg & 0xFF) << 16 | (rb & 0xFF) << 24;
+        }
+        public static ColorARGB DstOver(ColorARGB s, ColorARGB d)
         {
             // r = d*da + (1-da)*s*sa
-            var result = ((int4)destination * destination.a / 255) + (255 - destination.a) * ((int4)source * source.a / 255) / 255;
-            var alpha = destination.a + source.a * (255 - destination.a) / 255;
-            result[0] = alpha;
-            return (ColorARGB)result;
+            var oneMinusAlpha = 255 - d.a;
+            var ra = d.a + s.a * oneMinusAlpha / 255;
+            var rr = (d.r * d.a / 255) + oneMinusAlpha * (s.r * s.a / 255) / 255;
+            var rg = (d.g * d.a / 255) + oneMinusAlpha * (s.g * s.a / 255) / 255;
+            var rb = (d.b * d.a / 255) + oneMinusAlpha * (s.b * s.a / 255) / 255;
+            return new ColorARGB(ra, rr, rg, rb);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint4 DstOver(uint4 s, uint4 d)
+        {
+            //expects ColorARGB byte layout
+            var sa = s & 0xff;
+            var sr = (s >> 8) & 0xff;
+            var sg = (s >> 16) & 0xff;
+            var sb = (s >> 24) & 0xff;
+
+            var da = d & 0xff;
+            var dr = (d >> 8) & 0xff;
+            var dg = (d >> 16) & 0xff;
+            var db = (d >> 24) & 0xff;
+
+            //r = s * sa + (1 - sa) * d * da
+            var oneMinusAlpha = 255 - da;
+            var ra = da + sa * oneMinusAlpha / 255;
+            var rr = (dr * da / 255) + oneMinusAlpha * (sr * sa / 255) / 255;
+            var rg = (dg * da / 255) + oneMinusAlpha * (sg * sa / 255) / 255;
+            var rb = (db * da / 255) + oneMinusAlpha * (sb * sa / 255) / 255;
+            return ra & 0xFF | (rr & 0xFF) << 8 | (rg & 0xFF) << 16 | (rb & 0xFF) << 24;
+        }
+        public static ColorARGB SrcIn(ColorARGB s, ColorARGB d)
+        {
+            // a = sa * da
+            // r = s *sa * da
+            var ra = s.a * d.a / 255;
+            var rr = s.r * s.r / 255 * d.a / 255;
+            var rg = s.g * s.g / 255 * d.a / 255;
+            var rb = s.b * s.a / 255 * d.a / 255;            
+            return new ColorARGB(ra, rr, rg, rb);
+        }
+        public static ColorARGB SrcIn2(ColorARGB s, ColorARGB d)
+        {
+            // r = s * da
+            var ra = s.a * d.a / 255;
+            var rr = s.r * d.a / 255;
+            var rg = s.g * d.a / 255;
+            var rb = s.b * d.a / 255;
+            return new ColorARGB(ra, rr, rg, rb);
+        }
+        public static ColorARGB DstIn(ColorARGB s, ColorARGB d)
+        {
+            // a = sa * da
+            // r = s *sa * da
+            var ra = d.a * s.a / 255;
+            var rr = d.r * d.a / 255 * s.a / 255;
+            var rg = d.g * d.a / 255 * s.a / 255;
+            var rb = d.b * d.a / 255 * s.a / 255;
+            var alpha = d.a * s.a / 255;
+            return new ColorARGB(ra, rr, rg, rb);
+        }
+        public static ColorARGB DstIn2(ColorARGB s, ColorARGB d)
+        {
+            // r = d * sa
+            var ra = d.a * s.a / 255;
+            var rr = d.r * s.a / 255;
+            var rg = d.g * s.a / 255;
+            var rb = d.b * s.a / 255;
+            return new ColorARGB(ra, rr, rg, rb);
         }
 
-        //public static ColorARGB SrcIn(ColorARGB source, ColorARGB destination)
-        //{
-        //    // r = s * da
-        //    var result = (int4)source * destination.a / 255;
-        //    return (ColorARGB)result;
-        //}
-        //public static ColorARGB DstIn(ColorARGB source, ColorARGB destination)
-        //{
-        //    // r = d * sa
-        //    var result = (int4)destination * source.a / 255;
-        //    return (ColorARGB)result;
-        //}
-        public static ColorARGB SrcIn(ColorARGB source, ColorARGB destination)
-        {
-            // r = s *sa * da
-            //alpha = sa * da
-            var result = (int4)source * source.a / 255 * destination.a / 255;
-            var alpha = source.a * destination.a / 255;
-            result[0] = alpha;
-            return (ColorARGB)result;
-        }
-        public static ColorARGB DstIn(ColorARGB source, ColorARGB destination)
-        {
-            // r = s *sa * da
-            //alpha = sa * da
-            var result = (int4)destination * destination.a / 255 * source.a / 255;
-            var alpha = destination.a * source.a / 255;
-            result[0] = alpha;
-            return (ColorARGB)result;
-        }
-
-        public static ColorARGB SrcOut(ColorARGB source, ColorARGB destination)
+        public static ColorARGB SrcOut(ColorARGB s, ColorARGB d)
         {
             // r = s * (1 - da)
-            var result = (int4)source *  (255 - destination.a) / 255;
-            return (ColorARGB)result;
+            var ra = s.a * (255 - d.a) / 255;
+            var rr = s.r * (255 - d.a) / 255;
+            var rg = s.g * (255 - d.a) / 255;
+            var rb = s.b * (255 - d.a) / 255;
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB DstOut(ColorARGB source, ColorARGB destination)
+        public static ColorARGB DstOut(ColorARGB s, ColorARGB d)
         {
             // r = d * (1 - sa)
-            var result = (int4)destination * (255 - source.a) / 255;
-            return (ColorARGB)result;
+            var ra = d.a * (255 - s.a) / 255;
+            var rr = d.r * (255 - s.a) / 255;
+            var rg = d.g * (255 - s.a) / 255;
+            var rb = d.b * (255 - s.a) / 255;
+            return new ColorARGB(ra, rr, rg, rb);
         }
         
-        public static ColorARGB SrcAtop(ColorARGB source, ColorARGB destination)
+        public static ColorARGB SrcAtop(ColorARGB s, ColorARGB d)
         {
             // r = s*da + d*(1-sa)
-            var result = (int4)source * destination.a / 255 + (int4)destination* (255-source.a) / 255;
-            return (ColorARGB)result;
+            var ra = s.a * d.a / 255 + d.a * (255 - s.a) / 255;
+            var rr = s.r * d.a / 255 + d.r * (255 - s.a) / 255;
+            var rg = s.g * d.a / 255 + d.g * (255 - s.a) / 255;
+            var rb = s.b * d.a / 255 + d.b * (255 - s.a) / 255;
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB DstAtop(ColorARGB source, ColorARGB destination)
+        public static ColorARGB DstAtop(ColorARGB s, ColorARGB d)
         {
             // r = d*sa + s*(1-da)
-            var result = (int4)destination * source.a / 255 + (int4)source * (255 - destination.a) / 255;
-            return (ColorARGB)result;
+            var ra = d.a * s.a / 255 + s.a * (255 - d.a) / 255;
+            var rr = d.r * s.a / 255 + s.r * (255 - d.a) / 255;
+            var rg = d.g * s.a / 255 + s.g * (255 - d.a) / 255;
+            var rb = d.b * s.a / 255 + s.b * (255 - d.a) / 255;
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB Xor(ColorARGB source, ColorARGB destination)
+        public static ColorARGB Xor(ColorARGB s, ColorARGB d)
         {
             // r = s*(1-da) + d*(1-sa)
-            var result = (int4)source * (255- destination.a)/255 + (int4)destination * (255 - source.a) / 255;
-            return (ColorARGB)result;
+            var ra = s.a * (255 - d.a) / 255 + d.a * (255 - s.a) / 255;
+            var rr = s.r * (255 - d.a) / 255 + d.r * (255 - s.a) / 255;
+            var rg = s.g * (255 - d.a) / 255 + d.g * (255 - s.a) / 255;
+            var rb = s.b * (255 - d.a) / 255 + d.b * (255 - s.a) / 255;
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB Plus(ColorARGB source, ColorARGB destination)
+        public static ColorARGB Plus(ColorARGB s, ColorARGB d)
         {
             // r = min(s + d, 1)
-            var result = math.min((int4)source + (int4)destination, 255);
-            return (ColorARGB)result;
+            var ra = math.min(s.a + d.a, 255);
+            var rr = math.min(s.r + d.r, 255);
+            var rg = math.min(s.g + d.g, 255);
+            var rb = math.min(s.b + d.b, 255);
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB Screen(ColorARGB source, ColorARGB destination)
+        public static ColorARGB Screen(ColorARGB s, ColorARGB d)
         {
             // r = s + d - s*d
-            var result = (int4)source + (int4)destination - (int4)source * (int4)destination / 255;
-            return (ColorARGB)result;
+            var ra = s.a + d.a - s.a * d.a / 255;
+            var rr = s.r + d.r - s.r * d.r / 255;
+            var rg = s.g + d.g - s.g * d.g / 255;
+            var rb = s.b + d.b - s.b * d.b / 255;
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB Multiply(ColorARGB source, ColorARGB destination)
+        public static ColorARGB Multiply(ColorARGB s, ColorARGB d)
         {
             // r = s*(1-da) + d*(1-sa) + s*d
-            var result = (ColorARGB)((int4)source * (255 - destination.a) / 255 + (int4)destination * (255 - source.a) / 255 + ((int4)source * (int4)destination / 255));
-            return result;
+            var ra = (s.a * (255 - d.a) / 255 + d.a * (255 - s.a) / 255 + (s.a * d.a / 255));
+            var rr = (s.r * (255 - d.a) / 255 + d.r * (255 - s.a) / 255 + (s.r * d.r / 255));
+            var rg = (s.g * (255 - d.a) / 255 + d.g * (255 - s.a) / 255 + (s.g * d.g / 255));
+            var rb = (s.b * (255 - d.a) / 255 + d.b * (255 - s.a) / 255 + (s.b * d.b / 255));             
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB ColorDodge(ColorARGB source, ColorARGB destination)
+        public static ColorARGB ColorDodge(ColorARGB s, ColorARGB d)
         {
             // a / (1 - d)
-            var result = (int4)source / (255 - (int4)destination);
-            return (ColorARGB)result;
+            var ra = s.a / (255 - d.a);
+            var rr = s.r / (255 - d.r);
+            var rg = s.g / (255 - d.g);
+            var rb = s.b / (255 - d.b);
+            return new ColorARGB(ra, rr, rg, rb);
         }
-        public static ColorARGB ColorBurn(ColorARGB source, ColorARGB destination)
+        public static ColorARGB ColorBurn(ColorARGB s, ColorARGB d)
         {
             // 1 - (1 - s) / d
-            var result = 255 - (255 - (int4)source) / (int4)destination;
-            return (ColorARGB)result;
+            var ra = 255 - (255 - s.a) / d.a;
+            var rr = 255 - (255 - s.r) / d.r;
+            var rg = 255 - (255 - s.g) / d.g;
+            var rb = 255 - (255 - s.b) / d.b;
+            return new ColorARGB(ra, rr, rg, rb);
         }
 
-        public static ColorARGB Overlay(ColorARGB source, ColorARGB destination)
+        public static ColorARGB Overlay(ColorARGB s, ColorARGB d)
         {
-            // multiply or screen, depending on destination
+            // multiply or screen, depending on d
             //multiply: // r = s*(1-da) + d*(1-sa) + s*d
             //screen: // r = s + d - s*d
-            var result = math.select(255 - 2 * (255 - (int4)source) * (255 - (int4)destination), 
-                                    2 * (int4)source * (int4)destination/255, 
-                                    (int4)source < 127);
-            return (ColorARGB)result;
+            var ra = math.select(255 - 2 * (255 - s.a) * (255 - d.a), 2 * s.a * d.a / 255, s.a < 127);
+            var rr = math.select(255 - 2 * (255 - s.r) * (255 - d.r), 2 * s.r * d.r / 255, s.r < 127);
+            var rg = math.select(255 - 2 * (255 - s.g) * (255 - d.g), 2 * s.g * d.g / 255, s.g < 127);
+            var rb = math.select(255 - 2 * (255 - s.b) * (255 - d.b), 2 * s.b * d.b / 255, s.b < 127);            
+            return new ColorARGB(ra, rr, rg, rb);
         }
         public static void SetWhite(NativeArray<ColorARGB> result)
         {
+            var white = new ColorARGB(255, 255, 255, 255);
             for (int i = 0; i < result.Length; i++)
-                result[i] = new ColorARGB(255,255,255,255);
+                result[i] = white;
         }
         public static void Clear(NativeArray<ColorARGB> result)
         {

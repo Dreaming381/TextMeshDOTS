@@ -42,7 +42,7 @@ namespace TextMeshDOTS.HarfBuzz
         }
         public void PaintGlyph(uint glyphID, ref PaintData paintData, PaintDelegates paintFunctions, uint palette, ColorARGB foreground)
         {
-            HB.hb_font_paint_glyph(ptr, glyphID, paintFunctions, ref paintData, palette, (uint)foreground);
+            HB.hb_font_paint_glyph(ptr, glyphID, paintFunctions, ref paintData, palette, (uint)foreground.argb);
         }
 
         public void GetSyntheticBold(out float x_embolden, out float y_embolden, out bool in_place)

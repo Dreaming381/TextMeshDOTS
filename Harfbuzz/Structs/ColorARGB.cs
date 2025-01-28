@@ -10,7 +10,7 @@ namespace TextMeshDOTS.HarfBuzz
     public struct ColorARGB : IEquatable<ColorARGB>
     {
         [FieldOffset(0)]
-        private int argb;
+        public uint argb;
 
         [FieldOffset(0)]
         public byte a;
@@ -22,42 +22,7 @@ namespace TextMeshDOTS.HarfBuzz
         public byte g;
 
         [FieldOffset(3)]
-        public byte b;
-
-        public byte this[int index]
-        {
-            get
-            {
-                return index switch
-                {
-                    0 => a,
-                    1 => r,
-                    2 => g,
-                    3 => b,
-                    _ => throw new IndexOutOfRangeException("Invalid ColorBGRA index(" + index + ")!"),
-                };
-            }
-            set
-            {
-                switch (index)
-                {
-                    case 0:
-                        a = value;
-                        break;
-                    case 1:
-                        r = value;
-                        break;
-                    case 2:
-                        g = value;
-                        break;
-                    case 3:
-                        b = value;
-                        break;
-                    default:
-                        throw new IndexOutOfRangeException("Invalid ColorBGRA index(" + index + ")!");
-                }
-            }
-        }
+        public byte b;        
 
         public ColorARGB(byte a, byte r, byte g, byte b)
         {
@@ -67,23 +32,32 @@ namespace TextMeshDOTS.HarfBuzz
             this.g = g;
             this.b = b; 
         }
-        public static implicit operator uint(ColorARGB c)
+        public ColorARGB(int a, int r, int g, int b)
         {
-            return (((uint)c.b & 0xFF) << 24) | (((uint)c.g & 0xFF) << 16) | (((uint)c.r & 0xFF) << 8) | ((uint)c.a & 0xFF);
+            argb = 0;
+            this.a = (byte)a;
+            this.r = (byte)r;
+            this.g = (byte)g;
+            this.b = (byte)b;
         }
+        //public static implicit operator uint(ColorARGB c)
+        //{
+        //    return (((uint)c.b & 0xFF) << 24) | (((uint)c.g & 0xFF) << 16) | (((uint)c.r & 0xFF) << 8) | ((uint)c.a & 0xFF);
+        //}
         public static implicit operator ColorARGB(uint c)
         {
-            return new ColorARGB { argb= (int)c };
+            return new ColorARGB { argb = c };
         }
-        public static explicit operator ColorARGB(int4 c)
-        {
-            return new ColorARGB { a = (byte)c[0], r = (byte)c[1], g = (byte)c[2], b = (byte)c[3] };
-        }
-        public static explicit operator int4(ColorARGB c)
-        {
-            return new int4 (c.a,c.r,c.g,c.b);
-        }
+        //public static explicit operator ColorARGB(int4 c)
+        //{
+        //    return new ColorARGB { a = (byte)c[0], r = (byte)c[1], g = (byte)c[2], b = (byte)c[3] };
+        //}
+        //public static explicit operator int4(ColorARGB c)
+        //{
+        //    return new int4 (c.a,c.r,c.g,c.b);
+        //}
 
+        #region Color32 interoperability
         public static implicit operator ColorARGB(Color32 c)
         {
             return new ColorARGB(c.a, c.r, c.g, c.b);
@@ -93,25 +67,41 @@ namespace TextMeshDOTS.HarfBuzz
         {
             return new Color32(c.r, c.g, c.b, c.a);
         }
+        #endregion
+
+        #region Color interoperability
         public static implicit operator ColorARGB(Color c)
         {
-            return new ColorARGB((byte)Mathf.Round(Mathf.Clamp01(c.a) * 255f), (byte)Mathf.Round(Mathf.Clamp01(c.r) * 255f), (byte)Mathf.Round(Mathf.Clamp01(c.g) * 255f), (byte)Mathf.Round(Mathf.Clamp01(c.b) * 255f));
+            return new ColorARGB(
+                (byte)math.round(math.clamp(0, 1, c.a) * 255f), 
+                (byte)math.round(math.clamp(0, 1, c.r) * 255f), 
+                (byte)math.round(math.clamp(0, 1, c.g) * 255f), 
+                (byte)math.round(math.clamp(0, 1, c.b) * 255f));
         }
 
         public static implicit operator Color(ColorARGB c)
         {
-            return new Color((float)(int)c.r / 255f, (float)(int)c.g / 255f, (float)(int)c.b / 255f, (float)(int)c.a / 255f);
+            return new Color(c.r / 255f, c.g / 255f, c.b / 255f, c.a / 255f);
         }
+        #endregion
 
         public static ColorARGB Lerp(ColorARGB a, ColorARGB b, float t)
         {
-            t = Mathf.Clamp01(t);
-            return new ColorARGB((byte)((float)(int)a.a + (float)(b.a - a.a) * t), (byte)((float)(int)a.r + (float)(b.r - a.r) * t), (byte)((float)(int)a.g + (float)(b.g - a.g) * t), (byte)((float)(int)a.b + (float)(b.b - a.b) * t));
+            t = math.clamp(0, 1, t);
+            return new ColorARGB(
+                (byte)(a.a + (b.a - a.a) * t),
+                (byte)(a.r + (b.r - a.r) * t),
+                (byte)(a.g + (b.g - a.g) * t),
+                (byte)(a.b + (b.b - a.b) * t));
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ColorARGB LerpUnclamped(ColorARGB a, ColorARGB b, float t)
         {
-            return new ColorARGB((byte)((float)(int)a.a + (float)(b.a - a.a) * t), (byte)((float)(int)a.r + (float)(b.r - a.r) * t), (byte)((float)(int)a.g + (float)(b.g - a.g) * t), (byte)((float)(int)a.b + (float)(b.b - a.b) * t));
+            return new ColorARGB(
+                (byte)(a.a + (b.a - a.a) * t), 
+                (byte)(a.r + (b.r - a.r) * t), 
+                (byte)(a.g + (b.g - a.g) * t), 
+                (byte)(a.b + (b.b - a.b) * t));
         }
 
         public override int GetHashCode()
