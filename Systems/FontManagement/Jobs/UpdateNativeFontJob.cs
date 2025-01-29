@@ -4,6 +4,8 @@ using Unity.Collections;
 using Unity.Entities;
 using TextMeshDOTS.Collections;
 using TextMeshDOTS.HarfBuzz;
+using UnityEngine;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -24,18 +26,19 @@ namespace TextMeshDOTS.TextProcessing
             var face = nativeFontPointer.face;
             var atlasData = atlasDataLookup[fontEntity];            
 
-            var fontTextureReference = dynamicFontAssetLookup[fontEntity];
-            if(fontTextureReference.blob.IsCreated)
+            var dynamicFontAsset = dynamicFontAssetLookup[fontEntity];
+            //Debug.Log($"Trying to update DynamicFontAsset for ({nativeFontPointer.debugFamily} {nativeFontPointer.debugSubfamily})");
+            if (dynamicFontAsset.blob.IsCreated)
             {
-                //Debug.Log($"Patching existing blob for font {hbFontAssetRef.family} {hbFontAssetRef.subFamily}, adding {placedGlyphs.Length} glyphs");
-                PatchDynamicFontData(ref fontTextureReference.blob, placedGlyphs);
+                //Debug.Log($"Patching existing blob to add {placedGlyphs.Length} glyphs");
+                PatchDynamicFontData(ref dynamicFontAsset.blob, placedGlyphs);
             }
             else
             {
-                fontTextureReference.blob = CreateDynamicFontData(ref atlasData, placedGlyphs, face, font);
-                //Debug.Log($"Create new blob");
+                dynamicFontAsset.blob = CreateDynamicFontData(ref atlasData, placedGlyphs, face, font);
+                //Debug.Log($"Create new blob to add {placedGlyphs.Length} glyphs");
             }            
-            dynamicFontAssetLookup[fontEntity] = fontTextureReference;
+            dynamicFontAssetLookup[fontEntity] = dynamicFontAsset;
         }
         public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(
             ref AtlasData atlasData,

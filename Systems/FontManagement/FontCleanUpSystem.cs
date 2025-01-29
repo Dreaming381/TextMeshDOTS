@@ -30,18 +30,18 @@ namespace TextMeshDOTS.TextProcessing
                 ecb.RemoveComponent<NativeFontPointer>(entity);
             }
 
-            foreach (var (fontTextureReference, entity) in SystemAPI.Query<DynamicFontAsset>()
+            foreach (var (dynamicFontAsset, entity) in SystemAPI.Query<DynamicFontAsset>()
                 .WithAll<DynamicFontAsset>()
                 .WithNone<UsedGlyphs>()
                 .WithNone<MissingGlyphs>()         
                 .WithEntityAccess())
             {
                 Debug.Log($"Destroy font material");
-                fontTextureReference.blob.Dispose();
-                var fontMaterial = hybridRenderer.GetMaterial(fontTextureReference.fontMaterialID);
-                hybridRenderer.UnregisterMaterial(fontTextureReference.fontMaterialID);
+                if(dynamicFontAsset.blob.IsCreated) dynamicFontAsset.blob.Dispose();
+                var fontMaterial = hybridRenderer.GetMaterial(dynamicFontAsset.fontMaterialID);
+                hybridRenderer.UnregisterMaterial(dynamicFontAsset.fontMaterialID);
                 UnityEngine.Object.Destroy(fontMaterial);
-                UnityEngine.Object.Destroy(fontTextureReference.texture);
+                UnityEngine.Object.Destroy(dynamicFontAsset.texture);
                 ecb.RemoveComponent<DynamicFontAsset>(entity);
             }
         }        

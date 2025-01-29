@@ -1,14 +1,10 @@
-using System.Diagnostics;
 using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using UnityEngine.UIElements;
 
 namespace TextMeshDOTS
 {
-
-
     /// <summary>
     /// Purpose of FontBlob is to store reference to desired font (otf, ttf file)
     /// Any kind of dynamic data should be generated during runtime and stored elsewhere

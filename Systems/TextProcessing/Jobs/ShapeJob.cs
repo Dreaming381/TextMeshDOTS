@@ -9,6 +9,7 @@ using System;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 using TextMeshDOTS.Rendering;
 using UnityEngine;
+using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -20,7 +21,8 @@ namespace TextMeshDOTS.TextProcessing
 
         public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
 
-        [ReadOnly] public NativeHashMap<FontAssetRef, Entity> fontEntities;
+        [ReadOnly] public NativeArray<Entity> fontEntities;
+        [ReadOnly] public NativeArray<FontAssetRef> fontEntitiesLookup;
         [ReadOnly] public EntityTypeHandle entitesHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
@@ -99,20 +101,21 @@ namespace TextMeshDOTS.TextProcessing
                     buffer.SetSegmentProperties(latinLTR);
 
                     //To-Do: revisit how to add features per textSpan
-                    //for (int i = 0, length = textSpans.Length; i < length; i++)
-                    //{
-                    //    var textSpan = textSpans[i];
-                    //    if ((textSpan.fontStyle & FontStyles.SmallCaps) == FontStyles.SmallCaps)
-                    //        features.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, textSpan.startIndex, textSpan.endIndex));
-                    //    if ((textSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
-                    //        features.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, textSpan.startIndex, textSpan.endIndex));
-                    //    if ((textSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
-                    //        features.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, textSpan.startIndex, textSpan.endIndex));
-                    //}
-                    //features.Add(new Feature() { tag = HB.HB_TAG('f', 'r', 'a', 'c'), value = 1, start = 0, end = (uint)calliBytes.Length, });
+                    for (int i = 0, ii = textSpans.Length; i < ii; i++)
+                    {
+                        var textSpan = textSpans[i];
+                        if ((textSpan.fontStyle & FontStyles.SmallCaps) == FontStyles.SmallCaps)
+                            features.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, textSpan.startIndex, textSpan.endIndex));
+                        if ((textSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
+                            features.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, textSpan.startIndex, textSpan.endIndex));
+                        if ((textSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
+                            features.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, textSpan.startIndex, textSpan.endIndex));
+                    }
+                    features.Add(new Feature() { tag = HB.HB_TAG('f', 'r', 'a', 'c'), value = 1, start = 0, end = (uint)calliBytes.Length, });
 
-
-                    var fontEntity = fontEntities[fontAssetRefs[currentFont]];
+                    var fontAssetRef = fontAssetRefs[currentFont];
+                    var fontEntityID = fontEntitiesLookup.IndexOf(fontAssetRef);
+                    var fontEntity = fontEntities[fontEntityID];
                     var nativeFontPointer = nativeFontPointerLookup[fontEntity];
                     var font = nativeFontPointer.font;
 

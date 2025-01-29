@@ -17,7 +17,7 @@ namespace TextMeshDOTS.TextProcessing
     //[DisableAutoCreation]
     public partial struct ShapeSystem : ISystem
     {
-        EntityQuery m_query, fontEntityQ, fontsQ;
+        EntityQuery m_query, fontEntitiesQ, fontstateQ;
         static readonly ProfilerMarker marker = new ProfilerMarker("harfbuzz");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
 
@@ -26,29 +26,29 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            fontsQ = SystemAPI.QueryBuilder()
-                      .WithAll<FontState>()
-                      .WithNone<FontsDirtyTag>()
-                      .Build();
+            fontstateQ = SystemAPI.QueryBuilder()
+                .WithAll<FontState>()
+                .WithNone<FontsDirtyTag>()
+                .Build();
             m_query = SystemAPI.QueryBuilder()
-                      .WithAllRW<GlyphOTF>()
-                      .WithAll<CalliByte>()
-                      .WithAll<TextSpan>()
-                      .WithAll<TextBaseConfiguration>()
-                      .WithAll<FontBlobReference>()
-                      .Build();            
+                .WithAllRW<GlyphOTF>()
+                .WithAll<CalliByte>()
+                .WithAll<TextSpan>()
+                .WithAll<TextBaseConfiguration>()
+                .WithAll<FontBlobReference>()
+                .Build();            
 
-            fontEntityQ = SystemAPI.QueryBuilder()
-                              .WithAll<UsedGlyphs>()
-                              .WithAll<MissingGlyphs>()
-                              .WithAll<DynamicFontAsset>()
-                              .Build();
+            fontEntitiesQ = SystemAPI.QueryBuilder()
+                .WithAll<FontAssetRef>()
+                .WithAll<UsedGlyphs>()
+                .WithAll<MissingGlyphs>()
+                .WithAll<DynamicFontAsset>()
+                .Build();
 
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<TextSpan>());
             m_query.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
-            state.RequireForUpdate(fontsQ);
-            SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
+            state.RequireForUpdate(fontstateQ);
         }
 
 
@@ -59,9 +59,10 @@ namespace TextMeshDOTS.TextProcessing
                 return;
             //Debug.Log("Shape system");
 
-            var fontHashMap = SystemAPI.GetSingleton<FontHashMap>();
             var missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.TempJob);
-            
+
+            var fontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
+            var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
             state.Dependency = new ShapeJob
             {
                 marker = marker,
@@ -69,7 +70,8 @@ namespace TextMeshDOTS.TextProcessing
                 
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
 
-                fontEntities = fontHashMap.fontEntities,
+                fontEntities = fontEntities,
+                fontEntitiesLookup = fontEntitiesLookup,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
@@ -92,7 +94,7 @@ namespace TextMeshDOTS.TextProcessing
             state.Dependency = new CopyMissingGlyphsToFontEntitiesJob
             {
                 newMissingGlyphs= missingGlyphs,
-            }.ScheduleParallel(fontEntityQ, state.Dependency);
+            }.ScheduleParallel(fontEntitiesQ, state.Dependency);
             missingGlyphs.Dispose(state.Dependency);
         }
     }

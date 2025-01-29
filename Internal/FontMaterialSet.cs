@@ -7,9 +7,8 @@ namespace TextMeshDOTS
 {
     public struct FontAssetArray
     {
-        public FixedList4096Bytes<FontAssetRef> fontAssetRefs;
-       
-        public int Length => fontAssetRefs.Length;
+        public FixedList4096Bytes<FontAssetRef> fontAssetRefs;       
+        public readonly int Length => fontAssetRefs.Length;
         public void Initialize(BlobAssetReference<FontBlob> singleFont)
         {
             var fontAssetRef = singleFont.Value.fontAssetRef;

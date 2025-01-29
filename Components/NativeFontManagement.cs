@@ -51,10 +51,10 @@ namespace TextMeshDOTS
  
     /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
     public struct DynamicFontAsset : ICleanupComponentData
-    {        
+    {
+        public UnityObjectRef<Material> debugMaterial;
         public TextureType textureType;
-        public UnityObjectRef<Texture2D> texture;
-        public UnityObjectRef<Material> materialDebug;
+        public UnityObjectRef<Texture2D> texture;        
         public BatchMaterialID fontMaterialID;
         public BlobAssetReference<DynamicFontBlob> blob;
     }
@@ -77,7 +77,24 @@ namespace TextMeshDOTS
         public int samplingPointSize;  //size of font (in pixel) in atlas
     }
 
-    public struct FontAssetRef : IEquatable<FontAssetRef>
+    //while it is tempting to just copy FontBlobReference to font entities, it will not work:
+    //font entities need to be stable during incremental baking where additional data
+    //is merged into the entiy world. Unfortunately, this can invalidate all blob pointer
+    //from a previous baking run. Adding instead the FontAssetRef and FontAssetMetadata signifiantly
+    //reduces chunk capacity for font entities, but should be "rock solid"
+    public struct FontAssetMetadata : IComponentData
+    {
+        public FixedString128Bytes family;
+        public FixedString128Bytes subfamily;
+    }
+
+    /// <summary>
+    /// FontAssetRef is THE link between any fonts request and font entities, and consists of a hash representing the 
+    /// font family, and variation axis used during typesetting such as weight ("normal", "bold", semibold"), 
+    /// width ("Condensed", Normal"), and italic. Slant is ignored in such font matching (see GetHashcode) 
+    /// because slant value cannot be "guessed" and requested by user during typesetting 
+    /// </summary>
+    public struct FontAssetRef : IEquatable<FontAssetRef>, IComponentData
     {
         //Font selection logic: https://www.high-logic.com/font-editor/fontcreator/tutorials/font-family-settings
         public int familyHash;    //default to typeographic family, and fall-back to family if it does not exist
@@ -134,10 +151,6 @@ namespace TextMeshDOTS
             return $"FamilyHash {familyHash} weigth {weight} width {width} isItalic {isItalic}";
         }
     }
-    public struct FontHashMap : IComponentData
-    {
-        public NativeHashMap<FontAssetRef, Entity> fontEntities;
-    }
     public struct FontState : IComponentData { };
     public struct FontsDirtyTag : IComponentData { }
 
@@ -168,6 +181,5 @@ namespace TextMeshDOTS
             }
         }
     }
-
     #endregion
 }

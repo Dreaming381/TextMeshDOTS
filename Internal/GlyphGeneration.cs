@@ -16,7 +16,8 @@ namespace TextMeshDOTS
     {
         /// <summary> This function logic follows TMPro_Private.GenerateTextMesh() </summary>
         internal static unsafe void CreateRenderGlyphs(ref FontAssetArray fontAssetArray,
-                                                        NativeHashMap<FontAssetRef, Entity> fontEntities,
+                                                        NativeArray<Entity> fontEntities,
+                                                        NativeArray<FontAssetRef> fontEntitiesLookup,
                                                        in ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup,
                                                        ref DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer,
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
@@ -58,7 +59,9 @@ namespace TextMeshDOTS
 
             var previousFontMaterialIndex = currentTextSpan.fontMaterialIndex;
             var currentFontAssetRef = fontAssetRefs[currentTextSpan.fontMaterialIndex];
-            var currentFontEntity = fontEntities[currentFontAssetRef];
+            var currentFontEntityID = fontEntitiesLookup.IndexOf(currentFontAssetRef);
+            var currentFontEntity = fontEntities[currentFontEntityID];
+
             var dynamicFontBlobReference = dynamicFontAssetsLookup[currentFontEntity].blob;
             if (!dynamicFontBlobReference.IsCreated)
             {
@@ -100,7 +103,8 @@ namespace TextMeshDOTS
                     if (previousFontMaterialIndex != currentTextSpan.fontMaterialIndex)
                     {
                         currentFontAssetRef = fontAssetRefs[currentTextSpan.fontMaterialIndex];
-                        currentFontEntity = fontEntities[fontAssetRefs[currentTextSpan.fontMaterialIndex]];
+                        currentFontEntityID = fontEntitiesLookup.IndexOf(currentFontAssetRef);
+                        currentFontEntity = fontEntities[currentFontEntityID];
                         dynamicFontBlobReference = dynamicFontAssetsLookup[currentFontEntity].blob;
                         if (!dynamicFontBlobReference.IsCreated)
                         {
@@ -120,12 +124,12 @@ namespace TextMeshDOTS
                 #region Look up Character Data
                 if (!currentFont.glyphs.TryGetValue(glyphOTF.codepoint, out var glyphBlob))
                 {
-                    Debug.Log($"glyph {(char)currentRune.value} not found in font entity {currentFontEntity}");
-                    var glyphBlobs = currentFont.glyphs.GetValueArray(Allocator.Temp);
-                    foreach (var glyph in glyphBlobs)
-                    {
-                        Debug.Log($"glyph {glyph.glyphID}");
-                    }
+                    Debug.Log($"glyph {(char)currentRune.value} not found in font entity {dynamicFontBlobReference.Value}");
+                    //var glyphBlobs = currentFont.glyphs.GetValueArray(Allocator.Temp);
+                    //foreach (var glyph in glyphBlobs)
+                    //{
+                    //    Debug.Log($"glyph {glyph.glyphID}");
+                    //}
                     continue;
                 }
 

@@ -13,7 +13,7 @@ namespace TextMeshDOTS.TextProcessing
     [RequireMatchingQueriesForUpdate]
     partial class RegisterFontMaterialSystem : SystemBase
     {
-        EntityQuery fontEntityQ, fontsQ;
+        EntityQuery fontEntitiesQ, fontstateQ;
         EntitiesGraphicsSystem hybridRenderer;
 
         Material textMeshDOTSMaterial;
@@ -30,12 +30,12 @@ namespace TextMeshDOTS.TextProcessing
             textMeshDOTSMaterial = Resources.Load<Material>(TextMaterialUtility.ktextMeshDOTS_URP_material);
             urpUnlitMaterial = Resources.Load<Material>(TextMaterialUtility.kUnlit_material);
 
-            fontsQ = SystemAPI.QueryBuilder()
+            fontstateQ = SystemAPI.QueryBuilder()
                       .WithAll<FontState>()
                       .WithAll<FontsDirtyTag>()
                       .Build();
-            fontEntityQ = SystemAPI.QueryBuilder()
-                    .WithAll<FontBlobReference>()
+            fontEntitiesQ = SystemAPI.QueryBuilder()
+                    .WithAll<FontAssetRef>()
                     .WithAll<AtlasData>()
                     .WithAll<DynamicFontAsset>()
                     .WithAll<UsedGlyphs>()
@@ -45,27 +45,22 @@ namespace TextMeshDOTS.TextProcessing
                     .Build();
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<FontTextureReference>());
             
-            RequireForUpdate(fontsQ);
-            SystemAPI.TryGetSingletonRW<FontHashMap>(out _);//still needed to create system dependency?
+            RequireForUpdate(fontstateQ);
         }
 
         protected override void OnUpdate()
         {
-            if (fontEntityQ.IsEmpty)
+            if (fontEntitiesQ.IsEmpty)
                 return;
 
             if (backendMeshID == BatchMeshID.Null)
                 backendMeshID = hybridRenderer.RegisterMesh(backendMesh);
 
-            var fontStateEntity = fontsQ.GetSingletonEntity();
-            var entities = fontEntityQ.ToEntityArray(Allocator.TempJob);            
+            var fontStateEntity = fontstateQ.GetSingletonEntity();
+            var entities = fontEntitiesQ.ToEntityArray(WorldUpdateAllocator);
 
             foreach (var entity in entities)
             {
-                var fontBlobRef = EntityManager.GetComponentData<FontBlobReference>(entity);
-                //Debug.Log($"Load texture for font {fontBlobRef.value.Value.fontFamily} {fontBlobRef.value.Value.fontSubFamily}");
-                //System.IO.File.WriteAllBytes("Assets\\Resources\\Materials\\SDFtest.png", fontTextureReference.texture.Value.EncodeToPNG());
-                
                 var dynamicFontAsset = EntityManager.GetComponentData<DynamicFontAsset>(entity);
                 var mainTexture = dynamicFontAsset.texture.Value;
                 mainTexture.Apply();
@@ -74,14 +69,14 @@ namespace TextMeshDOTS.TextProcessing
                 {
                     var material = Object.Instantiate(textMeshDOTSMaterial);
                     material.mainTexture = dynamicFontAsset.texture;
-                    dynamicFontAsset.materialDebug = material;
+                    dynamicFontAsset.debugMaterial = material;
                     dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
                 }
                 else
                 {
                     var material = Object.Instantiate(urpUnlitMaterial);
                     material.mainTexture = dynamicFontAsset.texture;
-                    dynamicFontAsset.materialDebug = material;
+                    dynamicFontAsset.debugMaterial = material;
                     dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
                 }
 
@@ -92,7 +87,6 @@ namespace TextMeshDOTS.TextProcessing
             EntityManager.RemoveComponent<FontsDirtyTag>(fontStateEntity);
             //EntityManager.AddComponent<RebuildTextRenderTag>(fontStateEntity);
 
-            entities.Dispose();
             //this.Enabled = false;
         }
     }

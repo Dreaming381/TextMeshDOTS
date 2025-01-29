@@ -39,10 +39,11 @@ namespace TextMeshDOTS.TextProcessing
         {
             if(fontEntityQ.IsEmpty) 
                 return;
-
+            
             var fontsRequiringUpdate = new NativeList<Entity>(16, Allocator.TempJob);
-            foreach (var (fontBlobReference, missingGlyphs, entity) in SystemAPI.Query<FontBlobReference, DynamicBuffer<MissingGlyphs>>()
-                .WithAll<FontBlobReference>()
+            foreach (var (fontAssetRef, fontAssetMetadata, missingGlyphs, entity) in SystemAPI.Query<FontAssetRef, FontAssetMetadata, DynamicBuffer<MissingGlyphs>>()
+                .WithAll<FontAssetRef>()
+                .WithAll<FontAssetMetadata>()
                 .WithAll<AtlasData>()
                 .WithAll<MissingGlyphs>()
                 .WithEntityAccess())
@@ -50,7 +51,7 @@ namespace TextMeshDOTS.TextProcessing
                 if (missingGlyphs.Length > 0)
                 {
                     fontsRequiringUpdate.Add(entity);
-                    Debug.Log($"Add {missingGlyphs.Length} glyphs for {fontBlobReference.value.Value.fontFamily} {fontBlobReference.value.Value.fontSubFamily} to atlas...");
+                    Debug.Log($"Request to add {missingGlyphs.Length} glyphs to texture of {fontAssetMetadata.family} {fontAssetMetadata.subfamily}");
                 }
             }
             if(fontsRequiringUpdate.IsEmpty)
@@ -61,7 +62,6 @@ namespace TextMeshDOTS.TextProcessing
 
             state.Dependency.Complete();
             var placedGlyphs = new NativeList<GlyphBlob> (1024, Allocator.TempJob); 
-
             var atlasDataLookup = SystemAPI.GetComponentLookup<AtlasData>(true);
             var missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false);
             var usedGlyphsLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(false);
@@ -139,15 +139,12 @@ namespace TextMeshDOTS.TextProcessing
                 };
                 state.Dependency = updateNativeFontJob.Schedule(state.Dependency);
 
-                state.Dependency.Complete();
-                placedGlyphs.Clear();
+                state.Dependency.Complete(); //To-Do: remove sync point.               
                 dynamicFontAsset.texture.Value.Apply();
+                placedGlyphs.Clear();
             }
             fontsRequiringUpdate.Dispose(state.Dependency);
             placedGlyphs.Dispose(state.Dependency);
-
-            //To-Do: remove sync point.
-            state.Dependency.Complete();
         }
     }
 }

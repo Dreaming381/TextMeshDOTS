@@ -35,6 +35,8 @@ namespace TextMeshDOTS
 
         public static bool TryGetSystemFontReference(string familyName, string styleName, out UnityFontReference unityFontReference)
         {
+            //var test = UnityEngine.Font.GetPathsToOSFonts();
+            //var test2 = UnityEngine.Font.GetOSInstalledFontNames();
             var success = FontEngine.TryGetSystemFontReference(familyName, styleName, out FontReference m_fontRef);
             unityFontReference = success ? new UnityFontReference { typographicFamily = m_fontRef.familyName, typographicSubfamily = m_fontRef.styleName, faceIndex = m_fontRef.faceIndex, filePath = m_fontRef.filePath } : default;
             return success;
