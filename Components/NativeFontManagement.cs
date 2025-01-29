@@ -56,6 +56,7 @@ namespace TextMeshDOTS
         public TextureType textureType;
         public UnityObjectRef<Texture2D> texture;        
         public BatchMaterialID fontMaterialID;
+        public BatchMeshID backendMeshID;
         public BlobAssetReference<DynamicFontBlob> blob;
     }
     /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>

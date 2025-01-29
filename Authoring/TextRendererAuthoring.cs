@@ -157,7 +157,8 @@ namespace TextMeshDOTS.Authoring
         {
             AddComponent<WorldRenderBounds>(entity);
             AddSharedComponent(entity, renderFilterSettings);
-            //AddComponent<MaterialMeshInfo>(entity); //add once font texture was generated and registered with BRG        
+            AddComponent<MaterialMeshInfo>(entity); 
+            SetComponentEnabled<MaterialMeshInfo>(entity, false); //enable once font texture was generated and registered with BRG
             AddComponent<WorldToLocal_Tag>(entity);
             AddComponent<RenderBounds>(entity);
             AddComponent<PerInstanceCullingTag>(entity);

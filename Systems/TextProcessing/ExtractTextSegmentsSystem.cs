@@ -11,36 +11,37 @@ namespace TextMeshDOTS.TextProcessing
     //[DisableAutoCreation]
     public partial struct ExtractTextSegmentsSystem : ISystem
     {
-        EntityQuery m_query, triggerQ;
+        EntityQuery textRendererQ, fontstateQ;
         EntityQuery fontEntityQ;
         bool m_skipChangeFilter;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            triggerQ = SystemAPI.QueryBuilder()
+            fontstateQ = SystemAPI.QueryBuilder()
                       .WithAll<FontState>()
-                      //.WithAll<RebuildTextRenderTag>()
                       .WithNone<FontsDirtyTag>()
                       .Build();
-            m_query = SystemAPI.QueryBuilder()
+
+            textRendererQ = SystemAPI.QueryBuilder()
                       .WithAll<CalliByteRaw>()
                       .WithAllRW<CalliByte>()
                       .WithAllRW<TextSpan>()
                       .WithAll<TextBaseConfiguration>()
                       .WithAll<FontBlobReference>()
                       .Build();
+
             fontEntityQ = SystemAPI.QueryBuilder()
                   .WithAll<NativeFontPointer>() //cleanup component-->present even if font entity was destroyed
                   .WithAll<DynamicFontAsset>()  //cleanup component-->present even if font entity was destroyed
                   .WithAll<UsedGlyphs>()        // present only when font entity is valid
                   .Build();
 
-            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
-            m_query.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
+            textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
+            textRendererQ.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
             //m_query.SetChangedVersionFilter(ComponentType.ReadWrite<FontBlobReference>());
             fontEntityQ.SetChangedVersionFilter(ComponentType.ReadWrite<NativeFontPointer>());
-            state.RequireForUpdate(triggerQ);
+            state.RequireForUpdate(fontstateQ);
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
         }
 
@@ -48,9 +49,9 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (m_query.IsEmpty)
+            if (textRendererQ.IsEmpty)
                 return;
-            //Debug.Log("Extract text segments system");
+            Debug.Log("Extract text segments system");
 
             state.Dependency = new ExtractTextSegmentsChunkJob
             {                
@@ -65,7 +66,7 @@ namespace TextMeshDOTS.TextProcessing
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
-            }.ScheduleParallel(m_query, state.Dependency);
+            }.ScheduleParallel(textRendererQ, state.Dependency);
         }
     }
 }

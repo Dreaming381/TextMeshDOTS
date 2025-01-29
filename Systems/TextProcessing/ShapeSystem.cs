@@ -17,7 +17,7 @@ namespace TextMeshDOTS.TextProcessing
     //[DisableAutoCreation]
     public partial struct ShapeSystem : ISystem
     {
-        EntityQuery m_query, fontEntitiesQ, fontstateQ;
+        EntityQuery textRendererQ, fontEntitiesQ, fontstateQ;
         static readonly ProfilerMarker marker = new ProfilerMarker("harfbuzz");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
 
@@ -30,7 +30,8 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<FontState>()
                 .WithNone<FontsDirtyTag>()
                 .Build();
-            m_query = SystemAPI.QueryBuilder()
+
+            textRendererQ = SystemAPI.QueryBuilder()
                 .WithAllRW<GlyphOTF>()
                 .WithAll<CalliByte>()
                 .WithAll<TextSpan>()
@@ -45,8 +46,8 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<DynamicFontAsset>()
                 .Build();
 
-            m_query.SetChangedVersionFilter(ComponentType.ReadWrite<TextSpan>());
-            m_query.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
+            textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<TextSpan>());
+            textRendererQ.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             state.RequireForUpdate(fontstateQ);
         }
@@ -55,7 +56,7 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (m_query.IsEmpty)
+            if (textRendererQ.IsEmpty)
                 return;
             //Debug.Log("Shape system");
 
@@ -84,7 +85,7 @@ namespace TextMeshDOTS.TextProcessing
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             //}.Schedule(m_query, state.Dependency);
-            }.ScheduleParallel(m_query, state.Dependency);
+            }.ScheduleParallel(textRendererQ, state.Dependency);
 
             state.Dependency = new SortMissingGlyphJob
             {
