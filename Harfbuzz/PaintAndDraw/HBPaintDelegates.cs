@@ -130,7 +130,7 @@ namespace TextMeshDOTS.HarfBuzz
             var colorARGB = (ColorARGB)color;
             //Debug.Log($"color {colorARGB}");
             var solidColor = new SolidColor(colorARGB);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.inverseGlyphTransform, data.paintSurface, solidColor, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, solidColor, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -144,7 +144,7 @@ namespace TextMeshDOTS.HarfBuzz
                 return;
 
             lineGradient.InitializeColorLine(colorLine);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.inverseGlyphTransform, data.paintSurface, lineGradient, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, lineGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -158,7 +158,7 @@ namespace TextMeshDOTS.HarfBuzz
                 return;
 
             radialGradient.InitializeColorLine(colorLine);
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.inverseGlyphTransform, data.paintSurface, radialGradient, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, radialGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(SweepGradientDelegate))]
@@ -172,7 +172,7 @@ namespace TextMeshDOTS.HarfBuzz
             if (!sweepGradient.isValid)
                 return;
 
-            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.inverseGlyphTransform, data.paintSurface, sweepGradient, data.clipRect);
+            AntiAliasedRasterizer.Rasterize(ref data.clipGlyph, data.paintSurface, sweepGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
