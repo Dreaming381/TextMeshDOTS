@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -22,6 +23,7 @@ namespace TextMeshDOTS.HarfBuzz
         float minStop;
         float maxStop;
         float2x3 inverseTransform;
+        [MarshalAs(UnmanagedType.U1)]
         public bool isValid;
         public SweepGradient(float x0, float y0, float startAngle, float endAngle, PaintExtend paintExtend, float2x3 transform)
         {

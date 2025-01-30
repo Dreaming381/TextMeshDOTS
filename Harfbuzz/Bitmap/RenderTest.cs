@@ -24,8 +24,8 @@ public class RenderTest : MonoBehaviour
     SDFOrientation orientation;
     public DrawDelegates drawFunctions;
     DrawData drawData;
-    PaintDelegates paintFunctions;
-    PaintData paintData;
+    PaintDeferredDelegates paintFunctions;
+    PaintDeferredData paintData;
     Blob blob;
     Face face;
     Font font;    
@@ -38,7 +38,7 @@ public class RenderTest : MonoBehaviour
         if (fontPath == null)
             return;
         drawFunctions = new DrawDelegates(true);
-        paintFunctions = new PaintDelegates(true);
+        paintFunctions = new PaintDeferredDelegates(true);
         LoadFont(fontPath, 256);
 
         //DrawTest(letter);
@@ -96,7 +96,7 @@ public class RenderTest : MonoBehaviour
             glyphID = glyphInfos[0].codepoint;
         }
 
-        paintData = new PaintData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
+        paintData = new PaintDeferredData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
         font.GetGlyphExtends(glyphID, out GlyphExtents glyphExtents);
         //Debug.Log($"glyphExtents: {glyphExtents}");
         marker.Begin();
@@ -105,14 +105,14 @@ public class RenderTest : MonoBehaviour
 
         if (paintData.imageData.Length > 0)//render PNG and SVG
         {
-            if (paintData.imageFormat == HB_PAINT_IMAGE_FORMAT.PNG)
+            if (paintData.imageFormat == PaintImageFormat.PNG)
             {
                 var png = new Texture2D(2, 2, TextureFormat.ARGB32, false);
                 png.LoadImage(paintData.imageData.ToArray());
                 var sourceTexture = png.GetRawTextureData<ColorARGB>();                
                 PaintUtils.BlitRawTexture(sourceTexture, paintData.imageWidth, paintData.imageHeight, textureData, atlasWidth, atlasHeight, 0, 0);
             }
-            if (paintData.imageFormat == HB_PAINT_IMAGE_FORMAT.SVG)
+            if (paintData.imageFormat == PaintImageFormat.SVG)
             {
                 //could use com.unity.vectorgraphics (designed to parse, tesselate and render svg) if it would not be a class 
             }

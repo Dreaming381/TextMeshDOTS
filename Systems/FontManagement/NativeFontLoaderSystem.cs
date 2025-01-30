@@ -26,7 +26,7 @@ namespace TextMeshDOTS.TextProcessing
         NativeList<LoadRequest> newLoadRequests;
         EntityArchetype nativeFontDataArchetype, fontStateArchetype;
         DrawDelegates drawFunctions;
-        PaintDelegates paintFunctions;
+        PaintDeferredDelegates paintFunctions;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -60,7 +60,7 @@ namespace TextMeshDOTS.TextProcessing
                 .Build();
 
             drawFunctions = new DrawDelegates(true);
-            paintFunctions =  new PaintDelegates(true);
+            paintFunctions =  new PaintDeferredDelegates(true);
             state.RequireForUpdate(fontstateQ);
             state.RequireForUpdate(changedTextRendererQ);
         }

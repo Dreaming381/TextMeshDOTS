@@ -6,7 +6,47 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public static class Blending
     {
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ColorARGB Blend(ColorARGB source, ColorARGB destination, PaintCompositeMode mode)
+        {
+            switch (mode)
+            {
+                case PaintCompositeMode.SRC:
+                    return source;
+                case PaintCompositeMode.DEST:
+                    return destination;
+                case PaintCompositeMode.SRC_OVER:
+                    return SrcOver(source, destination);
+                case PaintCompositeMode.DEST_OVER:
+                    return DstOver(source, destination);
+                case PaintCompositeMode.SRC_IN:
+                    return SrcIn(source, destination);
+                case PaintCompositeMode.DEST_IN:
+                    return DstIn(source, destination);
+                case PaintCompositeMode.SRC_OUT:
+                    return SrcOut(source, destination);
+                case PaintCompositeMode.DEST_OUT:
+                    return DstOut(source, destination);
+                case PaintCompositeMode.SRC_ATOP:
+                    return SrcAtop(source, destination);
+                case PaintCompositeMode.DEST_ATOP:
+                    return DstAtop(source, destination);
+                case PaintCompositeMode.XOR:
+                    return Xor(source, destination);
+                case PaintCompositeMode.PLUS:
+                    return Plus(source, destination);
+                case PaintCompositeMode.SCREEN:
+                    return Screen(source, destination);
+                case PaintCompositeMode.MULTIPLY:
+                    return Multiply(source, destination);
+                case PaintCompositeMode.COLOR_DODGE:
+                    return ColorDodge(source, destination);
+                case PaintCompositeMode.COLOR_BURN:
+                    return ColorBurn(source, destination);
+                default:
+                    return SrcOver(source, destination);
+            }
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ColorARGB SrcOver(ColorARGB s, ColorARGB d)
         {

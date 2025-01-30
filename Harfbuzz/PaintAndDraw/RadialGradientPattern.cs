@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -23,6 +24,7 @@ namespace TextMeshDOTS.HarfBuzz
         float y1;
         float r1;
         float2x3 inverseTransform;
+        [MarshalAs(UnmanagedType.U1)]
         public bool isValid;
         public RadialGradient(float x0, float y0, float r0, float x1, float y1, float r1, PaintExtend paintExtend, float2x3 transform)
         {

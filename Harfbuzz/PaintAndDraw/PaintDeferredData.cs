@@ -8,7 +8,7 @@ namespace TextMeshDOTS.HarfBuzz
     /// textureData and clipRect (informing about texture width and height) are the ultimate output of the paint API
     /// use this output to blit it into target texture (atlas) at desired location
     /// </summary>     
-    public struct PaintData
+    public struct PaintDeferredData
     {
         public DrawDelegates drawDelegates;
         public DrawData clipGlyph;
@@ -24,13 +24,18 @@ namespace TextMeshDOTS.HarfBuzz
         public NativeArray<ColorARGB> tempSurface1; // temp storage to cache a backup of current paint surface upon "push group"
         public NativeArray<ColorARGB> tempSurface2; // temp storage to cache a backup of current paint surface upon "push group"
         public NativeArray<ColorARGB> tempSurface3; // temp storage to cache a backup of current paint surface upon "push group"
+        public PatterType patterType;
+        public SolidColor solidColor;
+        public LineGradient lineGradient;
+        public RadialGradient radialGradient;
+        public SweepGradient sweepGradient;        
         public int group;                           // current paint group
         public NativeArray<byte> imageData;
         public PaintImageFormat imageFormat;
         public int imageWidth;
         public int imageHeight;
 
-        public PaintData(DrawDelegates drawDelegates, int edgeCapacity, int contourCapacity, float maxDeviation, Allocator allocator)
+        public PaintDeferredData(DrawDelegates drawDelegates, int edgeCapacity, int contourCapacity, float maxDeviation, Allocator allocator)
         {
             this.drawDelegates = drawDelegates;
             clipGlyph = new DrawData(edgeCapacity, contourCapacity, maxDeviation, allocator);
@@ -40,7 +45,11 @@ namespace TextMeshDOTS.HarfBuzz
             transformStack.Add(PaintUtils.AffineTransformIdentity);
             color = default;
             clipRect = BBox.Empty;
-            
+            patterType = PatterType.Undefined;
+            solidColor = default;
+            lineGradient = default;
+            radialGradient = default;
+            sweepGradient = default;
             paintSurface = default; 
             tempSurface1 = default; 
             tempSurface2 = default; 

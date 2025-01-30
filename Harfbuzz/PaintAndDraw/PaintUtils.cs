@@ -20,19 +20,19 @@ namespace TextMeshDOTS.HarfBuzz
         //😱: (push+pop group error)
         //🌁: 3941,  4009, 4010, 4011, 4012, 4013, 4014, 4015, 4016, 4017, 4018, 4019, 4020, 4021, 4022, 4023, 4024, 4025, 4026, 
 
-        public static readonly int filterGlyph = 6767;//13317;
-        public static FixedList4096Bytes<int> filterGlyphs = new()
-        {
-            4025,
-        };
-        public static bool DrawGlyph(int glyphID)
-        {
-            return true;
-            if(!filterGlyphs.Contains(glyphID))
-                return false;
-            else 
-                return true;
-        }
+        //public static readonly int filterGlyph = 6767;//13317;
+        //public static FixedList4096Bytes<int> filterGlyphs = new()
+        //{
+        //    4025,
+        //};
+        //public static bool DrawGlyph(int glyphID)
+        //{
+        //    return true;
+        //    if(!filterGlyphs.Contains(glyphID))
+        //        return false;
+        //    else 
+        //        return true;
+        //}
         public static readonly ProfilerMarker rasterizeMarker = new ProfilerMarker("Rasterize");
         public static readonly ProfilerMarker blendMarker = new ProfilerMarker("Blend");
 

@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -18,9 +19,12 @@ namespace TextMeshDOTS.HarfBuzz
         float y0;
         public float p0p2Slope;
         public float p0p2YIntercept;
+        [MarshalAs(UnmanagedType.U1)]
         public bool horizontal;
+        [MarshalAs(UnmanagedType.U1)]
         public bool vertical;
         float2x3 inverseTransform;
+        [MarshalAs(UnmanagedType.U1)]
         public bool isValid;
         public LineGradient(float x0, float y0, float x1, float y1, float x2, float y2, PaintExtend paintExtend, float2x3 transform)
         {
