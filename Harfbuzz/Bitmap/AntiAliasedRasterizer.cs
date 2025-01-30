@@ -112,7 +112,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 {
                     var row = i / width;
                     var column = i % width;
-                    var color = pattern.GetColor(new float2(column, row));
+                    var color = pattern.GetColor(new float2(column, row)+offset);
                     color.a = (byte)(color.a * alphaByte / 255);
                     textureData[i] = color;
                 }
