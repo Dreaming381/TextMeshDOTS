@@ -15,7 +15,7 @@ namespace TextMeshDOTS.HarfBuzz
         public float2x3 inverseGlyphTransform;
         public uint glyphID;
         internal FixedStack512Bytes<float2x3> transformStack; //could also use Unity AffineTransform (but this would require use of float3 vs float2)
-        public uint color;  
+        public uint color;
         public BBox clipRect;
 
         //according to https://github.com/harfbuzz/harfbuzz/issues/3931, there should only be two intermediate surfaces requiered
@@ -28,7 +28,7 @@ namespace TextMeshDOTS.HarfBuzz
         public SolidColor solidColor;
         public LineGradient lineGradient;
         public RadialGradient radialGradient;
-        public SweepGradient sweepGradient;        
+        public SweepGradient sweepGradient;
         public int group;                           // current paint group
         public NativeArray<byte> imageData;
         public PaintImageFormat imageFormat;
@@ -50,16 +50,16 @@ namespace TextMeshDOTS.HarfBuzz
             lineGradient = default;
             radialGradient = default;
             sweepGradient = default;
-            paintSurface = default; 
-            tempSurface1 = default; 
-            tempSurface2 = default; 
+            paintSurface = default;
+            tempSurface1 = default;
+            tempSurface2 = default;
             tempSurface3 = default;
             group = 0;
 
             imageData = default;
             imageFormat = default;
             imageWidth = -1;
-            imageHeight = -1; 
+            imageHeight = -1;
         }
         public void Clear()
         {
@@ -78,7 +78,7 @@ namespace TextMeshDOTS.HarfBuzz
             imageData = default;
             imageFormat = default;
             imageWidth = -1;
-            imageHeight = -1;            
+            imageHeight = -1;
         }
-    }    
+    }
 }

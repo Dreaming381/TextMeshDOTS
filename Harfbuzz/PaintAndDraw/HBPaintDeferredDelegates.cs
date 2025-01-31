@@ -21,42 +21,42 @@ namespace TextMeshDOTS.HarfBuzz
         public PaintDeferredDelegates(bool dummyProperty)
         {
             ptr = HB.hb_paint_funcs_create();
-            FunctionPointer<PushTransformDelegate> pushTransformFunctionPointer = BurstCompiler.CompileFunctionPointer<PushTransformDelegate>(HB_paint_push_transform_func_t);
-            FunctionPointer<PopDelegate> popTransformFunctionPointer = BurstCompiler.CompileFunctionPointer<PopDelegate>(HB_paint_pop_transform_func_t);
-            FunctionPointer<ColorGlyphDelegate> colorGlyphFunctionPointer = BurstCompiler.CompileFunctionPointer<ColorGlyphDelegate>(hb_paint_color_glyph_func_t);
-            FunctionPointer<PushClipGlyphDelegate> pushClipGlyphFunctionPointer = BurstCompiler.CompileFunctionPointer<PushClipGlyphDelegate>(HB_paint_push_clip_glyph_func_t);
-            FunctionPointer<PushClipRectangleDelegate> pushClipRectangleFunctionPointer = BurstCompiler.CompileFunctionPointer<PushClipRectangleDelegate>(HB_paint_push_clip_rectangle_func_t);
-            FunctionPointer<PopDelegate> popClipFunctionPointer = BurstCompiler.CompileFunctionPointer<PopDelegate>(HB_paint_pop_clip_func_t);
-            FunctionPointer<ColorDelegate> colorFunctionPointer = BurstCompiler.CompileFunctionPointer<ColorDelegate>(HB_paint_color_func_t);
-            FunctionPointer<LinearOrRadialGradientDelegate> linearGradientFunctionPointer = BurstCompiler.CompileFunctionPointer<LinearOrRadialGradientDelegate>(HB_paint_linear_gradient_func_t);
-            FunctionPointer<LinearOrRadialGradientDelegate> radialGradientFunctionPointer = BurstCompiler.CompileFunctionPointer<LinearOrRadialGradientDelegate>(HB_paint_radial_gradient_func_t);
-            FunctionPointer<SweepGradientDelegate> sweepGradientFunctionPointer = BurstCompiler.CompileFunctionPointer<SweepGradientDelegate>(HB_paint_sweep_gradient_func_t);
-            FunctionPointer<PopDelegate> pushGroupFunctionPointer = BurstCompiler.CompileFunctionPointer<PopDelegate>(HB_paint_push_group_func_t);
-            FunctionPointer<PopGroupDelegate> popGroupFunctionPointer = BurstCompiler.CompileFunctionPointer<PopGroupDelegate>(HB_paint_pop_group_func_t);
-            FunctionPointer<CustomPalette_colorDelegate> customPaletteColorFunctionPointer = BurstCompiler.CompileFunctionPointer<CustomPalette_colorDelegate>(hb_paint_custom_palette_color_func_t);
-            FunctionPointer<ImageDelegate> imageFunctionPointer = BurstCompiler.CompileFunctionPointer<ImageDelegate>(hb_paint_image_func_t);
-            FunctionPointer<ReleaseDelegate> releaseFunctionPointer = BurstCompiler.CompileFunctionPointer<ReleaseDelegate>(Test);
+            //FunctionPointer<PushTransformDelegate> pushTransformFunctionPointer = BurstCompiler.CompileFunctionPointer<PushTransformDelegate>(HB_paint_push_transform_func_t);
+            //FunctionPointer<PopDelegate> popTransformFunctionPointer = BurstCompiler.CompileFunctionPointer<PopDelegate>(HB_paint_pop_transform_func_t);
+            //FunctionPointer<ColorGlyphDelegate> colorGlyphFunctionPointer = BurstCompiler.CompileFunctionPointer<ColorGlyphDelegate>(hb_paint_color_glyph_func_t);
+            //FunctionPointer<PushClipGlyphDelegate> pushClipGlyphFunctionPointer = BurstCompiler.CompileFunctionPointer<PushClipGlyphDelegate>(HB_paint_push_clip_glyph_func_t);
+            //FunctionPointer<PushClipRectangleDelegate> pushClipRectangleFunctionPointer = BurstCompiler.CompileFunctionPointer<PushClipRectangleDelegate>(HB_paint_push_clip_rectangle_func_t);
+            //FunctionPointer<PopDelegate> popClipFunctionPointer = BurstCompiler.CompileFunctionPointer<PopDelegate>(HB_paint_pop_clip_func_t);
+            //FunctionPointer<ColorDelegate> colorFunctionPointer = BurstCompiler.CompileFunctionPointer<ColorDelegate>(HB_paint_color_func_t);
+            //FunctionPointer<LinearOrRadialGradientDelegate> linearGradientFunctionPointer = BurstCompiler.CompileFunctionPointer<LinearOrRadialGradientDelegate>(HB_paint_linear_gradient_func_t);
+            //FunctionPointer<LinearOrRadialGradientDelegate> radialGradientFunctionPointer = BurstCompiler.CompileFunctionPointer<LinearOrRadialGradientDelegate>(HB_paint_radial_gradient_func_t);
+            //FunctionPointer<SweepGradientDelegate> sweepGradientFunctionPointer = BurstCompiler.CompileFunctionPointer<SweepGradientDelegate>(HB_paint_sweep_gradient_func_t);
+            //FunctionPointer<PopDelegate> pushGroupFunctionPointer = BurstCompiler.CompileFunctionPointer<PopDelegate>(HB_paint_push_group_func_t);
+            //FunctionPointer<PopGroupDelegate> popGroupFunctionPointer = BurstCompiler.CompileFunctionPointer<PopGroupDelegate>(HB_paint_pop_group_func_t);
+            //FunctionPointer<CustomPalette_colorDelegate> customPaletteColorFunctionPointer = BurstCompiler.CompileFunctionPointer<CustomPalette_colorDelegate>(hb_paint_custom_palette_color_func_t);
+            //FunctionPointer<ImageDelegate> imageFunctionPointer = BurstCompiler.CompileFunctionPointer<ImageDelegate>(hb_paint_image_func_t);
+            //FunctionPointer<ReleaseDelegate> releaseFunctionPointer = BurstCompiler.CompileFunctionPointer<ReleaseDelegate>(Test);
 
-            HB.hb_paint_funcs_set_push_transform_func(ptr, pushTransformFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_pop_transform_func(ptr, popTransformFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_color_glyph_func(ptr, colorGlyphFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_push_clip_glyph_func(ptr, pushClipGlyphFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_push_clip_rectangle_func(ptr, pushClipRectangleFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_pop_clip_func(ptr, popClipFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_color_func(ptr, colorFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_linear_gradient_func(ptr, linearGradientFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_radial_gradient_func(ptr, radialGradientFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_sweep_gradient_func(ptr, sweepGradientFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_push_group_func(ptr, pushGroupFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_pop_group_func(ptr, popGroupFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            //HB.hb_paint_funcs_set_custom_palette_color_func(ptr, customPaletteColorFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_paint_funcs_set_image_func(ptr, imageFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_push_transform_func(ptr, pushTransformFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_pop_transform_func(ptr, popTransformFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_color_glyph_func(ptr, colorGlyphFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_push_clip_glyph_func(ptr, pushClipGlyphFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_push_clip_rectangle_func(ptr, pushClipRectangleFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_pop_clip_func(ptr, popClipFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_color_func(ptr, colorFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_linear_gradient_func(ptr, linearGradientFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_radial_gradient_func(ptr, radialGradientFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_sweep_gradient_func(ptr, sweepGradientFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_push_group_func(ptr, pushGroupFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_pop_group_func(ptr, popGroupFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            ////HB.hb_paint_funcs_set_custom_palette_color_func(ptr, customPaletteColorFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            //HB.hb_paint_funcs_set_image_func(ptr, imageFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
 
-            HB.hb_paint_funcs_make_immutable(ptr);
+            //HB.hb_paint_funcs_make_immutable(ptr);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PushTransformDelegate))]
-        public static void HB_paint_push_transform_func_t (IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, float xx, float yx, float xy, float yy, float dx, float dy, IntPtr user_data)
+        public static void HB_paint_push_transform_func_t(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, float xx, float yx, float xy, float yy, float dx, float dy, IntPtr user_data)
         {
             var transform = new float2x3
             {
@@ -65,12 +65,12 @@ namespace TextMeshDOTS.HarfBuzz
                 c2 = new float2(dx, dy)
             };
             transform = PaintUtils.mul(transform, data.transformStack.Peek());
-            data.transformStack.Add(transform);           
+            data.transformStack.Add(transform);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
         public static void HB_paint_pop_transform_func_t(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, IntPtr user_data)
-        {            
+        {
             data.transformStack.Pop();
         }
         [BurstCompile]
@@ -86,7 +86,7 @@ namespace TextMeshDOTS.HarfBuzz
             data.glyphID = glyphID;
             //when deferring the rasterization, we cannot clear the transformed clipGlyph in
             //HB_paint_pop_clip_func_t or nothing will be rendered. Rather clear when setting a new clipGlyph
-            data.clipGlyph.Clear(); 
+            data.clipGlyph.Clear();
             HB.hb_font_draw_glyph(font, glyphID, data.drawDelegates, ref data.clipGlyph);
             PaintUtils.TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
         }
@@ -100,7 +100,7 @@ namespace TextMeshDOTS.HarfBuzz
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
-        public static void HB_paint_pop_clip_func_t (IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, IntPtr user_data)
+        public static void HB_paint_pop_clip_func_t(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, IntPtr user_data)
         {
             //when deferring the rasterization, we cannot clear the transformed clipGlyph in
             //HB_paint_pop_clip_func_t or nothing will be rendered. Rather clear when setting a new clipGlyph
@@ -152,7 +152,7 @@ namespace TextMeshDOTS.HarfBuzz
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
         public static void HB_paint_push_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, IntPtr user_data)
-        {            
+        {
             // COMPOSITE: 
             // push_group()
             // // recurse for backdrop
@@ -190,14 +190,14 @@ namespace TextMeshDOTS.HarfBuzz
                     break;
                 case PatterType.SweepGradient:
                     AntiAliasedRasterizer.RasterizeAndBlend(ref data.clipGlyph, data.paintSurface, data.sweepGradient, mode, data.clipRect);
-                    break;                
+                    break;
             }
             data.patterType = PatterType.Undefined;
-            data.group--;            
+            data.group--;
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(CustomPalette_colorDelegate))]
-        public static bool hb_paint_custom_palette_color_func_t (IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, uint color_index, uint color, IntPtr user_data)
+        public static bool hb_paint_custom_palette_color_func_t(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, uint color_index, uint color, IntPtr user_data)
         {
             //Debug.Log($"hb_paint_custom_palette_color color_index {color_index} color {color}");
             return true;
@@ -213,17 +213,17 @@ namespace TextMeshDOTS.HarfBuzz
         public static bool hb_paint_image_func_t(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, Blob image, uint width, uint height, PaintImageFormat format, float slant, ref GlyphExtents extents, IntPtr user_data)
         {
             Debug.Log("hb_paint_image");
-            data.imageFormat = format;            
+            data.imageFormat = format;
             data.imageWidth = (int)width;
             data.imageHeight = (int)height;
-            var rawBytes= image.GetData();
+            var rawBytes = image.GetData();
             if (format == PaintImageFormat.BGRA)
             {
                 var rawBytesLength = rawBytes.Length;
                 var textureData = new NativeArray<ColorARGB>(rawBytesLength / 4, Allocator.Temp);
                 int count = 0;
                 for (int i = 0, ii = rawBytes.Length; i < ii; i += 4)
-                    textureData[count++] = new ColorARGB(rawBytes[i+3], rawBytes[i+2], rawBytes[i+1], rawBytes[i]);
+                    textureData[count++] = new ColorARGB(rawBytes[i + 3], rawBytes[i + 2], rawBytes[i + 1], rawBytes[i]);
                 data.paintSurface = textureData;
             }
             else // HB_PAINT_IMAGE_FORMAT.PNG, HB_PAINT_IMAGE_FORMAT.SVG To-Do: find BURST compatible decoder
@@ -238,16 +238,16 @@ namespace TextMeshDOTS.HarfBuzz
         public delegate void PopDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, IntPtr user_data);
 
         [return: MarshalAs(UnmanagedType.I1)]
-        public delegate bool ColorGlyphDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, /*hb_codepoint_t*/ uint glyph, IntPtr font, IntPtr user_data);
+        public delegate bool ColorGlyphDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, uint glyph, IntPtr font, IntPtr user_data);
 
-        public delegate void PushClipGlyphDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, /*hb_codepoint_t*/ uint glyph, IntPtr font, IntPtr user_data);
+        public delegate void PushClipGlyphDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, uint glyph, IntPtr font, IntPtr user_data);
 
         public delegate void PushClipRectangleDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, float xmin, float ymin, float xmax, float ymax, IntPtr user_data);
 
         public delegate void ColorDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, bool is_foreground, uint color, IntPtr user_data);
 
         [return: MarshalAs(UnmanagedType.I1)]
-        public delegate bool ImageDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, /*hb_blob_t*/ Blob image, uint width, uint height, PaintImageFormat format, float slant, ref GlyphExtents extents, IntPtr user_data);
+        public delegate bool ImageDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, Blob image, uint width, uint height, PaintImageFormat format, float slant, ref GlyphExtents extents, IntPtr user_data);
 
         public delegate void LinearOrRadialGradientDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, ColorLine color_line, float x0, float y0, float x1, float y1, float x2, float y2, IntPtr user_data);
 
@@ -258,6 +258,6 @@ namespace TextMeshDOTS.HarfBuzz
         [return: MarshalAs(UnmanagedType.I1)]
         public delegate bool CustomPalette_colorDelegate(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, uint color_index, uint color, IntPtr user_data);
     }
-    
-    
+
+
 }

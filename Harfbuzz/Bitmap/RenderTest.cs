@@ -24,8 +24,8 @@ public class RenderTest : MonoBehaviour
     SDFOrientation orientation;
     public DrawDelegates drawFunctions;
     DrawData drawData;
-    PaintDeferredDelegates paintFunctions;
-    PaintDeferredData paintData;
+    PaintDelegates paintFunctions;
+    PaintData paintData;
     Blob blob;
     Face face;
     Font font;    
@@ -38,7 +38,7 @@ public class RenderTest : MonoBehaviour
         if (fontPath == null)
             return;
         drawFunctions = new DrawDelegates(true);
-        paintFunctions = new PaintDeferredDelegates(true);
+        paintFunctions = new PaintDelegates(true);
         LoadFont(fontPath, 256);
 
         //DrawTest(letter);
@@ -96,7 +96,7 @@ public class RenderTest : MonoBehaviour
             glyphID = glyphInfos[0].codepoint;
         }
 
-        paintData = new PaintDeferredData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
+        paintData = new PaintData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
         font.GetGlyphExtends(glyphID, out GlyphExtents glyphExtents);
         //Debug.Log($"glyphExtents: {glyphExtents}");
         marker.Begin();

@@ -34,7 +34,7 @@ namespace TextMeshDOTS.TextProcessing
 
             var font = nativeFontPointer.font;
             var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);
-            var paintData = new PaintDeferredData(nativeFontPointer.drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
+            var paintData = new PaintData(nativeFontPointer.drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
             marker.Begin();
             font.PaintGlyph(glyphBlob.glyphID, ref paintData, nativeFontPointer.paintFunctions, 0, new ColorARGB(0, 0, 0, 255));
 
