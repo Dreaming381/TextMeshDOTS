@@ -114,7 +114,7 @@ namespace TextMeshDOTS
                 #region Look up Character Data
                 if (!currentFont.glyphs.TryGetValue(glyphOTF.codepoint, out var glyphBlob))
                 {
-                    Debug.LogError($"Glyph {(char)currentRune.value} has not yet been added to texture atlas");
+                    Debug.LogError($"Glyph {currentRune.value} has not yet been added to texture atlas");
                     continue;
                 }
                 // review how to handle glyphOTF.codepoint = 0 (not defined glyph) which is retured for example for tab stop (9)

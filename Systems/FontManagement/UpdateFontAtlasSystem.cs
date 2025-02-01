@@ -61,7 +61,8 @@ namespace TextMeshDOTS.TextProcessing
             }
 
             state.Dependency.Complete();
-            var placedGlyphs = new NativeList<GlyphBlob> (1024, Allocator.TempJob); 
+            var placedGlyphs = new NativeList<GlyphBlob> (1024, Allocator.TempJob);
+            var fontAssetMetadataLookup = SystemAPI.GetComponentLookup<FontAssetMetadata>(true);
             var atlasDataLookup = SystemAPI.GetComponentLookup<AtlasData>(true);
             var missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false);
             var usedGlyphsLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(false);
@@ -83,6 +84,7 @@ namespace TextMeshDOTS.TextProcessing
                     placedGlyphs = placedGlyphs,
 
                     fontEntity = fontEntity,
+                    fontAssetMetadataLookup = fontAssetMetadataLookup,
                     atlasDataLookup = atlasDataLookup,
                     nativeFontPointerLookup = nativeFontPointerLookup,
 

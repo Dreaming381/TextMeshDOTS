@@ -1,4 +1,4 @@
-Shader "TextMeshDOTS/TextMeshDOTS-URP-debug"
+Shader "TextMeshDOTS/SDF-URP-debug"
 {
     Properties
     {

@@ -15,7 +15,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             freeGlyphRectsBuffer.Reinterpret<GlyphRect>().Add(new GlyphRect(0, 0, atlasWidth, atlasHeight));
         }
 
-        public static void AddGlyphs(
+        public static bool AddGlyphs(
             int padding,
             NativeList<GlyphBlob> glyphsToPlace,
             NativeList<GlyphBlob> placedGlyphs,
@@ -75,10 +75,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 }
                 else
                 {
-                    Debug.Log($"Ran out of Space: {glyphsToPlace.Length} glyphs could not be placed");
-                    break; //atlas full; no room left
+                    return false;//atlas full; no room left
                 }
             }
+            return true;
         }
         public static bool TryAddGlyph(
             int padding,

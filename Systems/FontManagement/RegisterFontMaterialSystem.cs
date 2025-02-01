@@ -28,8 +28,8 @@ namespace TextMeshDOTS.TextProcessing
             hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
             backendMesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
             backendMeshID = BatchMeshID.Null;
-            textMeshDOTSMaterial = Resources.Load<Material>(TextMaterialUtility.ktextMeshDOTS_URP_material);
-            urpUnlitMaterial = Resources.Load<Material>(TextMaterialUtility.kUnlit_material);
+            textMeshDOTSMaterial = Resources.Load<Material>(TextMaterialUtility.kSDF_URP_Material);
+            urpUnlitMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_URP_Material);
 
             fontstateQ = SystemAPI.QueryBuilder()
                 .WithAll<FontState>()

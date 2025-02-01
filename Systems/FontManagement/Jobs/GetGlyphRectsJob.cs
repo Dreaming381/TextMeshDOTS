@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Entities;
 using UnityEngine.TextCore;
 using TextMeshDOTS.HarfBuzz.Bitmap;
+using UnityEngine;
 
 
 namespace TextMeshDOTS.TextProcessing
@@ -17,6 +18,7 @@ namespace TextMeshDOTS.TextProcessing
 
         [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
         [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
+        [ReadOnly] public ComponentLookup<FontAssetMetadata> fontAssetMetadataLookup;
 
         public BufferLookup<MissingGlyphs> missingGlyphsBuffer;
         public BufferLookup<UsedGlyphs> usedGlyphsBuffer;
@@ -33,16 +35,35 @@ namespace TextMeshDOTS.TextProcessing
             var freeGlyphRects = freeGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
             var font = nativeFontPointer.font;
-            var glyphBlobs = new NativeList<GlyphBlob>(256, Allocator.Temp);
+            var glyphsToPlace = new NativeList<GlyphBlob>(256, Allocator.Temp);
 
             for (int i = 0, ii = missingGlyphs.Length; i < ii; i++)
             {
                 var glyphID = missingGlyphs[i];
                 font.GetGlyphExtends(glyphID, out GlyphExtents extends);                
                 var hbGlyph = new GlyphBlob { glyphID = glyphID, glyphExtents = extends};
-                glyphBlobs.Add(hbGlyph);
+                glyphsToPlace.Add(hbGlyph);
             };
-            NativeAtlas.AddGlyphs(atlasData.padding, glyphBlobs, placedGlyphs, usedGlyphs, usedGlyphRects, freeGlyphRects);
+            var success = NativeAtlas.AddGlyphs(atlasData.padding, glyphsToPlace, placedGlyphs, usedGlyphs, usedGlyphRects, freeGlyphRects);
+            if (!success)
+            {
+                var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
+                Debug.Log($"{glyphsToPlace.Length} glyphs could not be placed for font {fontAssetMetaData.family} {fontAssetMetaData.subfamily} ");
+                //for (int i = 0, ii = usedGlyphs.Length; i < ii; i++)
+                //{
+                //    var glyphExtents= glyphsToPlace[i].glyphExtents;
+                //    Debug.Log($"Glyph Rect: {glyphExtents.width} {glyphExtents.height} padding: {atlasData.padding}");
+                //}
+                //for (int i = 0, ii = freeGlyphRects.Length; i < ii; i++)
+                //{
+                //    var freeGlyphRect = freeGlyphRects[i];
+                //    Debug.Log($"Free Rect: {freeGlyphRect.width} {freeGlyphRect.height}");
+                //}
+                //missingGlyphs.Clear();
+                //for (int i = 0, ii = usedGlyphs.Length; i < ii; i++)
+                //    missingGlyphs.Add(glyphsToPlace[i].glyphID);
+                //return;
+            }
             missingGlyphs.Clear();
         }
     }    

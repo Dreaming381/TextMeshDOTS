@@ -8,11 +8,21 @@ namespace TextMeshDOTS.Rendering.Authoring
     {        
         public const string kResourcePath = "Assets/Resources";
 
-        public const string ktextMeshDOTS_URP_material = "TextMeshDOTS-URP";
-        public const string ktextMeshDOTS_URP_path = "Assets/Resources/TextMeshDOTS-URP.mat";
+        private const string kSDF_HDRP_Shader = "TextMeshDOTS/SDF-HDRP";
+        public const string kSDF_HDRP_Material = "TextMeshDOTS-HDRP";
+        public const string kSDF_HDRP_MaterialPath = "Assets/Resources/SDF-HDRP.mat";
 
-        public const string kUnlit_material = "COLRv1-URP";
-        public const string kUnlitPath = "Assets/Resources/COLRv1-URP.mat";
+        private const string kSDF_URP_Shader = "TextMeshDOTS/SDF-URP";
+        public const string kSDF_URP_Material = "SDF-URP";
+        public const string kSDF_URP_MaterialPath = "Assets/Resources/SDF-URP.mat";
+
+        private const string kCOLRv1_HDRP_Shader = "TextMeshDOTS/COLRv1-HDRP";
+        public const string kCOLRv1_HDRP_Material = "COLRv1-HDRP";
+        public const string kCOLORv1_HDRP_MaterialPath = "Assets/Resources/COLRv1-HDRP.mat";
+
+        private const string kCOLRv1_URP_Shader = "TextMeshDOTS/COLRv1-URP";
+        public const string kCOLRv1_URP_Material = "COLRv1-URP";
+        public const string kCOLORv1_URP_MaterialPath = "Assets/Resources/COLRv1-URP.mat";
 
 #if UNITY_EDITOR
         [UnityEditor.MenuItem("TextMeshDOTS/Generate Materials")]
@@ -21,16 +31,27 @@ namespace TextMeshDOTS.Rendering.Authoring
             if (!UnityEditor.AssetDatabase.IsValidFolder(kResourcePath))
                 UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
 
+            var shader = Shader.Find(kSDF_HDRP_Shader);
+            var material = new Material(shader);
+            material.enableInstancing = true;
+            SetupMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, kSDF_HDRP_MaterialPath);
 
-            var textMeshDOTSShader = Shader.Find("TextMeshDOTS/TextMeshDOTS-URP");
-            var textMeshDOTSMaterial = new Material(textMeshDOTSShader);
-            textMeshDOTSMaterial.enableInstancing = true;
-            SetupMaterialWithBlendMode(textMeshDOTSMaterial);
-            UnityEditor.AssetDatabase.CreateAsset(textMeshDOTSMaterial, ktextMeshDOTS_URP_path);
+            shader = Shader.Find(kSDF_URP_Shader);
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, kSDF_URP_MaterialPath);
 
-            var urpUnlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-            var urpUnlitMaterial = new Material(urpUnlitShader);
-            UnityEditor.AssetDatabase.CreateAsset(urpUnlitMaterial, kUnlitPath);
+            shader = Shader.Find(kCOLRv1_HDRP_Shader);
+            material = new Material(shader);
+            material.enableInstancing = true;
+            UnityEditor.AssetDatabase.CreateAsset(material, kCOLORv1_HDRP_MaterialPath);
+
+            shader = Shader.Find(kCOLRv1_URP_Shader);
+            material = new Material(shader);
+            material.enableInstancing = true;
+            UnityEditor.AssetDatabase.CreateAsset(material, kCOLORv1_URP_MaterialPath);
         }
 #endif
         public static void SetupMaterialWithBlendMode(Material material)
