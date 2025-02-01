@@ -10,8 +10,8 @@ namespace TextMeshDOTS.HarfBuzz
         {
             var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
             var result = new FixedString128Bytes();
-            var values = Enum.GetValues(typeof(HB_OT_NAME_ID));
-            foreach (HB_OT_NAME_ID value in values)
+            var values = Enum.GetValues(typeof(NameID));
+            foreach (NameID value in values)
             {
                 var textSize = (uint)result.Capacity;
                 face.GetFaceInfo(value, language, ref textSize, ref result);

@@ -51,7 +51,7 @@ namespace TextMeshDOTS.TextProcessing
 
             var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
             //var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
-            var latinLTR = new SegmentProperties(Direction.LeftToRight, Script.Latin, language);
+            var latinLTR = new SegmentProperties(Direction.LTR, Script.LATIN, language);
             var buffer = new Buffer(true);
             var features = new NativeList<Feature>(16, Allocator.Temp);
 
@@ -99,6 +99,10 @@ namespace TextMeshDOTS.TextProcessing
                     var length = (int)(endIndex - startIndex);
                     buffer.AddText(text, startIndex, length);
                     buffer.SetSegmentProperties(latinLTR);
+                    //a number of white spaces are regretably not replaced by "space", no need to be handled in 
+                    //https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767
+                    buffer.BufferFlag = BufferFlag.REMOVE_DEFAULT_IGNORABLES | BufferFlag.BOT | BufferFlag.EOT;
+                    
 
                     //To-Do: revisit how to add features per textSpan
                     for (int i = 0, ii = textSpans.Length; i < ii; i++)

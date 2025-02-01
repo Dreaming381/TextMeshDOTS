@@ -29,7 +29,7 @@ namespace TextMeshDOTS.Authoring
             {
                 fixed (byte* bytes = fontBytes)
                 {
-                    blob = new Blob(bytes, (uint)fontBytes.Length, MemoryMode.Readonly);
+                    blob = new Blob(bytes, (uint)fontBytes.Length, MemoryMode.READONLY);
                 }
             }
 
@@ -42,27 +42,27 @@ namespace TextMeshDOTS.Authoring
             var initialCapacity = 125u; //FixedString128Bytes.Capacity
             fontBlobRoot.fontFamily = new FixedString128Bytes();
             uint textSize = initialCapacity;
-            face.GetFaceInfo(HB_OT_NAME_ID.FONT_FAMILY, language, ref textSize, ref fontBlobRoot.fontFamily);
+            face.GetFaceInfo(NameID.FONT_FAMILY, language, ref textSize, ref fontBlobRoot.fontFamily);
             fontBlobRoot.fontFamily.Length = (int)textSize;
 
             fontBlobRoot.fontSubFamily = new FixedString128Bytes();
             textSize = initialCapacity;
-            face.GetFaceInfo(HB_OT_NAME_ID.FONT_SUBFAMILY, language, ref textSize, ref fontBlobRoot.fontSubFamily);
+            face.GetFaceInfo(NameID.FONT_SUBFAMILY, language, ref textSize, ref fontBlobRoot.fontSubFamily);
             fontBlobRoot.fontSubFamily.Length = (int)textSize;
 
             fontBlobRoot.typographicFamily = new FixedString128Bytes();
             textSize = initialCapacity;
-            face.GetFaceInfo(HB_OT_NAME_ID.TYPOGRAPHIC_FAMILY, language, ref textSize, ref fontBlobRoot.typographicFamily);
+            face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language, ref textSize, ref fontBlobRoot.typographicFamily);
             fontBlobRoot.typographicFamily.Length = (int)textSize;
 
             fontBlobRoot.typographicSubfamily = new FixedString128Bytes();
             textSize = initialCapacity;
-            face.GetFaceInfo(HB_OT_NAME_ID.TYPOGRAPHIC_SUBFAMILY, language, ref textSize, ref fontBlobRoot.typographicSubfamily);
+            face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language, ref textSize, ref fontBlobRoot.typographicSubfamily);
             fontBlobRoot.typographicSubfamily.Length = (int)textSize;            
 
-            var weight = font.GetStyleTag(StyleTag.Weight);
-            var width = font.GetStyleTag(StyleTag.Width);
-            var italic = (byte)font.GetStyleTag(StyleTag.Italic);
+            var weight = font.GetStyleTag(StyleTag.WEIGHT);
+            var width = font.GetStyleTag(StyleTag.WIDTH);
+            var italic = (byte)font.GetStyleTag(StyleTag.ITALIC);
             bool isItalic;
             switch (italic)
             {
@@ -74,13 +74,13 @@ namespace TextMeshDOTS.Authoring
                     isItalic = false;
                     break;
             }
-            var slant = font.GetStyleTag(StyleTag.SlantAngle); 
+            var slant = font.GetStyleTag(StyleTag.SLANT_ANGLE); 
 
             fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, (int)weight, width, isItalic, slant);
 
             //var result = new FixedString128Bytes();
-            //var values = Enum.GetValues(typeof(HB_OT_NAME_ID));
-            //foreach (HB_OT_NAME_ID value in values)
+            //var values = Enum.GetValues(typeof(NameId));
+            //foreach (NameId value in values)
             //{
             //    textSize = (uint)result.Capacity;
             //    face.GetFaceInfo(value, language, ref textSize, ref result);

@@ -141,7 +141,7 @@ namespace TextMeshDOTS.HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_face_get_glyph_count(IntPtr face);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern uint hb_ot_name_get_utf8(IntPtr face, HB_OT_NAME_ID name_id, Language language, ref uint text_size, byte* text);
+        internal static extern uint hb_ot_name_get_utf8(IntPtr face, NameID name_id, Language language, ref uint text_size, byte* text);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_face_is_immutable(IntPtr face);
@@ -188,7 +188,7 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern bool hb_font_is_immutable(IntPtr font);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
-        internal static extern bool hb_ot_layout_get_baseline(IntPtr font, OpenTypeLayoutBaselineTag baseline_tag, Direction direction, Script script_tag, uint language_tag, out int coord);
+        internal static extern bool hb_ot_layout_get_baseline(IntPtr font, LayoutBaselineTag baseline_tag, Direction direction, Script script_tag, uint language_tag, out int coord);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_font_get_glyph_advance_for_direction(IntPtr font, uint glyph, Direction direction, out int x, out int y);
 
@@ -300,6 +300,10 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern Script hb_buffer_get_script(IntPtr buffer);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_buffer_set_script(IntPtr buffer, Script script);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_buffer_set_flags(IntPtr buffer, BufferFlag flags);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern BufferFlag hb_buffer_get_flags(IntPtr buffer);
         #endregion
 
 

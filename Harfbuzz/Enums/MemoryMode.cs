@@ -2,9 +2,9 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public enum MemoryMode
     {
-        Duplicate,
-        Readonly,
-        Writable,
-        ReadonlyMayMakeWritable
+        DUBLICATE,
+        READONLY,
+        WRITABLE,
+        READONLY_MAY_MAKE_WRITABLE
     }
 }

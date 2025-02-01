@@ -1,6 +1,5 @@
 using TextMeshDOTS.Collections;
 using Unity.Collections;
-using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -14,8 +13,8 @@ namespace TextMeshDOTS
     /// </summary>
     public struct FontBlob
     {
-        // Unity FontReference.familyName can be HB_OT_NAME_ID.TYPOGRAPHIC_FAMILY or HB_OT_NAME_ID.FONT_FAMILY 
-        // Unity FontReference.styleName  = HB_OT_NAME_ID.TYPOGRAPHIC_SUBFAMILY or HB_OT_NAME_ID.FONT_SUBFAMILY
+        // Unity FontReference.familyName can be NameID.TYPOGRAPHIC_FAMILY or NameID.FONT_FAMILY 
+        // Unity FontReference.styleName  = NameID.TYPOGRAPHIC_SUBFAMILY or NameID.FONT_SUBFAMILY
         // https://www.high-logic.com/fontcreator/manual15/fonttype.html
         public FontAssetRef fontAssetRef;
         public FixedString128Bytes fontFamily;

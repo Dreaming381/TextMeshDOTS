@@ -1,6 +1,6 @@
 namespace TextMeshDOTS.HarfBuzz
 {
-    public enum HB_OT_NAME_ID
+    public enum NameID
     {
         COPYRIGHT = 0,
         FONT_FAMILY = 1,
@@ -17,7 +17,7 @@ namespace TextMeshDOTS.HarfBuzz
         DESIGNER_URL = 12,
         LICENSE = 13,
         LICENSE_URL = 14,
-        /*RESERVED		= 15,*/
+        /*HB_OT_NAME_ID_RESERVED		= 15,*/
         TYPOGRAPHIC_FAMILY = 16,
         TYPOGRAPHIC_SUBFAMILY = 17,
         MAC_FULL_NAME = 18,
@@ -28,7 +28,6 @@ namespace TextMeshDOTS.HarfBuzz
         LIGHT_BACKGROUND = 23,
         DARK_BACKGROUND = 24,
         VARIATIONS_PS_PREFIX = 25,
-
         INVALID = 0xFFFF
     }
 }

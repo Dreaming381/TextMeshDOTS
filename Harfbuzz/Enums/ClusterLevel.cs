@@ -2,13 +2,9 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public enum ClusterLevel
     {
-        // HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES = 0
-        MonotoneGraphemes = 0,
-        // HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS = 1
-        MonotoneCharacters = 1,
-        // HB_BUFFER_CLUSTER_LEVEL_CHARACTERS = 2
-        Characters = 2,
-        // HB_BUFFER_CLUSTER_LEVEL_DEFAULT = HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES
-        Default = 0,
+        MONOTONE_GRAPHEMES = 0,
+        MONOTONE_CHARACTERS = 1,
+        CHARACTERS = 2,
+        DEFAULT = 0,
     }
 }

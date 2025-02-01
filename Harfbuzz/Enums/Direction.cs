@@ -2,11 +2,11 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public enum Direction
     {
-        Invalid = 0,
-        LeftToRight = 4,
-        RightToLeft,
-        TopToBottom,
-        BottomToTop
+        INVALID = 0,
+        LTR = 4,
+        RTL,
+        TTB,
+        BTT
     }
 
     public static class DirectionExtensions

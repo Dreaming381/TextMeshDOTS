@@ -79,7 +79,7 @@ namespace TextMeshDOTS.HarfBuzz
         }
         public void GetBaseline(Direction direction, Script script, out int baseline)
         {
-            HB.hb_ot_layout_get_baseline(ptr, OpenTypeLayoutBaselineTag.Roman, direction, script, HB.HB_TAG('A', 'P', 'P', 'H'), out baseline);
+            HB.hb_ot_layout_get_baseline(ptr, LayoutBaselineTag.ROMAN, direction, script, HB.HB_TAG('A', 'P', 'P', 'H'), out baseline);
         }
         public void Shape(Buffer buffer, NativeList<Feature> features)
         {

@@ -70,7 +70,6 @@ namespace TextMeshDOTS
             }
             ref var currentFont = ref dynamicFontBlobReference.Value;
 
-
             // Calculate the scale of the font based on selected font size and sampling point size.
             // baseScale is calculated using the font asset assigned to the text object.            
             float baseScale = baseConfiguration.fontSize / currentFont.atlasSamplingPointSize * (baseConfiguration.isOrthographic ? 1 : 0.1f);
@@ -118,6 +117,9 @@ namespace TextMeshDOTS
                     Debug.LogError($"Glyph {(char)currentRune.value} has not yet been added to texture atlas");
                     continue;
                 }
+                // review how to handle glyphOTF.codepoint = 0 (not defined glyph) which is retured for example for tab stop (9)
+                // see here why: https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767
+                // should not be rendered, but xAdvance should be processed
 
                 // Cache glyph metrics
                 var currentGlyphExtents = glyphBlob.glyphExtents;
@@ -180,7 +182,6 @@ namespace TextMeshDOTS
                 // Determine the position of the vertices of the Character or Sprite.
                 #region Calculate Vertices Position
                 var renderGlyph = new RenderGlyph();
-
 
                 // top left is used to position bottom left and top right
                 float2 topLeft;

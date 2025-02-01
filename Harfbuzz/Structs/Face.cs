@@ -22,7 +22,7 @@ namespace TextMeshDOTS.HarfBuzz
         {
             HB.hb_ot_layout_get_size_params(ptr, out design_size, out subfamily_id, out subfamily_name_id, out range_start, out range_end);
         }
-        public void GetFaceInfo(HB_OT_NAME_ID name_id, Language language, ref uint textSize, ref FixedString128Bytes text)
+        public void GetFaceInfo(NameID name_id, Language language, ref uint textSize, ref FixedString128Bytes text)
         {
             unsafe 
             {

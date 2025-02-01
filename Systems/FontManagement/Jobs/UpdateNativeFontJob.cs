@@ -47,23 +47,36 @@ namespace TextMeshDOTS.TextProcessing
             Font font)
         {
             //first, get all native data
-            font.GetBaseline(Direction.LeftToRight, Script.Latin, out int baseLine);
-            font.GetFontExtentsForDirection(Direction.LeftToRight, out FontExtents fontExtents);
+            font.GetBaseline(Direction.LTR, Script.LATIN, out int baseLine);
+            font.GetFontExtentsForDirection(Direction.LTR, out FontExtents fontExtents);
 
             face.GetSizeParams(out uint design_size, out uint subfamily_id, out uint subfamily_name_id, out uint range_start, out uint range_end);
 
-            font.GetMetrics(MetricTag.CapHeight, out int capHeight);
-            font.GetMetrics(MetricTag.XHeight, out int xHeight);
+            font.GetMetrics(MetricTag.CAP_HEIGHT, out int capHeight);
+            font.GetMetrics(MetricTag.X_HEIGHT, out int xHeight);
 
-            font.GetMetrics(MetricTag.SubScriptEmXSize, out int subScriptEmXSize);
-            font.GetMetrics(MetricTag.SubScriptEmYSize, out int subScriptEmYSize);
-            font.GetMetrics(MetricTag.SubScriptEmXOffset, out int subScriptEmXOffset);
-            font.GetMetrics(MetricTag.SubScriptEmYOffset, out int subScriptEmYOffset);
+            font.GetMetrics(MetricTag.SUBSCRIPT_EM_X_SIZE, out int subScriptEmXSize);
+            font.GetMetrics(MetricTag.SUBSCRIPT_EM_Y_SIZE, out int subScriptEmYSize);
+            font.GetMetrics(MetricTag.SUBSCRIPT_EM_X_OFFSET, out int subScriptEmXOffset);
+            font.GetMetrics(MetricTag.SUBSCRIPT_EM_Y_OFFSET, out int subScriptEmYOffset);
 
-            font.GetMetrics(MetricTag.SuperScriptEmXSize, out int superScriptEmXSize);
-            font.GetMetrics(MetricTag.SuperScriptEmYSize, out int superScriptEmYSize);
-            font.GetMetrics(MetricTag.SuperScriptEmXOffset, out int superScriptEmXOffset);
-            font.GetMetrics(MetricTag.SuperScriptEmYOffset, out int superScriptEmYOffset);
+            font.GetMetrics(MetricTag.SUPERSCRIPT_EM_X_SIZE, out int superScriptEmXSize);
+            font.GetMetrics(MetricTag.SUPERSCRIPT_EM_Y_SIZE, out int superScriptEmYSize);
+            font.GetMetrics(MetricTag.SUPERSCRIPT_EM_X_OFFSET, out int superScriptEmXOffset);
+            font.GetMetrics(MetricTag.SUPERSCRIPT_EM_Y_OFFSET, out int superScriptEmYOffset);
+
+            var scale = font.GetScale();
+            var upem = face.GetUnitsPerEM;
+
+            //get width of space -->is there no easier way to do this?        
+            var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+            var buffer = new Buffer(Direction.LTR, Script.LATIN, language);
+            buffer.ContentType = ContentType.UNICODE;
+            buffer.Add(0x20, 0);
+            font.Shape(buffer);
+            var glyphPosition = buffer.GetGlyphPositionsSpan();
+            var xWidth = glyphPosition[0].xAdvance;
+            buffer.Dispose();
 
             var builder = new BlobBuilder(Allocator.Temp);
             ref DynamicFontBlob fontBlobRoot = ref builder.ConstructRoot<DynamicFontBlob>();
@@ -71,13 +84,12 @@ namespace TextMeshDOTS.TextProcessing
             fontBlobRoot.atlasSamplingPointSize = atlasData.samplingPointSize;
             fontBlobRoot.atlasWidth = atlasData.atlasWidth;
             fontBlobRoot.atlasHeight = atlasData.atlasHeight;
-            //fontBlobRoot.materialPadding = fontAsset.material.GetPaddingForText(false, false);
             fontBlobRoot.materialPadding = atlasData.padding;
             fontBlobRoot.regularStyleSpacing = 0;
             fontBlobRoot.boldStyleSpacing = 7;
             fontBlobRoot.italicsStyleSlant = 35;
-            fontBlobRoot.tabWidth = face.GetUnitsPerEM/100; //review what to set here
-            fontBlobRoot.tabMultiple = 10;
+            fontBlobRoot.tabWidth = xWidth; //typically width of space
+            fontBlobRoot.tabMultiple = 10;  //tab advace = tabWidth * tabMultiple
 
             //third, copy over native font data
             fontBlobRoot.ascender = fontExtents.ascender;

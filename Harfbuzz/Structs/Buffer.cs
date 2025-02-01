@@ -32,6 +32,11 @@ namespace TextMeshDOTS.HarfBuzz
             get => HB.hb_buffer_get_language(ptr);
             set => HB.hb_buffer_set_language(ptr, value);
         }
+        public BufferFlag BufferFlag
+        {
+            get { return HB.hb_buffer_get_flags(ptr); }
+            set { HB.hb_buffer_set_flags(ptr, value); }
+        }
         //public IntPtr Language
         //{
         //    get => HB.hb_buffer_get_language(ptr);
@@ -67,9 +72,9 @@ namespace TextMeshDOTS.HarfBuzz
         public uint Length => HB.hb_buffer_get_length(ptr);
         public void Add(uint codepoint, uint cluster)
         {
-            if ((int)Length != 0 && (ContentType != ContentType.Unicode))
+            if ((int)Length != 0 && (ContentType != ContentType.UNICODE))
                 throw new InvalidOperationException("Non empty buffer's ContentType must be of type Unicode.");
-            if (ContentType == ContentType.Glyphs)
+            if (ContentType == ContentType.GLYPHS)
                 throw new InvalidOperationException("ContentType must not be of type Glyphs");
 
             HB.hb_buffer_add(ptr, codepoint, cluster);
