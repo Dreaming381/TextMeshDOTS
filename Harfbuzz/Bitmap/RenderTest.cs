@@ -6,8 +6,7 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
-using UnityEngine.TextCore;
-using System.IO;
+
 
 public class RenderTest : MonoBehaviour
 {
@@ -28,7 +27,9 @@ public class RenderTest : MonoBehaviour
     PaintData paintData;
     Blob blob;
     Face face;
-    Font font;    
+    Font font;
+    static int samplingPointSize = 128;
+    int padding = 9;
 
     void Start()
     {
@@ -39,11 +40,11 @@ public class RenderTest : MonoBehaviour
             return;
         drawFunctions = new DrawDelegates(true);
         paintFunctions = new PaintDelegates(true);
-        LoadFont(fontPath, 256);
+        LoadFont(fontPath, samplingPointSize);
 
-        //DrawTest(letter);
+        DrawTest(letter, glyphID);
         //PaintPNGTest("😉");
-        PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
+        //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
     }
 
     void Update()
@@ -51,32 +52,40 @@ public class RenderTest : MonoBehaviour
         
     }
 
-    void DrawTest(string character)
+    void DrawTest(string character, uint glyphID)
     {
         var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.Alpha8, false);
         var textureData = texture2D.GetRawTextureData<byte>();
         for (int i = 0; i < textureData.Length; i++)
             textureData[i] = 0;
 
-        var language = new Language("eng");
-        var buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
-        //buffer.AddText("😉");
-        buffer.AddText(character);
-        font.Shape(buffer);
-        var glyphInfos = buffer.GetGlyphInfosSpan();
+        Buffer buffer = default;
+        if (!renderGlyphID)
+        {
+            var language = new Language("eng");
+            buffer = new Buffer(Direction.LeftToRight, Script.Latin, language);
+            //buffer.AddText("😉");
+            buffer.AddText(character);
+            font.Shape(buffer);
+            var glyphInfos = buffer.GetGlyphInfosSpan();
+            glyphID = glyphInfos[0].codepoint;
+        }
 
         drawData = new DrawData(256, 16, maxDeviation, Allocator.Persistent);
-        font.DrawGlyph(glyphInfos[0].codepoint, drawFunctions, ref drawData);
-
+        font.DrawGlyph(glyphID, drawFunctions, ref drawData);
+                
+        font.GetGlyphExtends(glyphID, out GlyphExtents glyphExtents);
+        var atlastRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
+        
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
-        var glyphRect = new GlyphRect(32,32, (int)drawData.glyphRect.width+64, (int)drawData.glyphRect.height+64);
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, glyphRect, atlasWidth, atlasHeight);
+        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, atlastRect, padding, atlasWidth, atlasHeight);
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
         texture2D.Apply();
-        buffer.Dispose();
+        if (!renderGlyphID)
+            buffer.Dispose();
     }   
     void PaintTest(string character, uint glyphID)
     {

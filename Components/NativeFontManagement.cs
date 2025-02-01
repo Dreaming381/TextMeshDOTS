@@ -23,7 +23,7 @@ namespace TextMeshDOTS
 
     #region Native FontAsset Components    
 
-    /// <summary> Glyphs requested by hb_shape (=they are guarentied to exist in font), </summary>
+    /// <summary> Glyphs requested by hb_shape (=they are guaranteed to exist in font), </summary>
     [InternalBufferCapacity(0)]
     public struct MissingGlyphs : IBufferElementData
     {
@@ -92,7 +92,7 @@ namespace TextMeshDOTS
     /// <summary>
     /// FontAssetRef is THE link between any fonts request and font entities, and consists of a hash representing the 
     /// font family, and variation axis used during typesetting such as weight ("normal", "bold", semibold"), 
-    /// width ("Condensed", Normal"), and italic. Slant is ignored in such font matching (see GetHashcode) 
+    /// width ("vondensed", normal"), and italic. Slant is ignored in such font matching (see GetHashcode) 
     /// because slant value cannot be "guessed" and requested by user during typesetting 
     /// </summary>
     public struct FontAssetRef : IEquatable<FontAssetRef>, IComponentData

@@ -9,7 +9,7 @@ namespace TextMeshDOTS.HarfBuzz
     public static class BezierMath
     {
         const float absolutTolerane = 0.000000001f;
-        const float relativeTolerance = 32 / (1 << 16); //The epsilon distance  used for corner
+        const float relativeTolerance = 32f / (1 << 16); //The epsilon distance  used for corner
 
         /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -94,7 +94,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(PushClipRectangleDelegate))]
         public static void HB_paint_push_clip_rectangle_func_t(IntPtr harfBuzzPaintFunct, ref PaintDeferredData data, float xmin, float ymin, float xmax, float ymax, IntPtr user_data)
         {
-            var clipRect = new BBox(new float2(xmin, ymin), new float2(xmax, ymax));
+            var clipRect = new BBox(xmin, ymin,xmax, ymax);
             data.clipRect = clipRect;
             data.paintSurface = new NativeArray<ColorARGB>((int)(clipRect.width) * (int)clipRect.height, Allocator.Temp);
         }

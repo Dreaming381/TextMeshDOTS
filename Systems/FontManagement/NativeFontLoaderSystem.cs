@@ -160,7 +160,7 @@ namespace TextMeshDOTS.TextProcessing
 
             //load new fonts
             for (int i = 0, ii = newLoadRequests.Length; i < ii; i++)
-                LoadFont(newLoadRequests[i], 48, 128, ref state);
+                LoadFont(newLoadRequests[i], ref state);
 
             newLoadRequests.Clear();
         }
@@ -172,7 +172,7 @@ namespace TextMeshDOTS.TextProcessing
             drawFunctions.Dispose();
             paintFunctions.Dispose();
         }
-        void LoadFont(LoadRequest loadRequest, int samplingPointSizeSDF, int samplingPointSizeBitmap, ref SystemState state)
+        void LoadFont(LoadRequest loadRequest, ref SystemState state)
         {
             ref var fontBlobRef = ref loadRequest.fontBlobRef.value.Value;           
 
@@ -205,7 +205,7 @@ namespace TextMeshDOTS.TextProcessing
                     atlasHeight = 1024,
                     atlasWidth = 1024,
                     padding = 0,                //10% of atlas height or width
-                    samplingPointSize = samplingPointSizeBitmap,    //size of font (in pixel) in atlas
+                    samplingPointSize = fontBlobRef.samplingPointSizeBitmap,    //size of font (in pixel) in atlas
                 };
                 
                 atlasData.padding = 0;
@@ -223,7 +223,7 @@ namespace TextMeshDOTS.TextProcessing
                     atlasHeight = 1024,
                     atlasWidth = 1024,
                     padding = 9,                //10% of atlas height or width
-                    samplingPointSize = samplingPointSizeSDF,    //size of font (in pixel) in atlas
+                    samplingPointSize = fontBlobRef.samplingPointSizeSDF,    //size of font (in pixel) in atlas
                 };
                 texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.Alpha8, false);
                 var rawTextureData = texture2D.GetRawTextureData<byte>();

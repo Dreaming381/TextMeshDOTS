@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.TextCore;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
@@ -15,15 +16,15 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         /// <summary>
         /// Converts a glyph into a SDF bitmap. When using this function, ensure all bezier edges have been split into line edges first 
         /// </summary>
-        public static bool SDFGenerateSubDivisionLineEdges(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
+        public static bool SDFGenerateSubDivisionLineEdges(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect atlastRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
         {
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
                 return false;
 
-            return SDFGenerateBoundingBoxLineEdges(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+            return SDFGenerateBoundingBoxLineEdges(ref drawData, orientation, spread, buffer, atlastRect, padding, atlasWidth, atlasHeight);
         }
 
-        static bool SDFGenerateBoundingBoxLineEdges(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        static bool SDFGenerateBoundingBoxLineEdges(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect atlastRect, int padding, int atlasWidth, int atlasHeight)
         {
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
@@ -31,9 +32,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             bool flip_y = true;
             bool flip_sign = false;
             int outsideSign = -1;
+            var offset = drawData.glyphRect.min - padding;
             float sp_sq;
             SDFEdge edge;
-            var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
+            var dists = new NativeArray<SignedDistance>(atlastRect.width * atlastRect.height, Allocator.Temp);
 
             if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
                 return false;
@@ -43,10 +45,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             else
                 sp_sq = spread;
 
-            var rectX = glyphRect.x;
-            var rectY = glyphRect.y;
-            var rectWidth = glyphRect.width;
-            var rectHeight = glyphRect.height;
+            var atasX = atlastRect.x;
+            var atlasY = atlastRect.y;
+            var atlasRectWidth = atlastRect.width;
+            var atlasRectHeight = atlastRect.height;
 
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
@@ -55,22 +57,24 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
                     edge = edges[edgeID];
-                    var cbox = BezierMath.GetLineBBox(edge.start_pos, edge.end_pos);
+                    var p0 = edge.start_pos - offset;
+                    var p1 = edge.end_pos - offset;
+                    var cbox = BezierMath.GetLineBBox(p0, p1);                    
                     cbox.Expand(spread);
-                    float4 ax = edge.start_pos.x;
-                    float4 ay = edge.start_pos.y;
-                    float4 bx = edge.end_pos.x;
-                    float4 by = edge.end_pos.y;
+                    float4 ax = p0.x;
+                    float4 ay = p0.y;
+                    float4 bx = p1.x;
+                    float4 by = p1.y;
                     float4 gridPointx=default;
                     float4 gridPointy;
                     SignedDistance4 dist = maxSDF;
 
                     /* now loop over the pixels in the control box. */
-                    for (int y = math.max((int)cbox.min.y, 0), yEnd = math.min((int)cbox.max.y, rectHeight); y < yEnd; y++)
+                    for (int y = math.max((int)cbox.min.y, 0), yEnd = math.min((int)cbox.max.y, atlasRectHeight); y < yEnd; y++)
                     {                        
                         gridPointy = y + 0.5f;     // use the center of any pixel to be rendered within cbox
                         //xEnd +3 because of 4 pixel stride (ensure we process also last 3 pixel)
-                        for (int x = math.max((int)cbox.min.x,0), xEnd = math.min((int)cbox.max.x, rectWidth); x < xEnd +3; x = x + 4) 
+                        for (int x = math.max((int)cbox.min.x,0), xEnd = math.min((int)cbox.max.x, atlasRectWidth); x < xEnd +3; x = x + 4) 
                         {                            
                             var x4 = new int4(x+0, x+1, x+2, x+3);                            
                             gridPointx = x4;
@@ -83,9 +87,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             // otherwise it creates artifacts due to the wrong sign
                             var validDist = dist.distance <= sp_sq;
                             dist.distance = math.select(dist.distance, math.sqrt(dist.distance), SDFCommon.USE_SQUARED_DISTANCES);
-                            var indices = math.select((int4)((rectHeight - y - 1) * rectWidth) + x4, (y * rectWidth) + x4, flip_y);
+                            var indices = math.select((int4)((atlasRectHeight - y - 1) * atlasRectWidth) + x4, (y * atlasRectWidth) + x4, flip_y);
 
-                            var validX = x4 < rectWidth;
+                            var validX = x4 < atlasRectWidth;
                             validX = validX & validDist;
                             for (int i = 0; i < 4; i++)
                             {
@@ -111,27 +115,27 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
 
             // final pass
-            for (int row = 0; row < rectHeight; row++)
+            for (int row = 0; row < atlasRectHeight; row++)
             {
                 /* We assume the starting pixel of each row is outside. */
                 int current_sign = outsideSign;
 
-                for (int column = 0; column < rectWidth; column++)
+                for (int column = 0; column < atlasRectWidth; column++)
                 {
-                    var sourceIndex = rectWidth * row + column;
-                    var targetIndex = (atlasWidth * (row + rectY)) + (column + rectX);
-
-                    // if the pixel is not set, its shortest distance is more than `spread`
+                    var sourceIndex = atlasRectWidth * row + column;
+                    var targetIndex = (atlasWidth * (row + atlasY)) + (column + atasX);
+                    
                     var dist = dists[sourceIndex];
-                    if (BezierMath.EqualsForSmallValues(dist.sign, 0))
+                    if (dist.sign == 0)
                     {
+                        // if the pixel is not set, its shortest distance is more than `spread`
                         dist.sign = outsideSign;
                         dist.distance = -spread;
                     }
                     else
                         current_sign = dist.sign;
 
-                    dist.distance = math.clamp(dist.distance, -spread, spread);
+                    dist.distance = math.select(dist.distance, spread, dist.distance > spread);
 
                     // flip sign if required
                     dist.distance *= flip_sign ? -current_sign : current_sign;

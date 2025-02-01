@@ -39,28 +39,15 @@ namespace TextMeshDOTS.TextProcessing
 
             var drawData = new DrawData(256, 16, maxDeviation, Allocator.Temp);
             marker.Begin();
-            font.DrawGlyph(glyphBlob.glyphID, nativeFontPointer.drawFunctions, ref drawData);            
+            font.DrawGlyph(glyphBlob.glyphID, nativeFontPointer.drawFunctions, ref drawData);
 
-            //shift the bezier edges so that they are in the center of the reserved atlas padded texture window (usedRects)
-			var edges = drawData.edges;
-            var shiftx = drawData.glyphRect.min.x - ((glyphBlob.glyphExtents.width + 2 * atlasData.padding - drawData.glyphRect.width) / 2);
-            var shifty = drawData.glyphRect.min.y - ((glyphBlob.glyphExtents.height + 2 * atlasData.padding - drawData.glyphRect.height) / 2);
-            float2 shift = -new float2(shiftx, shifty);
-            for (int k = 0, kk = edges.Length; k < kk; k++)
-            {
-                ref var edge = ref edges.ElementAt(k);
-                edge.start_pos += shift;
-                edge.end_pos += shift;
-                edge.control1 += shift;
-                edge.control2 += shift;
-                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
-            }
             var glyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphBlob.glyphID);
             if (glyphIndex != -1)
             {
-                var atlasRect = usedGlyphRects[glyphIndex]; //render SDF into the reserved padded atlas texture  window 
+                //render SDF into the reserved padded atlas texture  window 
+                var atlasRect = usedGlyphRects[glyphIndex]; 
                 //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-                SDF_SPMD.SDFGenerateSubDivisionLineEdges(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.atlasWidth, atlasData.atlasHeight);
+                SDF_SPMD.SDFGenerateSubDivisionLineEdges(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.padding, atlasData.atlasWidth, atlasData.atlasHeight);
             }
             else
                 Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");

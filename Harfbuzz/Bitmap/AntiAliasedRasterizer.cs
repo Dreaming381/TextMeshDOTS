@@ -27,7 +27,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool invert = false) where T : IPattern
         {
             PaintUtils.rasterizeMarker.Begin();
-            var sdfEdges = drawData.edges;
+            var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
             var width = (int)clipRect.width;
             var height = (int)clipRect.height;
@@ -39,9 +39,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 int nextStartID = contourIDs[contourID + 1];
                 for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
-                    var sdfEdge = sdfEdges[edgeID];
-                    var p0 = sdfEdge.start_pos - offset;
-                    var p1 = sdfEdge.end_pos - offset;
+                    var edge = edges[edgeID];
+                    var p0 = edge.start_pos - offset;
+                    var p1 = edge.end_pos - offset;
                     bool inverse = p0.y < p1.y;
                     var dir = math.select(-1.0f, 1.0f, inverse);
                     if (!inverse)

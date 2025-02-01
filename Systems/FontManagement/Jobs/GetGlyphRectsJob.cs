@@ -32,16 +32,13 @@ namespace TextMeshDOTS.TextProcessing
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
             var freeGlyphRects = freeGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
-
             var font = nativeFontPointer.font;
             var glyphBlobs = new NativeList<GlyphBlob>(256, Allocator.Temp);
 
             for (int i = 0, ii = missingGlyphs.Length; i < ii; i++)
             {
                 var glyphID = missingGlyphs[i];
-                font.GetGlyphExtends(glyphID, out GlyphExtents extends);
-
-                extends.height = -extends.height; //y-axis in harfbuzz is top to bottom (positve values are down), but this library assumes bottom to top (positve values are up)
+                font.GetGlyphExtends(glyphID, out GlyphExtents extends);                
                 var hbGlyph = new GlyphBlob { glyphID = glyphID, glyphExtents = extends};
                 glyphBlobs.Add(hbGlyph);
             };

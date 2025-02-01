@@ -17,36 +17,37 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         /// Converts a glyph into a SDF bitmap. While function accepts all kinds of edges found in font files
         /// (quadratic beziers, cubic beziers, lines) consider to generates lines before using this function for performance reasons
         /// </summary>
-        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
+        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect atlastRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
         {
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
                 return false;
 
-            return SDFGenerateBoundingBoxAllEdgeTypes(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+            return SDFGenerateBoundingBoxAllEdgeTypes(ref drawData, orientation, spread, buffer, atlastRect, padding, atlasWidth, atlasHeight);
         }
 
         /// <summary>
         /// Converts a glyph into a SDF bitmap. When using this function, ensure all bezier edges have been split into line edges first 
         /// </summary>
-        public static bool SDFGenerateSubDivisionLineEdges(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
+        public static bool SDFGenerateSubDivisionLineEdges(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect atlastRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
         {
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
                 return false;
 
-            return SDFGenerateBoundingBoxLineEdges(ref drawData, orientation, spread, buffer, glyphRect, atlasWidth, atlasHeight);
+            return SDFGenerateBoundingBoxLineEdges(ref drawData, orientation, spread, buffer, atlastRect, padding, atlasWidth, atlasHeight);
         }
 
-        static bool SDFGenerateBoundingBoxLineEdgesNew(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        static bool SDFGenerateBoundingBoxLineEdgesNew(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect atlastRect, int padding, int atlasWidth, int atlasHeight)
         {
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
 
             bool flip_y = true;
             bool flip_sign = false;
-            int overloadSign = 0;
+            int outsideSign = -1;
+            var offset = drawData.glyphRect.min - padding;
             float sp_sq;
             SDFEdge edge;
-            var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
+            var dists = new NativeArray<SignedDistance>(atlastRect.width * atlastRect.height, Allocator.Temp);
 
             if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
                 return false;
@@ -56,10 +57,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             else
                 sp_sq = spread;
 
-            var rectX = glyphRect.x;
-            var rectY = glyphRect.y;
-            var rectWidth = glyphRect.width;
-            var rectHeight = glyphRect.height;
+            var rectX = atlastRect.x;
+            var rectY = atlastRect.y;
+            var rectWidth = atlastRect.width;
+            var rectHeight = atlastRect.height;
 
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
@@ -68,12 +69,11 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {                    
                     edge = edges[edgeID];
-                    var cbox = BezierMath.GetLineBBox(edge.start_pos, edge.end_pos);
+                    var p0 = edge.start_pos - offset;
+                    var p1 = edge.end_pos - offset;
+                    var cbox = BezierMath.GetLineBBox(p0, p1);
                     cbox.Expand(spread);
-                    var a = edge.start_pos;
-                    var b = edge.end_pos;
-
-                    var ab = b - a;
+                    var ab = p1 - p0;
                     var abLength = math.length(ab);
                     var normal1 = new float2(-ab.y, ab.x)/ abLength;
                     var normal2 = new float2(ab.y, -ab.x)/ abLength;
@@ -90,8 +90,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             continue;
 
                         gridPoint.y = y + 0.5f;
-                        var dy_as = gridPoint.y - a.y;
-                        var dy_bs = gridPoint.y - b.y;
+                        var dy_as = gridPoint.y - p0.y;
+                        var dy_bs = gridPoint.y - p1.y;
 
                         if (ab.x > 0) //edge and scanline have opposite direction
                             (normal1, normal2) = (normal2, normal1);                        
@@ -102,18 +102,18 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         bEdgeToScan = tB * normal1;
                         if (ab.x == 0)//vertical
                         {
-                            aScanIntersect =  bScanIntersect = new float2(a.x,0);
+                            aScanIntersect =  bScanIntersect = new float2(p0.x,0);
                         }
                         else
                         {
-                            aScanIntersect = a + aEdgeToScan; //works also for horizontal case (ab.y == 0) where normal1 will be 0 (ab.y is nominator of normal)
-                            bScanIntersect = b + bEdgeToScan;
+                            aScanIntersect = p0 + aEdgeToScan; //works also for horizontal case (ab.y == 0) where normal1 will be 0 (ab.y is nominator of normal)
+                            bScanIntersect = p1 + bEdgeToScan;
                         }
 
                         if (ab.x == 0) //vertical
                         {
-                            var maxY = math.max(a.y, b.y);
-                            var minY = math.min(a.y, b.y);
+                            var maxY = math.max(p0.y, p1.y);
+                            var minY = math.min(p0.y, p1.y);
                             for (int x = (int)cbox.min.x, xEnd = (int)cbox.max.x; x < xEnd; x++)
                             {
                                 if (x < 0 || x >= rectWidth)
@@ -123,7 +123,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                     continue;
 
                                 gridPoint.x = x + 0.5f;
-                                nearestPoint = new float2(a.x, y);
+                                nearestPoint = new float2(p0.x, y);
                                 GetDistBetweenPoints(nearestPoint - gridPoint, ab, false, ref dist);
                                 if (!ValidateAndSaveDistance(dists, ref dist, x, y, rectWidth, rectHeight, orientation, sp_sq, flip_y))
                                     continue;
@@ -131,11 +131,11 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         }
                         else
                         {
-                            if (a.x > b.x)
+                            if (p0.x > p1.x)
                             {
                                 (aScanIntersect, bScanIntersect) = (bScanIntersect, aScanIntersect);
                                 (aEdgeToScan, bEdgeToScan) = (bEdgeToScan, aEdgeToScan);
-                                (a, b) = (b, a);
+                                (p0, p1) = (p1, p0);
                             }
 
                             //interpolate distance between edge endpoints projected onto scanLine
@@ -147,10 +147,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                                 gridPoint.x = x + 0.5f;
                                 t = (x - aScanIntersect.x) / interpolateLength;
-                                if (a.y == b.y) //horizontal
+                                if (p0.y == p1.y) //horizontal
                                 {
-                                    nearestPoint.x = math.lerp(a.x, b.x, t);
-                                    nearestPoint.y = a.y;
+                                    nearestPoint.x = math.lerp(p0.x, p1.x, t);
+                                    nearestPoint.y = p0.y;
                                 }
                                 else
                                 {
@@ -180,7 +180,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 if (dists[index].sign != 0) // check if the pixel is already set
                                     continue;
 
-                                GetDistBetweenPoints(a-gridPoint, ab, true, ref dist);
+                                GetDistBetweenPoints(p0-gridPoint, ab, true, ref dist);
                                 if (!ValidateAndSaveDistance(dists, ref dist, x, y, rectWidth, rectHeight, orientation, sp_sq, flip_y))
                                     continue;
                             }
@@ -201,7 +201,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 if (dists[index].sign != 0) // check if the pixel is already set
                                     continue;
 
-                                GetDistBetweenPoints(b-gridPoint, ab, true, ref dist);
+                                GetDistBetweenPoints(p1-gridPoint, ab, true, ref dist);
                                 if (!ValidateAndSaveDistance(dists, ref dist, x, y, rectWidth, rectHeight, orientation, sp_sq, flip_y))
                                     continue;
                             }
@@ -211,14 +211,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
 
             // final pass
-            int outsideSign = -1;
             for (int row = 0; row < rectHeight; row++)
             {
                 /* We assume the starting pixel of each row is outside. */
                 int current_sign = outsideSign;
-
-                if (overloadSign != 0)
-                    current_sign = overloadSign < 0 ? -1 : 1;
 
                 for (int column = 0; column < rectWidth; column++)
                 {
@@ -227,16 +223,14 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                     // if the pixel is not set, its shortest distance is more than `spread`
                     var dist = dists[sourceIndex];
-                    if (BezierMath.EqualsForSmallValues(dist.sign, 0))
+                    if (dist.sign == 0)
                     {
                         dist.sign = outsideSign;
                         dist.distance = -spread;
                     }
                     current_sign = dist.sign;
 
-                    // clamp the distance
-                    if (dist.distance > spread)
-                        dist.distance = spread;
+                    dist.distance = math.select(dist.distance, spread, dist.distance > spread);
 
                     // flip sign if required
                     dist.distance *= flip_sign ? -current_sign : current_sign;
@@ -249,7 +243,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
             return true;
         }
-        static bool SDFGenerateBoundingBoxLineEdges(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        static bool SDFGenerateBoundingBoxLineEdges(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect atlastRect, int padding, int atlasWidth, int atlasHeight)
         {
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
@@ -257,9 +251,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             bool flip_y = true;
             bool flip_sign = false;
             int outsideSign = -1;
+            var offset = drawData.glyphRect.min - padding;
             float sp_sq;
             SDFEdge edge;
-            var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
+            var dists = new NativeArray<SignedDistance>(atlastRect.width * atlastRect.height, Allocator.Temp);
 
             if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
                 return false;
@@ -269,10 +264,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             else
                 sp_sq = spread;
 
-            var rectX = glyphRect.x;
-            var rectY = glyphRect.y;
-            var rectWidth = glyphRect.width;
-            var rectHeight = glyphRect.height;
+            var rectX = atlastRect.x;
+            var rectY = atlastRect.y;
+            var rectWidth = atlastRect.width;
+            var rectHeight = atlastRect.height;
 
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
@@ -281,10 +276,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
                     edge = edges[edgeID];
-                    var cbox = BezierMath.GetLineBBox(edge.start_pos, edge.end_pos);
+                    var p0 = edge.start_pos - offset;
+                    var p1 = edge.end_pos - offset;
+                    var cbox = BezierMath.GetLineBBox(p0, p1);
                     cbox.Expand(spread);
-                    var a = edge.start_pos;
-                    var b = edge.end_pos;
                     float2 gridPoint = default;
                     SignedDistance dist = maxSDF;
 
@@ -295,7 +290,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         for (int x = math.max((int)cbox.min.x,0), xEnd = math.min((int)cbox.max.x, rectWidth); x < xEnd; x++)
                         { 
                             gridPoint.x = x + 0.5f; // use the center of any pixel to be rendered within cbox
-                            GetMinDistanceLineToPoint(a,b, gridPoint, ref dist);
+                            GetMinDistanceLineToPoint(p0,p1, gridPoint, ref dist);
                             if (!ValidateAndSaveDistance(dists, ref dist, x, y, rectWidth, rectHeight, orientation, sp_sq, flip_y))
                                 continue;
                         }
@@ -324,7 +319,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     else
                         current_sign = dist.sign;
 
-                    dist.distance = math.clamp(dist.distance, -spread, spread);
+                    dist.distance = math.select(dist.distance, spread, dist.distance > spread);
+
                     // flip sign if required
                     dist.distance *= flip_sign ? -current_sign : current_sign;
                     dists[sourceIndex] = dist;
@@ -336,7 +332,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
             return true;
         }
-        static bool SDFGenerateBoundingBoxAllEdgeTypes(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect glyphRect, int atlasWidth, int atlasHeight)
+        static bool SDFGenerateBoundingBoxAllEdgeTypes(ref DrawData drawData, SDFOrientation orientation, int spread, NativeArray<byte> buffer, GlyphRect atlastRect, int padding, int atlasWidth, int atlasHeight)
         {
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
@@ -344,9 +340,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             bool flip_y = true;
             bool flip_sign = false;
             int outsideSign = -1;
+            var offset = drawData.glyphRect.min - padding;
             float sp_sq;
             SDFEdge edge;
-            var dists = new NativeArray<SignedDistance>(glyphRect.width * glyphRect.height, Allocator.Temp);
+            var dists = new NativeArray<SignedDistance>(atlastRect.width * atlastRect.height, Allocator.Temp);
 
             if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
                 return false;
@@ -356,10 +353,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             else
                 sp_sq = spread;
 
-            var rectX = glyphRect.x;
-            var rectY = glyphRect.y;
-            var rectWidth = glyphRect.width;
-            var rectHeight = glyphRect.height;
+            var rectX = atlastRect.x;
+            var rectY = atlastRect.y;
+            var rectWidth = atlastRect.width;
+            var rectHeight = atlastRect.height;
 
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
@@ -367,11 +364,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 int nextStartID = contourIDs[contourID + 1];
                 for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
-                    edge = edges[edgeID];                
-                    BBox cbox;
-
-                    cbox = GetControlBox(edge);
-                    //cbox = GetBBox(edge); //BBox might be smaller--review if atlas can hold more glyphs using this 
+                    edge = edges[edgeID];
+                    var cbox = GetControlBox(edge);
                     cbox.Expand(spread);
                     float2 gridPoint;
                     SignedDistance dist = maxSDF;
@@ -388,7 +382,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 continue;                            
 
                             gridPoint.x = x + 0.5f; // use the center of any pixel to be rendered within cbox 
-                            SDFEdgeGetMinDistance(edge, gridPoint, ref dist);
+                            SDFEdgeGetMinDistance(edge, offset, gridPoint, ref dist);
 
                             if (!ValidateAndSaveDistance(dists, ref dist, x, y, rectWidth, rectHeight, orientation, sp_sq, flip_y))
                                 continue;                            
@@ -408,17 +402,19 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     var sourceIndex = rectWidth * row + column;
                     var targetIndex = (atlasWidth * (row + rectY)) + (column + rectX);
 
-                    // if the pixel is not set, its shortest distance is more than `spread`
-                    var dist = dists[sourceIndex];                    
-                    if (BezierMath.EqualsForSmallValues(dist.sign, 0))
+                    
+                    var dist = dists[sourceIndex];
+                    if (dist.sign == 0)
                     {
+                        // if the pixel is not set, its shortest distance is more than `spread`
                         dist.sign = outsideSign;
                         dist.distance = -spread;
                     }
                     else
                         current_sign = dist.sign;
 
-                    dist.distance = math.clamp(dist.distance, -spread, spread);
+                    dist.distance = math.select(dist.distance, spread, dist.distance > spread);
+
                     // flip sign if required
                     dist.distance *= flip_sign ? -current_sign : current_sign;
                     dists[sourceIndex] = dist;
@@ -507,19 +503,19 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
             return BBox.Empty;
         }
-        public static bool SDFEdgeGetMinDistance(SDFEdge edge, float2 point, ref SignedDistance signedDistance)
+        public static bool SDFEdgeGetMinDistance(SDFEdge edge, float2 offset, float2 point, ref SignedDistance signedDistance)
         {
             bool success = false;
             switch (edge.edge_type)
             {
                 case SDFEdgeType.LINE:
-                    success = GetMinDistanceLineToPoint(edge.start_pos, edge.end_pos, point, ref signedDistance);
+                    success = GetMinDistanceLineToPoint(edge.start_pos - offset, edge.end_pos - offset, point, ref signedDistance);
                     break;
                 case SDFEdgeType.QUADRATIC:
-                    success = GetMinDistanceQuadraticNewton(edge, point, ref signedDistance);
+                    success = GetMinDistanceQuadraticNewton(edge, offset, point, ref signedDistance);
                     break;
                 case SDFEdgeType.CUBIC:
-                    success = GetMinDistanceCubicNewton(edge, point, ref signedDistance);
+                    success = GetMinDistanceCubicNewton(edge, offset, point, ref signedDistance);
                     break;
                 default:
                     break;
@@ -581,15 +577,15 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             return true;
         }
-        static bool GetMinDistanceQuadraticNewton(SDFEdge quadratic, float2 point, ref SignedDistance dist)
+        static bool GetMinDistanceQuadraticNewton(SDFEdge quadratic, float2 offset, float2 point, ref SignedDistance dist)
         {
             float min = int.MaxValue;           // shortest distance
             float min_factor = 0;               // factor at shortest distance
             float2 nearest_point = default;     // point on curve nearest to `point`
 
-            var p0 = quadratic.start_pos;
-            var p1 = quadratic.control1;
-            var p2 = quadratic.end_pos;
+            var p0 = quadratic.start_pos - offset;
+            var p1 = quadratic.control1 - offset;
+            var p2 = quadratic.end_pos - offset;
 
             // compute substitution coefficients
             var aA = p0 - 2 * p1 + p2;
@@ -647,17 +643,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
            
             return true;
         }
-        static bool GetMinDistanceCubicNewton(SDFEdge cubic, float2 point, ref SignedDistance dist)
+        static bool GetMinDistanceCubicNewton(SDFEdge cubic, float2 offset, float2 point, ref SignedDistance dist)
         {
             float2 nearest_point = default;  // point on curve nearest to `point`
             float min_factor = 0;            // factor at shortest distance
             float min_factor_sq = 0;         // factor at shortest distance
             float min = int.MaxValue;        // shortest distance
 
-            var p0 = cubic.start_pos;
-            var p1 = cubic.control1;
-            var p2 = cubic.control2;
-            var p3 = cubic.end_pos;
+            var p0 = cubic.start_pos - offset;
+            var p1 = cubic.control1 - offset;
+            var p2 = cubic.control2 - offset;
+            var p3 = cubic.end_pos - offset;
 
             // compute substitution coefficients
             var aA = -p0 + 3 * (p1 - p2) + p3;

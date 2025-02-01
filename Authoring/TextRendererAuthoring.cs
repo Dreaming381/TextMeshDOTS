@@ -22,6 +22,10 @@ namespace TextMeshDOTS.Authoring
         [EnumButtons]
         public FontStyles fontStyles = FontStyles.Normal;
         public float fontSize = 12f;
+
+        [Tooltip("Sampling point size is used to set the font scale. See https://harfbuzz.github.io/harfbuzz-hb-font.html#hb-font-set-scale")]
+        public int samplingPointSizeSDF = 64;
+        public int samplingPointSizeBitmap = 128;
         public Color32 color = Color.white;
 
         public HorizontalAlignmentOptions horizontalAlignment = HorizontalAlignmentOptions.Left;
@@ -87,10 +91,10 @@ namespace TextMeshDOTS.Authoring
             {
                 var fontItem = authoring.fonts[i];
                 if (i > 0)
-                    AddAdditionalFontEntity(fontItem, authoring.useSystemFonts, additionalEntities, renderFilterSettings);
+                    AddAdditionalFontEntity(fontItem, authoring.useSystemFonts, authoring.samplingPointSizeSDF, authoring.samplingPointSizeBitmap, additionalEntities, renderFilterSettings);
                 else
                 {
-                    var fontBlobRef = BakeFontAsset(fontItem,authoring.useSystemFonts);
+                    var fontBlobRef = BakeFontAsset(fontItem,authoring.useSystemFonts, authoring.samplingPointSizeSDF, authoring.samplingPointSizeBitmap);
                     AddComponent(entity, new FontBlobReference { value = fontBlobRef });
                 }
             }
@@ -126,19 +130,19 @@ namespace TextMeshDOTS.Authoring
             });
             AddBuffer<RenderGlyph>(entity);
         }
-        BlobAssetReference<FontBlob> BakeFontAsset(Object fontItem, bool useSystemFont)
+        BlobAssetReference<FontBlob> BakeFontAsset(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap)
         {            
             var customHash = new Unity.Entities.Hash128((uint)fontItem.GetHashCode(), (uint)useSystemFont.GetHashCode(), 0, 0);
             if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<FontBlob> blobReference))
             {
-                blobReference = FontBlobber.BakeFontBlob(fontItem, useSystemFont);
+                blobReference = FontBlobber.BakeFontBlob(fontItem, useSystemFont, samplingPointSizeSDF, samplingPointSizeBitmap);
 
                 // Register the Blob Asset to the Baker for de-duplication and reverting.
                 AddBlobAssetWithCustomHash<FontBlob>(ref blobReference, customHash);
             }
             return blobReference;
         }
-        void AddAdditionalFontEntity(Object fontItem, bool useSystemFont, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
+        void AddAdditionalFontEntity(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
         {
             var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
             AddEntityGraphicsComponents(newEntity, renderFilterSettings);
@@ -147,7 +151,7 @@ namespace TextMeshDOTS.Authoring
             AddComponent(newEntity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
             AddComponent<TextShaderIndex>(newEntity);
 
-            var fontBlobRef = BakeFontAsset(fontItem, useSystemFont);
+            var fontBlobRef = BakeFontAsset(fontItem, useSystemFont, samplingPointSizeSDF, samplingPointSizeBitmap);
             AddComponent(newEntity, new FontBlobReference { value = fontBlobRef});
             additionalEntities.Add(newEntity);
         }

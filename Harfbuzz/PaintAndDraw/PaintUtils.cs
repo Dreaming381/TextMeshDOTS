@@ -5,6 +5,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.TextCore;
 
 
 namespace TextMeshDOTS.HarfBuzz
@@ -96,25 +97,7 @@ namespace TextMeshDOTS.HarfBuzz
             drawData.glyphRect=newGlyphRect;
             //SDFCommon.WriteGlyphOutlineToFile("ClipGlyph-Transformed.txt", ref drawData, false);
         }
-        public static void CenterGlyphInClipRect(ref DrawData drawData, BBox clipRect, int padding)
-        {
-            var edges = drawData.edges;
-            var shiftx = -drawData.glyphRect.min.x + ((clipRect.width - (drawData.glyphRect.width + 2 * padding)) / 2);
-            var shifty = -drawData.glyphRect.min.y + ((clipRect.height - (drawData.glyphRect.height + 2 * padding)) / 2);
-            float2 shift = new float2(shiftx, shifty);
-            for (int k = 0, kk = edges.Length; k < kk; k++)
-            {
-                ref var edge = ref edges.ElementAt(k);
-                edge.start_pos += shift;
-                edge.end_pos += shift;
-                edge.control1 += shift;
-                edge.control2 += shift;
-                //Debug.Log($"From {edge.start_pos} {edge.end_pos}");
-            }
-            ref var glyphRect = ref drawData.glyphRect;
-            glyphRect.min += shift;
-            glyphRect.max += shift;
-        }
+
         public static void BlitRawTexture(NativeArray<ColorARGB> src, int srcWidth, int srcHeight,  NativeArray<ColorARGB> dest, int dstWidth, int dstHeight, int destX, int destY)
         {
             for (int y = 0; y < srcHeight; y++)

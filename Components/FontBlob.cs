@@ -2,6 +2,7 @@ using TextMeshDOTS.Collections;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace TextMeshDOTS
 {
@@ -21,6 +22,8 @@ namespace TextMeshDOTS
         public FixedString128Bytes fontSubFamily;
         public FixedString128Bytes typographicFamily;       
         public FixedString128Bytes typographicSubfamily;
+        public int samplingPointSizeSDF;
+        public int samplingPointSizeBitmap;
         public bool useSystemFont;        
         public FixedString512Bytes fontAssetPath; //To-Do: ensure this points to streamingAssets folder or Application persistent data path
 
@@ -29,7 +32,7 @@ namespace TextMeshDOTS
             return $"{fontFamily} {fontSubFamily}";
         }
     }
-    /// <summary> dynamic font data from FontAsset (or extracted by HarfBuzz) </summary>
+    /// <summary> dynamic font data extracted by HarfBuzz. Ensure to set scale correctly to the desired sampling point size before  </summary>
     public struct DynamicFontBlob
     {
         #region data from Fontasset which is set by user
@@ -72,71 +75,5 @@ namespace TextMeshDOTS
         public float superScriptEmYSize;
         public float superScriptEmXOffset;
         public float superScriptEmYOffset;
-    }
-
-    /// <summary> copy of DynamicFontBlob used during Glyphgeneration to scale some factor </summary>
-    public struct ScaledDynamicFont
-    {
-        public float ascender;
-        public float descender;
-        public float baseLine;
-
-        //public float designSize;
-        //public float subfamilyNameID;
-        //public float rangeStart;
-        //public float rangeEnd;
-        //public float unitsPerEm;
-        //public float xScale;
-        //public float yScale;
-
-        public float capHeight;
-        public float xHeight;
-
-        public float subScriptEmXSize;
-        //public float subScriptEmYSize;
-        //public float subScriptEmXOffset;
-        public float subScriptEmYOffset;
-
-        public float superScriptEmXSize;
-        //public float superScriptEmYSize;
-        //public float superScriptEmXOffset;
-        public float superScriptEmYOffset;
-
-        public ScaledDynamicFont(BlobAssetReference<DynamicFontBlob> dynamicFontBlobReference, out float xNativeToUnity, out float yNativeToUnity)
-        {
-            ref var dynamicFont = ref dynamicFontBlobReference.Value;
-            xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.x;
-            yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.y;
-
-            ascender = dynamicFont.ascender * xNativeToUnity;
-            descender = dynamicFont.descender * xNativeToUnity;
-            baseLine = dynamicFont.baseLine * xNativeToUnity;
-
-            capHeight = dynamicFont.capHeight * xNativeToUnity;
-            xHeight = dynamicFont.xHeight * xNativeToUnity;
-
-            subScriptEmXSize = dynamicFont.subScriptEmXSize / dynamicFont.scale.x;
-            superScriptEmXSize = dynamicFont.superScriptEmXSize / dynamicFont.scale.x;
-            subScriptEmYOffset = dynamicFont.subScriptEmYOffset * yNativeToUnity;
-            superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
-        }
-        public void Update(BlobAssetReference<DynamicFontBlob> dynamicFontBlobReference, out float xNativeToUnity, out float yNativeToUnity)
-        {
-            ref var dynamicFont = ref dynamicFontBlobReference.Value;
-            xNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.x;
-            yNativeToUnity = dynamicFont.atlasSamplingPointSize / dynamicFont.scale.y;
-
-            ascender = dynamicFont.ascender * xNativeToUnity;
-            descender = dynamicFont.descender * xNativeToUnity;
-            baseLine = dynamicFont.baseLine * xNativeToUnity;
-
-            capHeight = dynamicFont.capHeight * xNativeToUnity;
-            xHeight = dynamicFont.xHeight * xNativeToUnity;
-
-            subScriptEmXSize = dynamicFont.subScriptEmXSize / dynamicFont.scale.x;
-            superScriptEmXSize = dynamicFont.superScriptEmXSize / dynamicFont.scale.x;
-            subScriptEmYOffset = dynamicFont.subScriptEmYOffset * yNativeToUnity;
-            superScriptEmYOffset = dynamicFont.superScriptEmYOffset * yNativeToUnity;
-        }
-    }
+    }    
 }

@@ -7,9 +7,9 @@ namespace TextMeshDOTS.HarfBuzz
     {
         public float2 min;
         public float2 max;
-        public bool IsValid => math.all(min <= max);
-        public float width => max.x - min.x;
-        public float height => max.y - min.y;
+        public readonly bool IsValid => math.all(min <= max);
+        public readonly float width => max.x - min.x;
+        public readonly float height => max.y - min.y;
 
         /// <summary>  Create an empty, invalid BBox. </summary>
         public static readonly BBox Empty = new BBox { min = float.MaxValue, max = float.MinValue };
@@ -37,6 +37,11 @@ namespace TextMeshDOTS.HarfBuzz
         {
             this.min = min;
             this.max = max;
+        }
+        public BBox(float xmin, float ymin, float xmax, float ymax)
+        {
+            min = new float2(xmin, ymin);
+            max = new float2(xmax, ymax);
         }
 
         public bool Equals(BBox other)

@@ -10,7 +10,7 @@ namespace TextMeshDOTS.Authoring
 {
     public static class FontBlobber
     {
-        public static BlobAssetReference<FontBlob> BakeFontBlob(Object fontItem, bool useSystemFont)
+        public static BlobAssetReference<FontBlob> BakeFontBlob(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap)
         {
             string fontPath = default;
 #if UNITY_EDITOR
@@ -18,6 +18,8 @@ namespace TextMeshDOTS.Authoring
 #endif
             var builder = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot = ref builder.ConstructRoot<FontBlob>();
+            fontBlobRoot.samplingPointSizeSDF = samplingPointSizeSDF;
+            fontBlobRoot.samplingPointSizeBitmap = samplingPointSizeBitmap;
             fontBlobRoot.useSystemFont = useSystemFont;
             fontBlobRoot.fontAssetPath = fontPath;
             var fontBytes = File.ReadAllBytes(fontPath);

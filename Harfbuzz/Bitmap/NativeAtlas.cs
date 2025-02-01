@@ -58,9 +58,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     var glyphExtents =currentGlyph.glyphExtents;
                     usedRects.Add(bestRect);
                     glyphsInUse.Add(currentGlyph.glyphID);
-
-                    //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlast Texture windows.
-                    //the glyph (dounded by glyphExtents) will be renderered into the center of this windows
+                    
+                    //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlas texture window.
+                    //the glyph (bounded by glyphExtents) will be renderered into the center of this window
                     //GlyphRect needs to point to non-padded Glyph, and NOT to the entire padded atlas texture window
                     currentGlyph.glyphRect = new GlyphRect
                     {

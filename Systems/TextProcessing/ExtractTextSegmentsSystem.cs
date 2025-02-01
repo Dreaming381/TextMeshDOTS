@@ -51,7 +51,7 @@ namespace TextMeshDOTS.TextProcessing
         {
             if (textRendererQ.IsEmpty)
                 return;
-            Debug.Log("Extract text segments system");
+            //Debug.Log("Extract text segments system");
 
             state.Dependency = new ExtractTextSegmentsChunkJob
             {                
