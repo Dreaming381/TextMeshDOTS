@@ -28,7 +28,7 @@ public class RenderTest : MonoBehaviour
     Blob blob;
     Face face;
     Font font;
-    static int samplingPointSize = 128;
+    static int samplingPointSize = 256;
     int padding = 9;
 
     void Start()
@@ -42,9 +42,8 @@ public class RenderTest : MonoBehaviour
         paintFunctions = new PaintDelegates(true);
         LoadFont(fontPath, samplingPointSize);
 
-        DrawTest(letter, glyphID);
-        //PaintPNGTest("😉");
-        //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
+        //DrawTest(letter, glyphID);
+        PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
     }
 
     void Update()
@@ -116,6 +115,8 @@ public class RenderTest : MonoBehaviour
         {
             if (paintData.imageFormat == PaintImageFormat.PNG)
             {
+
+
                 var png = new Texture2D(2, 2, TextureFormat.ARGB32, false);
                 png.LoadImage(paintData.imageData.ToArray());
                 var sourceTexture = png.GetRawTextureData<ColorARGB>();                
