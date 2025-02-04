@@ -59,7 +59,7 @@ namespace TextMeshDOTS
 
         public bool m_isNonBreakingSpace;
 
-        public short m_fxRotationAngleCCW;
+        public short m_fxRotationAngleCCW_degree;
         public float m_fxScale;
 
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
@@ -126,7 +126,7 @@ namespace TextMeshDOTS
 
             m_isNonBreakingSpace = false;
 
-            m_fxRotationAngleCCW = 0;
+            m_fxRotationAngleCCW_degree = 0;
             m_fxScale = 1;
 
             m_highlightStateStack.Clear();

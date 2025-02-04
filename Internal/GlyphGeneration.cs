@@ -279,7 +279,7 @@ namespace TextMeshDOTS
 
                 // Handle Character FX Rotation
                 #region Handle Character FX Rotation
-                renderGlyph.rotationCCW = currentTextSpan.fxRotationAngleCCW;
+                renderGlyph.rotationCCW = math.radians(currentTextSpan.fxRotationAngleCCW_degree);
                 #endregion
 
                 #region Store vertex information for the character or sprite.

@@ -6,6 +6,7 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
+using Unity.Mathematics;
 
 
 public class RenderTest : MonoBehaviour
@@ -15,9 +16,11 @@ public class RenderTest : MonoBehaviour
     [SerializeField] private string fontPath;
     public string letter;
     public uint glyphID;
-    public int atlasWidth = 64;
-    public int atlasHeight = 64;
+    public int atlasWidth = 1024;
+    public int atlasHeight = 1024;
+    public int samplingPointSize = 256;
     public bool renderGlyphID;
+    
 
     float maxDeviation;
     SDFOrientation orientation;
@@ -28,7 +31,7 @@ public class RenderTest : MonoBehaviour
     Blob blob;
     Face face;
     Font font;
-    static int samplingPointSize = 256;
+    
     int padding = 9;
 
     void Start()
@@ -90,10 +93,9 @@ public class RenderTest : MonoBehaviour
     {
         var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.ARGB32, false);
         var textureData = texture2D.GetRawTextureData<ColorARGB>();
-        //for (int i = 0; i < textureData.Length; i++)
-        //    textureData[i] = (ColorARGB)Color.white;
+        Blending.SetBlack(textureData);
 
-        Buffer buffer=default;
+        Buffer buffer = default;
         if (!renderGlyphID)
         {
             var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
@@ -115,11 +117,9 @@ public class RenderTest : MonoBehaviour
         {
             if (paintData.imageFormat == PaintImageFormat.PNG)
             {
-
-
                 var png = new Texture2D(2, 2, TextureFormat.ARGB32, false);
                 png.LoadImage(paintData.imageData.ToArray());
-                var sourceTexture = png.GetRawTextureData<ColorARGB>();                
+                var sourceTexture = png.GetRawTextureData<ColorARGB>();
                 PaintUtils.BlitRawTexture(sourceTexture, paintData.imageWidth, paintData.imageHeight, textureData, atlasWidth, atlasHeight, 0, 0);
             }
             if (paintData.imageFormat == PaintImageFormat.SVG)
@@ -135,8 +135,9 @@ public class RenderTest : MonoBehaviour
             //for (int i = 0; i < paintData.finalTexture.Length; i++)
             //    paintData.finalTexture[i] = Blending.SrcOver(paintData.finalTexture[i], canvas[i]);
             PaintUtils.BlitRawTexture(paintData.paintSurface, (int)clipRect.width, (int)clipRect.height, textureData, atlasWidth, atlasHeight, 0, 0);
-        }        
+        }
 
+       
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
         texture2D.Apply(false);

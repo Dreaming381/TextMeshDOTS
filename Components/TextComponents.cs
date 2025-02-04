@@ -43,7 +43,7 @@ namespace TextMeshDOTS
         public float monoSpacing;
         public float cSpacing;
         public float fxScale;
-        public short fxRotationAngleCCW;
+        public short fxRotationAngleCCW_degree;
 
         public override string ToString()
         {

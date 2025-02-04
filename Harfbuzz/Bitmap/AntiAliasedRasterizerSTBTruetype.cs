@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
@@ -58,14 +60,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         edge.invert = true;
                         (start_pos, end_pos) = (end_pos, start_pos);
                     }
-                    edge.x0 = start_pos.x;  // * scale_x + shift_x;
-                    edge.y0 = start_pos.y;  // * y_scale_inv + shift_y);
-                    edge.x1 = end_pos.x;    //* scale_x + shift_x;
-                    edge.y1 = end_pos.y;    // * y_scale_inv + shift_y);
-                    //edge.x0 = start_pos.x - minX;
-                    //edge.y0 = start_pos.y - minY;
-                    //edge.x1 = end_pos.x - minX;
-                    //edge.y1 = end_pos.y - minY;
+                    edge.x0 = start_pos.x;
+                    edge.y0 = start_pos.y;
+                    edge.x1 = end_pos.x;
+                    edge.y1 = end_pos.y;
                     edges.Add(edge);
                 }
             }
@@ -75,40 +73,39 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         }
 
 
-        static void RasterizeSortedEdges<T>(NativeArray<ColorARGB> textureData, T pattern, int textureWidth, int textureHeight, NativeList<Edge> edges, int off_x, int off_y) where T : IPattern
+        static void RasterizeSortedEdges<T>(NativeArray<ColorARGB> textureData, T pattern, int width, int height, NativeList<Edge> edges, int off_x, int off_y) where T : IPattern
         {
             var actives = new NativeList<ActiveEdge>(16, Allocator.Temp);
             int activeID = -1;
             int y, j = 0;
-            var scanline = new NativeArray<float>(textureWidth, Allocator.Temp);
-            var scanline2 = new NativeArray<float>(textureWidth + 1, Allocator.Temp);
+            var scanline = new NativeArray<float>(width, Allocator.Temp);
+            var scanline2 = new NativeArray<float>(width + 1, Allocator.Temp);
 
             y = off_y;
             var n = edges.Length - 1;
             var edgeID = 0;
             //edges.ElementAt(n).y0 = (float)(off_y + textureHeight) + 1;
 
-            while (j < textureHeight)
+            while (j < height)
             {
-                float scanYTop = y + 0.0f;
-                float scanYBottom = y + 1.0f;
+                float scanYTop = y + 1.0f;
                 int stepID = activeID;
                 int previousStepID = -1;
 
-                ClearArray(scanline, 0, textureWidth);
-                ClearArray(scanline2, 0, textureWidth + 1);
+                ClearArray(scanline, 0, width);
+                ClearArray(scanline2, 0, width + 1);
 
                 while (stepID != -1)
                 {
                     ref var step = ref actives.ElementAt(stepID);
-                    if (step.ey <= scanYTop)
+                    if (step.y1 <= y)
                     {
                         if (previousStepID == -1)
                             activeID = step.nextID;
                         else
                             actives.ElementAt(previousStepID).nextID = step.nextID; //skip current active (effectivly deletes it)
                         stepID = step.nextID;
-                        step.direction = 0;
+                        step.dir = 0;
                     }
                     else
                     {
@@ -117,36 +114,26 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     }
                 }
 
-                while (edgeID <= n && edges[edgeID].y0 <= scanYBottom)
+                while (edgeID <= n && edges[edgeID].y0 <= scanYTop)
                 {
-                    var zID = AddActiveEdge(actives, edges[edgeID], off_x, scanYTop);
+                    var zID = AddActiveEdge(actives, edges[edgeID], off_x, y);
                     if (zID != -1)
                     {
                         ref var z = ref actives.ElementAt(zID);
                         if (j == 0 && off_y != 0)
                         {
-                            if (z.ey < scanYTop)
-                                z.ey = scanYTop;
+                            if (z.y1 < y)
+                                z.y1 = y;
                         }
                         z.nextID = activeID;
                         activeID = zID;
                     }
                     edgeID++;
-                }
-
-                //int count = 0;
-                //int currentID = activeID;
-                //while (currentID != -1)
-                //{
-                //    count++;
-                //    currentID = actives[currentID].nextID;
-                //}
-                //Debug.Log($"count: {count} activeID:{activeID}");
-                //if(count>1)                
-                FillActiveEdges(scanline, scanline2, textureWidth, actives, activeID, scanYTop);
+                }              
+                FillActiveEdges(scanline, scanline2, width, actives, activeID, y);
 
                 float sum = 0;
-                for (int i = 0; i < textureWidth; ++i)
+                for (int i = 0; i < width; ++i)
                 {
                     float k;
                     int m;
@@ -159,7 +146,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     if (m > 1)
                     {
                         var color = pattern.GetColor(new float2(i + off_x, y));
-                        var targetIndex = textureWidth * (y - off_y) + i; //(why not (i - off_x)?; substracting clipRect.min results in aliging glyph with (0,0) of bitmap
+                        var targetIndex = width * (y - off_y) + i; //(why not (i - off_x)?; substracting clipRect.min results in aliging glyph with (0,0) of bitmap
                         color.a = (byte)(color.a * (byte)m / 255);
                         textureData[targetIndex] = color;
                     }
@@ -169,7 +156,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 while (stepID != -1)
                 {
                     ref var z = ref actives.ElementAt(stepID);
-                    z.fx += z.fdx; // advance to position for current scanline
+                    z.x += z.dxdy; // advance to position for current scanline
                     stepID = z.nextID; // advance through list
                 }
 
@@ -177,9 +164,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 j++;
             }
         }
-        static void FillActiveEdges(NativeArray<float> scanline, NativeArray<float> scanline_fill, int len, NativeList<ActiveEdge> actvies, int eID, float y_top)
+        static void FillActiveEdges(NativeArray<float> scanline, NativeArray<float> scanline_fill, int width, NativeList<ActiveEdge> actvies, int eID, float y_bottom)
         {
-            float y_bottom = y_top + 1;
+            float y_top = y_bottom + 1;
 
             while (eID != -1)
             {
@@ -189,133 +176,127 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 ref var e = ref actvies.ElementAt(eID);
                 //Debug.Assert(e.ey >= y_top);
 
-                if (e.fdx == 0)
+                if (e.dxdy == 0)
                 {
-                    float x0 = e.fx;
-                    if (x0 < len)
+                    float x0 = e.x;
+                    if (x0 < width)
                     {
                         if (x0 >= 0)
                         {
-                            HandleClippedEdge(scanline, (int)x0, ref e, x0, y_top, x0, y_bottom);
-                            HandleClippedEdge(scanline_fill, (int)x0 + 1, ref e, x0, y_top, x0, y_bottom);
+                            HandleClippedEdge(scanline, (int)x0, ref e, x0, y_bottom, x0, y_top);
+                            HandleClippedEdge(scanline_fill, (int)x0 + 1, ref e, x0, y_bottom, x0, y_top);
                         }
                         else
-                        {
-                            HandleClippedEdge(scanline_fill, 0, ref e, x0, y_top, x0, y_bottom);
-                        }
+                            HandleClippedEdge(scanline_fill, 0, ref e, x0, y_bottom, x0, y_top);
                     }
                 }
                 else
                 {
-                    float x0 = e.fx;
-                    float dx = e.fdx;
-                    float xb = x0 + dx;
-                    float x_top, x_bottom;
+                    float x0 = e.x;
+                    float dxdy = e.dxdy;
+                    float xnext = x0 + dxdy;
+                    float x_bottom, x_top;
                     float sy0, sy1;
-                    float dy = e.fdy;
+                    float dydx = e.dydx;
                     //Debug.Assert(e.sy <= y_bottom && e.ey >= y_top);
 
                     // compute endpoints of line segment clipped to this scanline (if the
                     // line segment starts on this scanline. x0 is the intersection of the
                     // line with y_top, but that may be off the line segment.
-                    if (e.sy > y_top)
+                    if (e.y0 > y_bottom)
                     {
-                        x_top = x0 + dx * (e.sy - y_top);
-                        sy0 = e.sy;
+                        x_bottom = x0 + dxdy * (e.y0 - y_bottom);
+                        sy0 = e.y0;
                     }
                     else
                     {
-                        x_top = x0;
-                        sy0 = y_top;
+                        x_bottom = x0;
+                        sy0 = y_bottom;
                     }
-                    if (e.ey < y_bottom)
+                    if (e.y1 < y_top)
                     {
-                        x_bottom = x0 + dx * (e.ey - y_top);
-                        sy1 = e.ey;
+                        x_top = x0 + dxdy * (e.y1 - y_bottom);
+                        sy1 = e.y1;
                     }
                     else
                     {
-                        x_bottom = xb;
-                        sy1 = y_bottom;
+                        x_top = xnext;
+                        sy1 = y_top;
                     }
 
-                    if (x_top >= 0 && x_bottom >= 0 && x_top < len && x_bottom < len)
+                    if (x_bottom >= 0 && x_top >= 0 && x_bottom < width && x_top < width)
                     {
                         // from here on, we don't have to range check x values
 
-                        if ((int)x_top == (int)x_bottom)
+                        if ((int)x_bottom == (int)x_top)
                         {
-                            float height;
                             // simple case, only spans one pixel
-                            int x = (int)x_top;
-                            height = (sy1 - sy0) * e.direction;
+                            int x = (int)x_bottom;
+                            var height = (sy1 - sy0) * e.dir;
                             //Debug.Assert(x >= 0 && x < len);
-                            scanline[x] += PositionTrapezoidArea(height, x_top, x + 1.0f, x_bottom, x + 1.0f);
+                            var bottomWidth = (x + 1.0f) - x_bottom;
+                            var topWidth = (x + 1.0f) - x_top;
+                            scanline[x] += TrapezoidArea(height, bottomWidth, topWidth);
                             scanline_fill[x + 1] += height; // everything right of this pixel is filled
                         }
                         else
                         {
-                            int x, x1, x2;
+                            int x1, x2;
                             float y_crossing, y_final, step, sign, area;
                             // covers 2+ pixels
-                            if (x_top > x_bottom)
+                            if (x_bottom > x_top)
                             {
                                 // flip scanline vertically; signed area is the same
-                                float t;
-                                sy0 = y_bottom - (sy0 - y_top);
-                                sy1 = y_bottom - (sy1 - y_top);
-                                t = sy0; sy0 = sy1; sy1 = t;
-                                t = x_bottom; x_bottom = x_top; x_top = t;
-                                dx = -dx;
-                                dy = -dy;
-                                t = x0; x0 = xb; xb = t;
+                                (x_bottom, x_top) = (x_top, x_bottom);
+                                (x0, xnext) = (xnext, x0);
+                                dydx = -dydx;
                             }
                             //Debug.Assert(dy >= 0);
                             //Debug.Assert(dx >= 0);
 
-                            x1 = (int)x_top;
-                            x2 = (int)x_bottom;
+                            x1 = (int)x_bottom;
+                            x2 = (int)x_top;
                             // compute intersection with y axis at x1+1
-                            y_crossing = y_top + dy * (x1 + 1 - x0);
+                            y_crossing = y_bottom + dydx * (x1 + 1 - x0);
 
                             // compute intersection with y axis at x2
-                            y_final = y_top + dy * (x2 - x0);
+                            y_final = y_bottom + dydx * (x2 - x0);
 
-                            //           x1    x_top                            x2    x_bottom
-                            //     y_top  +------|-----+------------+------------+--------|---+------------+
+                            //     y_top  +------------+------------+------------+------------+------------+
                             //            |            |            |            |            |            |
                             //            |            |            |            |            |            |
-                            //       sy0  |      Txxxxx|............|............|............|............|
-                            // y_crossing |            *xxxxx.......|............|............|............|
-                            //            |            |     xxxxx..|............|............|............|
-                            //            |            |     /-   xx*xxxx........|............|............|
-                            //            |            | dy <       |    xxxxxx..|............|............|
+                            //       sy1  |            |            |            |   xxxxxT...|............|
                             //   y_final  |            |     \-     |          xx*xxx.........|............|
-                            //       sy1  |            |            |            |   xxxxxB...|............|
+                            //            |            | dy <       |    xxxxxx..|............|............|
+                            //            |            |     /-   xx*xxxx........|............|............|
+                            //            |            |     xxxxx..|............|............|............|
+                            // y_crossing |            *xxxxx.......|............|............|............|
+                            //       sy0  |      Bxxxxx|............|............|............|............|
                             //            |            |            |            |            |            |
                             //            |            |            |            |            |            |
-                            //  y_bottom  +------------+------------+------------+------------+------------+
+                            //  y_bottom  +------|-----+------------+------------+--------|---+------------+
+                            //         x1    x_bottom                            x2    x_top
                             //
                             // goal is to measure the area covered by '.' in each pixel
 
                             // if x2 is right at the right edge of x1, y_crossing can blow up, github #1057
                             // @TODO: maybe test against sy1 rather than y_bottom?
-                            if (y_crossing > y_bottom)
-                                y_crossing = y_bottom;
+                            if (y_crossing > y_top)
+                                y_crossing = y_top;
 
-                            sign = e.direction;
+                            sign = e.dir;
 
                             // area of the rectangle covered from sy0..y_crossing
                             area = sign * (y_crossing - sy0);
 
                             // area of the triangle (x_top,sy0), (x1+1,sy0), (x1+1,y_crossing)
-                            scanline[x1] += SizedTriangleArea(area, x1 + 1 - x_top);
+                            scanline[x1] += TriangleArea(area, x1 + 1 - x_bottom);
 
                             // check if final y_crossing is blown up; no test case for this
-                            if (y_final > y_bottom)
+                            if (y_final > y_top)
                             {
-                                y_final = y_bottom;
-                                dy = (y_final - y_crossing) / (x2 - (x1 + 1)); // if denom=0, y_final = y_crossing, so y_final <= y_bottom
+                                y_final = y_top;
+                                dydx = (y_final - y_crossing) / (x2 - (x1 + 1)); // if denom=0, y_final = y_crossing, so y_final <= y_bottom
                             }
 
                             // in second pixel, area covered by line segment found in first pixel
@@ -328,13 +309,13 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             // the second pixel's contribution to the third pixel will be the
                             // rectangle 1 wide times the height change in the second pixel, which is dy.
 
-                            step = sign * dy * 1; // dy is dy/dx, change in y for every 1 change in x,
-                                                  // which multiplied by 1-pixel-width is how much pixel area changes for each step in x
-                                                  // so the area advances by 'step' every time
+                            step = sign * dydx; // dy is dy/dx, change in y for every 1 change in x,
+                                                // which multiplied by 1-pixel-width is how much pixel area changes for each step in x
+                                                // so the area advances by 'step' every time
 
-                            for (x = x1 + 1; x < x2; ++x)
+                            for (int xi = x1 + 1; xi < x2; xi++)
                             {
-                                scanline[x] += area + step / 2; // area of trapezoid is 1*step/2
+                                scanline[xi] += area + step * 0.5f; // area of trapezoid is 1*step/2
                                 area += step;
                             }
                             //Debug.Assert(math.abs(area) <= 1.01f); // accumulated error from area += step unless we round step down
@@ -342,7 +323,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                             // area covered in the last pixel is the rectangle from all the pixels to the left,
                             // plus the trapezoid filled by the line segment in this pixel all the way to the right edge
-                            scanline[x2] += area + sign * PositionTrapezoidArea(sy1 - y_final, (float)x2, x2 + 1.0f, x_bottom, x2 + 1.0f);
+                            var bottomWidth = (x2 + 1.0f) - x_top;
+                            scanline[x2] += area + sign * TrapezoidArea(sy1 - y_final, 1.0f, bottomWidth);
 
                             // the rest of the line is filled based on the total height of the line segment in this pixel
                             scanline_fill[x2 + 1] += sign * (sy1 - sy0);
@@ -358,7 +340,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         // x_top and x_bottom can be extrapolated at the top & bottom of
                         // the shape and actually lie outside the bounding box
                         int x;
-                        for (x = 0; x < len; ++x)
+                        for (x = 0; x < width; ++x)
                         {
                             // cases:
                             //
@@ -374,17 +356,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             // that, we need to explicitly produce segments based on x positions.
 
                             // rename variables to clearly-defined pairs
-                            float y0 = y_top;
+                            float y0 = y_bottom;
                             float x1 = (float)(x);
                             float x2 = (float)(x + 1);
-                            float x3 = xb;
-                            float y3 = y_bottom;
+                            float x3 = xnext;
+                            float y3 = y_top;
 
                             // x = e.x + e.dx * (y-y_top)
                             // (y-y_top) = (x - e.x) / e.dx
                             // y = (x - e.x) / e.dx + y_top
-                            float y1 = (x - x0) / dx + y_top;
-                            float y2 = (x + 1 - x0) / dx + y_top;
+                            float y1 = (x - x0) / dxdy + y_bottom;
+                            float y2 = (x + 1 - x0) / dxdy + y_bottom;
 
                             if (x0 < x1 && x3 > x2)
                             {         // three segments descending down-right
@@ -435,17 +417,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             if (y0 == y1) return;
             //Debug.Assert(y0 < y1);
             //Debug.Assert(e.sy <= e.ey);
-            if (y0 > e.ey) return;
-            if (y1 < e.sy) return;
-            if (y0 < e.sy)
+            if (y0 > e.y1) return;
+            if (y1 < e.y0) return;
+            if (y0 < e.y0)
             {
-                x0 += (x1 - x0) * (e.sy - y0) / (y1 - y0);
-                y0 = e.sy;
+                x0 += (x1 - x0) * (e.y0 - y0) / (y1 - y0);
+                y0 = e.y0;
             }
-            if (y1 > e.ey)
+            if (y1 > e.y1)
             {
-                x1 += (x1 - x0) * (e.ey - y1) / (y1 - y0);
-                y1 = e.ey;
+                x1 += (x1 - x0) * (e.y1 - y1) / (y1 - y0);
+                y1 = e.y1;
             }
 
             //if (x0 == x)
@@ -460,7 +442,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             //    Debug.Assert(x1 >= x && x1 <= x + 1);
 
             if (x0 <= x && x1 <= x)
-                scanline[x] += e.direction * (y1 - y0);
+                scanline[x] += e.dir * (y1 - y0);
             else if (x0 >= x + 1 && x1 >= x + 1)
             {
 
@@ -468,23 +450,18 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             else
             {
                 //Debug.Assert(x0 >= x && x0 <= x + 1 && x1 >= x && x1 <= x + 1);
-                scanline[x] += e.direction * (y1 - y0) * (1 - ((x0 - x) + (x1 - x)) / 2); // coverage = 1 - average x position
+                scanline[x] += e.dir * (y1 - y0) * (1 - ((x0 - x) + (x1 - x)) / 2); // coverage = 1 - average x position
             }
         }
-
-        static float SizedTrapezoidArea(float height, float top_width, float bottom_width)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float TrapezoidArea(float height, float top_width, float bottom_width)
         {
             //Debug.Assert(top_width >= 0);
             //Debug.Assert(bottom_width >= 0);
             return (top_width + bottom_width) / 2.0f * height;
         }
-
-        static float PositionTrapezoidArea(float height, float tx0, float tx1, float bx0, float bx1)
-        {
-            return SizedTrapezoidArea(height, tx1 - tx0, bx1 - bx0);
-        }
-
-        static float SizedTriangleArea(float height, float width)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float TriangleArea(float height, float width)
         {
             return 0.5f * height * width;
         }
@@ -496,21 +473,21 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 array[i] = default(T);
         }
 
-        static int AddActiveEdge(NativeList<ActiveEdge> hh, Edge e, int off_x, float start_point)
+        static int AddActiveEdge(NativeList<ActiveEdge> hh, Edge e, int off_x, float scanYTop)
         {
-            var z = new ActiveEdge();
+            var ae = new ActiveEdge();
             float dxdy = (e.x1 - e.x0) / (e.y1 - e.y0);
 
-            z.fdx = dxdy;
-            z.fdy = dxdy != 0.0f ? (1.0f / dxdy) : 0.0f;
-            z.fx = e.x0 + dxdy * (start_point - e.y0);
-            z.fx -= off_x;
-            z.direction = e.invert ? 1.0f : -1.0f;
-            z.sy = e.y0;
-            z.ey = e.y1;
+            ae.dxdy = dxdy;
+            ae.dydx = dxdy != 0.0f ? (1.0f / dxdy) : 0.0f;
+            ae.x = e.x0 + dxdy * (scanYTop - e.y0);
+            ae.x -= off_x;
+            ae.dir = e.invert ? 1.0f : -1.0f;
+            ae.y0 = e.y0;
+            ae.y1 = e.y1;
             //Debug.Assert(e.y1 > e.y0);
-            z.nextID = -1;
-            hh.Add(z);
+            ae.nextID = -1;
+            hh.Add(ae);
             return hh.Length - 1;
         }
         public struct EdgeYMaxComparer : IComparer<Edge>
@@ -533,11 +510,11 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
     struct ActiveEdge
     {
         public int nextID;
-        public float fx;
-        public float fdx;
-        public float fdy;
-        public float direction;
-        public float sy;
-        public float ey;
+        public float x;
+        public float dxdy;
+        public float dydx;
+        public float dir;
+        public float y0;
+        public float y1;
     }
 }

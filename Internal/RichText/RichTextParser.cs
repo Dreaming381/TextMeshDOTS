@@ -1401,17 +1401,15 @@ namespace TextMeshDOTS.RichText
                     case 2227963:  // <rotate=xx.x>
                     case 1600507:  // <ROTATE=xx.x>
                                    // TODO: Add ability to use Random Rotation
-                        calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);
+                        calliString.GetSubString(ref textConfiguration.m_htmlTag, firstTagIndentifier.valueStartIndex, firstTagIndentifier.valueLength);                        
                         // Reject tag if value is invalid.
                         if (ConvertToFloat(ref textConfiguration.m_htmlTag, out value) != ParseError.None)
                             return false;
-
-                        textConfiguration.m_fxRotationAngleCCW = (short)-math.radians(value);
-
+                        textConfiguration.m_fxRotationAngleCCW_degree = (short)-value;
                         return true;
                     case 7757466:  // </rotate>
                     case 7130010:  // </ROTATE>
-                        textConfiguration.m_fxRotationAngleCCW = 0;
+                        textConfiguration.m_fxRotationAngleCCW_degree = 0;
                         return true;
                     case 317446:  // <table>
                     case 227814:  // <TABLE>

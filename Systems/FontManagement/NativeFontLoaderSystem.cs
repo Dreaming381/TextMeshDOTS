@@ -209,11 +209,9 @@ namespace TextMeshDOTS.TextProcessing
                 };
                 
                 atlasData.padding = 0;
-                texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.ARGB32, false);
+                texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.ARGB32,false);
                 var textureData = texture2D.GetRawTextureData<ColorARGB>();
-                for (int i = 0; i < textureData.Length; i++)
-                    textureData[i] = (ColorARGB)Color.white;
-                texture2D.Apply();
+                Blending.SetBlack(textureData);
                 dynamicFontAsset = new DynamicFontAsset { texture = texture2D, textureType = TextureType.ARGB };
             }
             else

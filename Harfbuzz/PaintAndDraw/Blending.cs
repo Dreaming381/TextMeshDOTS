@@ -258,9 +258,15 @@ namespace TextMeshDOTS.HarfBuzz
         }
         public static void SetWhite(NativeArray<ColorARGB> result)
         {
-            var white = new ColorARGB(255, 255, 255, 255);
+            var color = new ColorARGB(255, 255, 255, 255);
             for (int i = 0; i < result.Length; i++)
-                result[i] = white;
+                result[i] = color;
+        }
+        public static void SetBlack(NativeArray<ColorARGB> result)
+        {
+            var color = new ColorARGB(255, 0, 0, 0);
+            for (int i = 0; i < result.Length; i++)
+                result[i] = color;
         }
         public static void Clear(NativeArray<ColorARGB> result)
         {
