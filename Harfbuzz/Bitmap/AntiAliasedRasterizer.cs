@@ -1,8 +1,6 @@
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Burst;
-using UnityEngine;
-using Unity.Entities.UniversalDelegates;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
@@ -31,8 +29,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             PaintUtils.rasterizeMarker.Begin();
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
-            var width = (int)clipRect.width;
-            var height = (int)clipRect.height;
+            var width = clipRect.intWidth;
+            var height = clipRect.intHeight;
             var areas = new NativeArray<float>(width * height, Allocator.Temp);
             var offset = clipRect.min;
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
@@ -72,8 +70,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             if (linestart_x0i < 0)  // index is out of bounds 
                                 continue;
 
-                            // simple case, edge only crosses one pixel in current line
-                            var xmf = 0.5f * (x + xnext) - x0floor;
+                            // simple case, edge only crosses one pixel in current line (includes vertical edge case)
+                            var xmf = 0.5f * (x0 + x1) - x0floor;
                             areas[linestart_x0i] += d - d * xmf; // area of trapezoid in pixel
                             areas[linestart_x0i + 1] += d * xmf; // everything right of this pixel is filled
                         }
@@ -85,16 +83,16 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                             var s = math.rcp(x1 - x0);
                             var x0f = x0 - x0floor;
-                            var a0 = 0.5f * s * (1.0f - x0f) * (1.0f - x0f);
+                            var a0 = 0.5f * (1.0f - x0f) * (1.0f - x0f) * s;
                             var x1f = x1 - x1ceil + 1.0f;
-                            var am = 0.5f * s * x1f * x1f;
+                            var am = 0.5f * x1f * x1f * s;
 
                             areas[linestart_x0i] += d * a0;         //area of triangle in first pixel crossed by edge
                             if (x1i == x0i + 2)
                                 areas[linestart_x0i + 1] += d * (1.0f - a0 - am); //area of trapezoid between first and last pixel crossed by edge
                             else
                             {
-                                var a1 = s * (1.5f - x0f);
+                                var a1 = (1.5f - x0f) * s;
                                 areas[linestart_x0i + 1] += d * (a1 - a0); //area of trapezoid between first and last pixel crossed by edge
                                 for (int xi = x0i + 2, xii = x1i - 1; xi < xii; xi++)
                                     areas[linestart + xi] += d * s;        //area of trapezoid between first and last pixel crossed by edge
@@ -136,8 +134,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             PaintUtils.rasterizeMarker.Begin();
             var sdfEdges = drawData.edges;
             var contourIDs = drawData.contourIDs;
-            var width = (int)clipRect.width;
-            var height = (int)clipRect.height;
+            var width = clipRect.intWidth;
+            var height = clipRect.intHeight;
             var areas = new NativeArray<float>(width * height, Allocator.Temp);
             var offset = clipRect.min;
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour

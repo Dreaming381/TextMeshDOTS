@@ -134,7 +134,7 @@ public class RenderTest : MonoBehaviour
             //Blending.SetWhite(canvas);
             //for (int i = 0; i < paintData.finalTexture.Length; i++)
             //    paintData.finalTexture[i] = Blending.SrcOver(paintData.finalTexture[i], canvas[i]);
-            PaintUtils.BlitRawTexture(paintData.paintSurface, (int)clipRect.width, (int)clipRect.height, textureData, atlasWidth, atlasHeight, 0, 0);
+            PaintUtils.BlitRawTexture(paintData.paintSurface, clipRect.intWidth, clipRect.intHeight, textureData, atlasWidth, atlasHeight, 0, 0);
         }
 
        

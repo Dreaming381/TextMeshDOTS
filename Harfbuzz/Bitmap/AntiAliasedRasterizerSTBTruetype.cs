@@ -68,7 +68,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 }
             }
             edges.Sort(default(EdgeYMaxComparer));
-            RasterizeSortedEdges(textureData, pattern, (int)clipRect.width, (int)clipRect.height, edges, (int)clipRect.min.x, (int)clipRect.min.y);
+            RasterizeSortedEdges(textureData, pattern, clipRect.intWidth, clipRect.intHeight, edges, (int)clipRect.min.x, (int)clipRect.min.y);
             PaintUtils.rasterizeMarker.End();
         }
 
@@ -79,7 +79,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             int activeID = -1;
             int y, j = 0;
             var scanline = new NativeArray<float>(width, Allocator.Temp);
-            var scanline2 = new NativeArray<float>(width + 1, Allocator.Temp);
+            var scanline_fill = new NativeArray<float>(width + 1, Allocator.Temp);
 
             y = off_y;
             var n = edges.Length - 1;
@@ -93,7 +93,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 int previousStepID = -1;
 
                 ClearArray(scanline, 0, width);
-                ClearArray(scanline2, 0, width + 1);
+                ClearArray(scanline_fill, 0, width + 1);
 
                 while (stepID != -1)
                 {
@@ -130,14 +130,14 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     }
                     edgeID++;
                 }              
-                FillActiveEdges(scanline, scanline2, width, actives, activeID, y);
+                FillActiveEdges(scanline, scanline_fill, width, actives, activeID, y);
 
                 float sum = 0;
                 for (int i = 0; i < width; ++i)
                 {
                     float k;
                     int m;
-                    sum += scanline2[i];
+                    sum += scanline_fill[i];
                     k = scanline[i] + sum;
                     k = math.abs(k) * 255 + 0.5f;
                     m = (int)k;
@@ -323,8 +323,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                             // area covered in the last pixel is the rectangle from all the pixels to the left,
                             // plus the trapezoid filled by the line segment in this pixel all the way to the right edge
-                            var bottomWidth = (x2 + 1.0f) - x_top;
-                            scanline[x2] += area + sign * TrapezoidArea(sy1 - y_final, 1.0f, bottomWidth);
+                            var topWidth = (x2 + 1.0f) - x_top;
+                            scanline[x2] += area + sign * TrapezoidArea(sy1 - y_final, 1.0f, topWidth);
 
                             // the rest of the line is filled based on the total height of the line segment in this pixel
                             scanline_fill[x2 + 1] += sign * (sy1 - sy0);

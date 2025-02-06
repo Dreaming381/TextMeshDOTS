@@ -31,7 +31,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var clipRectMinX = (int)clipRect.min.x;            
             var clipRectMinY = (int)clipRect.min.y;
             var clipRectMaxX = (int)clipRect.max.x;
-            var width = (int)clipRect.width;
+            var width = clipRect.intWidth;
             //var width = 1024;
 
             var scanLineStart = new float2(minX, minY);

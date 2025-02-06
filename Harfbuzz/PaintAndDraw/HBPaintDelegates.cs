@@ -99,7 +99,7 @@ namespace TextMeshDOTS.HarfBuzz
             //Debug.Log($"Push clip rect");
             var clipRect = new BBox(xmin, ymin, xmax, ymax);
             data.clipRect = clipRect;
-            data.paintSurface = new NativeArray<ColorARGB>((int)(clipRect.width) * (int)clipRect.height, Allocator.Temp);
+            data.paintSurface = new NativeArray<ColorARGB>(clipRect.intWidth * clipRect.intHeight, Allocator.Temp);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
@@ -115,7 +115,7 @@ namespace TextMeshDOTS.HarfBuzz
             //Debug.Log($"Paint solid color");
             var colorARGB = (ColorARGB)color;
             var solidColor = new SolidColor(colorARGB);
-            AntiAliasedRasterizerSTBTruetype.Rasterize(ref data.clipGlyph, data.paintSurface, solidColor, data.clipRect);
+            AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, solidColor, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -127,7 +127,7 @@ namespace TextMeshDOTS.HarfBuzz
                 return;
 
             lineGradient.InitializeColorLine(colorLine);
-            AntiAliasedRasterizerSTBTruetype.Rasterize(ref data.clipGlyph, data.paintSurface, lineGradient, data.clipRect);
+            AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, lineGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -139,7 +139,7 @@ namespace TextMeshDOTS.HarfBuzz
                 return;
 
             radialGradient.InitializeColorLine(colorLine);
-            AntiAliasedRasterizerSTBTruetype.Rasterize(ref data.clipGlyph, data.paintSurface, radialGradient, data.clipRect);
+            AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, radialGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(SweepGradientDelegate))]
@@ -151,7 +151,7 @@ namespace TextMeshDOTS.HarfBuzz
             if (!sweepGradient.isValid)
                 return;
 
-            AntiAliasedRasterizerSTBTruetype.Rasterize(ref data.clipGlyph, data.paintSurface, sweepGradient, data.clipRect);
+            AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, sweepGradient, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]

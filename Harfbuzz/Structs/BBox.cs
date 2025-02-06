@@ -11,6 +11,9 @@ namespace TextMeshDOTS.HarfBuzz
         public readonly float width => max.x - min.x;
         public readonly float height => max.y - min.y;
 
+        public readonly int intWidth => (int)math.ceil(max.x - min.x);
+        public readonly int intHeight => (int)math.ceil(max.y - min.y);
+
         /// <summary>  Create an empty, invalid BBox. </summary>
         public static readonly BBox Empty = new BBox { min = float.MaxValue, max = float.MinValue };
         /// <summary>   Create a union of two BBox. </summary>

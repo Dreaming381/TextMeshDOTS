@@ -60,9 +60,9 @@ namespace TextMeshDOTS.TextProcessing
                 else if (paintData.paintSurface.Length > 0) // render COLR, sbix, CBDT
                 {
                     var clipRect = paintData.clipRect;
-                    if (atlasRect.width != (int)clipRect.width || atlasRect.height != (int)clipRect.height)
-                        Debug.LogWarning($"Dimensions of glyphRect reserved in atlas ({atlasRect.width},{atlasRect.height}) and painted GlyphRect ({clipRect.width},{clipRect.height}) do not match");
-                    PaintUtils.BlitRawTexture(paintData.paintSurface, (int)clipRect.width, (int)clipRect.height, textureData, atlasData.atlasWidth, atlasData.atlasHeight, atlasRect.x, atlasRect.y);
+                    if (atlasRect.width != clipRect.intWidth || atlasRect.height != clipRect.intHeight)
+                        Debug.LogWarning($"Dimensions of glyphRect reserved in atlas ({atlasRect.width},{atlasRect.height}) and painted GlyphRect ({clipRect.intWidth},{clipRect.intHeight}) do not match");
+                    PaintUtils.BlitRawTexture(paintData.paintSurface, clipRect.intWidth, clipRect.intHeight, textureData, atlasData.atlasWidth, atlasData.atlasHeight, atlasRect.x, atlasRect.y);
                 }
             }
             else
