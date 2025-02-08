@@ -31,6 +31,8 @@ namespace TextMeshDOTS.TextProcessing
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
             var glyphBlob = placedGlyphs[i];
+            if (glyphBlob.glyphExtents.width == 0 && glyphBlob.glyphExtents.height ==0)
+                return;//glyph has no size, nothing needs to be renderered/added to texture
 
             var font = nativeFontPointer.font;
             var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);
@@ -57,11 +59,12 @@ namespace TextMeshDOTS.TextProcessing
                     //    //consider use of com.unity.vectorgraphics (which designed to render svg)
                     //}
                 }
-                else if (paintData.paintSurface.Length > 0) // render COLR, sbix, CBDT
+                else if (paintData.paintSurface.Length > 0) // render COLR, raw BRGA data stored in sbix, CBDT
                 {
                     var clipRect = paintData.clipRect;
-                    if (atlasRect.width != clipRect.intWidth || atlasRect.height != clipRect.intHeight)
-                        Debug.LogWarning($"Dimensions of glyphRect reserved in atlas ({atlasRect.width},{atlasRect.height}) and painted GlyphRect ({clipRect.intWidth},{clipRect.intHeight}) do not match");
+                    //var glyphExtents = glyphBlob.glyphExtents;
+                    //if (glyphExtents.width != clipRect.intWidth || glyphExtents.height != clipRect.intHeight)
+                    //    Debug.LogWarning($"Dimensions of glyphRect reserved in atlas ({glyphExtents.width},{glyphExtents.height}) and painted GlyphRect ({clipRect.intWidth},{clipRect.intHeight}) do not match");
                     PaintUtils.BlitRawTexture(paintData.paintSurface, clipRect.intWidth, clipRect.intHeight, textureData, atlasData.atlasWidth, atlasData.atlasHeight, atlasRect.x, atlasRect.y);
                 }
             }

@@ -66,6 +66,10 @@ namespace TextMeshDOTS.HarfBuzz
             return result;
         }
         public bool IsImmutable() => HB.hb_blob_is_immutable(ptr);
+        public void MakeImmutable()
+        {
+            HB.hb_blob_make_immutable(ptr);
+        }
 
         public void Dispose()
         {

@@ -4,7 +4,6 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public enum PaintCompositeMode
     {
-        //(d * (1 - s.a) + s * s.a );
         CLEAR,      // r = 0
         SRC,        // r = s
         DEST,       // r = d

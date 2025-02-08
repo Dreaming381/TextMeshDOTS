@@ -110,7 +110,10 @@ namespace TextMeshDOTS.HarfBuzz
         [return: MarshalAs(UnmanagedType.I1)] 
         internal static extern bool hb_blob_is_immutable(IntPtr blob);
 
-        
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_blob_make_immutable(IntPtr blob);
+
+
         [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr hb_blob_create(void* data, uint length, MemoryMode mode, IntPtr user_data, ReleaseDelegate destroy);
         [DllImport(HarfBuzz, CallingConvention = CallingConvention.Cdecl)]
@@ -145,6 +148,8 @@ namespace TextMeshDOTS.HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_face_is_immutable(IntPtr face);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_face_make_immutable(IntPtr face);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_ot_layout_get_size_params(IntPtr face, out uint design_size, out uint subfamily_id, out uint subfamily_name_id, out uint range_start, out uint range_end);

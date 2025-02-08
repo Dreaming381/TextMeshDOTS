@@ -60,6 +60,10 @@ namespace TextMeshDOTS.HarfBuzz
                    HasReferenceTable(HB.HB_TAG('C', 'F', 'F', '2')); 
         }
         public bool IsImmutable() => HB.hb_face_is_immutable(ptr);
+        public void MakeImmutable()
+        {
+            HB.hb_face_make_immutable(ptr);
+        }
         public void Dispose()
         {
             HB.hb_face_destroy(ptr);

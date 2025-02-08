@@ -33,6 +33,8 @@ namespace TextMeshDOTS.TextProcessing
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
             var glyphBlob = placedGlyphs[i];
+            if (glyphBlob.glyphExtents.width == 0 && glyphBlob.glyphExtents.height == 0)
+                return;//glyph has no size, nothing needs to be renderered/added to texture
 
             var font = nativeFontPointer.font;
             var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);

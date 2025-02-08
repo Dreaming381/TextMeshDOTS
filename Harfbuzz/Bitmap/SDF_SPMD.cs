@@ -179,6 +179,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             return true;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static float4  GetCross(float4 abx, float4 aby, float4 pnx, float4 pny, float4 abLengthSq, float4 pnLengthSq)
         {
             var abLength = math.sqrt(abLengthSq);
@@ -189,6 +190,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var pnyNorm = pny / pnLength;
             return BezierMath.cross2D(abxNorm, abyNorm, pnxNorm, pnyNorm);
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static SignedDistance ResolveCorner(ref SignedDistance sdf1, ref SignedDistance4 sdfs, int index)
         {
             var sdf2 = sdfs[index];

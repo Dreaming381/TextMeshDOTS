@@ -178,7 +178,7 @@ namespace TextMeshDOTS.TextProcessing
 
             var blob = new Blob(loadRequest.filePath.ToString());
             var face = new Face(blob.ptr, 0);
-            var font = new Font(face.ptr);            
+            var font = new Font(face.ptr);
 
             var sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;            
 
@@ -195,7 +195,6 @@ namespace TextMeshDOTS.TextProcessing
 
             //initialize texture. To save space, review how to initialize it with size 0
             //(as done by TextCore), and only increase once needed
-            Texture2D texture2D;
             DynamicFontAsset dynamicFontAsset;
             AtlasData atlasData;
             if (face.HasCOLR() || face.HasColorBitmap())
@@ -204,14 +203,12 @@ namespace TextMeshDOTS.TextProcessing
                 {
                     atlasHeight = 1024,
                     atlasWidth = 1024,
-                    padding = 0,                //10% of atlas height or width
+                    padding = 8,                //10% of atlas height or width
                     samplingPointSize = fontBlobRef.samplingPointSizeBitmap,    //size of font (in pixel) in atlas
                 };
-                
-                atlasData.padding = 0;
-                texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.ARGB32,false);
+                var texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.ARGB32,false);
                 var textureData = texture2D.GetRawTextureData<ColorARGB>();
-                Blending.SetBlack(textureData);
+                Blending.SetTransparent(textureData);
                 dynamicFontAsset = new DynamicFontAsset { texture = texture2D, textureType = TextureType.ARGB };
             }
             else
@@ -223,7 +220,7 @@ namespace TextMeshDOTS.TextProcessing
                     padding = 9,                //10% of atlas height or width
                     samplingPointSize = fontBlobRef.samplingPointSizeSDF,    //size of font (in pixel) in atlas
                 };
-                texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.Alpha8, false);
+                var texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.Alpha8, false);
                 var rawTextureData = texture2D.GetRawTextureData<byte>();
 
                 //initialize to black

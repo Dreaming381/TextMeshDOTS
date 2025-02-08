@@ -268,6 +268,12 @@ namespace TextMeshDOTS.HarfBuzz
             for (int i = 0; i < result.Length; i++)
                 result[i] = color;
         }
+        public static void SetTransparent(NativeArray<ColorARGB> result)
+        {
+            var color = new ColorARGB(0, 0, 0, 0);
+            for (int i = 0; i < result.Length; i++)
+                result[i] = color;
+        }
         public static void Clear(NativeArray<ColorARGB> result)
         {
             for (int i = 0; i < result.Length; i++)

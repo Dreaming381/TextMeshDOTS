@@ -130,10 +130,6 @@ public class RenderTest : MonoBehaviour
         else if (paintData.paintSurface.Length > 0) // content from COLR, or raw BGRA data from sbix, CBDT
         {
             var clipRect = paintData.clipRect;
-            //var canvas = new NativeArray<ColorARGB>(paintData.finalTexture.Length, Allocator.Temp);
-            //Blending.SetWhite(canvas);
-            //for (int i = 0; i < paintData.finalTexture.Length; i++)
-            //    paintData.finalTexture[i] = Blending.SrcOver(paintData.finalTexture[i], canvas[i]);
             PaintUtils.BlitRawTexture(paintData.paintSurface, clipRect.intWidth, clipRect.intHeight, textureData, atlasWidth, atlasHeight, 0, 0);
         }
 

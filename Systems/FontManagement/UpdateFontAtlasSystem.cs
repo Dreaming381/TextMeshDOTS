@@ -5,6 +5,7 @@ using Unity.Profiling;
 using Unity.Jobs;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Burst;
+using Unity.Mathematics;
 
 
 namespace TextMeshDOTS.TextProcessing
@@ -61,6 +62,7 @@ namespace TextMeshDOTS.TextProcessing
             }
 
             state.Dependency.Complete();
+            var glyphsToPlace = new NativeList<GlyphBlob>(1024, Allocator.TempJob);
             var placedGlyphs = new NativeList<GlyphBlob> (1024, Allocator.TempJob);
             var fontAssetMetadataLookup = SystemAPI.GetComponentLookup<FontAssetMetadata>(true);
             var atlasDataLookup = SystemAPI.GetComponentLookup<AtlasData>(true);
@@ -68,17 +70,13 @@ namespace TextMeshDOTS.TextProcessing
             var usedGlyphsLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(false);
             var usedGlyphRectsLookup = SystemAPI.GetBufferLookup<UsedGlyphRects>(false);
             var freeGlyphRectsLookup = SystemAPI.GetBufferLookup<FreeGlyphRects>(false);
-
             var nativeFontPointerLookup = SystemAPI.GetComponentLookup<NativeFontPointer>(true);
             var dynamicFontAssetsLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(false);
 
             for (int i = 0, ii = fontsRequiringUpdate.Length; i < ii; i++)
             {
-                var fontEntity = fontsRequiringUpdate[i];
+                var fontEntity = fontsRequiringUpdate[i];                
                 
-                
-                var dynamicFontAsset = dynamicFontAssetsLookup[fontEntity];
-
                 var getGlyphRectsJob = new GetGlyphRectsJob()
                 {
                     placedGlyphs = placedGlyphs,
@@ -95,6 +93,7 @@ namespace TextMeshDOTS.TextProcessing
                 };
                 state.Dependency = getGlyphRectsJob.Schedule(state.Dependency);
 
+                var dynamicFontAsset = dynamicFontAssetsLookup[fontEntity];
                 if (dynamicFontAsset.textureType == TextureType.SDF)
                 {
                     var updateAtlasTextureJob = new UpdateSDFAtlasTextureJob()
@@ -141,12 +140,15 @@ namespace TextMeshDOTS.TextProcessing
                 };
                 state.Dependency = updateNativeFontJob.Schedule(state.Dependency);
 
-                state.Dependency.Complete(); //To-Do: remove sync point.               
+                state.Dependency.Complete(); //To-Do: remove sync point. 
+
                 dynamicFontAsset.texture.Value.Apply();
                 placedGlyphs.Clear();
             }
+
+            glyphsToPlace.Dispose(state.Dependency);
+            placedGlyphs.Dispose(state.Dependency);            
             fontsRequiringUpdate.Dispose(state.Dependency);
-            placedGlyphs.Dispose(state.Dependency);
         }
     }
 }

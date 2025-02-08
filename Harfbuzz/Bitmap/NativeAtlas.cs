@@ -19,7 +19,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             int padding,
             NativeList<GlyphBlob> glyphsToPlace,
             NativeList<GlyphBlob> placedGlyphs,
-            DynamicBuffer<uint> glyphsInUse,
+            DynamicBuffer<uint> usedGlyphs,
             DynamicBuffer<GlyphRect> usedRects,
             DynamicBuffer<GlyphRect> freeRects)
         {
@@ -57,7 +57,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     var currentGlyph = glyphsToPlace[bestGlyphID];
                     var glyphExtents =currentGlyph.glyphExtents;
                     usedRects.Add(bestRect);
-                    glyphsInUse.Add(currentGlyph.glyphID);
+                    usedGlyphs.Add(currentGlyph.glyphID);
                     
                     //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlas texture window.
                     //the glyph (bounded by glyphExtents) will be renderered into the center of this window
