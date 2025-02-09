@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Entities.Graphics;
 using Unity.Rendering;
 using Unity.Transforms;
+using static UnityEngine.EventSystems.EventTrigger;
 
 namespace TextMeshDOTS
 {
@@ -96,6 +97,7 @@ namespace TextMeshDOTS
             componentTypeStaging[13] = ComponentType.ReadWrite<PerInstanceCullingTag>();
             componentTypeStaging[14] = ComponentType.ReadWrite<MaterialMeshInfo>();
             componentTypeStaging[15] = ComponentType.ReadWrite<RenderFilterSettings>();
+            componentTypeStaging[16] = ComponentType.ReadWrite<FontBlobReference>();
 
             return state.EntityManager.CreateArchetype(componentTypeStaging);
         }

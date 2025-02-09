@@ -8,7 +8,6 @@ using TextMeshDOTS.HarfBuzz;
 using System;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 using TextMeshDOTS.Rendering;
-using UnityEngine;
 using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS.TextProcessing
@@ -20,6 +19,7 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ProfilerMarker marker2;
 
         public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
+        //public ComponentTypeHandle<MaterialMeshInfo> materialMeshInfoHandle;
 
         [ReadOnly] public NativeArray<Entity> fontEntities;
         [ReadOnly] public NativeArray<FontAssetRef> fontEntitiesLookup;
@@ -30,8 +30,9 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<TextSpan> textSpanHandle;
-        [ReadOnly] public BufferLookup<UsedGlyphs> glyphsInUseLookup;
-        public NativeList<FontEntityGlyph>.ParallelWriter missingGlyphs;
+        //[ReadOnly] public BufferLookup<UsedGlyphs> glyphsInUseLookup;
+        //public NativeList<FontEntityGlyph>.ParallelWriter missingGlyphs;
+        //public NativeParallelMultiHashMap<Entity, uint>.ParallelWriter requieredGlyphs;
 
         public uint lastSystemVersion;
 
@@ -48,6 +49,7 @@ namespace TextMeshDOTS.TextProcessing
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var textSpanBuffers = chunk.GetBufferAccessor(ref textSpanHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
+            //var materialMeshInfos = chunk.GetNativeArray(ref materialMeshInfoHandle);
 
             var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
             //var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
@@ -61,6 +63,8 @@ namespace TextMeshDOTS.TextProcessing
             FontAssetArray fontAssetArray = default;
             bool hasMultipleFonts = additionalFontMaterialEntityBuffers.Length > 0;
 
+            //var chunkMissingGlyphs = new NativeList<FontEntityGlyph>(1024, Allocator.Temp);
+
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
                 var rootFontMaterialEntity = entities[indexInChunk];
@@ -71,6 +75,7 @@ namespace TextMeshDOTS.TextProcessing
 
                 var glyphOTFs = glyphOTFBuffers[indexInChunk];
                 var calliBytes = calliBytesBuffers[indexInChunk];
+                //var materialMeshInfo = materialMeshInfos[indexInChunk];
 
                 if (hasMultipleFonts)
                     fontAssetArray.Initialize(rootFontMaterialEntity, additionalFontMaterialEntityBuffers[indexInChunk], ref fontBlobReferenceLookup);
@@ -99,7 +104,7 @@ namespace TextMeshDOTS.TextProcessing
                     var length = (int)(endIndex - startIndex);
                     buffer.AddText(text, startIndex, length);
                     buffer.SetSegmentProperties(latinLTR);
-                    //a number of white spaces are regretably not replaced by "space", no need to be handled in 
+                    //a number of white spaces are regretably not replaced by "space" (needs to be handled in GenerateGlyphJob)
                     //https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767
                     buffer.BufferFlag = BufferFlag.REMOVE_DEFAULT_IGNORABLES | BufferFlag.BOT | BufferFlag.EOT;
                     
@@ -123,11 +128,10 @@ namespace TextMeshDOTS.TextProcessing
                     var nativeFontPointer = nativeFontPointerLookup[fontEntity];
                     var font = nativeFontPointer.font;
 
-                    var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
-                    
-
-
+                    //var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
+                    marker.Begin();
                     font.Shape(buffer, features);
+                    marker.End();
 
                     //var glyphInfos = buffer.GlyphInfo();
                     //var glyphPositions = buffer.GlyphPositions();
@@ -140,6 +144,7 @@ namespace TextMeshDOTS.TextProcessing
                         var codepoint = glyphInfo.codepoint;
                         glyphOTFs.Add(new GlyphOTF
                         {
+                            fontEntity = fontEntity,
                             codepoint = glyphInfo.codepoint,
                             cluster = glyphInfo.cluster,
                             xAdvance = glyphPosition.xAdvance,
@@ -147,13 +152,30 @@ namespace TextMeshDOTS.TextProcessing
                             xOffset = glyphPosition.xOffset,
                             yOffset = glyphPosition.yOffset,
                         });
-                        if (!glyphsInUse.Contains(codepoint))
-                            missingGlyphs.AddNoResize(new FontEntityGlyph { entity = fontEntity, glyphID = codepoint });
+                        //if (!glyphsInUse.Contains(codepoint))
+                        //{
+                        //    missingGlyphs.Add(fontEntity, codepoint);
+                        //}
+                        //if (!glyphsInUse.Contains(codepoint))
+                        //{
+                        //    var fontEntityGlyph = new FontEntityGlyph { entity = fontEntity, glyphID = codepoint };
+                        //    //we do not want to add redundantly the same glyph to missingGlyphs,
+                        //    //so preferably we check if glyph has already been added. Does not work due to 
+                        //    //ParrallelWriter. As a workaround, we create an additional list in this thread
+                        //    //(just before chunk iteration starts), and check against that list
+                        //    if (!chunkMissingGlyphs.Contains(fontEntityGlyph))
+                        //        chunkMissingGlyphs.Add(fontEntityGlyph);
+                        //}
                     }
                     buffer.ClearContent();
                     features.Clear();
                 } while (cur < textSpans.Length);
+
+                //TextBackendBakingUtility.SetSubMesh(glyphOTFs.Length, ref materialMeshInfo);
+                //materialMeshInfos[indexInChunk] = materialMeshInfo;
             }
+            //add missing glyphs identifed in chunks processed by this thread to missingGlyphs
+            //missingGlyphs.AddRangeNoResize(chunkMissingGlyphs);
             buffer.Dispose();
         }
     }

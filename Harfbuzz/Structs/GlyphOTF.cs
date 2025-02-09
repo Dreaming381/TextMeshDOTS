@@ -6,6 +6,7 @@ namespace TextMeshDOTS.HarfBuzz
     [StructLayout(LayoutKind.Sequential)]
     public struct GlyphOTF : IBufferElementData
     {
+        public Entity fontEntity;
         public uint codepoint;
         public uint cluster;
         public int xAdvance;

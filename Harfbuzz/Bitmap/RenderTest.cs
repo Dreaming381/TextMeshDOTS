@@ -103,14 +103,16 @@ public class RenderTest : MonoBehaviour
             buffer.AddText(character);
             font.Shape(buffer);
             var glyphInfos = buffer.GetGlyphInfosSpan();
+            var glyphPositions = buffer.GetGlyphPositionsSpan();
             glyphID = glyphInfos[0].codepoint;
+            //Debug.Log($"glyphID {glyphID} {glyphPositions[0]}");
         }
 
         paintData = new PaintData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
         font.GetGlyphExtends(glyphID, out GlyphExtents glyphExtents);
         //Debug.Log($"glyphExtents: {glyphExtents}");
         marker.Begin();
-        font.PaintGlyph(glyphID, ref paintData, paintFunctions, 0, new ColorARGB(0, 0, 0, 255));
+        font.PaintGlyph(glyphID, ref paintData, paintFunctions, 0, new ColorARGB(255, 255, 255, 255));
         marker.End();
 
         if (paintData.imageData.Length > 0)//render PNG and SVG
@@ -161,7 +163,7 @@ public class RenderTest : MonoBehaviour
             return;
         }
 
-        blob  = new Blob(filePath);
+        blob = new Blob(filePath);
         face = new Face(blob.ptr, 0);
         font = new Font(face.ptr);
 

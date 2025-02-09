@@ -1,4 +1,5 @@
 using TextMeshDOTS;
+using TextMeshDOTS.Rendering.Authoring;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;

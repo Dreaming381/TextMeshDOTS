@@ -7,7 +7,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
     /*
         developed based on description in  https://nothings.org/gamedev/rasterize/, but instead of using a 
-        list of active edges, edges are rasterized as they encountered in the polygon
+        list of active edges, edges are rasterized as they are encountered in the polygon
     */
     [BurstCompile]
     public static class AntiAliasedRasterizerTextMeshDOTS

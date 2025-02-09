@@ -99,7 +99,37 @@ namespace TextMeshDOTS.Authoring
 
             var result = builder.CreateBlobAssetReference<FontBlob>(Allocator.Persistent);
             builder.Dispose();
-            fontBlobRoot = result.Value;
+            return result;
+        }
+
+        public static BlobAssetReference<FontBlob> GetRuntimeFontBlob(
+            FixedString128Bytes fontAssetPath,
+            FixedString128Bytes fontFamily,
+            FixedString128Bytes fontSubFamily,
+            FixedString128Bytes typographicFamily,
+            FixedString128Bytes typographicSubfamily,
+            int weight,
+            int width,
+            bool isItalic,
+            int slant,
+            bool useSystemFont, 
+            int samplingPointSizeSDF, 
+            int samplingPointSizeBitmap)
+        {
+            var builder = new BlobBuilder(Allocator.Temp);
+            ref FontBlob fontBlobRoot = ref builder.ConstructRoot<FontBlob>();
+            fontBlobRoot.samplingPointSizeSDF = samplingPointSizeSDF;
+            fontBlobRoot.samplingPointSizeBitmap = samplingPointSizeBitmap;
+            fontBlobRoot.useSystemFont = useSystemFont;
+            fontBlobRoot.fontAssetPath = fontAssetPath;
+            fontBlobRoot.fontFamily = fontFamily; 
+            fontBlobRoot.fontSubFamily = fontSubFamily;
+            fontBlobRoot.typographicFamily = typographicFamily;
+            fontBlobRoot.typographicSubfamily = typographicSubfamily;            
+            fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, weight, width, isItalic, slant);
+
+            var result = builder.CreateBlobAssetReference<FontBlob>(Allocator.Persistent);
+            builder.Dispose();
             return result;
         }
     }

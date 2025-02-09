@@ -14,10 +14,6 @@ namespace TextMeshDOTS
         public float fontSize;        
         public Color32 color;
         public FontStyles fontStyles;
-        //public int fontWeight;
-        //public float fontWidth;
-        //public bool isItalic;
-        //public float slant;
 
         public float maxLineWidth;
         public float wordSpacing;

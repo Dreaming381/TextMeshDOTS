@@ -42,7 +42,7 @@ namespace TextMeshDOTS.Authoring
 
         [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. De-select to bake font raw data in blob asset")]
         public bool useSystemFonts = false;
-        [Tooltip("Drop here all fonts you like to use. Do not forget to include all font family members selected via Fontstyles or RichText tags such as <b> (bold), <i> (italic> or combinations thereof!")]
+        [Tooltip("Drop here all fonts and their family members you like to use. Family mebers are selected based on choosen FontStyle.)")]
         public Object[] fonts;
     }
 
@@ -66,7 +66,6 @@ namespace TextMeshDOTS.Authoring
                 }
                 redundancyCheck.Add(hashCode);
             }
-
 
             var layer = GetLayer();
 

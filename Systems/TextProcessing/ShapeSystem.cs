@@ -7,6 +7,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using Unity.Rendering;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -18,7 +19,7 @@ namespace TextMeshDOTS.TextProcessing
     public partial struct ShapeSystem : ISystem
     {
         EntityQuery textRendererQ, fontEntitiesQ, fontstateQ;
-        static readonly ProfilerMarker marker = new ProfilerMarker("harfbuzz");
+        static readonly ProfilerMarker marker = new ProfilerMarker("hb_shape");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
 
         bool m_skipChangeFilter;
@@ -32,6 +33,7 @@ namespace TextMeshDOTS.TextProcessing
                 .Build();
 
             textRendererQ = SystemAPI.QueryBuilder()
+                //.WithAllRW<MaterialMeshInfo>()
                 .WithAllRW<GlyphOTF>()
                 .WithAll<CalliByte>()
                 .WithAll<TextSpan>()
@@ -60,7 +62,7 @@ namespace TextMeshDOTS.TextProcessing
                 return;
             //Debug.Log("Shape system");
 
-            var missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.TempJob);
+            //var missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.TempJob);
 
             var fontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
             var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
@@ -69,11 +71,12 @@ namespace TextMeshDOTS.TextProcessing
                 marker = marker,
                 marker2 = marker2,
                 
-                missingGlyphs = missingGlyphs.AsParallelWriter(),
+                //missingGlyphs = missingGlyphs.AsParallelWriter(),
 
                 fontEntities = fontEntities,
                 fontEntitiesLookup = fontEntitiesLookup,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
+                //materialMeshInfoHandle = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(false),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
@@ -81,22 +84,28 @@ namespace TextMeshDOTS.TextProcessing
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
                 textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
-                glyphsInUseLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(true),
+                //glyphsInUseLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             //}.Schedule(m_query, state.Dependency);
-            }.ScheduleParallel(textRendererQ, state.Dependency);
+            }.ScheduleParallel(textRendererQ, state.Dependency); 
 
-            state.Dependency = new SortMissingGlyphJob
+            state.Dependency = new UpdateMissingGlyphsJob
             {
-                missingGlyphs = missingGlyphs,
-            }.Schedule(state.Dependency);
+                missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false),
+                usedGlyphsLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(true),
+            }.Schedule(textRendererQ, state.Dependency);
 
-            state.Dependency = new CopyMissingGlyphsToFontEntitiesJob
-            {
-                newMissingGlyphs= missingGlyphs,
-            }.ScheduleParallel(fontEntitiesQ, state.Dependency);
-            missingGlyphs.Dispose(state.Dependency);
+            //state.Dependency = new SortMissingGlyphJob
+            //{
+            //    missingGlyphs = missingGlyphs,
+            //}.Schedule(state.Dependency);
+
+            //state.Dependency = new CopyMissingGlyphsToFontEntitiesJob
+            //{
+            //    newMissingGlyphs= missingGlyphs,
+            //}.ScheduleParallel(fontEntitiesQ, state.Dependency);
+            //missingGlyphs.Dispose(state.Dependency);
         }
     }
 }
