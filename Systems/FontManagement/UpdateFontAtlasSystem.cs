@@ -52,7 +52,7 @@ namespace TextMeshDOTS.TextProcessing
                 if (missingGlyphs.Length > 0)
                 {
                     fontsRequiringUpdate.Add(entity);
-                    Debug.Log($"Request to add {missingGlyphs.Length} glyphs to texture of {fontAssetMetadata.family} {fontAssetMetadata.subfamily}");
+                    //Debug.Log($"Request to add {missingGlyphs.Length} glyphs to texture of {fontAssetMetadata.family} {fontAssetMetadata.subfamily}");
                 }
             }
             if(fontsRequiringUpdate.IsEmpty)

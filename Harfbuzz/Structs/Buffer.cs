@@ -64,11 +64,10 @@ namespace TextMeshDOTS.HarfBuzz
         {
             HB.hb_buffer_get_segment_properties(ptr, out segmentProperties);
         }
-        public void SetSegmentProperties(SegmentProperties segmentProperties)
+        public void SetSegmentProperties(ref SegmentProperties segmentProperties)
         {
             HB.hb_buffer_set_segment_properties(ptr, ref segmentProperties);
         }
-
         public uint Length => HB.hb_buffer_get_length(ptr);
         public void Add(uint codepoint, uint cluster)
         {

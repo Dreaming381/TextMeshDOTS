@@ -64,7 +64,7 @@ namespace TextMeshDOTS.TextProcessing
             if (changedFontEntitiesQ.IsEmpty)
                 return;
 
-            Debug.Log($"Register material, and link TextRender to fonts");
+            //Debug.Log($"Register material, and link TextRender to fonts");
             if (backendMeshID == BatchMeshID.Null)
                 backendMeshID = hybridRenderer.RegisterMesh(backendMesh);
 

@@ -10,6 +10,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
+using UnityEngine.UI;
 using static TextMeshDOTS.TextCoreExtensions;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
@@ -71,7 +72,7 @@ namespace TextMeshDOTS.TextProcessing
             if (changedTextRendererQ.IsEmpty)
                 return;
 
-            Debug.Log($"TextRender have changed, trigger font loading, or link to existing fonts");
+            //Debug.Log($"{changedTextRendererQ.CalculateEntityCount()} TextRender have changed, trigger font loading, or link to existing fonts");
             var allFontAssetRefs = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
             var changedFontBlobReferences = changedTextRendererQ.ToComponentDataArray<FontBlobReference>(state.WorldUpdateAllocator);
 
@@ -83,15 +84,20 @@ namespace TextMeshDOTS.TextProcessing
                 {
                     var loadRequest = new LoadRequest { fontBlobRef = changedFontBlobReference, fontAssetRef = fontBlob.fontAssetRef };
                     if (!fontBlob.useSystemFont)
-                    {
-                        loadRequest.filePath = fontBlob.fontAssetPath;
-                        if (!File.Exists(fontBlob.fontAssetPath.ToString()))
-                            Debug.Log($"Could not find font in {fontBlob.fontAssetPath}");
-                        else if (!newLoadRequests.Contains(loadRequest))
-                            newLoadRequests.Add(loadRequest);
+                    {                        
+                        var fontPath = Path.Combine(Application.streamingAssetsPath, fontBlob.fontAssetPath.ToString());
+                        //Debug.Log($"Try to load {fontBlob.fontAssetPath.ToString()}, from path {Application.streamingAssetsPath} full path {fontPath}");
+                        if (!File.Exists(fontPath))
+                            Debug.Log($"Could not find font in {fontPath}");
+                        else
+                        {
+                            loadRequest.filePath = fontPath;
+                            if (!newLoadRequests.Contains(loadRequest))
+                                newLoadRequests.Add(loadRequest);
+                        }
                     }
                     else
-                    {
+                    {                        
                         //loading rules: https://www.high-logic.com/fontcreator/manual15/fonttype.html
                         var typeographicFamilyDataMissing = (fontBlob.typographicFamily.IsEmpty || fontBlob.typographicSubfamily.IsEmpty);
                         var family = typeographicFamilyDataMissing ? fontBlob.fontFamily : fontBlob.typographicFamily;
@@ -104,6 +110,7 @@ namespace TextMeshDOTS.TextProcessing
                             if (!newLoadRequests.Contains(loadRequest))
                                 newLoadRequests.Add(loadRequest);
                         }
+                        //Debug.Log($"Try to load system font {family} {subFamily}, from path {loadRequest.filePath}");
                     }
                 }
             }
@@ -131,7 +138,7 @@ namespace TextMeshDOTS.TextProcessing
             //even if no new fonts are found, the backer will reset all MaterialMeshInfo (disable it, values are zero
             //-->run EnableAndValidateMaterialMeshInfoJob (same job that run after registering new materials)
             if (newLoadRequests.Length == 0) 
-            {
+            {                
                 //validate MaterialMeshInfo (TextRender connected to correct FontAssets?)
                 var allFontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
                 var fontEntityLookup = new NativeHashMap<FontAssetRef, Entity>(allFontAssetRefs.Length, state.WorldUpdateAllocator);
@@ -174,8 +181,7 @@ namespace TextMeshDOTS.TextProcessing
         }
         void LoadFont(LoadRequest loadRequest, ref SystemState state)
         {
-            ref var fontBlobRef = ref loadRequest.fontBlobRef.value.Value;           
-
+            ref var fontBlobRef = ref loadRequest.fontBlobRef.value.Value;
             var blob = new Blob(loadRequest.filePath.ToString());
             var face = new Face(blob.ptr, 0);
             var font = new Font(face.ptr);

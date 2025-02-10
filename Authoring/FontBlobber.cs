@@ -21,7 +21,7 @@ namespace TextMeshDOTS.Authoring
             fontBlobRoot.samplingPointSizeSDF = samplingPointSizeSDF;
             fontBlobRoot.samplingPointSizeBitmap = samplingPointSizeBitmap;
             fontBlobRoot.useSystemFont = useSystemFont;
-            fontBlobRoot.fontAssetPath = fontPath;
+            fontBlobRoot.fontAssetPath = useSystemFont ? string.Empty : fontPath.Substring(fontPath.IndexOf("StreamingAssets") + 16);
             var fontBytes = File.ReadAllBytes(fontPath);
 
             Blob blob;

@@ -30,9 +30,9 @@ namespace TextMeshDOTS.Authoring
         public void OnCreate(ref SystemState state)
         {
             initialized = false;
-
+            textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref state);
             singleFontReference = FontBlobber.GetRuntimeFontBlob(
-                "Assets/StreamingAssets/Notosans/NotoSansDisplay-Regular.ttf",
+                "Notosans/NotoSansDisplay-Regular.ttf",
                 "Noto Sans Display",
                 "Regular",
                 "",
@@ -44,7 +44,6 @@ namespace TextMeshDOTS.Authoring
                 false,
                 48,
                 64);
-
             textBaseConfiguration = new TextBaseConfiguration
             {
                 fontSize = 12,
@@ -58,7 +57,6 @@ namespace TextMeshDOTS.Authoring
                 verticalAlignment = VerticalAlignmentOptions.TopBase,
                 isOrthographic = false,
             };
-
             var layer = 1;
             renderFilterSettings = new RenderFilterSettings
             {
@@ -69,9 +67,7 @@ namespace TextMeshDOTS.Authoring
                 MotionMode = MotionVectorGenerationMode.ForceNoMotion,
                 StaticShadowCaster = false,
             };
-            textRenderControl = new TextRenderControl { flags = TextRenderControl.Flags.Dirty };
-
-            textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref state);
+            textRenderControl = new TextRenderControl { flags = TextRenderControl.Flags.Dirty };            
         }
         public void OnDestroy(ref SystemState state)
         {
@@ -172,7 +168,6 @@ namespace TextMeshDOTS.Authoring
                 }
                 Debug.Log("Text 2 spawned");
             }
-            frameCount++;
 
             //if (frameCount > 200)
             //{
@@ -181,6 +176,7 @@ namespace TextMeshDOTS.Authoring
             //    //initialized = true;
             //}
 
+            frameCount++;
         }        
     }
 }

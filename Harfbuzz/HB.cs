@@ -85,11 +85,11 @@ namespace TextMeshDOTS.HarfBuzz
         public static extern void hb_paint_funcs_set_custom_palette_color_func(IntPtr paintFunctions, FunctionPointer<CustomPalette_colorDelegate> func, IntPtr user_data, FunctionPointer<ReleaseDelegate> destroy);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern void hb_paint_push_clip_glyph(IntPtr paintFunctions, ref PaintData paint_data, uint glyph, IntPtr font);
+        public static extern void hb_paint_push_clip_glyph(IntPtr paintFunctions, ref PaintData paint_data, uint glyph, Font font);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool hb_paint_color_glyph(IntPtr paintFunctions, ref PaintData paint_data, uint glyph, IntPtr font);
+        public static extern bool hb_paint_color_glyph(IntPtr paintFunctions, ref PaintData paint_data, uint glyph, Font font);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_pop_clip(IntPtr paintFunctions, ref PaintData paint_data);
@@ -141,6 +141,7 @@ namespace TextMeshDOTS.HarfBuzz
         #endregion
 
         #region face
+
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_face_get_glyph_count(IntPtr face);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
@@ -311,6 +312,18 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern BufferFlag hb_buffer_get_flags(IntPtr buffer);
         #endregion
 
+        #region shapeplan
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        public static extern IntPtr hb_shape_list_shapers();
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern IntPtr hb_shape_plan_create_cached(IntPtr face, ref SegmentProperties props, IntPtr user_features, uint num_user_features, IntPtr shaper_list);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_shape_plan_execute(IntPtr shape_plan, Font font, Buffer buffer, IntPtr features, uint num_features);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_shape_plan_destroy(IntPtr shape_plan);
+        #endregion
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]

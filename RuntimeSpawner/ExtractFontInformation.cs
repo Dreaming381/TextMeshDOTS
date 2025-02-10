@@ -22,7 +22,7 @@ namespace TextMeshDOTS.Authoring
         public int slant;
 
 
-        //#if UNITY_EDITOR
+#if UNITY_EDITOR
         [MenuItem("TextMeshDOTS/Extract font data")]
         static void ExtractFileNames()
         {
@@ -90,9 +90,8 @@ namespace TextMeshDOTS.Authoring
             {
                 Debug.LogWarning("Ensure you only have files ending with 'ttf' or 'otf' (case insensitiv) in font list");
                 return;
-            }
-            
+            }            
         }
-//#endif
+#endif
     }
 }
