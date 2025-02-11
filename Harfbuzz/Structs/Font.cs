@@ -66,7 +66,7 @@ namespace TextMeshDOTS.HarfBuzz
             HB.hb_ot_metrics_get_position(ptr, metricTag, out position);
         }
         /// <summary> Get Glyph extends form harfbuzz, but invert the height as y axis is asumed to go up in this library </summary>
-        public bool GetGlyphExtends(uint glyph, out GlyphExtents extends)
+        public bool GetGlyphExtents(uint glyph, out GlyphExtents extends)
         {
             var success = HB.hb_font_get_glyph_extents(ptr, glyph, out extends);
             extends.InvertY();

@@ -1,13 +1,13 @@
+using UnityEngine;
+using UnityEditor;
 using System.IO;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
-using UnityEditor;
-using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS.Authoring
 {
-    [CreateAssetMenu(fileName = "ExtractFontInformation", menuName = "TextMeshDOTS/FontUtility")]
+    [CreateAssetMenu(fileName = "FontUtility", menuName = "TextMeshDOTS/FontUtility")]
     public class FontUtility : ScriptableObject
     {
         public Object font;
@@ -23,7 +23,8 @@ namespace TextMeshDOTS.Authoring
 
 
 #if UNITY_EDITOR
-        [MenuItem("TextMeshDOTS/Extract font data")]
+        //[MenuItem("TextMeshDOTS/Extract font data")]
+        [MenuItem("CONTEXT/FontUtility/Extract font data")]
         static void ExtractFileNames()
         {
             var activeObject = Selection.activeObject;

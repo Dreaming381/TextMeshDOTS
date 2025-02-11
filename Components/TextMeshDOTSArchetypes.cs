@@ -81,63 +81,65 @@ namespace TextMeshDOTS
         public static EntityArchetype GetSingleFontTextArchetype(ref SystemState state)
         {
             var componentTypeStaging = new NativeArray<ComponentType>(17, Allocator.Temp);
-            componentTypeStaging[0] = ComponentType.ReadWrite<LocalTransform>();
-            componentTypeStaging[1] = ComponentType.ReadWrite<LocalToWorld>();
-            componentTypeStaging[2] = ComponentType.ReadWrite<TextBaseConfiguration>();
-            componentTypeStaging[3] = ComponentType.ReadWrite<TextRenderControl>();
-            componentTypeStaging[4] = ComponentType.ReadWrite<GlyphOTF>();
-            componentTypeStaging[5] = ComponentType.ReadWrite<CalliByte>();
-            componentTypeStaging[6] = ComponentType.ReadWrite<CalliByteRaw>();
-            componentTypeStaging[7] = ComponentType.ReadWrite<TextSpan>();
-            componentTypeStaging[8] = ComponentType.ReadWrite<RenderGlyph>();
-            componentTypeStaging[9] = ComponentType.ReadWrite<TextShaderIndex>();
-            componentTypeStaging[10] = ComponentType.ReadWrite<WorldToLocal_Tag>();
-            componentTypeStaging[11] = ComponentType.ReadWrite<WorldRenderBounds>();
-            componentTypeStaging[12] = ComponentType.ReadWrite<RenderBounds>();
-            componentTypeStaging[13] = ComponentType.ReadWrite<PerInstanceCullingTag>();
-            componentTypeStaging[14] = ComponentType.ReadWrite<MaterialMeshInfo>();
-            componentTypeStaging[15] = ComponentType.ReadWrite<RenderFilterSettings>();
-            componentTypeStaging[16] = ComponentType.ReadWrite<FontBlobReference>();
+            componentTypeStaging[0] = ComponentType.ReadWrite<FontBlobReference>();            
+            componentTypeStaging[1] = ComponentType.ReadWrite<TextBaseConfiguration>();
+            componentTypeStaging[2] = ComponentType.ReadWrite<TextRenderControl>();
+            componentTypeStaging[3] = ComponentType.ReadWrite<GlyphOTF>();
+            componentTypeStaging[4] = ComponentType.ReadWrite<CalliByte>();
+            componentTypeStaging[5] = ComponentType.ReadWrite<CalliByteRaw>();
+            componentTypeStaging[6] = ComponentType.ReadWrite<TextSpan>();
+            componentTypeStaging[7] = ComponentType.ReadWrite<RenderGlyph>();
+            componentTypeStaging[8] = ComponentType.ReadWrite<TextShaderIndex>();
+            componentTypeStaging[9] = ComponentType.ReadWrite<LocalTransform>();
+            componentTypeStaging[10] = ComponentType.ReadWrite<LocalToWorld>();
+            componentTypeStaging[11] = ComponentType.ReadWrite<WorldToLocal_Tag>();
+            componentTypeStaging[12] = ComponentType.ReadWrite<WorldRenderBounds>();
+            componentTypeStaging[13] = ComponentType.ReadWrite<RenderBounds>();
+            componentTypeStaging[14] = ComponentType.ReadWrite<PerInstanceCullingTag>();
+            componentTypeStaging[15] = ComponentType.ReadWrite<MaterialMeshInfo>();
+            componentTypeStaging[16] = ComponentType.ReadWrite<RenderFilterSettings>();
+            
 
             return state.EntityManager.CreateArchetype(componentTypeStaging);
         }
         public static EntityArchetype GetMultiFontParentTextArchetype(ref SystemState state)
         {
             var componentTypeStaging = new NativeArray<ComponentType>(21, Allocator.Temp);
-            componentTypeStaging[0] = ComponentType.ReadWrite<LocalTransform>();
-            componentTypeStaging[1] = ComponentType.ReadWrite<LocalToWorld>();
-            componentTypeStaging[2] = ComponentType.ReadWrite<FontBlobReference>();
-            componentTypeStaging[3] = ComponentType.ReadWrite<TextBaseConfiguration>();
-            componentTypeStaging[4] = ComponentType.ReadWrite<TextRenderControl>();
-            componentTypeStaging[5] = ComponentType.ReadWrite<GlyphOTF>();
-            componentTypeStaging[6] = ComponentType.ReadWrite<CalliByte>();
-            componentTypeStaging[7] = ComponentType.ReadWrite<CalliByteRaw>();
-            componentTypeStaging[8] = ComponentType.ReadWrite<TextSpan>();
-            componentTypeStaging[9] = ComponentType.ReadWrite<RenderGlyph>();
-            componentTypeStaging[10] = ComponentType.ReadWrite<RenderGlyphMask>();
-            componentTypeStaging[11] = ComponentType.ReadWrite<TextShaderIndex>();
-            componentTypeStaging[12] = ComponentType.ReadWrite<TextMaterialMaskShaderIndex>();
-            componentTypeStaging[13] = ComponentType.ReadWrite<FontMaterialSelectorForGlyph>();
-            componentTypeStaging[14] = ComponentType.ReadWrite<WorldToLocal_Tag>();
-            componentTypeStaging[15] = ComponentType.ReadWrite<WorldRenderBounds>();
-            componentTypeStaging[16] = ComponentType.ReadWrite<RenderBounds>();
-            componentTypeStaging[17] = ComponentType.ReadWrite<PerInstanceCullingTag>();
-            componentTypeStaging[18] = ComponentType.ReadWrite<MaterialMeshInfo>();
-            componentTypeStaging[19] = ComponentType.ReadWrite<RenderFilterSettings>();
-            componentTypeStaging[20] = ComponentType.ReadWrite<AdditionalFontMaterialEntity>();
+            componentTypeStaging[0] = ComponentType.ReadWrite<FontBlobReference>();
+            componentTypeStaging[1] = ComponentType.ReadWrite<TextBaseConfiguration>();
+            componentTypeStaging[2] = ComponentType.ReadWrite<TextRenderControl>();
+            componentTypeStaging[3] = ComponentType.ReadWrite<GlyphOTF>();
+            componentTypeStaging[4] = ComponentType.ReadWrite<CalliByte>();
+            componentTypeStaging[5] = ComponentType.ReadWrite<CalliByteRaw>();
+            componentTypeStaging[6] = ComponentType.ReadWrite<TextSpan>();
+            componentTypeStaging[7] = ComponentType.ReadWrite<RenderGlyph>();
+            componentTypeStaging[8] = ComponentType.ReadWrite<RenderGlyphMask>();
+            componentTypeStaging[9] = ComponentType.ReadWrite<TextShaderIndex>();
+            componentTypeStaging[10] = ComponentType.ReadWrite<TextMaterialMaskShaderIndex>();
+            componentTypeStaging[11] = ComponentType.ReadWrite<FontMaterialSelectorForGlyph>();
+            componentTypeStaging[12] = ComponentType.ReadWrite<AdditionalFontMaterialEntity>();
+            componentTypeStaging[13] = ComponentType.ReadWrite<LocalTransform>();
+            componentTypeStaging[14] = ComponentType.ReadWrite<LocalToWorld>();
+            componentTypeStaging[15] = ComponentType.ReadWrite<WorldToLocal_Tag>();
+            componentTypeStaging[16] = ComponentType.ReadWrite<WorldRenderBounds>();
+            componentTypeStaging[17] = ComponentType.ReadWrite<RenderBounds>();
+            componentTypeStaging[18] = ComponentType.ReadWrite<PerInstanceCullingTag>();
+            componentTypeStaging[19] = ComponentType.ReadWrite<MaterialMeshInfo>();
+            componentTypeStaging[20] = ComponentType.ReadWrite<RenderFilterSettings>();
+            
 
             return state.EntityManager.CreateArchetype(componentTypeStaging);
         }
         public static EntityArchetype GetMultiFontChildTextArchetype(ref SystemState state)
         {
             var componentTypeStaging = new NativeArray<ComponentType>(13, Allocator.Temp);
-            componentTypeStaging[0] = ComponentType.ReadWrite<LocalTransform>();
-            componentTypeStaging[1] = ComponentType.ReadWrite<LocalToWorld>();
-            componentTypeStaging[2] = ComponentType.ReadWrite<FontBlobReference>();
-            componentTypeStaging[3] = ComponentType.ReadWrite<TextRenderControl>();
-            componentTypeStaging[4] = ComponentType.ReadWrite<RenderGlyphMask>();
-            componentTypeStaging[5] = ComponentType.ReadWrite<TextShaderIndex>();
-            componentTypeStaging[6] = ComponentType.ReadWrite<TextMaterialMaskShaderIndex>();
+            componentTypeStaging[0] = ComponentType.ReadWrite<FontBlobReference>();            
+            componentTypeStaging[1] = ComponentType.ReadWrite<TextRenderControl>();
+            componentTypeStaging[2] = ComponentType.ReadWrite<RenderGlyphMask>();
+            componentTypeStaging[3] = ComponentType.ReadWrite<TextShaderIndex>();
+            componentTypeStaging[4] = ComponentType.ReadWrite<TextMaterialMaskShaderIndex>();
+            componentTypeStaging[5] = ComponentType.ReadWrite<LocalTransform>();
+            componentTypeStaging[6] = ComponentType.ReadWrite<LocalToWorld>();
             componentTypeStaging[7] = ComponentType.ReadWrite<WorldToLocal_Tag>();
             componentTypeStaging[8] = ComponentType.ReadWrite<WorldRenderBounds>();
             componentTypeStaging[9] = ComponentType.ReadWrite<RenderBounds>();

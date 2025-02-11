@@ -40,9 +40,9 @@ namespace TextMeshDOTS.Authoring
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
 
-        [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. De-select to bake font raw data in blob asset")]
+        [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. Otherwise fonts need to be located in StreamingAssets folder")]
         public bool useSystemFonts = false;
-        [Tooltip("Drop here all fonts and their family members you like to use. Family mebers are selected based on choosen FontStyle.)")]
+        [Tooltip("Drop here all fonts and their family members you like to use. Family members are selected based on choosen FontStyle.)")]
         public Object[] fonts;
     }
 

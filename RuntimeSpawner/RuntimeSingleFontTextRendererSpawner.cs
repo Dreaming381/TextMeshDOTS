@@ -10,13 +10,11 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TextCore.Text;
 using TextMeshDOTS.TextProcessing;
-using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
-    //[DisableAutoCreation]
-    //[UpdateBefore(typeof(LoadNativeFont))]
+    [DisableAutoCreation]
     [CreateBefore(typeof(NativeFontLoaderSystem))]
     partial struct RuntimeSingleTextRendererSpawner : ISystem
     {
@@ -31,19 +29,24 @@ namespace TextMeshDOTS.Authoring
         {
             initialized = false;
             textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref state);
-            singleFontReference = FontBlobber.GetRuntimeFontBlob(
-                "Notosans/NotoSansDisplay-Regular.ttf",
-                "Noto Sans Display",
-                "Regular",
-                "",
-                "",
-                400,
-                100,
-                false,
-                0,
-                false,
-                48,
-                64);
+            //use FontUtility Scriptable Object to extract the following needed information
+            //(drop font into respective field, run context menu "Extract Font Data")
+            var fontRequest = new FontRequest 
+            { 
+                fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Regular",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                weight = 400,
+                width = 100,
+                isItalic = false,
+                slant = 0,
+                useSystemFont = false,
+                samplingPointSizeSDF = 48,
+                samplingPointSizeBitmap = 64
+            };
+            singleFontReference = FontBlobber.GetRuntimeFontBlob(fontRequest);
             textBaseConfiguration = new TextBaseConfiguration
             {
                 fontSize = 12,

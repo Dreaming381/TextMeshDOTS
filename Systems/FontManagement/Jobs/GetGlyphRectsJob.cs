@@ -42,7 +42,7 @@ namespace TextMeshDOTS.TextProcessing
                 var glyphID = missingGlyphs[i];
                 //GetGlyphExtends is a very costly function. For a COLR glyph, rect is determined by parsing all vertices of maybe 20 sub-glyphs
                 //calling it in parallel makes things worse (mutex lock?)
-                font.GetGlyphExtends(glyphID, out GlyphExtents extends);                
+                font.GetGlyphExtents(glyphID, out GlyphExtents extends);                
                 var hbGlyph = new GlyphBlob { glyphID = glyphID, glyphExtents = extends};
                 glyphsToPlace.Add(hbGlyph);
             };

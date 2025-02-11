@@ -102,35 +102,38 @@ namespace TextMeshDOTS.Authoring
             return result;
         }
 
-        public static BlobAssetReference<FontBlob> GetRuntimeFontBlob(
-            FixedString128Bytes fontAssetPath,
-            FixedString128Bytes fontFamily,
-            FixedString128Bytes fontSubFamily,
-            FixedString128Bytes typographicFamily,
-            FixedString128Bytes typographicSubfamily,
-            int weight,
-            int width,
-            bool isItalic,
-            int slant,
-            bool useSystemFont, 
-            int samplingPointSizeSDF, 
-            int samplingPointSizeBitmap)
+        public static BlobAssetReference<FontBlob> GetRuntimeFontBlob(FontRequest fontRequest)
         {
             var builder = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot = ref builder.ConstructRoot<FontBlob>();
-            fontBlobRoot.samplingPointSizeSDF = samplingPointSizeSDF;
-            fontBlobRoot.samplingPointSizeBitmap = samplingPointSizeBitmap;
-            fontBlobRoot.useSystemFont = useSystemFont;
-            fontBlobRoot.fontAssetPath = fontAssetPath;
-            fontBlobRoot.fontFamily = fontFamily; 
-            fontBlobRoot.fontSubFamily = fontSubFamily;
-            fontBlobRoot.typographicFamily = typographicFamily;
-            fontBlobRoot.typographicSubfamily = typographicSubfamily;            
-            fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, weight, width, isItalic, slant);
+            fontBlobRoot.samplingPointSizeSDF = fontRequest.samplingPointSizeSDF;
+            fontBlobRoot.samplingPointSizeBitmap = fontRequest.samplingPointSizeBitmap;
+            fontBlobRoot.useSystemFont = fontRequest.useSystemFont;
+            fontBlobRoot.fontAssetPath = fontRequest.fontAssetPath;
+            fontBlobRoot.fontFamily = fontRequest.fontFamily; 
+            fontBlobRoot.fontSubFamily = fontRequest.fontSubFamily;
+            fontBlobRoot.typographicFamily = fontRequest.typographicFamily;
+            fontBlobRoot.typographicSubfamily = fontRequest.typographicSubfamily;            
+            fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, fontRequest.weight, fontRequest.width, fontRequest.isItalic, fontRequest.slant);
 
             var result = builder.CreateBlobAssetReference<FontBlob>(Allocator.Persistent);
             builder.Dispose();
             return result;
         }
+    }
+    public struct FontRequest
+    {
+        public FixedString128Bytes fontAssetPath;
+        public FixedString128Bytes fontFamily;
+        public FixedString128Bytes fontSubFamily;
+        public FixedString128Bytes typographicFamily;
+        public FixedString128Bytes typographicSubfamily;
+        public int weight;
+        public int width;
+        public bool isItalic;
+        public int slant;
+        public bool useSystemFont;
+        public int samplingPointSizeSDF;
+        public int samplingPointSizeBitmap;
     }
 }

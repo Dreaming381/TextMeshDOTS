@@ -1,146 +1,212 @@
-//using TextMeshDOTS.Rendering;
-//using Unity.Burst;
-//using Unity.Collections;
-//using Unity.Entities;
-//using Unity.Entities.Graphics;
-//using Unity.Mathematics;
-//using Unity.Rendering;
-//using Unity.Transforms;
-//using UnityEngine;
-//using UnityEngine.Rendering;
-//using UnityEngine.TextCore.Text;
+﻿using TextMeshDOTS.Rendering;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Entities.Graphics;
+using Unity.Mathematics;
+using Unity.Rendering;
+using Unity.Transforms;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.TextCore.Text;
+using TextMeshDOTS.TextProcessing;
 
-//namespace TextMeshDOTS.Authoring
-//{
-//    [BurstCompile]
-//    [DisableAutoCreation]
-//    public partial class RuntimeMultiFontTextRendererSpawner : SystemBase
-//    {
-//        bool initialized;
-//        int frameCount = 0;
-//        EntityQuery fontEntityQ;
-//        EntityArchetype textRenderParentArchetype, textRenderChildArchetype;
-//        protected override void OnCreate()
-//        {
-//            initialized = false;
-//            textRenderParentArchetype = TextMeshDOTSArchetypes.GetMultiFontParentTextArchetype(ref CheckedStateRef);
-//            textRenderChildArchetype = TextMeshDOTSArchetypes.GetMultiFontChildTextArchetype(ref CheckedStateRef);
-//            fontEntityQ = new EntityQueryBuilder(Allocator.Temp)
-//                    .WithAll<FontBlobReference, FontMaterialRef, BackEndMesh>()
-//                    .Build(EntityManager);
-//            RequireForUpdate(fontEntityQ);
-//        }
+namespace TextMeshDOTS.Authoring
+{
+    [BurstCompile]
+    //[DisableAutoCreation]
+    [CreateBefore(typeof(NativeFontLoaderSystem))]
+    partial struct RuntimeMultiTextRendererSpawner : ISystem
+    {
+        bool initialized;
+        int frameCount;
+        //BlobAssetReference<FontBlob> fontReference0, fontReference1, fontReference2, fontReference3, fontReference4;
+        EntityArchetype textRenderArchetype, childTextRendererArchtype;
+        TextBaseConfiguration textBaseConfiguration;
+        RenderFilterSettings renderFilterSettings;
+        TextRenderControl textRenderControl;
+        NativeArray<FontRequest> fontRequests;
+        NativeArray<BlobAssetReference<FontBlob>> fontBlobReferences;
+        public void OnCreate(ref SystemState state)
+        {
+            initialized = false;
+            textRenderArchetype = TextMeshDOTSArchetypes.GetMultiFontParentTextArchetype(ref state);
+            childTextRendererArchtype = TextMeshDOTSArchetypes.GetMultiFontChildTextArchetype(ref state);
+            fontRequests=new NativeArray<FontRequest>(5, Allocator.Persistent);
+            fontBlobReferences = new NativeArray<BlobAssetReference<FontBlob>>(5, Allocator.Persistent);
+            //use FontUtility Scriptable Object to extract the following needed information
+            //(drop font into respective field, run context menu "Extract Font Data")
+            fontRequests[0] = new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Regular",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                weight = 400,
+                width = 100,
+                isItalic = false,
+                slant = 0,
+                useSystemFont = false,
+                samplingPointSizeSDF = 48,
+                samplingPointSizeBitmap = 64
+            };
+            fontRequests[1] = new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-Italic.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Italic",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                weight = 400,
+                width = 100,
+                isItalic = true,
+                slant = -12,
+                useSystemFont = false,
+                samplingPointSizeSDF = 48,
+                samplingPointSizeBitmap = 64
+            };
+            fontRequests[2] = new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-Bold.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Bold",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                weight = 700,
+                width = 100,
+                isItalic = false,
+                slant = 0,
+                useSystemFont = false,
+                samplingPointSizeSDF = 48,
+                samplingPointSizeBitmap = 64
+            };
+            fontRequests[3] = new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-BoldItalic.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Bold Italic",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                weight = 700,
+                width = 100,
+                isItalic = true,
+                slant = -12,
+                useSystemFont = false,
+                samplingPointSizeSDF = 48,
+                samplingPointSizeBitmap = 64
+            };
+            fontRequests[4] = new FontRequest
+            {
+                fontAssetPath = "Emoji/Noto-COLRv1.ttf",
+                fontFamily = "Noto Color Emoji",
+                fontSubFamily = "Regular",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                weight = 400,
+                width = 100,
+                isItalic = false,
+                slant = 0,
+                useSystemFont = false,
+                samplingPointSizeSDF = 48,
+                samplingPointSizeBitmap = 64
+            };
+            for (int i = 0, ii = fontRequests.Length; i < ii; i++)
+                fontBlobReferences[i] = FontBlobber.GetRuntimeFontBlob(fontRequests[i]);
 
-//        protected override void OnDestroy()
-//        {
+            textBaseConfiguration = new TextBaseConfiguration
+            {
+                fontSize = 12,
+                color = Color.white,
+                fontStyles = FontStyles.Normal,
+                maxLineWidth = 10,
+                wordSpacing = 0,
+                lineSpacing = 0,
+                paragraphSpacing = 0,
+                lineJustification = HorizontalAlignmentOptions.Left,
+                verticalAlignment = VerticalAlignmentOptions.TopBase,
+                isOrthographic = false,
+            };
+            var layer = 1;
+            renderFilterSettings = new RenderFilterSettings
+            {
+                Layer = layer,
+                RenderingLayerMask = (uint)(1 << layer),
+                ShadowCastingMode = ShadowCastingMode.Off,
+                ReceiveShadows = false,
+                MotionMode = MotionVectorGenerationMode.ForceNoMotion,
+                StaticShadowCaster = false,
+            };
+            textRenderControl = new TextRenderControl { flags = TextRenderControl.Flags.Dirty };
+        }
+        public void OnDestroy(ref SystemState state)
+        {
+            for (int i = 0, ii = fontBlobReferences.Length; i < ii; i++)
+                if (fontBlobReferences[i].IsCreated) fontBlobReferences[i].Dispose();
+            fontBlobReferences.Dispose();
+            fontRequests.Dispose();
+        }
 
-//        }
+        public void OnUpdate(ref SystemState state)
+        {
+            if (initialized)
+                return;
 
-//        protected override void OnUpdate()
-//        {
-//            if (initialized)
-//                return;
-//            if (fontEntityQ.IsEmptyIgnoreFilter)
-//                return;
+            if (frameCount == 0)
+            {
+                var text = "Regular then <b>switch to bold, <i>then bold italic</b> then italic</i>: we are <font=Noto Color emoji>🥳</font> if it all works!";
+                int count = 10;
+                int half = count / 2;
+                var factor = 10.0f;
+                textBaseConfiguration.color = Color.green;
+                //TextBackendBakingUtility.SetSubMesh(text2.Length, ref materialMeshInfo);
+                var entities = state.EntityManager.CreateEntity(textRenderArchetype, count * count, state.WorldUpdateAllocator);
+                var additionalEntities=new NativeList<Entity>(4, state.WorldUpdateAllocator);
+                for (int x = 0; x < count; x++)
+                {
+                    for (int y = 0; y < count; y++)
+                    {
+                        var entity = entities[x * count + y];
+                        state.EntityManager.SetSharedComponent(entity, renderFilterSettings);
+                        var calliByteBuffer = state.EntityManager.GetBuffer<CalliByteRaw>(entity);
+                        var calliString = new CalliString(calliByteBuffer);
+                        //string text = i.ToString() + j.ToString();
+                        calliString.Append(text);
 
-//            var fontBlobReferenceEntity = fontEntityQ.GetSingletonEntity();
-//            var fontMaterialsBuffer = SystemAPI.GetBuffer<FontMaterialRef>(fontBlobReferenceEntity);
-//            var fontBlobReferences = SystemAPI.GetBuffer<FontBlobReference>(fontBlobReferenceEntity).ToNativeArray(Allocator.Temp);
-//            var backEndMesh = SystemAPI.GetComponent<BackEndMesh>(fontBlobReferenceEntity);
-
-//            //if (!(frameCount == 0 ^ frameCount == 100))
-//            if (frameCount != 0)
-//            {
-//                frameCount++;
-//                return;
-//            }
-
-//            var entitiesGraphicsSystem = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
-
-//            var brgMeshID = entitiesGraphicsSystem.RegisterMesh(backEndMesh.value);
-//            var materialMeshInfos = CollectionHelper.CreateNativeArray<MaterialMeshInfo>(fontMaterialsBuffer.Length, WorldUpdateAllocator);
-//            for (int i = 0, length = fontMaterialsBuffer.Length; i < length; i++)
-//            {
-//                var brgMaterialID = entitiesGraphicsSystem.RegisterMaterial(fontMaterialsBuffer[i].value);
-//                materialMeshInfos[i] = new MaterialMeshInfo { MaterialID = brgMaterialID, MeshID = brgMeshID };
-//            }
+                        var localTransform = LocalTransform.FromPosition(new float3((x - half) * factor, (y - half) * factor, 0));
+                        state.EntityManager.SetComponentData(entity, textBaseConfiguration);
+                        state.EntityManager.SetComponentData(entity, new FontBlobReference { value = fontBlobReferences[0] });
+                        state.EntityManager.SetComponentData(entity, localTransform);
+                        state.EntityManager.SetComponentData(entity, textRenderControl);
+                        state.EntityManager.SetComponentEnabled(entity, ComponentType.ReadWrite<MaterialMeshInfo>(), false);
 
 
-//            var textRenderControl = new TextRenderControl { flags = TextRenderControl.Flags.Dirty };
-//            var textBaseConfiguration = new TextBaseConfiguration
-//            {
-//                fontSize = 12, //6
-//                color = (Color32)Color.green,
-//                fontStyle = FontStyles.Normal,
-//                fontWeight = TextFontWeight.Regular,
-//                maxLineWidth = 4,
-//                lineJustification = HorizontalAlignmentOptions.Left,
-//                verticalAlignment = VerticalAlignmentOptions.TopBase,
-//            };
+                        for (int i = 1, ii = fontBlobReferences.Length; i < ii; i++) //add additional fonts
+                        {
+                            var child = state.EntityManager.CreateEntity(childTextRendererArchtype);
+                            additionalEntities.Add(child);
+                            state.EntityManager.SetComponentData(child, textRenderControl);
+                            state.EntityManager.SetComponentData(child, new FontBlobReference { value = fontBlobReferences[i] });
+                            state.EntityManager.SetComponentData(child, localTransform);
+                            state.EntityManager.SetComponentEnabled(child, ComponentType.ReadWrite<MaterialMeshInfo>(), false);
+                            state.EntityManager.SetSharedComponent(child, renderFilterSettings);
+                        }
+                        var additionalEntitiesBuffer = state.EntityManager.GetBuffer<AdditionalFontMaterialEntity>(entity).Reinterpret<Entity>();
+                        additionalEntitiesBuffer.AddRange(additionalEntities.AsArray());
+                        additionalEntities.Clear();
+                    }
+                }
+                Debug.Log("Text 1 spawned");
+            }            
 
-//            var layer = 1;
-//            var filterSettings = new RenderFilterSettings
-//            {
-//                Layer = layer,
-//                RenderingLayerMask = (uint)(1 << layer),
-//                ShadowCastingMode = ShadowCastingMode.Off,
-//                ReceiveShadows = false,
-//                MotionMode = MotionVectorGenerationMode.ForceNoMotion,
-//                StaticShadowCaster = false,
-//            };
+            //if (frameCount > 200)
+            //{
+            //    Debug.Log($"Triggered font destruction");
+            //    EntityManager.DestroyEntity(fontEntityQ);
+            //    //initialized = true;
+            //}
 
-//            var text0 = "Te<b>st<i> 1</b>2</i>3";
-//            //var text1 = "the <b>quick brown <i> fox</b> jumps</i> over the lazy dog";
-//            //var text2 = "<font=Noto Sans Display>Noto Sans Display</font> <font=Garamond Premier Pro>Garamond Premier Pro</font>";
-
-//            if (frameCount == 0)
-//            {
-//                int count = 100;
-//                float half = count * 0.5f;
-//                var factor = 5.0f;
-
-//                var entities = EntityManager.CreateEntity(textRenderParentArchetype, count * count, WorldUpdateAllocator);
-//                var additionalEntitiesArray = CollectionHelper.CreateNativeArray<Entity>(fontMaterialsBuffer.Length - 1, WorldUpdateAllocator);
-//                for (int x = 0; x < count; x++)
-//                {
-//                    for (int y = 0; y < count; y++)
-//                    {
-//                        var entity = entities[x * count + y];
-
-//                        var calliByteBuffer = EntityManager.GetBuffer<CalliByteRaw>(entity);
-//                        var calliString = new CalliString(calliByteBuffer);
-//                        //string text = i.ToString() + j.ToString();
-//                        calliString.Append(text0);
-
-//                        var localTransform = LocalTransform.FromPosition(new float3((x - half) * factor, (y - half) * factor, 0));
-//                        EntityManager.SetComponentData(entity, textBaseConfiguration);
-//                        EntityManager.SetComponentData(entity, textRenderControl);
-//                        var fontBlobReferencesBuffer = EntityManager.GetBuffer<FontBlobReference>(entity);
-//                        fontBlobReferencesBuffer.CopyFrom(fontBlobReferences);
-//                        EntityManager.SetComponentData(entity, localTransform);
-//                        EntityManager.SetComponentData(entity, materialMeshInfos[0]);
-//                        EntityManager.SetSharedComponent(entity, filterSettings);
-
-//                        for (int m = 1, length = materialMeshInfos.Length; m < length; m++)
-//                        {
-//                            var child = EntityManager.CreateEntity(textRenderChildArchetype);
-//                            additionalEntitiesArray[m - 1] = child;
-//                            EntityManager.SetComponentData(child, textRenderControl);
-//                            EntityManager.SetComponentData(child, localTransform);
-//                            EntityManager.SetComponentData(child, materialMeshInfos[m]);
-//                            EntityManager.SetSharedComponent(child, filterSettings);
-//                        }
-//                        var additionalEntities = EntityManager.GetBuffer<AdditionalFontMaterialEntity>(entity).Reinterpret<Entity>();
-//                        additionalEntities.AddRange(additionalEntitiesArray);
-//                    }
-//                }
-//                Debug.Log("MultiFont Text spawned");
-//            }
-//            frameCount++;
-
-//            //if (frameCount > 200)
-//            //    initialized = true;
-
-//        }
-//    }
-//}
+            frameCount++;
+        }
+    }
+}

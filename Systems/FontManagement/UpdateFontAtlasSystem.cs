@@ -75,8 +75,20 @@ namespace TextMeshDOTS.TextProcessing
 
             for (int i = 0, ii = fontsRequiringUpdate.Length; i < ii; i++)
             {
-                var fontEntity = fontsRequiringUpdate[i];                
-                
+                var fontEntity = fontsRequiringUpdate[i];
+
+                ////for unknown reasons, parallel processing backfires: each thread takes as long as a single job thread) 
+                //var missingGlyphsBuffer = missingGlyphsLookup[fontEntity].Reinterpret<uint>();
+                //var glyphExtents = new NativeList<GlyphExtents>(missingGlyphsBuffer.Length, state.WorldUpdateAllocator);
+                //var getGlyphExtentsJob = new GetGlyphExtentsJob()
+                //{
+                //    glyphExtents = glyphExtents.AsParallelWriter(),
+                //    fontEntity = fontEntity,
+                //    nativeFontPointerLookup = nativeFontPointerLookup,
+                //    missingGlyphsBuffer = missingGlyphsBuffer,
+                //};
+                //state.Dependency = getGlyphExtentsJob.Schedule(missingGlyphsBuffer.Length, 1, state.Dependency);
+
                 var getGlyphRectsJob = new GetGlyphRectsJob()
                 {
                     placedGlyphs = placedGlyphs,

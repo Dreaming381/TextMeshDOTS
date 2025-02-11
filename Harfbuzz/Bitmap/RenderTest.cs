@@ -76,7 +76,7 @@ public class RenderTest : MonoBehaviour
         drawData = new DrawData(256, 16, maxDeviation, Allocator.Persistent);
         font.DrawGlyph(glyphID, drawFunctions, ref drawData);
                 
-        font.GetGlyphExtends(glyphID, out GlyphExtents glyphExtents);
+        font.GetGlyphExtents(glyphID, out GlyphExtents glyphExtents);
         var atlastRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
         
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
@@ -109,7 +109,7 @@ public class RenderTest : MonoBehaviour
         }
 
         paintData = new PaintData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
-        font.GetGlyphExtends(glyphID, out GlyphExtents glyphExtents);
+        font.GetGlyphExtents(glyphID, out GlyphExtents glyphExtents);
         //Debug.Log($"glyphExtents: {glyphExtents}");
         marker.Begin();
         font.PaintGlyph(glyphID, ref paintData, paintFunctions, 0, new ColorARGB(255, 255, 255, 255));
