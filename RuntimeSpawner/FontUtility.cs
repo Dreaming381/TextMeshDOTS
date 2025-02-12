@@ -8,6 +8,11 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 namespace TextMeshDOTS.Authoring
 {
     [CreateAssetMenu(fileName = "FontUtility", menuName = "TextMeshDOTS/FontUtility")]
+
+    // Use this utility to get the information requiered for spawning TextRenderer at runtime vai FontRequest. See
+    // RuntimeSpawner/RuntimeSingleFontTextRendererSpawner and
+    // RuntimeSpawner/RuntimeMultiFontTextRendererSpawner
+    // Drag and drop a font object into the font field
     public class FontUtility : ScriptableObject
     {
         public Object font;
@@ -20,27 +25,18 @@ namespace TextMeshDOTS.Authoring
         public int width;
         public string isItalic;
         public int slant;
-
-
-#if UNITY_EDITOR
-        //[MenuItem("TextMeshDOTS/Extract font data")]
-        [MenuItem("CONTEXT/FontUtility/Extract font data")]
-        static void ExtractFileNames()
+        
+        public void OnValidate()
         {
-            var activeObject = Selection.activeObject;
-            if (activeObject == null || !(activeObject.GetType() == typeof(FontUtility)))
-            {
-                Debug.LogError($"{activeObject.GetType()} is not FontUtility");
+            if ((font == null))
                 return;
-            }
-            var fontUtility = activeObject as FontUtility;
 
-            fontUtility.fontAssetPath = AssetDatabase.GetAssetPath(fontUtility.font);
-            bool isTrueType = fontUtility.fontAssetPath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
-            bool isOpentype = fontUtility.fontAssetPath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
+            fontAssetPath = AssetDatabase.GetAssetPath(font);
+            bool isTrueType = fontAssetPath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
+            bool isOpentype = fontAssetPath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
             if (isOpentype || isTrueType)
             {
-                var fontBytes = File.ReadAllBytes(fontUtility.fontAssetPath);
+                var fontBytes = File.ReadAllBytes(fontAssetPath);
                 Blob blob;
                 unsafe
                 {
@@ -57,32 +53,32 @@ namespace TextMeshDOTS.Authoring
                 var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
 
                 var initialCapacity = 125u; //FixedString128Bytes.Capacity
-                var tmp = new FixedString128Bytes();                
+                var tmp = new FixedString128Bytes();
                 uint textSize = initialCapacity;
                 face.GetFaceInfo(NameID.FONT_FAMILY, language, ref textSize, ref tmp);
                 tmp.Length = (int)textSize;
-                fontUtility.fontFamily = tmp.ToString();
+                fontFamily = tmp.ToString();
 
                 textSize = initialCapacity;
                 face.GetFaceInfo(NameID.FONT_SUBFAMILY, language, ref textSize, ref tmp);
                 tmp.Length = (int)textSize;
-                fontUtility.fontSubFamily = tmp.ToString();
+                fontSubFamily = tmp.ToString();
 
                 textSize = initialCapacity;
                 face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language, ref textSize, ref tmp);
                 tmp.Length = (int)textSize;
-                fontUtility.typographicFamily = tmp.ToString();
+                typographicFamily = tmp.ToString();
 
                 textSize = initialCapacity;
                 face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language, ref textSize, ref tmp);
                 tmp.Length = (int)textSize;
-                fontUtility.typographicSubfamily = tmp.ToString();
+                typographicSubfamily = tmp.ToString();
 
-                fontUtility.weight = (int)font.GetStyleTag(StyleTag.WEIGHT);
-                fontUtility.width = (int)font.GetStyleTag(StyleTag.WIDTH);
+                weight = (int)font.GetStyleTag(StyleTag.WEIGHT);
+                width = (int)font.GetStyleTag(StyleTag.WIDTH);
                 var italic = (byte)font.GetStyleTag(StyleTag.ITALIC);
-                fontUtility.isItalic = italic == 1 ? "true" : "false";                
-                fontUtility.slant = (int)font.GetStyleTag(StyleTag.SLANT_ANGLE);
+                isItalic = italic == 1 ? "true" : "false";
+                slant = (int)font.GetStyleTag(StyleTag.SLANT_ANGLE);
                 font.Dispose();
                 face.Dispose();
                 blob.Dispose();
@@ -91,8 +87,7 @@ namespace TextMeshDOTS.Authoring
             {
                 Debug.LogWarning("Ensure you only have files ending with 'ttf' or 'otf' (case insensitiv) in font list");
                 return;
-            }            
+            }
         }
-#endif
     }
 }

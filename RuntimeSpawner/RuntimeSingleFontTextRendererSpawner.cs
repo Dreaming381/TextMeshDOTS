@@ -16,7 +16,7 @@ namespace TextMeshDOTS.Authoring
     [BurstCompile]
     [DisableAutoCreation]
     [CreateBefore(typeof(NativeFontLoaderSystem))]
-    partial struct RuntimeSingleTextRendererSpawner : ISystem
+    partial struct RuntimeSingleFontTextRendererSpawner : ISystem
     {
         bool initialized;
         int frameCount;

@@ -16,11 +16,10 @@ namespace TextMeshDOTS.Authoring
     [BurstCompile]
     //[DisableAutoCreation]
     [CreateBefore(typeof(NativeFontLoaderSystem))]
-    partial struct RuntimeMultiTextRendererSpawner : ISystem
+    partial struct RuntimeMultiFontTextRendererSpawner : ISystem
     {
         bool initialized;
         int frameCount;
-        //BlobAssetReference<FontBlob> fontReference0, fontReference1, fontReference2, fontReference3, fontReference4;
         EntityArchetype textRenderArchetype, childTextRendererArchtype;
         TextBaseConfiguration textBaseConfiguration;
         RenderFilterSettings renderFilterSettings;
