@@ -1,12 +1,10 @@
 using UnityEngine;
 using Unity.Collections;
-using Unity.Mathematics;
-using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS.RichText
 {
     public static class RichTextParser
-    {
+    {        
         /// <summary>
         /// Function to identify and validate the rich tag. Returns the byte position of the > if the tag was valid.
         /// </summary>
@@ -225,7 +223,6 @@ namespace TextMeshDOTS.RichText
             {
                 float value = 0;
                 int fontIndex = -1;
-
                 switch (firstTagIndentifier.nameHashCode)
                 {
                     case 98:  // <b>
@@ -364,6 +361,14 @@ namespace TextMeshDOTS.RichText
                     case 143092:  // </MARK>                        
                         textConfiguration.m_fontStyleInternal &= ~FontStyles.Highlight;
                         textConfiguration.m_highlightStateStack.RemoveExceptRoot();
+                        return true;
+                    case 41350: // <frac>
+                    case 28550: // <FRAC>
+                        textConfiguration.m_fontStyleInternal |= FontStyles.Fraction;
+                        return true;
+                    case 154197: // </frac>
+                    case 141397: // </FRAC>
+                        textConfiguration.m_fontStyleInternal &= ~FontStyles.Fraction;
                         return true;
                     case 6552:  // <sub>
                     case 4728:  // <SUB>
@@ -919,11 +924,7 @@ namespace TextMeshDOTS.RichText
                     case 7513474:  // </cspace>
                     case 6886018:  // </CSPACE>
                         // Adjust xAdvance to remove extra space from last character.
-                        if (textConfiguration.m_characterCount > 0)
-                        {
-                            textConfiguration.m_xAdvance -= textConfiguration.m_cSpacing;
-                            //m_textInfo.characterInfo[m_characterCount - 1].xAdvance = m_xAdvance;
-                        }
+                        //m_textInfo.characterInfo[m_characterCount - 1].xAdvance = m_xAdvance;
                         textConfiguration.m_cSpacing = 0;
                         return true;
                     case 2152041:  // <mspace=xx.x>

@@ -1,9 +1,6 @@
 using TextMeshDOTS.RichText;
 using Unity.Collections;
-using Unity.Entities;
-using Unity.Entities.UniversalDelegates;
 using UnityEngine;
-using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
 {
@@ -63,7 +60,6 @@ namespace TextMeshDOTS
         public float m_fxScale;
 
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
-        public int m_characterCount;
 
         //public void Reset(in TextBaseConfiguration textBaseConfiguration, DynamicBuffer<FontMaterial> fontMaterial)
         public void Reset(in TextBaseConfiguration textBaseConfiguration, FontAssetArray fontAssetArray)
@@ -130,8 +126,6 @@ namespace TextMeshDOTS
             m_fxScale = 1;
 
             m_highlightStateStack.Clear();
-
-            m_characterCount = 0;  // Total characters in the CalliString
         }
     }
 }

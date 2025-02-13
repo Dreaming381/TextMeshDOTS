@@ -8,7 +8,6 @@ using TextMeshDOTS.HarfBuzz;
 using System;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 using TextMeshDOTS.Rendering;
-using UnityEngine.TextCore.Text;
 using Unity.Rendering;
 using TextMeshDOTS.Rendering.Authoring;
 
@@ -103,28 +102,27 @@ namespace TextMeshDOTS.TextProcessing
                     {
                         currentFont = currentSpan.fontMaterialIndex;
                         endIndex = currentSpan.endIndex;
+                        //scan for opentype features found in current textspan
+                        //there are many https://learn.microsoft.com/en-us/typography/opentype/spec/featurelist
+                        //and many of them are automaticlly set by harfbuzz during hb_shape
+                        //review which one make sense to expose via FontStyles
+                        if ((currentSpan.fontStyle & FontStyles.SmallCaps) == FontStyles.SmallCaps)
+                            features.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, currentSpan.startIndex, currentSpan.endIndex));
+                        if ((currentSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
+                            features.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, currentSpan.startIndex, currentSpan.endIndex));
+                        if ((currentSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
+                            features.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, currentSpan.startIndex, currentSpan.endIndex));
+                        if ((currentSpan.fontStyle & FontStyles.Fraction) == FontStyles.Fraction)
+                            features.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, currentSpan.startIndex, currentSpan.endIndex));
                         cur++;
                     } while (cur < textSpans.Length && (currentSpan = textSpans[cur]).fontMaterialIndex == currentFont);
-
                     var length = (int)(endIndex - startIndex);
                     buffer.AddText(text, startIndex, length);
                     buffer.SetSegmentProperties(ref latinLTR);
+
                     //a number of white spaces are regretably not replaced by "space" (needs to be handled in GenerateGlyphJob)
                     //https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767
-                    buffer.BufferFlag = BufferFlag.REMOVE_DEFAULT_IGNORABLES | BufferFlag.BOT | BufferFlag.EOT;
-
-                    //To-Do: revisit how to add features per textSpan
-                    for (int i = 0, ii = textSpans.Length; i < ii; i++)
-                    {
-                        var textSpan = textSpans[i];
-                        if ((textSpan.fontStyle & FontStyles.SmallCaps) == FontStyles.SmallCaps)
-                            features.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, textSpan.startIndex, textSpan.endIndex));
-                        if ((textSpan.fontStyle & FontStyles.Subscript) == FontStyles.Subscript)
-                            features.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, textSpan.startIndex, textSpan.endIndex));
-                        if ((textSpan.fontStyle & FontStyles.Superscript) == FontStyles.Superscript)
-                            features.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, textSpan.startIndex, textSpan.endIndex));
-                    }
-                    features.Add(new Feature() { tag = HB.HB_TAG('f', 'r', 'a', 'c'), value = 1, start = 0, end = (uint)calliBytes.Length, });
+                    buffer.BufferFlag = BufferFlag.REMOVE_DEFAULT_IGNORABLES | BufferFlag.BOT | BufferFlag.EOT;                    
 
                     var fontAssetRef = fontAssetRefs[currentFont];
                     var fontEntityID = fontEntitiesLookup.IndexOf(fontAssetRef);

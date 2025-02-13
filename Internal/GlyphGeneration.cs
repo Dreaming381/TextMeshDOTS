@@ -30,14 +30,12 @@ namespace TextMeshDOTS
         {
             //Debug.Log("CreateRenderGlyphs");
             renderGlyphs.Clear();
+            if (calliBytes.IsEmpty)
+                return;
             var fontAssetRefs = fontAssetArray.fontAssetRefs;
             int textSpanCounter = 0;
-            var currentTextSpan = textSpans[textSpanCounter++];
-            if (calliBytes.IsEmpty)
-            {
-                
-                return;
-            }
+            var currentTextSpan = textSpans[textSpanCounter++];            
+            
             var calliString = new CalliString(calliBytes);
             var characters = calliString.GetEnumerator();             
 
@@ -173,7 +171,7 @@ namespace TextMeshDOTS
                 bool simulateBold = (currentTextSpan.fontStyle & FontStyles.Bold) == FontStyles.Bold && currentFontAssetRef.weight != (int)FontWeight.Bold;
                 if (simulateBold) 
                 {
-                    Debug.Log($"Simulate Bold {currentFontAssetRef.weight} {(int)FontWeight.Bold}");
+                    //Debug.Log($"Simulate Bold {currentFontAssetRef.weight} {(int)FontWeight.Bold}");
                     style_padding = 0;
                     boldSpacingAdjustment = currentFont.boldStyleSpacing;
                 }

@@ -8,7 +8,6 @@ using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.TextCore.Text;
 using TextMeshDOTS.TextProcessing;
 
 namespace TextMeshDOTS.Authoring

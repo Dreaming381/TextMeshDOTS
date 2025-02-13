@@ -14,7 +14,7 @@ using TextMeshDOTS.TextProcessing;
 namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
-    //[DisableAutoCreation]
+    [DisableAutoCreation]
     [CreateBefore(typeof(NativeFontLoaderSystem))]
     partial struct RuntimeMultiFontTextRendererSpawner : ISystem
     {

@@ -50,14 +50,16 @@ namespace TextMeshDOTS.Authoring
     {
         public override void Bake(TextRendererAuthoring authoring)
         {
-            var fontCount = authoring.fonts.Length;
-            if (authoring.fonts == null || fontCount == 0)
+            int fontCount = 0;
+            if (authoring.fonts == null || (fontCount = authoring.fonts.Length) == 0)
                 return;
 
             HashSet<int> redundancyCheck = new HashSet<int>(fontCount);
             for (int i = 0; i < fontCount; i++)
             {
                 var font = authoring.fonts[i];
+                if(font == null) 
+                    return;
                 var hashCode = font.name.GetHashCode();
                 if (redundancyCheck.Contains(hashCode))
                 {

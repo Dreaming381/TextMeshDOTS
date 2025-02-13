@@ -3,13 +3,15 @@
 TextMeshDOTS is a standalone text package for DOTS, forked from [Latios Framework/Calligraphics](https://github.com/Dreaming381/Latios-Framework/tree/master/Calligraphics). 
 
 Prior to version 0.9.0, TextMeshDOTS used static font atlas textures from TextCore FontAssets. 
-As of version 0.9.0, generates all requiered font textures dynamically on the fly. This is made possible by utilizing 
-the [Harfbuzz](https://harfbuzz.github.io/) library. Thanks to it,  TextMeshDOTS now works directly with native Truetype 
-and Opentype fonts (file ending `*.ttf` and `*.otf`) and does not need Unity `Font` or `FontAsset`. The [HarfbuzzUnity](https://github.com/Dreaming381/HarfbuzzUnity) 
-plugin for MacOS, Linux and Windows was made by Dreaming381. Furthermore, TextMeshDOTS is now also capabaple to render the newest 
-version of colored emoji fonts natively without any additonal library dependencies such as freetype: 
+As of version 0.9.0, TextMeshDOTS generates all required font textures dynamically on the fly. This is made possible by utilizing 
+the [Harfbuzz](https://harfbuzz.github.io/) library. Thanks to it, TextMeshDOTS now works directly with native Truetype 
+and Opentype fonts (file ending `*.ttf` and `*.otf`) and does not need Unity `Font` or `FontAsset`. 
+The [HarfbuzzUnity](https://github.com/Dreaming381/HarfbuzzUnity) plugin for MacOS, Linux and Windows was made by Dreaming381. 
+Furthermore, TextMeshDOTS is now also capable to render the newest version of colored emoji fonts natively without any 
+additional library dependencies such as freetype: 
 [COLRv1 fonts](https://developer.chrome.com/blog/colrv1-fonts). It cannot (and may never) work with bitmap and svg version of 
-these fonts (read linked blog for "Why?").
+these fonts (read linked blog for "Why?"). Lastly, a new feature in TextMeshDOTS version 0.9.0 is the ability to automaticaly 
+work with font families, so e.g. select the "bold-italic" member when that style is selected (more below).
 
 TextMeshDOTS renders world space text similar to TextMeshPro. It leverages the 
 [Unity Entities](https://docs.unity3d.com/Packages/com.unity.entities@1.2/manual/index.html) 
@@ -29,15 +31,17 @@ and TextCore: \<allcaps\>, \<alpha\>, \<b\>, \<color\>, \<cspace\>, \<font\>, \<
 
   -	Create a `SubScene`
   -	Add empty `GameObject`, and `TextRenderer` component on it
-  - As for font usage, you need to drop all fonts you intend to use in the TextRenderer into the `Fonts` list. You got 2 options for doing so
+  - As for font usage, you need to drop all fonts you intend to use in a given TextRender into the `Fonts` list. You got two options for doing so
     1. `System Fonts`: you want to use fonts that you know can be found on the target device
     2. you want to include the font files into your build
   - To use `System Fonts`, you can drop the `ttf` and `otf` files anywhere in your project. Unity cannot be stopped converting this 
-    to a `font` asset, but this font asset is actually not needed and all information in it will be ignored.
-  - To include the font files into your build, create under your `Assets` folder a subfolder called `StreamingAssets`. Drag and drop all 
-    the `ttf` and `otf` files you intend to use there. You can organize fonts in further subfolders as you wish.
+    to a `font` asset, but this font asset is actually not needed and all information in it will be ignored. Drop the
+    `Font` assets you wish to use in a given TextRender into the `Fonts` list.
+  - To include the font files into your build, create under `Assets` a subfolder called `StreamingAssets`. Drag and drop all 
+    `ttf` and `otf` files you intend to use there. You can organize fonts in further subfolders as you wish. Drag and drop 
+    all font files you wish to use in a given TextRender into the `Fonts` list.
   - Please note, that pretty much any font such as "Arial" in Windows is actually multiple font files (e.g. one for `regular`,
-    one for `bold`, one for `italic`, one for `bold italic`. There can be many more. You need all of them to enable TextmeshDOTS to 
+    one for `bold`, one for `italic`, one for `bold italic`. There can be many more. You need all of them to enable TextMeshDOTS to 
     automatically select the right font when you apply FontStyles either via the buttons on the TextRenderer, or via richtext tags
     such as \<b\>, \<i> or \<font\> to explicitly select a font. TextMeshDOTS can simulate bold and italic when those variants are missing,
     but this should be the exception and not the default.    
