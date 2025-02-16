@@ -1,6 +1,6 @@
 namespace TextMeshDOTS.RichText
 {
-    internal enum TagUnitType
+    internal enum TagUnitType : byte
     {
         Pixels,
         FontUnits,

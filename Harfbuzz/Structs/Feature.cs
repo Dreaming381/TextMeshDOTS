@@ -28,7 +28,6 @@ namespace TextMeshDOTS.HarfBuzz
         }
         public Feature(uint tag, uint value, uint start, uint end)
         {
-            //features.Add(new Feature() { tag = HB.HB_TAG('s', 'm', 'c', 'p'), value = 1, start = (uint)textSpan.startIndex, end = (uint)(textSpan.startIndex + textSpan.length), });
             this.tag = tag;
             this.value = value;
             this.start = start;

@@ -110,7 +110,7 @@ namespace TextMeshDOTS.HarfBuzz
             HB.hb_buffer_destroy(ptr);
         }
 
-        public NativeArray<GlyphInfo> GlyphInfo()
+        public NativeArray<GlyphInfo> GetGlyphInfo()
         {
             uint length;
             var glyphInfoPtr = HB.hb_buffer_get_glyph_infos(ptr, out length);
@@ -127,7 +127,7 @@ namespace TextMeshDOTS.HarfBuzz
             return new ReadOnlySpan<GlyphInfo>(infoPtrs, (int)length);
         }
 
-        public NativeArray<GlyphPosition> GlyphPositions()
+        public NativeArray<GlyphPosition> GetGlyphPositions()
         {
             uint length;
             var glyphInfoPtr = HB.hb_buffer_get_glyph_positions(ptr, out length);

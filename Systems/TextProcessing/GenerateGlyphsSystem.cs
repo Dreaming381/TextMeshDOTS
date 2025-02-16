@@ -26,7 +26,7 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAllRW<RenderGlyph>()
                       .WithAll<CalliByte>()
                       .WithAll<GlyphOTF>()
-                      .WithAll<TextSpan>()                      
+                      .WithAll<XMLTag>()
                       .WithAll<TextBaseConfiguration>()
                       .WithAllRW<TextRenderControl>()
                       .Build();
@@ -39,7 +39,6 @@ namespace TextMeshDOTS.TextProcessing
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<GlyphOTF>());
             state.RequireForUpdate(fontstateQ);
-
         }
 
 
@@ -55,8 +54,7 @@ namespace TextMeshDOTS.TextProcessing
             state.Dependency = new GenerateRenderGlyphsJob
             {
                 renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
-                glyphMappingElementHandle = SystemAPI.GetBufferTypeHandle<GlyphMappingElement>(false),                
-                selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
+                glyphMappingElementHandle = SystemAPI.GetBufferTypeHandle<GlyphMappingElement>(false),
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
                 fontEntities = fontEntities,
@@ -66,13 +64,14 @@ namespace TextMeshDOTS.TextProcessing
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 dynamicFontAssetsLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(true),
+                fontAssetRefLookup = SystemAPI.GetComponentLookup<FontAssetRef>(true),
                 glyphMappingMaskHandle = SystemAPI.GetComponentTypeHandle<GlyphMappingMask>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),
-                textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
+                xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(true),
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
-               
-                lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion, 
+
+                lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(m_query, state.Dependency);
         }
     }

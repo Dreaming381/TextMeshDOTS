@@ -10,6 +10,7 @@ using Unity.Rendering;
 using UnityEngine.Rendering;
 using System.Collections.Generic;
 using UnityEditor;
+using TextMeshDOTS.RichText;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -110,7 +111,7 @@ namespace TextMeshDOTS.Authoring
             }
 
             //Text Content
-            AddBuffer<TextSpan>(entity);
+            AddBuffer<XMLTag>(entity);
             AddBuffer<GlyphOTF>(entity);
             AddBuffer<CalliByte>(entity);
             var calliByteRaw = AddBuffer<CalliByteRaw>(entity);

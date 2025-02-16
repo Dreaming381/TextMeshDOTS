@@ -1,4 +1,5 @@
 using System;
+using TextMeshDOTS.RichText;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -22,30 +23,7 @@ namespace TextMeshDOTS
         public HorizontalAlignmentOptions lineJustification;
         public VerticalAlignmentOptions verticalAlignment;
         public bool isOrthographic;
-    }
-
-    [InternalBufferCapacity(0)]
-    public struct TextSpan : IBufferElementData
-    {
-        public int fontMaterialIndex; //to access Font Blob
-        public uint startIndex;
-        public uint endIndex;
-
-        public float fontSize;
-        public Color32 color;
-        public FontStyles fontStyle;
-        public HorizontalAlignmentOptions lineJustification;
-
-        public float monoSpacing;
-        public float cSpacing;
-        public float fxScale;
-        public short fxRotationAngleCCW_degree;
-
-        public override string ToString()
-        {
-            return $"{startIndex}-{endIndex}: font {fontMaterialIndex}, fontSize {fontSize}, color {color}, fontStyle {fontStyle} lineJustification {lineJustification} color {color} color {color}";
-        }
-    }
+    }    
 
     /// <summary>
     /// The raw byte element as part of the text string.
@@ -62,7 +40,13 @@ namespace TextMeshDOTS
     {
         public byte element;
     }
-
+    public struct XMLTag : IBufferElementData
+    {
+        public TagType tagType;
+        public bool isClosing;
+        public int position; //position in processed text        
+        public TagValue value;
+    }
 
     /// <summary>
     /// The backing memory for a GlyphMapper struct. Cast to a GlyphMapper
@@ -173,5 +157,5 @@ namespace TextMeshDOTS
         Subscript = 0x100,
         Highlight = 0x200,
         Fraction = 0x400,
-    }
+    }   
 }

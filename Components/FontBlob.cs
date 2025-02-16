@@ -51,9 +51,9 @@ namespace TextMeshDOTS
 
         public BlobHashMap<uint, GlyphBlob> glyphs;
 
-        public float ascender; //depends on language and script direction, so risky to do it here. Better move to TextSpan
-        public float descender;//depends on language and script direction, so risky to do it here. Better move to TextSpan
-        public float baseLine;   //depends on language and script direction, so risky to do it here. Better move to TextSpan
+        public float ascender; //depends on language and script direction, so risky to do it here.
+        public float descender;//depends on language and script direction, so risky to do it here.
+        public float baseLine;   //depends on language and script direction, so risky to do it here.
 
         public float designSize;
         public float subfamilyNameID;

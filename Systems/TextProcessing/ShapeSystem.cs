@@ -4,13 +4,12 @@ using Unity.Profiling;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Jobs;
-using Unity.Rendering;
 using Unity.Collections;
+
 
 namespace TextMeshDOTS.TextProcessing
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateAfter(typeof(ExtractTextSegmentsSystem))]
     [RequireMatchingQueriesForUpdate]
     [BurstCompile]
     //[DisableAutoCreation]
@@ -31,10 +30,10 @@ namespace TextMeshDOTS.TextProcessing
                 .Build();
 
             textRendererQ = SystemAPI.QueryBuilder()
-                //.WithAllRW<MaterialMeshInfo>()
+                .WithAllRW<XMLTag>()
                 .WithAllRW<GlyphOTF>()
-                .WithAll<CalliByte>()
-                .WithAll<TextSpan>()
+                .WithAllRW<CalliByte>()                                
+                .WithAll<CalliByteRaw>()                
                 .WithAll<TextBaseConfiguration>()
                 .WithAll<FontBlobReference>()
                 .Build();            
@@ -46,8 +45,9 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<DynamicFontAsset>()
                 .Build();
 
-            textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<TextSpan>());
+            textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
             textRendererQ.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
+
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             state.RequireForUpdate(fontstateQ);
         }
@@ -64,34 +64,39 @@ namespace TextMeshDOTS.TextProcessing
 
             var fontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
             var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
+            state.Dependency = new ExtractTagsJob
+            {
+                calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),
+                calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(false),
+                xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(false),
+
+                lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
+            }.ScheduleParallel(textRendererQ, state.Dependency);
+
             state.Dependency = new ShapeJob
             {
                 marker = marker,
                 marker2 = marker2,
-                
+
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
 
                 fontEntities = fontEntities,
-                fontEntitiesLookup = fontEntitiesLookup,
+                fontAssetRefs = fontEntitiesLookup,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
-                materialMeshInfoHandle = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(false),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
+                textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 nativeFontPointerLookup = SystemAPI.GetComponentLookup<NativeFontPointer>(),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
+                calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
-                textSpanHandle = SystemAPI.GetBufferTypeHandle<TextSpan>(true),
+                selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
+                xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(true),
                 glyphsInUseLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
-            }.ScheduleParallel(textRendererQ, state.Dependency); 
-
-            //state.Dependency = new UpdateMissingGlyphsJob
-            //{
-            //    missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false),
-            //    usedGlyphsLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(true),
-            //}.Schedule(textRendererQ, state.Dependency);
+            }.ScheduleParallel(textRendererQ, state.Dependency);
 
             state.Dependency = new SortMissingGlyphJob
             {
@@ -102,8 +107,8 @@ namespace TextMeshDOTS.TextProcessing
             {
                 newMissingGlyphs = missingGlyphs,
             }.ScheduleParallel(fontEntitiesQ, state.Dependency);
+
             missingGlyphs.Dispose(state.Dependency);
         }
     }
 }
-

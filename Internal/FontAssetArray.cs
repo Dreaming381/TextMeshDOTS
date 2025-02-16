@@ -1,4 +1,3 @@
-using UnityEngine;
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;
@@ -7,8 +6,9 @@ namespace TextMeshDOTS
 {
     public struct FontAssetArray
     {
-        public FixedList4096Bytes<FontAssetRef> fontAssetRefs;       
+        public FixedList4096Bytes<FontAssetRef> fontAssetRefs;
         public readonly int Length => fontAssetRefs.Length;
+        public readonly FontAssetRef this[int index] => fontAssetRefs[index];
         public void Initialize(BlobAssetReference<FontBlob> singleFont)
         {
             var fontAssetRef = singleFont.Value.fontAssetRef;
@@ -30,7 +30,27 @@ namespace TextMeshDOTS
                     fontAssetRefs.Add(fontAssetRef);
                 }
             }
-        }        
+        }
+        /// <summary> Find font entity requested by combination of font family and style </summary>
+        public int GetFontIndex(FontAssetRef desiredFontAssetRef)
+        {
+            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            {
+                //Debug.Log($"current: {fontAssetArray.fontAssetRefs[i].ToString()}");
+                if (fontAssetRefs[i] == desiredFontAssetRef)
+                    return i;
+            }
+
+            //fall back to family in case we end up here
+            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            {
+                //Debug.Log($"current: {fontAssetArray.fontAssetRefs[i].ToString()}");
+                if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash)
+                    return i;
+            }
+            //Debug.Log($"Requested font not found");
+            return -1;
+        }
     }
 }
 

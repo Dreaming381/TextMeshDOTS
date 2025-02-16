@@ -214,7 +214,6 @@ namespace TextMeshDOTS
             //cannot implement MovePrevious realiably as we cannot establish length of previous UTF8 rune 
             public bool MovePrevious()
             {
-
                 throw new NotImplementedException();
             }
 
