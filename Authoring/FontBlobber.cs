@@ -76,7 +76,7 @@ namespace TextMeshDOTS.Authoring
             }
             var slant = font.GetStyleTag(StyleTag.SLANT_ANGLE); 
 
-            fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, (int)weight, width, isItalic, slant);
+            fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, (FontWeight)weight, width, isItalic, slant);
 
             //var result = new FixedString128Bytes();
             //var values = Enum.GetValues(typeof(NameId));
@@ -114,7 +114,7 @@ namespace TextMeshDOTS.Authoring
             fontBlobRoot.fontSubFamily = fontRequest.fontSubFamily;
             fontBlobRoot.typographicFamily = fontRequest.typographicFamily;
             fontBlobRoot.typographicSubfamily = fontRequest.typographicSubfamily;            
-            fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, fontRequest.weight, fontRequest.width, fontRequest.isItalic, fontRequest.slant);
+            fontBlobRoot.fontAssetRef = new FontAssetRef(fontBlobRoot.fontFamily, fontBlobRoot.typographicFamily, fontRequest.fontWeight, fontRequest.fontWidth, fontRequest.isItalic, fontRequest.slant);
 
             var result = builder.CreateBlobAssetReference<FontBlob>(Allocator.Persistent);
             builder.Dispose();
@@ -128,8 +128,8 @@ namespace TextMeshDOTS.Authoring
         public FixedString128Bytes fontSubFamily;
         public FixedString128Bytes typographicFamily;
         public FixedString128Bytes typographicSubfamily;
-        public int weight;
-        public int width;
+        public FontWeight fontWeight;
+        public float fontWidth;
         public bool isItalic;
         public int slant;
         public bool useSystemFont;

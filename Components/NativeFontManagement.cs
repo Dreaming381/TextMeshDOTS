@@ -7,7 +7,6 @@ using Unity.Entities;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TextCore;
-using UnityEngine.TextCore.Text;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
@@ -44,6 +43,7 @@ namespace TextMeshDOTS
         public GlyphRect value;
     }
     /// <summary> Free GlyphsRects of texture atlas </summary>
+    [InternalBufferCapacity(0)]
     public struct FreeGlyphRects : IBufferElementData
     {
         public GlyphRect value;
@@ -104,22 +104,45 @@ namespace TextMeshDOTS
         public bool isItalic;
         public float slant;
 
-        public FontAssetRef(FixedString128Bytes fontFamily, FixedString128Bytes typographicFamily, int weight, float width, bool isItalic, float slant)
+        public FontAssetRef(FixedString128Bytes fontFamily, FixedString128Bytes typographicFamily, FontWeight fontWeight, float width, bool isItalic, float slant)
         {
             this.familyHash = typographicFamily.IsEmpty ? TextHelper.GetHashCodeCaseInSensitive(fontFamily) : TextHelper.GetHashCodeCaseInSensitive(typographicFamily);
-            this.weight = weight;
+            this.weight = (int)fontWeight;
             this.width = width;
             this.isItalic = isItalic;
             this.slant = slant;
         }
-        public FontAssetRef(int familyNameHashCode, FontStyles fontStyles)
+        public FontAssetRef(int familyNameHashCode, FontWeight fontWeight, float fontWidth, FontStyles fontStyles)
         {
-            this.familyHash = familyNameHashCode;
-            this.weight = (fontStyles & FontStyles.Bold) == FontStyles.Bold ? (int)FontWeight.Bold : (int)FontWeight.Normal;
-            this.width = (int)FontWidth.Normal;
-            this.isItalic = (fontStyles & FontStyles.Italic) == FontStyles.Italic;
-            this.slant = 0;
+            familyHash = familyNameHashCode;
+            weight = (int)fontWeight;
+            width = fontWidth;
+            isItalic = (fontStyles & FontStyles.Italic) == FontStyles.Italic;
+            slant = 0;
         }
+        public FontAssetRef(int familyNameHashCode, FontWeight fontWeight, FontWidth fontWidth, FontStyles fontStyles)
+        {
+
+            familyHash = familyNameHashCode;
+            weight = (int)fontWeight;
+            width = (float)fontWidth;
+            isItalic = (fontStyles & FontStyles.Italic) == FontStyles.Italic;
+            slant = 0;
+            //adjust according to https://learn.microsoft.com/en-us/typography/opentype/spec/os2#uswidthclass
+            switch (fontWidth)
+            {
+                case FontWidth.ExtraCondensed:
+                    width = 62.5f;
+                    break;
+                case FontWidth.SemiCondensed:
+                    width = 87.5f;
+                    break;
+                case FontWidth.SemiExpanded:
+                    width = 112.5f;
+                    break;
+            }
+        }
+
         public override bool Equals(object obj) => obj is FontAssetRef other && Equals(other);
 
         public bool Equals(FontAssetRef other)

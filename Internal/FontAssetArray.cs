@@ -1,6 +1,8 @@
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
+using UnityEngine;
 
 namespace TextMeshDOTS
 {
@@ -34,17 +36,18 @@ namespace TextMeshDOTS
         /// <summary> Find font entity requested by combination of font family and style </summary>
         public int GetFontIndex(FontAssetRef desiredFontAssetRef)
         {
+            //Debug.Log($"Search for: {desiredFontAssetRef}");
             for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
             {
-                //Debug.Log($"current: {fontAssetArray.fontAssetRefs[i].ToString()}");
-                if (fontAssetRefs[i] == desiredFontAssetRef)
-                    return i;
+                //Debug.Log($"candidate: {fontAssetRefs[i].ToString()}");
+                if (fontAssetRefs[i] == desiredFontAssetRef)                  
+                    return i;                
             }
 
             //fall back to family in case we end up here
             for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
             {
-                //Debug.Log($"current: {fontAssetArray.fontAssetRefs[i].ToString()}");
+                //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
                 if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash)
                     return i;
             }

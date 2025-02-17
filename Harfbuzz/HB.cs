@@ -8,7 +8,7 @@ namespace TextMeshDOTS.HarfBuzz
 {
     public static unsafe class HB
     {
-        private const string HarfBuzz = "harfbuzz.dll";
+        private const string HarfBuzz = "harfbuzz";
         private const CallingConvention CallConvention = CallingConvention.Cdecl;
 
         #region draw

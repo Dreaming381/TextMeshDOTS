@@ -1,5 +1,6 @@
 using Unity.Burst;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace TextMeshDOTS.Rendering.Authoring
 {
@@ -39,17 +40,19 @@ namespace TextMeshDOTS.Rendering.Authoring
 
             shader = Shader.Find(kSDF_URP_Shader);
             material = new Material(shader);
-            material.enableInstancing = true;
+            material.enableInstancing = true;            
             SetupMaterialWithBlendMode(material);
             UnityEditor.AssetDatabase.CreateAsset(material, kSDF_URP_MaterialPath);
 
-            shader = Shader.Find(kCOLRv1_HDRP_Shader);
+            shader = Shader.Find(kCOLRv1_HDRP_Shader);            
             material = new Material(shader);
-            material.enableInstancing = true;
+            material.SetFloat("_Cull", (float)CullMode.Back);
+            material.enableInstancing = true;            
             UnityEditor.AssetDatabase.CreateAsset(material, kCOLORv1_HDRP_MaterialPath);
 
             shader = Shader.Find(kCOLRv1_URP_Shader);
             material = new Material(shader);
+            material.SetFloat("_Cull", (float)CullMode.Back);
             material.enableInstancing = true;
             UnityEditor.AssetDatabase.CreateAsset(material, kCOLORv1_URP_MaterialPath);
         }
@@ -57,9 +60,10 @@ namespace TextMeshDOTS.Rendering.Authoring
         public static void SetupMaterialWithBlendMode(Material material)
         {
             material.SetOverrideTag("RenderType", "Transparent");
-            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
             material.SetInt("_ZWrite", 0);
+            material.SetFloat("_Cull", (float)CullMode.Back);
             material.EnableKeyword("_ALPHATEST_ON");
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;

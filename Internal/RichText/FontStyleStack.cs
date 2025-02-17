@@ -47,18 +47,18 @@ namespace TextMeshDOTS
                 case FontStyles.Italic:
                     italic++;
                     return italic;
-                case FontStyles.Underline:
-                    underline++;
-                    return underline;
+                //case FontStyles.Underline:
+                //    underline++;
+                //    return underline;
                 case FontStyles.UpperCase:
                     uppercase++;
                     return uppercase;
                 case FontStyles.LowerCase:
                     lowercase++;
                     return lowercase;
-                case FontStyles.Strikethrough:
-                    strikethrough++;
-                    return strikethrough;
+                //case FontStyles.Strikethrough:
+                //    strikethrough++;
+                //    return strikethrough;
                 case FontStyles.Fraction:
                     fraction++;
                     return fraction;
@@ -68,9 +68,9 @@ namespace TextMeshDOTS
                 case FontStyles.Subscript:
                     subscript++;
                     return subscript;
-                case FontStyles.Highlight:
-                    highlight++;
-                    return highlight;
+                //case FontStyles.Highlight:
+                //    highlight++;
+                //    return highlight;
             }
             return 0;
         }
@@ -91,12 +91,12 @@ namespace TextMeshDOTS
                     else
                         italic = 0;
                     return italic;
-                case FontStyles.Underline:
-                    if (underline > 1)
-                        underline--;
-                    else
-                        underline = 0;
-                    return underline;
+                //case FontStyles.Underline:
+                //    if (underline > 1)
+                //        underline--;
+                //    else
+                //        underline = 0;
+                //    return underline;
                 case FontStyles.UpperCase:
                     if (uppercase > 1)
                         uppercase--;
@@ -109,18 +109,18 @@ namespace TextMeshDOTS
                     else
                         lowercase = 0;
                     return lowercase;
-                case FontStyles.Strikethrough:
-                    if (strikethrough > 1)
-                        strikethrough--;
-                    else
-                        strikethrough = 0;
-                    return strikethrough;
-                case FontStyles.Highlight:
-                    if (highlight > 1)
-                        highlight--;
-                    else
-                        highlight = 0;
-                    return highlight;
+                //case FontStyles.Strikethrough:
+                //    if (strikethrough > 1)
+                //        strikethrough--;
+                //    else
+                //        strikethrough = 0;
+                //    return strikethrough;
+                //case FontStyles.Highlight:
+                //    if (highlight > 1)
+                //        highlight--;
+                //    else
+                //        highlight = 0;
+                //    return highlight;
                 case FontStyles.Fraction:
                     if (fraction > 1)
                         fraction--;

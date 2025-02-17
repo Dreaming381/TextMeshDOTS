@@ -90,8 +90,7 @@ namespace TextMeshDOTS.TextProcessing
                                                    in calliBytes,
                                                    in glyphOTFs,
                                                    in xmlTags,
-                                                   in textBaseConfiguration,
-                                                   hasMultipleFonts);
+                                                   in textBaseConfiguration);
 
                 if (glyphMappingBuffers.Length > 0)
                 {

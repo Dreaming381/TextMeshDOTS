@@ -1,12 +1,10 @@
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering;
-using TextMeshDOTS.RichText;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Graphics;
 using Unity.Rendering;
 using Unity.Transforms;
-using static UnityEngine.EventSystems.EventTrigger;
 
 namespace TextMeshDOTS
 {

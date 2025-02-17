@@ -34,6 +34,7 @@ namespace TextMeshDOTS.RichText
 
             bool isTagSet = false;
             bool isValidHtmlTag = false;
+            bool success = false;
 
             Unicode.Rune unicode = Unicode.BadRune;
             while (enumerator.MoveNext() && (unicode = enumerator.Current) != Unicode.BadRune && unicode != '<')
@@ -42,28 +43,29 @@ namespace TextMeshDOTS.RichText
                 {
                     isValidHtmlTag = true;
                     GetTagType(nameHashCode, ref tag);
+                    tag.position = position;
                     var valueLength = tagValue.valueLength;                    
                     switch (tagValue.type)
                     {                        
                         case TagValueType.NumericalValue:
                             calliStringRaw.GetSubString(ref m_htmlTag, tagValue.valueStart, tagValue.valueLength);
-                            if (ConvertToFloat(ref m_htmlTag, out float value) != ParseError.None) // Reject tag if value is invalid.
-                                return false;
-                            tagValue.NumericalValue = value;
-                            tag.position = position;
-                            tmpTags.Add(tag);
+                            success = (ConvertToFloat(ref m_htmlTag, out float value) == ParseError.None);                            
+                            if (success)
+                            {
+                                tagValue.NumericalValue = value;
+                                //Debug.Log($"NumericalValue: {m_htmlTag} {tagValue.valueLength} {tagValue.NumericalValue}");
+                                tmpTags.Add(tag);
+                            }
                             break;
                         case TagValueType.ColorValue:
                             calliStringRaw.GetSubString(ref m_htmlTag, tagValue.valueStart, tagValue.valueLength);
                             tagValue.ColorValue = HexCharsToColor(m_htmlTag, tagValue.valueLength);
-                            tag.position = position;
                             //Debug.Log($"Color: {m_htmlTag} {tagValue.valueLength} {(Color32)tagValue.ColorValue}");
                             tmpTags.Add(tag);
                             break;
                         case TagValueType.StringValue:
                             GetStringValueTagType(valueHashCode, ref tag);
                             //Debug.Log($"StringValue: {tag.tagType} {tag.value.stringValue}");
-                            tag.position = position;
                             tmpTags.Add(tag);
                             break;
                         default:
@@ -75,7 +77,6 @@ namespace TextMeshDOTS.RichText
                                     tag.tagType = TagType.Color;
                                     tagValue.type = TagValueType.ColorValue;
                                     tagValue.ColorValue = HexCharsToColor(m_htmlTag, tagByteCount);
-                                    tag.position = position;
                                     //Debug.Log($"Color: {m_htmlTag} {(Color32)tagValue.ColorValue}");
                                     tmpTags.Add(tag);
                                     break;                                    
@@ -84,12 +85,12 @@ namespace TextMeshDOTS.RichText
                             }
                             else
                             {
-                                GetTagType(nameHashCode, ref tag);
-                                tag.position = position;
                                 tmpTags.Add(tag);
+                                //Debug.Log($"Add: {tag.tagType}");
                             }
                             break;
                     }
+                    //Debug.Log($"Unexpected: {tag.tagType} {tag.value.NumericalValue}");
                     break;
                 }
 
@@ -102,8 +103,9 @@ namespace TextMeshDOTS.RichText
                     if (tagValue.type == TagValueType.None)
                     {
                         // Check for tagIndentifier type
-                        if (unicode == '+' || unicode == '-' || unicode == '.' || Unicode.Rune.IsDigit(unicode))
+                        if (unicode == '+' || unicode == '-' || unicode == '.' || Unicode.Rune.IsDigit(unicode)) 
                         {
+                            //To-Do: distinguish between "+" and "-". Needed to enable relative font size increase (12pt "+6pt")...could store as NumericalValue.Plus and NumericalValue.Minus
                             //Debug.Log($"Found digit tag {(char)unicode.value}");
                             tagValue.unit = TagUnitType.Pixels;
                             tagValue.type = TagValueType.NumericalValue;
@@ -159,15 +161,18 @@ namespace TextMeshDOTS.RichText
                                 
                                 GetTagType(nameHashCode, ref tag);
                                 calliStringRaw.GetSubString(ref m_htmlTag, tagValue.valueStart, tagValue.valueLength);
-                                if (ConvertToFloat(ref m_htmlTag, out float value) != ParseError.None) // Reject tag if value is invalid.
-                                    return false;
-                                tagValue.NumericalValue = value;
-                                tag.position = position;
-                                tmpTags.Add(tag);
+                                success = (ConvertToFloat(ref m_htmlTag, out float value) == ParseError.None);
+                                if (success) // Reject tag if value is invalid.
+                                {
+                                    tagValue.NumericalValue = value;
+                                    tag.position = position;
+                                    //Debug.Log($"NumericalValue: {m_htmlTag} {tagValue.valueLength} {tagValue.NumericalValue} {tag.tagType}");
+                                    tmpTags.Add(tag);
+                                }                                
                                 tag=new XMLTag();
+                                tagValue = ref tag.value;
                                 valueHashCode = 0;
-                                nameHashCode = 0;
-                                tagValue.type = TagValueType.None;
+                                nameHashCode = 0;                                
                             }
                             else if (tagIndentifierFlag != ParserState.Two)
                             {
@@ -187,13 +192,11 @@ namespace TextMeshDOTS.RichText
                                 GetTagType(nameHashCode, ref tag);
                                 calliStringRaw.GetSubString(ref m_htmlTag, tagValue.valueStart, tagValue.valueLength);                                
                                 tagValue.ColorValue = HexCharsToColor(m_htmlTag, tagValue.valueLength);
-                                Debug.Log($"Color: {m_htmlTag} {tagValue.ColorValue}");
+                                //Debug.Log($"Added Color: {m_htmlTag} {tagValue.ColorValue}");
                                 tag.position = position;
                                 tmpTags.Add(tag);
                                 tag = new XMLTag();
                                 tagValue = ref tag.value;
-                                tagValue.type = TagValueType.None;
-                                tagValue.unit = TagUnitType.Pixels;
                                 valueHashCode = 0;
                                 nameHashCode = 0;
                             }
@@ -211,13 +214,11 @@ namespace TextMeshDOTS.RichText
                                 tagIndentifierFlag = ParserState.Two;
                                 GetTagType(nameHashCode, ref tag);
                                 GetStringValueTagType(valueHashCode, ref tag);
-                                Debug.Log($"StringValue: {tag.tagType} {tag.value.stringValue}");
+                                //Debug.Log($"Added StringValue: {tag.tagType} {tag.value.stringValue}");
                                 tag.position = position;
                                 tmpTags.Add(tag);
                                 tag = new XMLTag();
-                                tagValue = ref tag.value;
-                                tagValue.type = TagValueType.None;
-                                tagValue.unit = TagUnitType.Pixels;
+                                tagValue = ref tag.value;                                
                                 valueHashCode = 0;
                                 nameHashCode = 0;
                             }
@@ -242,8 +243,6 @@ namespace TextMeshDOTS.RichText
                     tmpTags.Add(tag);
                     tag = new XMLTag();
                     tagValue = ref tag.value;
-                    tagValue.type = TagValueType.None;
-                    tagValue.unit = TagUnitType.Pixels;
                     valueHashCode = 0;
                     nameHashCode = 0;
                 }
@@ -259,11 +258,6 @@ namespace TextMeshDOTS.RichText
             {
                 return false;
             }
-            //GetTagType(nameHashCode, ref tag);
-            //tag.hash = nameHashCode;
-            //tag.value = tagValue;
-            //tag.position = position;
-            //tmpTags.Add(tag);
             for (int i = 0; i < tmpTags.Length; i++) 
             {
                 var tmpTag = tmpTags[i];
@@ -365,6 +359,16 @@ namespace TextMeshDOTS.RichText
                 case -1885698441:  // </font-weight>
                 case 457225591:  // </FONT-WEIGHT>
                     tag.tagType = TagType.FontWeight;
+                    tag.isClosing = true;
+                    return;
+                case 566314408:  // <font-width>
+                case -939682424:  // <FONT-WIDTH>
+                    tag.tagType = TagType.FontWidth;
+                    tag.isClosing = false;
+                    return;
+                case 957749223:  // </font-width>
+                case -548247609:  // </FONT-WIDTH>
+                    tag.tagType = TagType.FontWidth;
                     tag.isClosing = true;
                     return;
                 case 43969:  // <nobr>
@@ -550,6 +554,16 @@ namespace TextMeshDOTS.RichText
                 case 7757466:  // </rotate>
                 case 7130010:  // </ROTATE>
                     tag.tagType = TagType.Rotate;
+                    tag.isClosing = true;
+                    return;
+                case 16034505:  // <voffset>
+                case 11642281:  // <VOFFSET>
+                    tag.tagType = TagType.VOffset;
+                    tag.isClosing = false;
+                    return;
+                case 54741026:  // </voffset>
+                case 50348802:  // </VOFFSET>
+                    tag.tagType = TagType.VOffset;
                     tag.isClosing = true;
                     return;
                 default:

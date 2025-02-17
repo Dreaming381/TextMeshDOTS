@@ -69,6 +69,7 @@ namespace TextMeshDOTS.TextProcessing
                 calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(false),
                 xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(false),
+                textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(textRendererQ, state.Dependency);

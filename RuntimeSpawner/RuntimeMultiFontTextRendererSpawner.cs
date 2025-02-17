@@ -13,7 +13,7 @@ using TextMeshDOTS.TextProcessing;
 namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
-    //[DisableAutoCreation]
+    [DisableAutoCreation]
     [CreateBefore(typeof(NativeFontLoaderSystem))]
     partial struct RuntimeMultiFontTextRendererSpawner : ISystem
     {
@@ -41,8 +41,8 @@ namespace TextMeshDOTS.Authoring
                 fontSubFamily = "Regular",
                 typographicFamily = "",
                 typographicSubfamily = "",
-                weight = 400,
-                width = 100,
+                fontWeight = FontWeight.Normal,
+                fontWidth = 100,
                 isItalic = false,
                 slant = 0,
                 useSystemFont = false,
@@ -56,8 +56,8 @@ namespace TextMeshDOTS.Authoring
                 fontSubFamily = "Italic",
                 typographicFamily = "",
                 typographicSubfamily = "",
-                weight = 400,
-                width = 100,
+                fontWeight = FontWeight.Normal,
+                fontWidth = 100,
                 isItalic = true,
                 slant = -12,
                 useSystemFont = false,
@@ -71,8 +71,8 @@ namespace TextMeshDOTS.Authoring
                 fontSubFamily = "Bold",
                 typographicFamily = "",
                 typographicSubfamily = "",
-                weight = 700,
-                width = 100,
+                fontWeight = FontWeight.Bold,
+                fontWidth = 100,
                 isItalic = false,
                 slant = 0,
                 useSystemFont = false,
@@ -86,8 +86,8 @@ namespace TextMeshDOTS.Authoring
                 fontSubFamily = "Bold Italic",
                 typographicFamily = "",
                 typographicSubfamily = "",
-                weight = 700,
-                width = 100,
+                fontWeight = FontWeight.Bold,
+                fontWidth = 100,
                 isItalic = true,
                 slant = -12,
                 useSystemFont = false,
@@ -101,8 +101,8 @@ namespace TextMeshDOTS.Authoring
                 fontSubFamily = "Regular",
                 typographicFamily = "",
                 typographicSubfamily = "",
-                weight = 400,
-                width = 100,
+                fontWeight = FontWeight.Normal,
+                fontWidth = 100,
                 isItalic = false,
                 slant = 0,
                 useSystemFont = false,

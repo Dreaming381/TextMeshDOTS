@@ -1,27 +1,30 @@
 # TextMeshDOTS
 
-TextMeshDOTS is a standalone text package for DOTS, forked from [Latios Framework/Calligraphics](https://github.com/Dreaming381/Latios-Framework/tree/master/Calligraphics). 
+TextMeshDOTS renders world space text similar to TextMeshPro. Its is a standalone text package for DOTS, 
+forked from [Latios Framework/Calligraphics](https://github.com/Dreaming381/Latios-Framework/tree/master/Calligraphics). 
 
-Prior to version 0.9.0, TextMeshDOTS used static font atlas textures from TextCore FontAssets. 
-As of version 0.9.0, TextMeshDOTS generates all required font textures dynamically on the fly. This is made possible by utilizing 
-the [Harfbuzz](https://harfbuzz.github.io/) library. Thanks to it, TextMeshDOTS now works directly with native Truetype 
-and Opentype fonts (file ending `*.ttf` and `*.otf`) and does not need Unity `Font` or `FontAsset`. 
+<b>Dynamic Atlas Textures</b> Prior to version 0.9.0, TextMeshDOTS used static font atlas textures from TextCore FontAssets. 
+As of version 0.9.0, TextMeshDOTS generates all required font textures dynamically. Using the 
+[Harfbuzz](https://harfbuzz.github.io/) library, TextMeshDOTS is now using native truetype (`*.ttf`) 
+and opentype fonts (`*.otf`), and does not need Unity `Font` or `FontAsset`. 
 The [HarfbuzzUnity](https://github.com/Dreaming381/HarfbuzzUnity) plugin for MacOS, Linux and Windows was made by Dreaming381. 
-Furthermore, TextMeshDOTS is now also capable to render the newest version of colored emoji fonts natively without any 
-additional library dependencies such as freetype: 
-[COLRv1 fonts](https://developer.chrome.com/blog/colrv1-fonts). It cannot (and may never) work with bitmap and svg version of 
-these fonts (read linked blog for "Why?"). Lastly, a new feature in TextMeshDOTS version 0.9.0 is the ability to automaticaly 
-work with font families, so e.g. select the "bold-italic" member when that style is selected (more below).
 
-TextMeshDOTS renders world space text similar to TextMeshPro. It leverages the 
-[Unity Entities](https://docs.unity3d.com/Packages/com.unity.entities@1.2/manual/index.html) 
-package to generate the vertex data required for rendering, and uses native 
+<b>Color Emoji :-)</b> TextMeshDOTS is now capable to render [COLRv1](https://developer.chrome.com/blog/colrv1-fonts) emoji fonts. 
+Bitmap and svg emoji fonts are currently not supported. 
+
+<b>Font Family support:</b> Lastly, a new feature in TextMeshDOTS version 0.9.0 is the ability 
+to automaticaly work with font families, so e.g. select the "bold-italic" member when that style is selected (more below).
+
+<b>Rich Text:</b> TextMeshDOTS supports many rich text tags like [TextMeshPro](https://docs.unity3d.com/Packages/com.unity.textmeshpro@4.0/manual/RichText.html) 
+and TextCore (see section below for details). User selectable [opentype features](https://learn.microsoft.com/en-us/typography/opentype/spec/featurelist) 
+can be enabled using rich text tags such as \<sub\>(subscript), \<sup\>(superscript), \<frac\> (fractions), \<smcp\> (smallcaps).
+
+<b>Unity DOTS:</b> TextMeshDOTS leverages the [Unity Entities](https://docs.unity3d.com/Packages/com.unity.entities@1.2/manual/index.html) 
+package, BURST, and jobs to generate all data required for rendering, and 
 [Unity Entities Graphics](https://docs.unity3d.com/Packages/com.unity.entities.graphics@1.2/manual/index.html) 
-for rendering. The HDRP and URP shader are wrapper around the TextMeshPro 4.0 SRP shader. TextMeshDOTS supports
-almost all rich text tags of [TextMeshPro](https://docs.unity3d.com/Packages/com.unity.textmeshpro@4.0/manual/RichText.html) 
-and TextCore: \<allcaps\>, \<alpha\>, \<b\>, \<color\>, \<cspace\>, \<font\>, \<i>, \<lowercase\>, \<sub\>, 
-\<sup\>, \<pos\>, \<voffset\>, \<size\>, \<space=000.00\>, \<mspace=xx.x\>, \<smallcaps\>, 
-<scale=xx.x>, \<rotate\>. Other tags are recognized but might be ignored for layout and rendering purposes. 
+for rendering. The included HDRP and URP shader are wrapper around the TextMeshPro 4.0 SRP shader. 
+
+![plot](./TextMeshDOTS.png)
 
 # How to use
 
@@ -36,15 +39,17 @@ and TextCore: \<allcaps\>, \<alpha\>, \<b\>, \<color\>, \<cspace\>, \<font\>, \<
     2. you want to include the font files into your build
   - To use `System Fonts`, you can drop the `ttf` and `otf` files anywhere in your project. Unity cannot be stopped converting this 
     to a `font` asset, but this font asset is actually not needed and all information in it will be ignored. Drop the
-    `Font` assets you wish to use in a given TextRender into the `Fonts` list.
+    `Font` assets you wish to use in a given TextRender into the `Fonts` list. Utilizing harfbuzz, the backer will fetch requiered data 
+    directly from the native `ttf` or `otf`file to be able to find the font at runtime on the device.
   - To include the font files into your build, create under `Assets` a subfolder called `StreamingAssets`. Drag and drop all 
     `ttf` and `otf` files you intend to use there. You can organize fonts in further subfolders as you wish. Drag and drop 
     all font files you wish to use in a given TextRender into the `Fonts` list.
-  - Please note, that pretty much any font such as "Arial" in Windows is actually multiple font files (e.g. one for `regular`,
-    one for `bold`, one for `italic`, one for `bold italic`. There can be many more. You need all of them to enable TextMeshDOTS to 
-    automatically select the right font when you apply FontStyles either via the buttons on the TextRenderer, or via richtext tags
-    such as \<b\>, \<i> or \<font\> to explicitly select a font. TextMeshDOTS can simulate bold and italic when those variants are missing,
-    but this should be the exception and not the default.    
+  - Please note, that pretty much any font such as "Arial" in Windows actually constists of multiple font files (e.g. one for `regular`,
+    one for `bold`, one for `italic`, one for `bold italic`. There can be many more to provide variations of font width 
+  - (regular, condensed etc) and weigth (Sembibold, Black etc). You need all of these files to enable TextMeshDOTS to 
+    automatically select the right font when you apply FontStyles. Fontsyles are changed either using the buttons on 
+    the TextRenderer, or via richtext tags such as \<b\>, \<i>. Alternatively \<font\> can be used to explicitly select a font.
+    TextMeshDOTS can simulate bold and italic when those variants are missing, but this should be the exception and not the default.    
   - Type in some text or rich text  
   -	You should now see the text    
 
@@ -59,13 +64,27 @@ and TextCore: \<allcaps\>, \<alpha\>, \<b\>, \<color\>, \<cspace\>, \<font\>, \<
     - Drag and drop the fonts from `StreamingAssets` or from anywhere else in your project 
       (in case you intend to use `System Fonts`) into the font field, and copy the information 
       over into your runtime spanwer. I know this is cumbersome, but I did not see it so far 
-      as well invested time to automate runtime spawning via a baking workflow, primarily because I want to keep 
-      only one unified path for triggering the runtime font loading/unloading system (via `FontBlobReference`)
+      as well invested time to automate runtime spawning via a baking workflow. I want to keep 
+      only one unified path for triggering runtime font loading/unloading (via `FontBlobReference`)
   -	Hit play
 
+# Supported Richtext Tags
+
+\<align=...\> \<allcaps\>, \<alpha=xx\>, \<b\>, \<color=...\>, \<cspace=xx\>, \<font\>, \<font-weight=xxx\>, \<font-width=xxx.x\>, 
+\<fraction\>, \<i>, \<indent=xx> \<lowercase\>, \<sub\>, 
+\<sup\>, \<size=xx\>, \<space=000.00\>, \<mspace=xx.x\>, \<smallcaps\>, 
+<scale=xx.x>, \<rotate=00\>, \<voffset=00\>.  Permitted size units are 'pt','px', 'em' and '%' or nothing 
+(e.g. font-weight, font-width). Permitted values for named colors (\<color=red\>) are red, lightblue, blue,
+grey, black, green, white, orange, purple, yellow. String value like named colors or font names are recognized 
+with and without surrounding quotation marks. Hexadecimal colors are either specified using the 
+color keyword \<color=#005500\>, or directly without the color keyword as  \<#005500\>. 
+Alpha values are specified via \<alpha=#FF\>.
 
 # Known issues
--   None at this time
+  - \<aling\> works only for left, center and right (not justified and flush)
+  - \<sub\> and \<sub\>  are currently implemented using the font opentype feature. For most 
+    fonts, this only works  or digits and a few characters. One could simulate this via scaling & offsetting, 
+   but this comes at the cost of glyphs that are optically too thin
 
 
 ## Special Thanks To the original authors and contributors

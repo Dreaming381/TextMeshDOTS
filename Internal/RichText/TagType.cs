@@ -14,6 +14,7 @@ namespace TextMeshDOTS.RichText
         CSpace,
         Font,
         FontWeight,
+        FontWidth,
         Fraction,
         Italic,
         Indent,
@@ -36,8 +37,9 @@ namespace TextMeshDOTS.RichText
         Superscript,
         Underline,
         Uppercase,
+        VOffset,
         Unknown // Not a real tag, used to indicate an error
 
-        //gradient: margin, pos, width, voffset will not be supported
+        //gradient, margin, pos, will not be supported
     }
 }

@@ -22,8 +22,7 @@ namespace TextMeshDOTS
                                                        in DynamicBuffer<CalliByte> calliBytes,
                                                        in DynamicBuffer<GlyphOTF> glyphOTFs,
                                                        in DynamicBuffer<XMLTag> xmlTags,
-                                                       in TextBaseConfiguration textBaseConfiguration,
-                                                       bool multiFont)
+                                                       in TextBaseConfiguration textBaseConfiguration)
         {
             //Debug.Log("CreateRenderGlyphs");
             renderGlyphs.Clear();
@@ -37,17 +36,10 @@ namespace TextMeshDOTS
             var fontAssetRefs = fontAssetArray.fontAssetRefs;
             LayoutConfig layoutConfiguration = default;
             layoutConfiguration.Reset(textBaseConfiguration);
-            int tagsCounter = 0;
+            
             XMLTag currentTag;
-            int nextTagPosition = calliString.Length;
-            if (xmlTags.Length > 0)
-            {
-                currentTag = xmlTags[tagsCounter++];                
-                layoutConfiguration.UpdateLayoutConfig(ref currentTag, textBaseConfiguration);
-                nextTagPosition = tagsCounter < xmlTags.Length ? xmlTags[tagsCounter].position : calliString.Length;
-                //Debug.Log($"{currentTag.tagType} {currentTag.value.type} ({0} {nextTagPosition})");
-            }
-
+            int tagsCounter = 0;
+            int nextTagPosition = xmlTags.Length > 0 ? xmlTags[tagsCounter].position : calliString.Length;
 
             int characterCount = 0;
             int lastWordStartCharacterGlyphIndex = 0;
@@ -63,7 +55,7 @@ namespace TextMeshDOTS
             float accumulatedVerticalOffset = 0f;
             float maxLineAscender = float.MinValue;
             float maxLineDescender = float.MaxValue;
-            float xAdvance = 0f;
+            //float xAdvance = 0f;
 
 
             Entity currentFontEntity = glyphOTFs[0].fontEntity;
@@ -142,20 +134,21 @@ namespace TextMeshDOTS
                 float elementAscentLine = currentFont.ascender;
                 float elementDescentLine = currentFont.descender;
 
-                //synthesize superscript and subscript unless it is a digit. Most opentype fonts should
-                //have dedicated glyphs for digits when enabling the 'subs' and 'sups' tags
+                //synthesize superscript and subscript redundant to opentype feature set during shaping.
+                //only purpose is to simulate missing subscript glyphs, but unclear how to determine this
                 float fontScaleMultiplier = 1;
-                float m_BaselineOffset = 0;
-                if ((layoutConfiguration.m_fontStyles & FontStyles.Subscript) == FontStyles.Subscript && !currentRune.IsDigit())
-                {
-                    fontScaleMultiplier = currentFont.subScriptEmXSize;
-                    m_BaselineOffset = -currentFont.subScriptEmYOffset * adjustedScale;
-                }
-                else if ((layoutConfiguration.m_fontStyles & FontStyles.Superscript) == FontStyles.Superscript && !currentRune.IsDigit())
-                {
-                    fontScaleMultiplier = currentFont.superScriptEmXSize;
-                    m_BaselineOffset = currentFont.superScriptEmYOffset * adjustedScale;
-                }
+                float m_SubAndSupscriptOffset = 0;
+                //if ((layoutConfiguration.m_fontStyles & FontStyles.Subscript) == FontStyles.Subscript && !currentRune.IsDigit())
+                //{
+                //    //Debug.Log($"{currentFont.subScriptEmXSize} {currentFont.subScriptEmYOffset} {adjustedScale}");
+                //    fontScaleMultiplier = currentFont.subScriptEmXSize * adjustedScale;
+                //    m_SubAndSupscriptOffset = -currentFont.subScriptEmYOffset * adjustedScale;
+                //}
+                //else if ((layoutConfiguration.m_fontStyles & FontStyles.Superscript) == FontStyles.Superscript && !currentRune.IsDigit())
+                //{
+                //    fontScaleMultiplier = currentFont.superScriptEmXSize * adjustedScale;
+                //    m_SubAndSupscriptOffset = currentFont.superScriptEmYOffset * adjustedScale;
+                //}
 
                 currentElementScale = adjustedScale * fontScaleMultiplier;
                 float baselineOffset = currentFont.baseLine * adjustedScale * fontScaleMultiplier;
@@ -171,7 +164,7 @@ namespace TextMeshDOTS
                 {
                     monoAdvance =
                         (layoutConfiguration.m_monoSpacing / 2 - (glyphWidth / 2 + x_bearing) * currentElementScale);  // * (1 - charWidthAdjDelta);
-                    xAdvance += monoAdvance;
+                    layoutConfiguration.m_xAdvance += monoAdvance;
                 }
                 #endregion
 
@@ -195,8 +188,8 @@ namespace TextMeshDOTS
 
                 // top left is used to position bottom left and top right
                 float2 topLeft;
-                topLeft.x = xAdvance + (x_bearing * layoutConfiguration.m_fxScale - currentFont.materialPadding - style_padding + glyphOTF.xOffset) * currentElementScale;
-                topLeft.y = baselineOffset + (y_bearing + currentFont.materialPadding + glyphOTF.yOffset) * currentElementScale + m_BaselineOffset;
+                topLeft.x = layoutConfiguration.m_xAdvance + (x_bearing * layoutConfiguration.m_fxScale - currentFont.materialPadding - style_padding + glyphOTF.xOffset) * currentElementScale;
+                topLeft.y = baselineOffset + (y_bearing + currentFont.materialPadding + glyphOTF.yOffset) * currentElementScale + layoutConfiguration.m_baselineOffset + m_SubAndSupscriptOffset;
 
                 float2 bottomLeft;
                 bottomLeft.x = topLeft.x;
@@ -273,7 +266,7 @@ namespace TextMeshDOTS
                 {
                     // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
                     float shear_value = currentFont.italicsStyleSlant * 0.01f;
-                    float midPoint = ((currentFont.capHeight - (currentFont.baseLine + m_BaselineOffset)) / 2) * fontScaleMultiplier;
+                    float midPoint = ((currentFont.capHeight - (currentFont.baseLine + layoutConfiguration.m_baselineOffset + m_SubAndSupscriptOffset)) / 2) * fontScaleMultiplier;
                     float topShear = shear_value * ((y_bearing + currentFont.materialPadding + style_padding - midPoint) * currentElementScale);
                     bottomShear = shear_value *
                                         ((y_bearing - glyphHeight - currentFont.materialPadding - style_padding - midPoint) *
@@ -312,11 +305,10 @@ namespace TextMeshDOTS
                 // Compute text metrics
                 #region Compute Ascender & Descender values
                 // Element Ascender in line space
-                float elementAscender = elementAscentLine * currentElementScale + m_BaselineOffset;
+                float elementAscender = elementAscentLine * currentElementScale + layoutConfiguration.m_baselineOffset + m_SubAndSupscriptOffset;
 
                 // Element Descender in line space
-                float elementDescender = elementDescentLine * currentElementScale + m_BaselineOffset;
-
+                float elementDescender = elementDescentLine * currentElementScale + layoutConfiguration.m_baselineOffset + m_SubAndSupscriptOffset;
 
                 float adjustedAscender = elementAscender;
                 float adjustedDescender = elementDescender;
@@ -325,10 +317,10 @@ namespace TextMeshDOTS
                 if (isLineStart || isWhiteSpace == false)
                 {
                     // Special handling for Superscript and Subscript where we use the unadjusted line ascender and descender
-                    if (m_BaselineOffset != 0)
+                    if (m_SubAndSupscriptOffset != 0) //To-Do: review (also voffset affecting m_baselineOffset), effect not clear. 
                     {
-                        adjustedAscender = math.max((elementAscender - m_BaselineOffset) / fontScaleMultiplier, adjustedAscender);
-                        adjustedDescender = math.min((elementDescender - m_BaselineOffset) / fontScaleMultiplier, adjustedDescender);
+                        adjustedAscender = math.max((elementAscender - m_SubAndSupscriptOffset) / fontScaleMultiplier, adjustedAscender);
+                        adjustedDescender = math.min((elementDescender - m_SubAndSupscriptOffset) / fontScaleMultiplier, adjustedDescender);
                     }
                     maxLineAscender = math.max(adjustedAscender, maxLineAscender);
                     maxLineDescender = math.min(adjustedDescender, maxLineDescender);
@@ -339,23 +331,23 @@ namespace TextMeshDOTS
                 if (currentRune.value == 9)
                 {
                     float tabSize = currentFont.tabWidth * currentFont.tabMultiple * currentElementScale;
-                    float tabs = math.ceil(xAdvance / tabSize) * tabSize;
-                    xAdvance = tabs > xAdvance ? tabs : xAdvance + tabSize;
+                    float tabs = math.ceil(layoutConfiguration.m_xAdvance / tabSize) * tabSize;
+                    layoutConfiguration.m_xAdvance = tabs > layoutConfiguration.m_xAdvance ? tabs : layoutConfiguration.m_xAdvance + tabSize;
                 }
                 else if (layoutConfiguration.m_monoSpacing != 0)
                 {
                     float monoAdjustment = layoutConfiguration.m_monoSpacing - monoAdvance;
-                    xAdvance += (monoAdjustment + ((currentFont.regularStyleSpacing) * currentEmScale) + layoutConfiguration.m_cSpacing);
+                    layoutConfiguration.m_xAdvance += (monoAdjustment + ((currentFont.regularStyleSpacing) * currentEmScale) + layoutConfiguration.m_cSpacing);
                     if (isWhiteSpace || currentRune.value == 0x200B)
-                        xAdvance += textBaseConfiguration.wordSpacing * currentEmScale;
+                        layoutConfiguration.m_xAdvance += textBaseConfiguration.wordSpacing * currentEmScale;
                 }
                 else
                 {
-                    xAdvance += (glyphOTF.xAdvance * layoutConfiguration.m_fxScale) * currentElementScale +
+                    layoutConfiguration.m_xAdvance += (glyphOTF.xAdvance * layoutConfiguration.m_fxScale) * currentElementScale +
                                 (currentFont.regularStyleSpacing + boldSpacingAdjustment) * currentEmScale + layoutConfiguration.m_cSpacing;
 
                     if (isWhiteSpace || currentRune.value == 0x200B)
-                        xAdvance += textBaseConfiguration.wordSpacing * currentEmScale;
+                        layoutConfiguration.m_xAdvance += textBaseConfiguration.wordSpacing * currentEmScale;
                 }
                 #endregion XAdvance, Tabulation & Stops
 
@@ -403,7 +395,7 @@ namespace TextMeshDOTS
                     isLineStart = true;
                     bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale);
 
-                    xAdvance = 0;
+                    layoutConfiguration.m_xAdvance = 0 + layoutConfiguration.m_tagIndent;
                     previousRune = currentRune;
                     continue;
                 }
@@ -413,7 +405,7 @@ namespace TextMeshDOTS
                 // Handle word wrap
                 if (textBaseConfiguration.maxLineWidth < float.MaxValue &&
                     textBaseConfiguration.maxLineWidth > 0 &&
-                    xAdvance > textBaseConfiguration.maxLineWidth)
+                    layoutConfiguration.m_xAdvance > textBaseConfiguration.maxLineWidth)
                 {
                     bool dropSpace = false;
 
@@ -429,7 +421,7 @@ namespace TextMeshDOTS
                     }
 
                     var yOffsetChange = 0f;  //font.lineHeight * currentElementScale;
-                    var xOffsetChange = renderGlyphs[lastWordStartCharacterGlyphIndex].blPosition.x - bottomShear;
+                    var xOffsetChange = renderGlyphs[lastWordStartCharacterGlyphIndex].blPosition.x - bottomShear - layoutConfiguration.m_tagIndent;
                     if (xOffsetChange > 0 && !dropSpace)  // Always allow one visible character
                     {
                         // Finish line based on alignment
@@ -458,7 +450,7 @@ namespace TextMeshDOTS
                         isLineStart = true;
                         lineCount++;
 
-                        xAdvance -= xOffsetChange;
+                        layoutConfiguration.m_xAdvance -= xOffsetChange;
 
                         // Adjust the vertices of the previous render glyphs in the word
                         var glyphPtr = (RenderGlyph*)renderGlyphs.GetUnsafePtr();

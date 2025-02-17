@@ -14,7 +14,9 @@ namespace TextMeshDOTS
     {
         public float fontSize;        
         public Color32 color;
-        public FontStyles fontStyles;
+        public FontStyles fontStyles; //readout of bold style only during authoring, otherwise this library will use fontweight (selectable via xml tags)
+        public FontWeight fontWeight; //selectable via xml tags
+        public float fontWidth;   //selectable via xml tags
 
         public float maxLineWidth;
         public float wordSpacing;
@@ -40,12 +42,22 @@ namespace TextMeshDOTS
     {
         public byte element;
     }
+    [InternalBufferCapacity(0)]
     public struct XMLTag : IBufferElementData
     {
         public TagType tagType;
         public bool isClosing;
         public int position; //position in processed text        
         public TagValue value;
+        public XMLTag(bool dummy)
+        {
+            tagType = TagType.Unknown;
+            isClosing = false;
+            position = -1;
+            value = new TagValue();
+            value.type = TagValueType.None;
+            value.unit = TagUnitType.Pixels;            
+        }
     }
 
     /// <summary>
@@ -128,6 +140,7 @@ namespace TextMeshDOTS
         Black = 900,
         Heavy = 900,
     }
+
     public enum FontWidth :byte
     {
         //https://learn.microsoft.com/en-us/typography/opentype/spec/os2#uswidthclass
@@ -148,14 +161,30 @@ namespace TextMeshDOTS
         Normal = 0,
         Bold = 0x1,
         Italic = 0x2,
-        Underline = 0x4,
+        //Underline = 0x4,
         LowerCase = 0x8,
         UpperCase = 0x10,
         SmallCaps = 0x20,
-        Strikethrough = 0x40,
+        //Strikethrough = 0x40,
         Superscript = 0x80,
         Subscript = 0x100,
-        Highlight = 0x200,
+        //Highlight = 0x200,
         Fraction = 0x400,
-    }   
+    }
+    [Flags]
+    public enum AuthoringFontStyles
+    {
+        N = 0,
+        B = 0x1,
+        I = 0x2,
+        //Underline = 0x4,
+        LC = 0x8,
+        UC = 0x10,
+        SC = 0x20,
+        //Strikethrough = 0x40,
+        Sup = 0x80,
+        Sub = 0x100,
+        //Highlight = 0x200,
+        Frac = 0x400,
+    }
 }

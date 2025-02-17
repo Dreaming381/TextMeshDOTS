@@ -3,14 +3,12 @@ using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
-using UnityEngine.TextCore.Text;
 using Unity.Mathematics;
 using Unity.Entities.Graphics;
 using Unity.Rendering;
 using UnityEngine.Rendering;
 using System.Collections.Generic;
-using UnityEditor;
-using TextMeshDOTS.RichText;
+
 
 namespace TextMeshDOTS.Authoring
 {
@@ -21,7 +19,7 @@ namespace TextMeshDOTS.Authoring
         [TextArea(5, 10)]
         public string text;
         [EnumButtons]
-        public FontStyles fontStyles = FontStyles.Normal;
+        public AuthoringFontStyles fontStyles = AuthoringFontStyles.N;
         public float fontSize = 12f;
 
         [Tooltip("Sampling point size is used to set the font scale. See https://harfbuzz.github.io/harfbuzz-hb-font.html#hb-font-set-scale")]
@@ -117,7 +115,7 @@ namespace TextMeshDOTS.Authoring
             var calliByteRaw = AddBuffer<CalliByteRaw>(entity);
             var calliString = new CalliString(calliByteRaw);
             calliString.Append(authoring.text);
-            AddComponent(entity, new TextBaseConfiguration
+            var textBaseConfiguraton = new TextBaseConfiguration
             {
                 fontSize = authoring.fontSize,
                 color = authoring.color,
@@ -125,11 +123,14 @@ namespace TextMeshDOTS.Authoring
                 lineJustification = authoring.horizontalAlignment,
                 verticalAlignment = authoring.verticalAlignment,
                 isOrthographic = authoring.isOrthographic,
-                fontStyles = authoring.fontStyles,
+                fontStyles = (FontStyles)authoring.fontStyles,
+                fontWeight = ((FontStyles)authoring.fontStyles & FontStyles.Bold)== FontStyles.Bold ? FontWeight.Bold : FontWeight.Normal,
+                fontWidth = (int)FontWidth.Normal, //cannot be set from UI, 
                 wordSpacing = authoring.wordSpacing,
                 lineSpacing = authoring.lineSpacing,
                 paragraphSpacing = authoring.paragraphSpacing,
-            });
+            };
+            AddComponent(entity, textBaseConfiguraton);
             AddBuffer<RenderGlyph>(entity);
         }
         BlobAssetReference<FontBlob> BakeFontAsset(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap)

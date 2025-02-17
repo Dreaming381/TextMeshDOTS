@@ -13,19 +13,22 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<CalliByte> calliByteHandle;
         public BufferTypeHandle<XMLTag> xmlTagHandle; 
         [ReadOnly] public BufferTypeHandle<CalliByteRaw> calliByteRawHandle;
+        [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
 
         public uint lastSystemVersion;
 
         [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion)))
+            if (!(chunk.DidChange(ref calliByteRawHandle, lastSystemVersion) ||
+                  chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion)))
                 return;
 
             //Debug.Log("Extract text segments job");
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var calliBytesRawBuffers = chunk.GetBufferAccessor(ref calliByteRawHandle);
             var xmlTagBuffers = chunk.GetBufferAccessor(ref xmlTagHandle);
+            var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
 
             FixedString128Bytes m_htmlTag = new FixedString128Bytes();
             var tmpTags = new NativeList<XMLTag>(16, Allocator.Temp);
@@ -36,14 +39,15 @@ namespace TextMeshDOTS.TextProcessing
                 calliBytesBuffer.Clear();
                 calliBytesBuffer.Capacity = calliBytesRawBuffer.Length;//2x speedup compared to allocating for each element.  Might overallocate a bit when text uses a lot of richtext tags
                 var xmlTags = xmlTagBuffers[indexInChunk];
-                
+                var textBaseConfiguration = textBaseConfigurations[indexInChunk];
+
                 var calliStringRaw = new CalliString(calliBytesRawBuffer);
                 var calliString = new CalliString(calliBytesBuffer);
                 calliBytesBuffer.Clear();
                 xmlTags.Clear();
                 var rawCharacters = calliStringRaw.GetEnumerator();
                 var previousRuneStartPosition = 0;
-                FontStyles currentFontStyle=default;
+                var currentFontStyle= textBaseConfiguration.fontStyles;
                 int utf8Count = 0;
                 while (rawCharacters.MoveNext())
                 {

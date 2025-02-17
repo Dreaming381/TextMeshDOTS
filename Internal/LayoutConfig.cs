@@ -1,5 +1,6 @@
 using TextMeshDOTS.RichText;
 using UnityEngine;
+using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
 {    
@@ -44,9 +45,9 @@ namespace TextMeshDOTS
 
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
 
-        //public void Reset(in TextBaseConfiguration textBaseConfiguration, DynamicBuffer<FontMaterial> fontMaterial)
         public void Reset(in TextBaseConfiguration textBaseConfiguration)
         {
+            m_fontStyles = textBaseConfiguration.fontStyles;
             m_fontScaleMultiplier = 1;
             m_currentFontSize = textBaseConfiguration.fontSize;
             m_sizeStack.Clear();
@@ -95,18 +96,18 @@ namespace TextMeshDOTS
         {
             switch (tag.tagType)
             {
-                case TagType.Subscript:
-                    if (!tag.isClosing)
-                        m_fontStyles |= FontStyles.Subscript;
-                    else
-                        m_fontStyles &= ~FontStyles.Subscript;                    
-                    return;
-                case TagType.Superscript:
-                    if (!tag.isClosing)
-                        m_fontStyles |= FontStyles.Superscript;
-                    else
-                        m_fontStyles &= ~FontStyles.Superscript;
-                    return;
+                //case TagType.Subscript: //redundant to opentype feature set during shaping. only purpose is to simulate missing subscript glyphs, but unclear how to determine this
+                //    if (!tag.isClosing)
+                //        m_fontStyles |= FontStyles.Subscript;
+                //    else
+                //        m_fontStyles &= ~FontStyles.Subscript;                    
+                //    return;
+                //case TagType.Superscript: //redundant to opentype feature set during shaping. only purpose is to simulate missing subscript glyphs, but unclear how to determine this
+                //    if (!tag.isClosing)
+                //        m_fontStyles |= FontStyles.Superscript;
+                //    else
+                //        m_fontStyles &= ~FontStyles.Superscript;
+                //    return;
                 case TagType.NoBr:
                     if (!tag.isClosing)
                         m_isNonBreakingSpace = true;
@@ -162,26 +163,23 @@ namespace TextMeshDOTS
                         switch (tag.value.stringValue)
                         {
                             case StringValue.left:  // <align=left>
-                                m_lineJustification = HorizontalAlignmentOptions.Left;
-                                m_lineJustificationStack.Add(m_lineJustification);
-                                return;
+                                m_lineJustification = HorizontalAlignmentOptions.Left;                                
+                                break;
                             case StringValue.right:  // <align=right>
                                 m_lineJustification = HorizontalAlignmentOptions.Right;
-                                m_lineJustificationStack.Add(m_lineJustification);
-                                return;
+                                break;
                             case StringValue.center:  // <align=center>
                                 m_lineJustification = HorizontalAlignmentOptions.Center;
-                                m_lineJustificationStack.Add(m_lineJustification);
-                                return;
+                                break;
                             case StringValue.justified:  // <align=justified>
                                 m_lineJustification = HorizontalAlignmentOptions.Justified;
-                                m_lineJustificationStack.Add(m_lineJustification);
-                                return;
+                                break;
                             case StringValue.flush:  // <align=flush>
                                 m_lineJustification = HorizontalAlignmentOptions.Flush;
-                                m_lineJustificationStack.Add(m_lineJustification);
-                                return;
+                                break;
                         }
+                        m_lineJustificationStack.Add(m_lineJustification);
+                        return;
                     }
                     else
                         m_lineJustification = m_lineJustificationStack.RemoveExceptRoot();
@@ -339,6 +337,33 @@ namespace TextMeshDOTS
                     }
                     else
                         m_fxRotationAngleCCW_degree = 0;
+                    return;
+                case TagType.VOffset:
+                    if (!tag.isClosing)
+                    {
+                        var tmp = m_baselineOffset;
+                        switch (tag.value.unit)
+                        {
+                            case TagUnitType.Pixels:
+                                m_baselineOffset = (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * tag.value.NumericalValue;
+                                break;
+                            case TagUnitType.FontUnits:
+                                m_baselineOffset = (textBaseConfiguration.isOrthographic ? 1 : 0.1f) * m_currentFontSize * tag.value.NumericalValue;
+                                break;
+                            case TagUnitType.Percentage:
+                                //m_tagIndent = m_marginWidth * tag.value.NumericalValue / 100;
+                                break;
+                        }
+                        m_baselineOffsetStack.Add(m_baselineOffset);
+                        //Debug.Log($"Set from {tmp} to {m_baselineOffset}");
+                    }
+                    else
+                    {
+                        var tmp = m_baselineOffset;                        
+                        m_baselineOffset = m_baselineOffsetStack.RemoveExceptRoot();
+                        //Debug.Log($"revert from {tmp} to {m_baselineOffset}");
+                    }
+
                     return;
             }
         }
