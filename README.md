@@ -46,9 +46,9 @@ for rendering. The included HDRP and URP shader are wrapper around the TextMeshP
     all font files you wish to use in a given TextRender into the `Fonts` list.
   - Please note, that pretty much any font such as "Arial" in Windows actually constists of multiple font files (e.g. one for `regular`,
     one for `bold`, one for `italic`, one for `bold italic`. There can be many more to provide variations of font width 
-  - (regular, condensed etc) and weigth (Sembibold, Black etc). You need all of these files to enable TextMeshDOTS to 
+    (regular, condensed etc) and weigth (Sembibold, Black etc). You need all of these files to enable TextMeshDOTS to 
     automatically select the right font when you apply FontStyles. Fontsyles are changed either using the buttons on 
-    the TextRenderer, or via richtext tags such as \<b\>, \<i>. Alternatively \<font\> can be used to explicitly select a font.
+    the TextRenderer, or via rich text tags such as \<b\>, \<i>. Alternatively \<font\> can be used to explicitly select a font.
     TextMeshDOTS can simulate bold and italic when those variants are missing, but this should be the exception and not the default.    
   - Type in some text or rich text  
   -	You should now see the text    
@@ -70,12 +70,12 @@ for rendering. The included HDRP and URP shader are wrapper around the TextMeshP
 
 # Supported Richtext Tags
 
-\<align=...\> \<allcaps\>, \<alpha=xx\>, \<b\>, \<color=...\>, \<cspace=xx\>, \<font\>, \<font-weight=xxx\>, \<font-width=xxx.x\>, 
+\<align=...\> \<allcaps\>, \<alpha=xx\>, \<b\>, \<color=...\>, \<cspace=xx\>, \<font=...\>, \<font-weight=xxx\>, \<font-width=xxx.x\>, 
 \<fraction\>, \<i>, \<indent=xx> \<lowercase\>, \<sub\>, 
 \<sup\>, \<size=xx\>, \<space=000.00\>, \<mspace=xx.x\>, \<smallcaps\>, 
 <scale=xx.x>, \<rotate=00\>, \<voffset=00\>.  Permitted size units are 'pt','px', 'em' and '%' or nothing 
 (e.g. font-weight, font-width). Permitted values for named colors (\<color=red\>) are red, lightblue, blue,
-grey, black, green, white, orange, purple, yellow. String value like named colors or font names are recognized 
+grey, black, green, white, orange, purple, yellow. String values (such as named colors or font names) are recognized 
 with and without surrounding quotation marks. Hexadecimal colors are either specified using the 
 color keyword \<color=#005500\>, or directly without the color keyword as  \<#005500\>. 
 Alpha values are specified via \<alpha=#FF\>.

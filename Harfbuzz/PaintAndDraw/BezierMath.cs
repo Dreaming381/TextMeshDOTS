@@ -361,7 +361,7 @@ namespace TextMeshDOTS.HarfBuzz
             newBezierData = new DrawData(edges.Length * 16, contourIDs.Length, maxDeviation, Allocator.Temp);
             var newEdges = newBezierData.edges;
             var newContourIDs = newBezierData.contourIDs;
-
+            newBezierData.glyphRect = drawData.glyphRect;
             bool success = true;
             SDFEdge edge;
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour

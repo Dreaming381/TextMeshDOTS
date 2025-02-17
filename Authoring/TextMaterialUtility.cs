@@ -64,6 +64,9 @@ namespace TextMeshDOTS.Rendering.Authoring
             material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
             material.SetInt("_ZWrite", 0);
             material.SetFloat("_Cull", (float)CullMode.Back);
+            // _IsoPerimeter = Outline Width. Increase x a bit to avoid that thin lines dissappear.
+            // Best compromize in combination with current automatic calculation of SPREAD in SDF generation. 
+            material.SetVector("_IsoPerimeter", new Vector4(0.15f,0,0,0));
             material.EnableKeyword("_ALPHATEST_ON");
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;

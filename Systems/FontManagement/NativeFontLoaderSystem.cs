@@ -207,8 +207,8 @@ namespace TextMeshDOTS.TextProcessing
             {
                 atlasData = new AtlasData
                 {
-                    atlasHeight = 1024,
-                    atlasWidth = 1024,
+                    atlasHeight = 2048,
+                    atlasWidth = 2048,
                     padding = 8,                //10% of atlas height or width
                     samplingPointSize = fontBlobRef.samplingPointSizeBitmap,    //size of font (in pixel) in atlas
                 };
@@ -221,10 +221,10 @@ namespace TextMeshDOTS.TextProcessing
             {
                 atlasData = new AtlasData
                 {
-                    atlasHeight = 1024,
-                    atlasWidth = 1024,
-                    padding = 9,                //10% of atlas height or width
-                    samplingPointSize = fontBlobRef.samplingPointSizeSDF,    //size of font (in pixel) in atlas
+                    atlasHeight = 2048,
+                    atlasWidth = 2048,
+                    padding = fontBlobRef.samplingPointSizeSDF / 6,  //samplingPointSizeSDF is clamped to 64..96, so padding will be clamped to 10..16
+                    samplingPointSize = fontBlobRef.samplingPointSizeSDF,  //size of font (in pixel) in atlas
                 };
                 var texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.Alpha8, false);
                 var rawTextureData = texture2D.GetRawTextureData<byte>();

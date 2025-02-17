@@ -47,9 +47,9 @@ namespace TextMeshDOTS.TextProcessing
             if (glyphIndex != -1)
             {
                 //render SDF into the reserved padded atlas texture  window 
-                var atlasRect = usedGlyphRects[glyphIndex]; 
+                var atlasRect = usedGlyphRects[glyphIndex];
                 //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-                SDF_SPMD.SDFGenerateSubDivisionLineEdges(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.padding, atlasData.atlasWidth, atlasData.atlasHeight);
+                SDF_SPMD.SDFGenerateSubDivisionLineEdges(nativeFontPointer.orientation, ref drawData, textureData, atlasRect, atlasData.padding, atlasData.atlasWidth, atlasData.atlasHeight, atlasData.padding);
             }
             else
                 Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");

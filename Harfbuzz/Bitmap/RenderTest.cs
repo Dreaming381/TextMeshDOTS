@@ -32,7 +32,7 @@ public class RenderTest : MonoBehaviour
     Face face;
     Font font;
     
-    int padding = 9;
+    int padding = 16;
 
     void Start()
     {
@@ -77,11 +77,12 @@ public class RenderTest : MonoBehaviour
         font.DrawGlyph(glyphID, drawFunctions, ref drawData);
                 
         font.GetGlyphExtents(glyphID, out GlyphExtents glyphExtents);
-        var atlastRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
-        
+        var atlasRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
+
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, atlastRect, padding, atlasWidth, atlasHeight);
+        SDF.SDFGenerateSubDivision(orientation, ref drawData, textureData, atlasRect, padding, atlasWidth, atlasHeight,padding);
+        //SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, atlasRect, padding, atlasWidth, atlasHeight, padding);
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;

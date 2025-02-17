@@ -23,7 +23,9 @@ namespace TextMeshDOTS.Authoring
         public float fontSize = 12f;
 
         [Tooltip("Sampling point size is used to set the font scale. See https://harfbuzz.github.io/harfbuzz-hb-font.html#hb-font-set-scale")]
+        [Range(64, 96)]
         public int samplingPointSizeSDF = 64;
+        [Range(64, 256)]
         public int samplingPointSizeBitmap = 128;
         public Color32 color = Color.white;
 
