@@ -63,7 +63,7 @@ for rendering. The included HDRP and URP shader are wrapper around the TextMeshP
     - Right click in a folder, then `Create --> TextMeshDOTS --> Font Utility`
     - Drag and drop the fonts from `StreamingAssets` or from anywhere else in your project 
       (in case you intend to use `System Fonts`) into the font field, and copy the information 
-      over into your runtime spanwer. I know this is cumbersome, but I did not see it so far 
+      over into your runtime spawner. I know this is cumbersome, but I did not see it so far 
       as well invested time to automate runtime spawning via a baking workflow. I want to keep 
       only one unified path for triggering runtime font loading/unloading (via `FontBlobReference`)
   -	Hit play
@@ -82,8 +82,8 @@ Alpha values are specified via \<alpha=#FF\>.
 
 # Known issues
   - \<aling\> works only for left, center and right (not justified and flush)
-  - \<sub\> and \<sub\>  are currently implemented using the font opentype feature. For most 
-    fonts, this only works  or digits and a few characters. One could simulate this via scaling & offsetting, 
+  - \<sub\> and \<sup\>  are currently implemented using the font opentype feature. For most 
+    fonts, this only works  for digits and a few characters. One could simulate this via scaling & offsetting, 
    but this comes at the cost of glyphs that are optically too thin
 
 

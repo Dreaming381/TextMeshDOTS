@@ -26,7 +26,7 @@ namespace TextMeshDOTS.Authoring
         [Range(64, 96)]
         public int samplingPointSizeSDF = 64;
         [Range(64, 256)]
-        public int samplingPointSizeBitmap = 128;
+        public int samplingPointSizeBitmap = 64;
         public Color32 color = Color.white;
 
         public HorizontalAlignmentOptions horizontalAlignment = HorizontalAlignmentOptions.Left;
@@ -172,21 +172,5 @@ namespace TextMeshDOTS.Authoring
             AddComponent<RenderBounds>(entity);
             AddComponent<PerInstanceCullingTag>(entity);
         }
-    }
-    
-
-    [System.Serializable]
-    [Tooltip("Copy strings from system fonts here ")]
-    public struct FontItem    
-    {        
-        public string typographicFamily;
-        public string typographicSubfamily;
-        public override int GetHashCode()
-        {
-            int hashCode = 2055808453;
-            hashCode = hashCode * -1521134295 + TextHelper.GetHashCodeCaseInSensitive(typographicFamily);
-            hashCode = hashCode * -1521134295 + TextHelper.GetHashCodeCaseInSensitive(typographicSubfamily);
-            return hashCode;
-        }
-    }
+    }    
 }

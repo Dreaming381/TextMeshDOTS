@@ -2,8 +2,6 @@ using System;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.RichText;
 using Unity.Collections;
-using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace TextMeshDOTS
 {
@@ -35,7 +33,7 @@ namespace TextMeshDOTS
             if (fractionStartID != -1)
                 values.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, position));
         }
-        internal void UpdateOpenTypeFeatures(ref XMLTag tag)
+        internal void Update(ref XMLTag tag)
         {
             switch (tag.tagType)
             {

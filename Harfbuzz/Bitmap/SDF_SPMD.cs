@@ -27,10 +27,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             bool flip_y = true;
             bool flip_sign = false;
-            int outsideSign = -1;
             var offset = drawData.glyphRect.min - padding;
             float sp_sq;
-            SDFEdge edge;
             var dists = new NativeArray<SignedDistance>(atlastRect.width * atlastRect.height, Allocator.Temp);
 
             if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
@@ -50,7 +48,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 int nextStartID = contourIDs[contourID + 1];
                 for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
                 {
-                    edge = edges[edgeID];
+                    var edge = edges[edgeID];
                     var p0 = edge.start_pos - offset;
                     var p1 = edge.end_pos - offset;
                     var cbox = BezierMath.GetLineBBox(p0, p1);

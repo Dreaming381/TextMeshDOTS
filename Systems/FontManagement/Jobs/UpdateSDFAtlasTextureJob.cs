@@ -3,7 +3,6 @@ using Unity.Jobs;
 using Unity.Collections;
 using Unity.Profiling;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine.TextCore;
 using UnityEngine;
 using TextMeshDOTS.HarfBuzz;

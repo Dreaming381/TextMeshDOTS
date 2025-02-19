@@ -1,12 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
-using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Profiling;
-using UnityEngine;
-using UnityEngine.TextCore;
-
 
 namespace TextMeshDOTS.HarfBuzz
 {

@@ -56,9 +56,7 @@ namespace TextMeshDOTS.TextProcessing
             //var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
             var segmentProperties = new SegmentProperties(Direction.LTR, Script.LATIN, language);
             var buffer = new Buffer(true);
-            //var features = new NativeList<Feature>(16, Allocator.Temp);
-            var openTypeFeatures = new OpenTypeFeatureConfig(16, Allocator.Temp);
-            
+            var openTypeFeatures = new OpenTypeFeatureConfig(16, Allocator.Temp);            
 
             //shape plans can be cached..no use case found yet where there this makes a signifiant difference
             //var shaperList = HB.hb_shape_list_shapers();
@@ -70,8 +68,7 @@ namespace TextMeshDOTS.TextProcessing
 
             FontAssetArray fontAssetArray = default;
             bool hasMultipleFonts = additionalFontMaterialEntityBuffers.Length > 0;
-
-            var chunkMissingGlyphs = new NativeList<FontEntityGlyph>(1024, Allocator.Temp);           
+            var chunkMissingGlyphs = new NativeList<FontEntityGlyph>(1024, Allocator.Temp);
 
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
@@ -103,32 +100,30 @@ namespace TextMeshDOTS.TextProcessing
                 if (xmlTags.Length==0) //text has no richtext tags, just search font requested by textBaseConfiguration and shape 
                 {
                     //find font Entity requested by combination of font family and style
-                    fontConfiguration.fontFamilyHash = fontAssetRefs[0].familyHash;                    
+                    fontConfiguration.m_fontFamilyHash = fontAssetRefs[0].familyHash;                    
                     var fontIndex = fontConfiguration.GetFontIndex(ref fontAssetArray);                    
                     if (fontIndex != -1)
-                        fontConfiguration.fontMaterialIndex = fontIndex;
+                        fontConfiguration.m_fontMaterialIndex = fontIndex;
                  
-                    Shape(buffer, text, 0, text.Length, ref segmentProperties, ref fontAssetArray, fontConfiguration.fontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
+                    Shape(buffer, text, 0, text.Length, ref segmentProperties, ref fontAssetArray, fontConfiguration.m_fontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
                     continue;
                 }
 
                 //text has richtext tags. Search segments where font, language, script and direction does does not change (To-Do: use ICU for that),
                 //apply opentype features requested via richtext tags, and shape
                 var calliStringRaw = new CalliString(calliBytesRawBuffer);
-
-
                 int tagsCounter = 0;
                 XMLTag currentTag;
                 int startIndex = 0;
                 int endIndex = text.Length;
-                var currentFontMaterialIndex = fontConfiguration.fontMaterialIndex;
+                var currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
                 while (startIndex < endIndex)
                 {
-                    while (tagsCounter < xmlTags.Length && fontConfiguration.fontMaterialIndex == currentFontMaterialIndex)
+                    while (tagsCounter < xmlTags.Length && fontConfiguration.m_fontMaterialIndex == currentFontMaterialIndex)
                     {
                         currentTag = xmlTags[tagsCounter];
                         fontConfiguration.GetCurrentFontIndex(ref currentTag, ref fontAssetArray, ref calliStringRaw);
-                        openTypeFeatures.UpdateOpenTypeFeatures(ref currentTag);
+                        openTypeFeatures.Update(ref currentTag);
                         endIndex = currentTag.position;                        
                         tagsCounter++;
                     }                    
@@ -137,7 +132,7 @@ namespace TextMeshDOTS.TextProcessing
                     Shape(buffer, text, startIndex, length, ref segmentProperties, ref fontAssetArray, currentFontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
                     startIndex = endIndex;
                     endIndex = text.Length;
-                    currentFontMaterialIndex = fontConfiguration.fontMaterialIndex;
+                    currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
                     openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)text.Length);
                 }
             }

@@ -6,141 +6,136 @@ namespace TextMeshDOTS
 {    
     internal struct FontConfig
     {
-        public int fontMaterialIndex;        
+        public int m_fontMaterialIndex;        
 
-        public int fontFamilyHash;
-        public FixedStack512Bytes<int> fontFamilyHashStack;
+        public int m_fontFamilyHash;
+        public FixedStack512Bytes<int> m_fontFamilyHashStack;
 
-        public FontWeight fontWeight;
-        public FixedStack512Bytes<FontWeight> fontWeightStack;
+        public FontWeight m_fontWeight;
+        public FixedStack512Bytes<FontWeight> m_fontWeightStack;
 
-        public float fontWidth;
-        public FixedStack512Bytes<float> fontWidthStack;
+        public float m_fontWidth;
+        public FixedStack512Bytes<float> m_fontWidthStack;
 
-        public FontStyles fontStyles; //only used for italic state
+        public FontStyles m_fontStyles; //only used for italic state
         public void Reset(in TextBaseConfiguration textBaseConfiguration, ref FontAssetArray fontAssetArray)
         {
-            fontStyles = textBaseConfiguration.fontStyles;
+            m_fontStyles = textBaseConfiguration.fontStyles;
 
-            fontFamilyHash = fontAssetArray.fontAssetRefs[0].familyHash;
-            fontFamilyHashStack.Clear();
-            fontFamilyHashStack.Add(fontFamilyHash);
+            m_fontFamilyHash = fontAssetArray.fontAssetRefs[0].familyHash;
+            m_fontFamilyHashStack.Clear();
+            m_fontFamilyHashStack.Add(m_fontFamilyHash);
 
-            fontWeight = textBaseConfiguration.fontWeight;
-            fontWeightStack.Clear();
-            fontWeightStack.Add(fontWeight);
+            m_fontWeight = textBaseConfiguration.fontWeight;
+            m_fontWeightStack.Clear();
+            m_fontWeightStack.Add(m_fontWeight);
 
-            fontWidth = textBaseConfiguration.fontWidth;
-            fontWidthStack.Clear();
-            fontWidthStack.Add(fontWidth);
+            m_fontWidth = textBaseConfiguration.fontWidth;
+            m_fontWidthStack.Clear();
+            m_fontWidthStack.Add(m_fontWidth);
 
-            fontMaterialIndex = 0;
+            m_fontMaterialIndex = 0;
 
-            var desiredFontAssetRef = new FontAssetRef(fontFamilyHash, fontWeight, fontWidth, fontStyles);
+            var desiredFontAssetRef = new FontAssetRef(m_fontFamilyHash, m_fontWeight, m_fontWidth, m_fontStyles);
             var fontIndex = fontAssetArray.GetFontIndex(desiredFontAssetRef);
-            fontMaterialIndex = fontIndex == -1 ? 0 : fontIndex;
-        }
-        public FontAssetRef GetFontAssetRef()
-        {
-            return new FontAssetRef
-            {
-                familyHash = fontFamilyHash,
-                weight = (int)fontWeight,
-                width = fontWidth,
-                isItalic = (fontStyles & FontStyles.Italic) == FontStyles.Italic,
-                slant = 0,
-            };       
-        }
+            m_fontMaterialIndex = fontIndex == -1 ? 0 : fontIndex;
+        }        
         public int GetFontIndex(ref FontAssetArray fontAssetArray)
         {
             var desiredFontAssetRef = new FontAssetRef
             {
-                familyHash = fontFamilyHash,
-                weight = (int)fontWeight,
-                width = fontWidth,
-                isItalic = (fontStyles & FontStyles.Italic) == FontStyles.Italic,
+                familyHash = m_fontFamilyHash,
+                weight = m_fontWeight,
+                width = m_fontWidth,
+                isItalic = (m_fontStyles & FontStyles.Italic) == FontStyles.Italic,
                 slant = 0,
             };
             return fontAssetArray.GetFontIndex(desiredFontAssetRef);
         }
+        
+        /// <summary>
+        /// In case the XMLTag  causes a change of the required font by changing any of the parameters in FontAssetRef, this method 
+        /// searches the index of that font (0=main entity, >0 AdditionalFontEntity) in the provided FontAssetArray 
+        /// </summary>
         internal void GetCurrentFontIndex(ref XMLTag tag, ref FontAssetArray fontAssetArray, ref CalliString calliStringRaw)
         {
             int fontIndex;
             switch (tag.tagType)
             {
+                case TagType.Italic:
+                    if (!tag.isClosing)
+                        m_fontStyles |= FontStyles.Italic;
+                    else
+                        m_fontStyles &= ~FontStyles.Italic;
+                    fontIndex = GetFontIndex(ref fontAssetArray);
+                    if (fontIndex != -1)
+                        m_fontMaterialIndex = fontIndex;
+                    return;
                 case TagType.Bold:
                     if (!tag.isClosing)
                     {
-                        fontWeight = FontWeight.Bold;
-                        fontWeightStack.Add(fontWeight);
+                        m_fontWeight = FontWeight.Bold;
+                        m_fontWeightStack.Add(m_fontWeight);
                     }
                     else
-                        fontWeight = fontWeightStack.RemoveExceptRoot();
+                        m_fontWeight = m_fontWeightStack.RemoveExceptRoot();
                     fontIndex = GetFontIndex(ref fontAssetArray);
                     if (fontIndex != -1)
-                        fontMaterialIndex = fontIndex;
-                    return;
-                case TagType.Italic:
-                    if (!tag.isClosing)
-                        fontStyles |= FontStyles.Italic;
-                    else
-                        fontStyles &= ~FontStyles.Italic;
-                    fontIndex = GetFontIndex(ref fontAssetArray);
-                    if (fontIndex != -1)
-                        fontMaterialIndex = fontIndex;
-                    return;
+                        m_fontMaterialIndex = fontIndex;
+                    return;                
                 case TagType.FontWeight:                   
                     if (!tag.isClosing)
                     {
-                        fontWeight = (FontWeight)tag.value.NumericalValue;
-                        fontWeightStack.Add(fontWeight);
+                        m_fontWeight = (FontWeight)tag.value.NumericalValue;
+                        m_fontWeightStack.Add(m_fontWeight);
                     }
                     else
-                        fontWeight = fontWeightStack.RemoveExceptRoot();
+                        m_fontWeight = m_fontWeightStack.RemoveExceptRoot();
 
                     fontIndex = GetFontIndex(ref fontAssetArray);
                     if (fontIndex != -1)
-                        fontMaterialIndex = fontIndex;
+                        m_fontMaterialIndex = fontIndex;
                     return;
                 case TagType.FontWidth:
                     if (!tag.isClosing)
                     {
-                        fontWidth = tag.value.NumericalValue;
-                        fontWidthStack.Add(fontWidth);
+                        m_fontWidth = tag.value.NumericalValue;
+                        m_fontWidthStack.Add(m_fontWidth);
                     }
                     else
-                        fontWidth = fontWidthStack.RemoveExceptRoot();
+                        m_fontWidth = m_fontWidthStack.RemoveExceptRoot();
 
                     fontIndex = GetFontIndex(ref fontAssetArray);
                     if (fontIndex != -1)
-                        fontMaterialIndex = fontIndex;
+                        m_fontMaterialIndex = fontIndex;
                     return;
                 case TagType.Font:
                     if (!tag.isClosing)
                     {
                         if (tag.value.stringValue == StringValue.Default)
-                            fontFamilyHash = fontFamilyHashStack[0];                        
+                            m_fontFamilyHash = m_fontFamilyHashStack[0];                        
                         else 
                         {
                             //fetch name of font from calliStringRaw Buffer
                             FixedString128Bytes stringValue = default; //should not happen too often, so should be OK to allocate here
                             calliStringRaw.GetSubString(ref stringValue, tag.value.valueStart, tag.value.valueLength);
-                            fontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(stringValue); 
-                            fontFamilyHashStack.Add(fontFamilyHash);
+                            m_fontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(stringValue); 
+                            m_fontFamilyHashStack.Add(m_fontFamilyHash);
                         }
                         fontIndex = GetFontIndex(ref fontAssetArray);
                         if (fontIndex != -1)
-                            fontMaterialIndex = fontIndex;
+                            m_fontMaterialIndex = fontIndex;
                         return;                        
                     }
                     else
                     {
-                        fontFamilyHash = fontFamilyHashStack.RemoveExceptRoot();
+                        m_fontFamilyHash = m_fontFamilyHashStack.RemoveExceptRoot();
                         fontIndex = GetFontIndex(ref fontAssetArray);
                         if (fontIndex != -1)
-                            fontMaterialIndex = fontIndex;
+                            m_fontMaterialIndex = fontIndex;
                     }
                     return;
+
             }
         }
     }    

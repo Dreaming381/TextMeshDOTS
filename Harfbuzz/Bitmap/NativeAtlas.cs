@@ -9,7 +9,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 {    
     public static class NativeAtlas
     {
-        public static void InitialzeFreeGlyphRects(ref DynamicBuffer<FreeGlyphRects> freeGlyphRectsBuffer, int atlasWidth, int atlasHeight)
+        public static void InitializeFreeGlyphRects(ref DynamicBuffer<FreeGlyphRects> freeGlyphRectsBuffer, int atlasWidth, int atlasHeight)
         {
             freeGlyphRectsBuffer.Clear();
             freeGlyphRectsBuffer.Reinterpret<GlyphRect>().Add(new GlyphRect(0, 0, atlasWidth, atlasHeight));
@@ -23,10 +23,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             DynamicBuffer<GlyphRect> usedRects,
             DynamicBuffer<GlyphRect> freeRects)
         {
-            //Walk all rectsToPlace and find the one that fits the best given 
-            //our current freeRect list. Then start again
-            //sorting improves nothing, algorithm always finds best glyph to place
-            //glyphsToPlace.Sort(default(GlyphSizeComparer)); 
+            //Walk all rectsToPlace and find the a free rect that fits best given 
+            //our current freeRect list. Then start again.
+            //Sorting improves nothing, algorithm always finds best glyph to place
             var doublePadding = 2 * padding;
             while (glyphsToPlace.Length > 0)
             {                

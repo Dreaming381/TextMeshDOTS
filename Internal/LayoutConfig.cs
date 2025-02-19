@@ -1,6 +1,5 @@
 using TextMeshDOTS.RichText;
 using UnityEngine;
-using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
 {    
@@ -12,6 +11,12 @@ namespace TextMeshDOTS
         public FixedStack512Bytes<float> m_sizeStack;
 
         public FontStyles m_fontStyles;
+
+        public FontWeight fontWeight;
+        public FixedStack512Bytes<FontWeight> fontWeightStack;
+
+        public float fontWidth;
+        public FixedStack512Bytes<float> fontWidthStack;
 
         public HorizontalAlignmentOptions m_lineJustification;
         public FixedStack512Bytes<HorizontalAlignmentOptions> m_lineJustificationStack;
@@ -47,8 +52,18 @@ namespace TextMeshDOTS
 
         public void Reset(in TextBaseConfiguration textBaseConfiguration)
         {
-            m_fontStyles = textBaseConfiguration.fontStyles;
             m_fontScaleMultiplier = 1;
+
+            m_fontStyles = textBaseConfiguration.fontStyles;
+
+            fontWeight = textBaseConfiguration.fontWeight;
+            fontWeightStack.Clear();
+            fontWeightStack.Add(fontWeight);
+
+            fontWidth = textBaseConfiguration.fontWidth;
+            fontWidthStack.Clear();
+            fontWidthStack.Add(fontWidth);
+           
             m_currentFontSize = textBaseConfiguration.fontSize;
             m_sizeStack.Clear();
             m_sizeStack.Add(m_currentFontSize);
@@ -92,7 +107,7 @@ namespace TextMeshDOTS
 
             m_highlightStateStack.Clear();
         }
-        internal void UpdateLayoutConfig(ref XMLTag tag, in TextBaseConfiguration textBaseConfiguration)
+        internal void Update(ref XMLTag tag, in TextBaseConfiguration textBaseConfiguration)
         {
             switch (tag.tagType)
             {
@@ -108,6 +123,39 @@ namespace TextMeshDOTS
                 //    else
                 //        m_fontStyles &= ~FontStyles.Superscript;
                 //    return;
+                case TagType.Italic:
+                    if (!tag.isClosing)
+                        m_fontStyles |= FontStyles.Italic;
+                    else
+                        m_fontStyles &= ~FontStyles.Italic;
+                    return;
+                case TagType.Bold:
+                    if (!tag.isClosing)
+                    {
+                        fontWeight = FontWeight.Bold;
+                        fontWeightStack.Add(fontWeight);
+                    }
+                    else
+                        fontWeight = fontWeightStack.RemoveExceptRoot();
+                    return;                
+                case TagType.FontWeight:
+                    if (!tag.isClosing)
+                    {
+                        fontWeight = (FontWeight)tag.value.NumericalValue;
+                        fontWeightStack.Add(fontWeight);
+                    }
+                    else
+                        fontWeight = fontWeightStack.RemoveExceptRoot();
+                    return;
+                case TagType.FontWidth:
+                    if (!tag.isClosing)
+                    {
+                        fontWidth = tag.value.NumericalValue;
+                        fontWidthStack.Add(fontWidth);
+                    }
+                    else
+                        fontWidth = fontWidthStack.RemoveExceptRoot();
+                    return;                
                 case TagType.NoBr:
                     if (!tag.isClosing)
                         m_isNonBreakingSpace = true;

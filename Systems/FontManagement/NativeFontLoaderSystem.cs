@@ -10,7 +10,6 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
-using UnityEngine.UI;
 using static TextMeshDOTS.TextCoreExtensions;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
@@ -245,7 +244,7 @@ namespace TextMeshDOTS.TextProcessing
             state.EntityManager.AddComponentData(fontEntity, nativeFontPointer);
 
             var freeGlyphRects = state.EntityManager.GetBuffer<FreeGlyphRects>(fontEntity);
-            NativeAtlas.InitialzeFreeGlyphRects(ref freeGlyphRects, atlasData.atlasWidth, atlasData.atlasHeight);        
+            NativeAtlas.InitializeFreeGlyphRects(ref freeGlyphRects, atlasData.atlasWidth, atlasData.atlasHeight);        
         }
 
         public struct LoadRequest : IEquatable<LoadRequest>

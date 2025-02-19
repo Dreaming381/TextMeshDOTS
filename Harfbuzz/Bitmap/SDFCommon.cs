@@ -10,15 +10,15 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
     {
         public readonly static bool USE_SQUARED_DISTANCES = true;
         // SPREAD represents the permitted distance of a given pixel to an edge in bits.
-        // So 8 bit means distance can be from -127 (outside) top +128 (inside).
+        // So 8 bit means distance can be from -127 (outside) to +128 (inside).
         // We need 8 bit when storing distances in an 8 bit alpha channel. 
-        // When glyphs have a lot of "inside" area, and sampling them at larger sampling
-        // point sizes (e.g. 128, or 256), this will led to "holes". Due to this line of code in ValidateAndSaveDistance():
+        // When glyphs have a lot of "inside" area (often found in BLACK font weigth), and sampling them at larger sampling
+        // point sizes (e.g. 128, or 256), this will led to "holes" due to this line of code in ValidateAndSaveDistance():
         // ignore if the distance is greater than spread;
         // if (dist.distance > sp_sq) return false;
         // Could possibly also clamp the distance here, but this would not look much prettier due
-        // due to clipping. Better solution is to increase SPREAD to e.g. 16. When converting to 8 bit alpha, we add this
-        // SPREAD to give distances from 0..2*SPREAD, and multiply by (256/(2*SPREAD ) via this line of code in the final pass:
+        // due to clipping. Better solution is to increase SPREAD to e.g. 16. When converting to 8 bit alpha, we add SPREAD
+        // to give distances from 0..2*SPREAD, and multiply by (256/(2*SPREAD ) via this line of code in the final pass:
         // var scaleTo8Bit = 256 / (spread * 2);
         public const int DEFAULT_SPREAD = 8; // SPREAD and Atlas padding are related, but do not set SPREAD too small 
         public const int MIN_SPREAD = 2;

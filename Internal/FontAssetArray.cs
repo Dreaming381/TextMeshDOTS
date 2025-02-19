@@ -1,8 +1,6 @@
 using TextMeshDOTS.Rendering;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.UniversalDelegates;
-using UnityEngine;
 
 namespace TextMeshDOTS
 {

@@ -4,7 +4,6 @@ using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace TextMeshDOTS.HarfBuzz
 {
