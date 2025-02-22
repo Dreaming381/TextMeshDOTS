@@ -93,6 +93,14 @@ namespace TextMeshDOTS.HarfBuzz
         {
             HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafeReadOnlyPtr(), text.Length, startIndex, length);
         }
+        public void AddText(NativeArray<byte> text, uint startIndex, int length)
+        {
+            HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafeReadOnlyPtr(), text.Length, startIndex, length);
+        }
+        public void AddText(NativeText text, uint startIndex, int length)
+        {
+            HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafePtr(), text.Length, startIndex, length);
+        }
         public void ClearContent()
         {
             HB.hb_buffer_clear_contents(ptr);

@@ -19,27 +19,31 @@ namespace TextMeshDOTS
                                                        ref ComponentLookup<FontAssetRef> fontAssetRefLookup,                                                       
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
                                                        ref GlyphMappingWriter mappingWriter,
-                                                       in DynamicBuffer<CalliByte> calliBytes,
-                                                       in DynamicBuffer<GlyphOTF> glyphOTFs,
-                                                       in DynamicBuffer<XMLTag> xmlTags,
+                                                       in DynamicBuffer<CalliByte> calliBytesBuffer,
+                                                       in DynamicBuffer<GlyphOTF> glyphOTFBuffer,
+                                                       in DynamicBuffer<XMLTag> xmlTagBuffer,
                                                        in TextBaseConfiguration textBaseConfiguration)
         {
             //Debug.Log("CreateRenderGlyphs");
             renderGlyphs.Clear();
-            if (glyphOTFs.IsEmpty)
+            if (glyphOTFBuffer.IsEmpty)
                 return;
-            renderGlyphs.Capacity = glyphOTFs.Length; //2x speedup compared to allocation of individual items
+            renderGlyphs.Capacity = glyphOTFBuffer.Length; //2x speedup compared to allocation of individual items
 
-            var calliString = new CalliString(calliBytes);
+            var calliString = new CalliString(calliBytesBuffer);
             var characters = calliString.GetEnumerator();
 
             var fontAssetRefs = fontAssetArray.fontAssetRefs;
             LayoutConfig layoutConfig = default;
             layoutConfig.Reset(textBaseConfiguration);
 
-            XMLTag currentTag;
+            XMLTag currentTag=default;
             int tagsCounter = 0;
-            int nextTagPosition = xmlTags.Length > 0 ? xmlTags[tagsCounter].position : calliString.Length;
+            int nextSegmentEndID = xmlTagBuffer.Length > 0 ? xmlTagBuffer[tagsCounter].startID : calliString.Length;
+            int cleanedSegmentLength = nextSegmentEndID - currentTag.endID;
+            int richTextOffset = 0;
+            int nextTagPositionInCleanedText = cleanedSegmentLength;
+            //Debug.Log($"{currentTag.tagType} {cleanedSegmentLength} {nextTagPositionInCleanedText}");
 
             int characterCount = 0;
             int lastWordStartCharacterGlyphIndex = 0;
@@ -58,7 +62,7 @@ namespace TextMeshDOTS
             //float xAdvance = 0f;
 
 
-            Entity currentFontEntity = glyphOTFs[0].fontEntity;
+            Entity currentFontEntity = glyphOTFBuffer[0].fontEntity;
             var dynamicFontBlobReference = dynamicFontAssetsLookup[currentFontEntity].blob;
             if (!dynamicFontBlobReference.IsCreated)
             {
@@ -79,13 +83,11 @@ namespace TextMeshDOTS
 
             Unicode.Rune currentRune, previousRune = Unicode.BadRune;//input text unicode
 
-            for (int k = 0, length = glyphOTFs.Length; k < length; k++)
+            for (int k = 0, length = glyphOTFBuffer.Length; k < length; k++)
             {
-                var glyphOTF = glyphOTFs[k];
+                var glyphOTF = glyphOTFBuffer[k];
 
-                var utf8Count = (int)glyphOTF.cluster;
-                characters.GotoByteIndex(utf8Count);
-                currentRune = characters.Current;
+                var cluster = (int)glyphOTF.cluster; //cluster is char index in cleaned text = aligned with glyphOTF buffer
                 if (currentFontEntity != glyphOTF.fontEntity)
                 {
                     currentFontEntity = glyphOTF.fontEntity;
@@ -98,16 +100,24 @@ namespace TextMeshDOTS
                     currentFont = ref dynamicFontBlobReference.Value;
                     currentFontAssetRef = fontAssetRefLookup[currentFontEntity];
                 }
-                if (utf8Count >= nextTagPosition)
+                while (cluster >= nextTagPositionInCleanedText)
                 {
-                    if(tagsCounter < xmlTags.Length)
-                    {
-                        currentTag = xmlTags[tagsCounter++];
-                        layoutConfig.Update(ref currentTag, textBaseConfiguration);
-                        nextTagPosition = tagsCounter < xmlTags.Length ? xmlTags[tagsCounter].position : calliString.Length;
-                        //Debug.Log($"{currentTag.tagType} {currentTag.value.type} ({callibytePosition} {nextTagPosition})");
+                    if(tagsCounter < xmlTagBuffer.Length)
+                    {                        
+                        currentTag = xmlTagBuffer[tagsCounter++];
+                        richTextOffset += currentTag.Length;
+                        layoutConfig.Update(ref currentTag, textBaseConfiguration);                       
+                        nextSegmentEndID = tagsCounter < xmlTagBuffer.Length ? xmlTagBuffer[tagsCounter].startID - 1 : calliString.Length;
+                        cleanedSegmentLength = nextSegmentEndID - currentTag.endID;                        
+                        nextTagPositionInCleanedText = cluster + cleanedSegmentLength;
+                        
+                        //Debug.Log($"{currentTag.tagType} {cleanedSegmentLength} {nextTagPositionInCleanedText}");
                     }
                 }
+                // need to add richTextOffset to fetch correct char from richtext buffer. 
+                // note: upper/lowercase is not applied in richtextBuffer (is only applied to cleaned text just before shaping)...should not cause any issues here
+                characters.GotoByteIndex(richTextOffset + cluster); 
+                currentRune = characters.Current;
 
                 if (lineCount == 0)
                     topAnchor = GetTopAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale, topAnchor);

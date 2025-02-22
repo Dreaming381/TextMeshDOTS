@@ -29,14 +29,8 @@ namespace TextMeshDOTS
 
     /// <summary>
     /// The raw byte element as part of the text string.
-    /// Prefer to use TextRendererAspect or cast to CalliString instead.
-    /// Usage: ReadWrite, but using the abstraction tools.
+    /// Cast to CalliString to read  /write.
     /// </summary>
-    [InternalBufferCapacity(0)]
-    public struct CalliByteRaw : IBufferElementData
-    {
-        public byte element;
-    }
     [InternalBufferCapacity(0)]
     public struct CalliByte : IBufferElementData
     {
@@ -47,13 +41,16 @@ namespace TextMeshDOTS
     {
         public TagType tagType;
         public bool isClosing;
-        public int position; //position in processed text        
+        public int startID; //start position raw text
+        public int endID;   //start position raw text
+        public int Length => endID + 1 - startID;
         public TagValue value;
         public XMLTag(bool dummy)
         {
             tagType = TagType.Unknown;
             isClosing = false;
-            position = -1;
+            startID = -1;
+            endID = -1;
             value = new TagValue();
             value.type = TagValueType.None;
             value.unit = TagUnitType.Pixels;            

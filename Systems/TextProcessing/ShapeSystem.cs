@@ -32,8 +32,7 @@ namespace TextMeshDOTS.TextProcessing
             textRendererQ = SystemAPI.QueryBuilder()
                 .WithAllRW<XMLTag>()
                 .WithAllRW<GlyphOTF>()
-                .WithAllRW<CalliByte>()                                
-                .WithAll<CalliByteRaw>()                
+                .WithAllRW<CalliByte>()           
                 .WithAll<TextBaseConfiguration>()
                 .WithAll<FontBlobReference>()
                 .Build();            
@@ -45,7 +44,7 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<DynamicFontAsset>()
                 .Build();
 
-            textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByteRaw>());
+            textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
             textRendererQ.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
@@ -66,10 +65,8 @@ namespace TextMeshDOTS.TextProcessing
             var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
             state.Dependency = new ExtractTagsJob
             {
-                calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),
-                calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(false),
+                calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(false),
-                textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(textRendererQ, state.Dependency);
@@ -90,7 +87,6 @@ namespace TextMeshDOTS.TextProcessing
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 nativeFontPointerLookup = SystemAPI.GetComponentLookup<NativeFontPointer>(),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
-                calliByteRawHandle = SystemAPI.GetBufferTypeHandle<CalliByteRaw>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
                 selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
                 xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(true),

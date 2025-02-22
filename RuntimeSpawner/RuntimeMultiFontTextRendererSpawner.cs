@@ -153,7 +153,7 @@ namespace TextMeshDOTS.Authoring
             if (frameCount == 0)
             {
                 var text = "Regular then <b>switch to bold, <i>then bold italic</b> then italic</i>: we are <font=Noto Color emoji>🥳</font> if it all works!";
-                int count = 10;
+                int count = 50;
                 int half = count / 2;
                 var factor = 10.0f;
                 textBaseConfiguration.color = Color.green;
@@ -166,7 +166,7 @@ namespace TextMeshDOTS.Authoring
                     {
                         var entity = entities[x * count + y];
                         state.EntityManager.SetSharedComponent(entity, renderFilterSettings);
-                        var calliByteBuffer = state.EntityManager.GetBuffer<CalliByteRaw>(entity);
+                        var calliByteBuffer = state.EntityManager.GetBuffer<CalliByte>(entity);
                         var calliString = new CalliString(calliByteBuffer);
                         //string text = i.ToString() + j.ToString();
                         calliString.Append(text);

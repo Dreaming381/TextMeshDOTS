@@ -113,9 +113,8 @@ namespace TextMeshDOTS.Authoring
             //Text Content
             AddBuffer<XMLTag>(entity);
             AddBuffer<GlyphOTF>(entity);
-            AddBuffer<CalliByte>(entity);
-            var calliByteRaw = AddBuffer<CalliByteRaw>(entity);
-            var calliString = new CalliString(calliByteRaw);
+            var calliByte = AddBuffer<CalliByte>(entity);
+            var calliString = new CalliString(calliByte);
             calliString.Append(authoring.text);
             var textBaseConfiguraton = new TextBaseConfiguration
             {

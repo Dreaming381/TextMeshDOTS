@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.RichText;
 using Unity.Collections;
@@ -22,18 +23,18 @@ namespace TextMeshDOTS
             superscriptStartID = -1;
             fractionStartID = -1;
         }
-        internal void FinalizeOpenTypeFeatures(uint position)
+        internal void FinalizeOpenTypeFeatures(int position)
         {
             if (smallCapsStartID != -1)
-                values.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, (uint)smallCapsStartID, position));
+                values.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, (uint)smallCapsStartID, (uint)position));
             if (subscriptStartID != -1)
-                values.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, (uint)subscriptStartID, position));
+                values.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, (uint)subscriptStartID, (uint)position));
             if (superscriptStartID != -1)
-                values.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, (uint)superscriptStartID, position));
+                values.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, (uint)superscriptStartID, (uint)position));
             if (fractionStartID != -1)
-                values.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, position));
+                values.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, (uint)position));
         }
-        internal void Update(ref XMLTag tag)
+        internal void Update(ref XMLTag tag, int position)
         {
             switch (tag.tagType)
             {
@@ -41,11 +42,11 @@ namespace TextMeshDOTS
                     if (!tag.isClosing)
                     {
                         if (smallCapsStartID == -1)
-                            smallCapsStartID = tag.position;
+                            smallCapsStartID = position;
                     }
                     else
                     {
-                        values.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, (uint)smallCapsStartID, (uint)tag.position));
+                        values.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, (uint)smallCapsStartID, (uint)position));
                         smallCapsStartID = -1;
                     }
                     return;
@@ -53,11 +54,11 @@ namespace TextMeshDOTS
                     if (!tag.isClosing)
                     {
                         if (subscriptStartID == -1)
-                            subscriptStartID = tag.position;
+                            subscriptStartID = position;
                     }
                     else
                     {
-                        values.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, (uint)subscriptStartID, (uint)tag.position));
+                        values.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, (uint)subscriptStartID, (uint)position));
                         subscriptStartID = -1;
                     }
                     return;
@@ -65,11 +66,11 @@ namespace TextMeshDOTS
                     if (!tag.isClosing)
                     {
                         if (superscriptStartID == -1)
-                            superscriptStartID = tag.position;
+                            superscriptStartID = position;
                     }
                     else
                     {
-                        values.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, (uint)superscriptStartID, (uint)tag.position));
+                        values.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, (uint)superscriptStartID, (uint)position));
                         superscriptStartID = -1;
                     }
                     return;
@@ -77,11 +78,11 @@ namespace TextMeshDOTS
                     if (!tag.isClosing)
                     {
                         if (fractionStartID == -1)
-                            fractionStartID = tag.position;
+                            fractionStartID = position;
                     }
                     else
                     {
-                        values.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, (uint)tag.position));
+                        values.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, (uint)position));
                         fractionStartID = -1;
                     }
                     return;

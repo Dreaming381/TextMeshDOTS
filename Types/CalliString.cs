@@ -33,12 +33,6 @@ namespace TextMeshDOTS
     {
         DynamicBuffer<byte> m_stringBuffer;
 
-        public CalliString(DynamicBuffer<CalliByteRaw> buffer)
-        {
-            m_stringBuffer = buffer.Reinterpret<byte>();
-            if (m_stringBuffer.IsEmpty)
-                m_stringBuffer.Add(0);
-        }
         public CalliString(DynamicBuffer<CalliByte> buffer)
         {
             m_stringBuffer = buffer.Reinterpret<byte>();
@@ -138,11 +132,6 @@ namespace TextMeshDOTS
         {
             Length = newLength;
             return true;
-        }
-
-        public static implicit operator CalliString(DynamicBuffer<CalliByteRaw> buffer)
-        {
-            return new CalliString(buffer);
         }
 
         /// <summary>

@@ -50,6 +50,63 @@ namespace TextMeshDOTS
 
         public FixedStack512Bytes<HighlightState> m_highlightStateStack;
 
+        public LayoutConfig(in TextBaseConfiguration textBaseConfiguration)
+        {
+            m_fontScaleMultiplier = 1;
+
+            m_fontStyles = textBaseConfiguration.fontStyles;
+
+            fontWeight = textBaseConfiguration.fontWeight;
+            fontWeightStack = default;
+            fontWeightStack.Add(fontWeight);
+
+            fontWidth = textBaseConfiguration.fontWidth;
+            fontWidthStack = default;
+            fontWidthStack.Add(fontWidth);
+
+            m_currentFontSize = textBaseConfiguration.fontSize;
+            m_sizeStack = default;
+            m_sizeStack.Add(m_currentFontSize);
+
+            m_lineJustification = textBaseConfiguration.lineJustification;
+            m_lineJustificationStack = default;
+            m_lineJustificationStack.Add(m_lineJustification);
+
+            m_baselineOffset = 0;
+            m_baselineOffsetStack = default;
+            m_baselineOffsetStack.Add(m_baselineOffset);
+
+            m_htmlColor = textBaseConfiguration.color;
+            m_underlineColor = Color.white;
+            m_strikethroughColor = Color.white;
+
+            m_htmlColorStack = default;
+            m_htmlColorStack.Add(m_htmlColor);
+            m_underlineColorStack = default;
+            m_underlineColorStack.Add(m_htmlColor);
+            m_strikethroughColorStack = default;
+            m_strikethroughColorStack.Add(m_htmlColor);
+
+            m_lineOffset = 0;  // Amount of space between lines (font line spacing + m_linespacing).
+            m_lineHeight = float.MinValue;  //TMP_Math.FLOAT_UNSET -->is there a better way to do this?
+
+            m_cSpacing = 0;  // Amount of space added between characters as a result of the use of the <cspace> tag.
+            m_monoSpacing = 0;
+            m_xAdvance = 0;  // Used to track the position of each character.
+
+            m_tagLineIndent = 0;  // Used for indentation of text.
+            m_tagIndent = 0;
+            m_indentStack = default;
+            m_indentStack.Add(m_tagIndent);
+            m_tagNoParsing = false;
+
+            m_isNonBreakingSpace = false;
+
+            m_fxRotationAngleCCW_degree = 0;
+            m_fxScale = 1;
+
+            m_highlightStateStack = default;
+        }
         public void Reset(in TextBaseConfiguration textBaseConfiguration)
         {
             m_fontScaleMultiplier = 1;

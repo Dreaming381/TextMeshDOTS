@@ -29,7 +29,6 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
         [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
-        [ReadOnly] public BufferTypeHandle<CalliByteRaw> calliByteRawHandle; //required for fetching string values from richtext tags such as font names
         [ReadOnly] public BufferTypeHandle<XMLTag> xmlTagHandle;
         [ReadOnly] public BufferLookup<UsedGlyphs> glyphsInUseLookup;
         public NativeList<FontEntityGlyph>.ParallelWriter missingGlyphs;
@@ -47,7 +46,6 @@ namespace TextMeshDOTS.TextProcessing
             //Debug.Log("Shape job");
             var entities = chunk.GetNativeArray(entitesHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
-            var calliBytesRawBuffers = chunk.GetBufferAccessor(ref calliByteRawHandle);
             var xmlTagBuffers = chunk.GetBufferAccessor(ref xmlTagHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
             var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
@@ -69,14 +67,16 @@ namespace TextMeshDOTS.TextProcessing
             FontAssetArray fontAssetArray = default;
             bool hasMultipleFonts = additionalFontMaterialEntityBuffers.Length > 0;
             var chunkMissingGlyphs = new NativeList<FontEntityGlyph>(1024, Allocator.Temp);
+            var cleanedText = new NativeList<byte>(1024, Allocator.Temp);
+            LayoutConfig2 layoutConfig2 =default;
+            FontConfig fontConfiguration = default;
 
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
                 var rootFontMaterialEntity = entities[indexInChunk];
-                var xmlTags = xmlTagBuffers[indexInChunk];
+                var xmlTagBuffer = xmlTagBuffers[indexInChunk];
                 var glyphOTFs = glyphOTFBuffers[indexInChunk];
-                var calliBytes = calliBytesBuffers[indexInChunk];
-                var calliBytesRawBuffer = calliBytesRawBuffers[indexInChunk];
+                var calliBytesBuffer = calliBytesBuffers[indexInChunk].Reinterpret<byte>();
                 var textBaseConfiguration = textBaseConfigurations[indexInChunk];                
 
                 DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer;
@@ -91,60 +91,117 @@ namespace TextMeshDOTS.TextProcessing
                     m_selectorBuffer = default;
                     fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
                 }
+                var calliString = new CalliString(calliBytesBuffer);
+                var rawCharacters = calliString.GetEnumerator();
 
-                FontConfig fontConfiguration = default;
+
                 fontConfiguration.Reset(textBaseConfiguration, ref fontAssetArray);
+                layoutConfig2.Reset(textBaseConfiguration);
+
                 glyphOTFs.Clear();
-                var text = calliBytes.Reinterpret<byte>();
-                openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)text.Length);
-                if (xmlTags.Length==0) //text has no richtext tags, just search font requested by textBaseConfiguration and shape 
+                var text = calliBytesBuffer.Reinterpret<byte>();
+
+                var calliStringRaw = new CalliString(calliBytesBuffer);
+                var cleanedString = new NativeText(calliBytesBuffer.Length, Allocator.Temp);
+
+
+                if (xmlTagBuffer.Length==0) //text has no richtext tags, just search font requested by textBaseConfiguration and shape 
                 {
+                    //copy text into buffer used for shaping, convert case while doing so
+                    while (rawCharacters.MoveNext())
+                    {
+                        var currentRune = rawCharacters.Current;
+                        if ((layoutConfig2.m_fontStyles & FontStyles.UpperCase) == FontStyles.UpperCase)
+                            cleanedString.Append(currentRune.ToUpper());
+                        else if ((layoutConfig2.m_fontStyles & FontStyles.LowerCase) == FontStyles.LowerCase)
+                            cleanedString.Append(currentRune.ToLower());
+                        else
+                            cleanedString.Append(currentRune);
+                    }
                     //find font Entity requested by combination of font family and style
                     fontConfiguration.m_fontFamilyHash = fontAssetRefs[0].familyHash;                    
                     var fontIndex = fontConfiguration.GetFontIndex(ref fontAssetArray);                    
                     if (fontIndex != -1)
                         fontConfiguration.m_fontMaterialIndex = fontIndex;
-                 
-                    Shape(buffer, text, 0, text.Length, ref segmentProperties, ref fontAssetArray, fontConfiguration.m_fontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
+
+                    openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)text.Length);
+                    Shape(buffer, cleanedString, 0, cleanedString.Length, ref segmentProperties, ref fontAssetArray, fontConfiguration.m_fontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
                     continue;
                 }
 
                 //text has richtext tags. Search segments where font, language, script and direction does does not change (To-Do: use ICU for that),
                 //apply opentype features requested via richtext tags, and shape
-                var calliStringRaw = new CalliString(calliBytesRawBuffer);
+
+                cleanedText.Capacity = calliStringRaw.Capacity;
                 int tagsCounter = 0;
                 XMLTag currentTag;
-                int startIndex = 0;
-                int endIndex = text.Length;
+
+                int richTextStartID = 0;
                 var currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
-                while (startIndex < endIndex)
+
+                //copy text into buffer used for shaping, convert case while doing so
+                int nextTagPosition = xmlTagBuffer.Length > 0 ? xmlTagBuffer[tagsCounter].startID : calliString.Length;
+                while (rawCharacters.MoveNext())
                 {
-                    while (tagsCounter < xmlTags.Length && fontConfiguration.m_fontMaterialIndex == currentFontMaterialIndex)
+                    var currentRune = rawCharacters.Current;
+                    while (rawCharacters.NextRuneByteIndex > nextTagPosition)
                     {
-                        currentTag = xmlTags[tagsCounter];
-                        fontConfiguration.GetCurrentFontIndex(ref currentTag, ref fontAssetArray, ref calliStringRaw);
-                        openTypeFeatures.Update(ref currentTag);
-                        endIndex = currentTag.position;                        
-                        tagsCounter++;
-                    }                    
-                    var length = endIndex - startIndex;
-                    openTypeFeatures.FinalizeOpenTypeFeatures((uint)endIndex);
-                    Shape(buffer, text, startIndex, length, ref segmentProperties, ref fontAssetArray, currentFontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
-                    startIndex = endIndex;
-                    endIndex = text.Length;
-                    currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
-                    openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)text.Length);
+                        if (tagsCounter < xmlTagBuffer.Length)
+                        {
+                            currentTag = xmlTagBuffer[tagsCounter++];
+                            rawCharacters.GotoByteIndex(currentTag.endID);  // go to ">'
+                            rawCharacters.MoveNext();                       // go to char after '>'
+                            nextTagPosition = tagsCounter < xmlTagBuffer.Length ? xmlTagBuffer[tagsCounter].startID : calliString.Length;
+                            layoutConfig2.Update(ref currentTag);
+                            //Debug.Log($"{currentTag.tagType} {cleanedSegmentLength} {nextTagPositionInCleanedText}");
+                        }
+                        currentRune = rawCharacters.Current;
+                        //continue;
+                    }
+                    if ((layoutConfig2.m_fontStyles & FontStyles.UpperCase) == FontStyles.UpperCase)
+                        cleanedString.Append(currentRune.ToUpper());
+                    else if ((layoutConfig2.m_fontStyles & FontStyles.LowerCase) == FontStyles.LowerCase)
+                        cleanedString.Append(currentRune.ToLower());
+                    else
+                        cleanedString.Append(currentRune);
                 }
-            }
+
+                richTextStartID = 0;
+                var cleanedEnd = 0;
+                var cleanedStart = 0;
+                tagsCounter = 0;
+                while (cleanedStart < cleanedString.Length)
+                {
+                    while (tagsCounter < xmlTagBuffer.Length && fontConfiguration.m_fontMaterialIndex == currentFontMaterialIndex)
+                    {
+                        currentTag = xmlTagBuffer[tagsCounter];
+                        var cleanedInterTagLength = (currentTag.startID - richTextStartID);
+                        cleanedEnd += cleanedInterTagLength;
+                        fontConfiguration.GetCurrentFontIndex(ref currentTag, ref fontAssetArray, ref calliStringRaw);
+                        openTypeFeatures.Update(ref currentTag, cleanedEnd);
+                        tagsCounter++;
+                        richTextStartID = currentTag.endID + 1;
+                    }
+                    openTypeFeatures.FinalizeOpenTypeFeatures(cleanedText.Length);
+                    openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedText.Length);
+                    var cleanedSegmentLength = cleanedEnd - cleanedStart;
+                    Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref segmentProperties, ref fontAssetArray, currentFontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
+                    currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
+                    cleanedStart = cleanedEnd;
+                    if (tagsCounter == xmlTagBuffer.Length) //last loop in order to shape text between last tag and end of rich text buffer
+                        cleanedEnd = cleanedString.Length;
+                }
+                cleanedString.Clear();
+            }           
             //add missing glyphs identifed in chunks processed by this thread to missingGlyphs
             missingGlyphs.AddRangeNoResize(chunkMissingGlyphs);
             buffer.Dispose();
         }
-
-        void Shape(Buffer buffer, 
-            DynamicBuffer<byte> text,
-            int startIndex, 
-            int length, 
+        void Shape(Buffer buffer,
+            //NativeArray<byte> text,
+            NativeText text,
+            int startIndex,
+            int length,
             ref SegmentProperties segmentProperties, 
             ref FontAssetArray fontAssetArray,
             int fontMaterialIndex,
@@ -194,7 +251,6 @@ namespace TextMeshDOTS.TextProcessing
                 for (int i = 0, ii = glyphInfos.Length; i < ii; i++)
                     m_selectorBuffer.Add(fontMaterialSelectorForGlyph);
             }
-
             for (int i = 0, ii = glyphInfos.Length; i < ii; i++)
             {
                 var glyphInfo = glyphInfos[i];
@@ -204,7 +260,7 @@ namespace TextMeshDOTS.TextProcessing
                 {
                     fontEntity = fontEntity,
                     codepoint = glyphInfo.codepoint,
-                    cluster = glyphInfo.cluster,
+                    cluster =  glyphInfo.cluster,
                     xAdvance = glyphPosition.xAdvance,
                     yAdvance = glyphPosition.yAdvance,
                     xOffset = glyphPosition.xOffset,
