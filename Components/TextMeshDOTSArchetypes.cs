@@ -8,10 +8,10 @@ using Unity.Transforms;
 
 namespace TextMeshDOTS
 {
-    static class TextMeshDOTSArchetypes
+    public static class TextMeshDOTSArchetypes
     {
         //These singleton components will be added to TextRenderingUpdateSystem in OnCreate()
-        public static ComponentTypeSet GetTextStatisticsTypeset()
+        internal static ComponentTypeSet GetTextStatisticsTypeset()
         {
             var result = new FixedList128Bytes<ComponentType>
             {
@@ -21,14 +21,14 @@ namespace TextMeshDOTS
             };
             return new ComponentTypeSet(result);
         }
-        public static EntityArchetype GetFontStateArchetype(ref SystemState state)
+        internal static EntityArchetype GetFontStateArchetype(ref SystemState state)
         {
             var componentTypeStaging = new NativeArray<ComponentType>(2, Allocator.Temp);
             componentTypeStaging[0] = ComponentType.ReadWrite<FontState>();
             componentTypeStaging[1] = ComponentType.ReadWrite<FontsDirtyTag>(); //initialize Font state to `dirty` to prevent premature system updates
             return state.EntityManager.CreateArchetype(componentTypeStaging);
         }
-        public static EntityArchetype GetNativeFontDataArchetype(ref SystemState state)
+        internal static EntityArchetype GetNativeFontDataArchetype(ref SystemState state)
         {
             var componentTypeStaging = new NativeArray<ComponentType>(7, Allocator.Temp);
             componentTypeStaging[0] = ComponentType.ReadWrite<FontAssetRef>();      // do not copy FontBlobReference for this information as blob pointer will not survive scene reload

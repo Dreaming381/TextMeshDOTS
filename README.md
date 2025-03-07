@@ -60,6 +60,7 @@ for rendering. The included HDRP and URP shader are wrapper around the TextMeshP
     as needed to spawn any number of `TextRenderer` entities. Per default, auto creation of both systems is disabled.
   - You will notice, that you need to manually fill out a lot of information in the `FontRequest` struct for every font 
     you intend to use. This information can be extracted utilizing the `FontUtility` Scriptable Object.
+    ![plot](./FontUtility.png)
     - Right click in a folder, then `Create --> TextMeshDOTS --> Font Utility`
     - Drag and drop the fonts from `StreamingAssets` or from anywhere else in your project 
       (in case you intend to use `System Fonts`) into the font field, and copy the information 
@@ -67,6 +68,7 @@ for rendering. The included HDRP and URP shader are wrapper around the TextMeshP
       as well invested time to automate runtime spawning via a baking workflow. I want to keep 
       only one unified path for triggering runtime font loading/unloading (via `FontBlobReference`)
   -	Hit play
+  
 
 # Supported Richtext Tags
 
