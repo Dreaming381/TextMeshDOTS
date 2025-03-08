@@ -30,84 +30,8 @@ namespace TextMeshDOTS.Authoring
             childTextRendererArchtype = TextMeshDOTSArchetypes.GetMultiFontChildTextArchetype(ref state);
 
             fontRequests =new NativeArray<FontRequest>(5, Allocator.Persistent);
-            fontBlobReferences = new NativeArray<BlobAssetReference<FontBlob>>(5, Allocator.Persistent);
-            //use FontUtility Scriptable Object to extract the following needed information
-            //see ReadMe for more details how
-            fontRequests[0] = new FontRequest
-            {
-                fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",
-                fontFamily = "Noto Sans Display",
-                fontSubFamily = "Regular",
-                typographicFamily = "",
-                typographicSubfamily = "",
-                fontWeight = FontWeight.Normal,
-                fontWidth = 100,
-                isItalic = false,
-                slant = 0,
-                useSystemFont = false,
-                samplingPointSizeSDF = 64,
-                samplingPointSizeBitmap = 64
-            };
-            fontRequests[1] = new FontRequest
-            {
-                fontAssetPath = "Notosans/NotoSansDisplay-Italic.ttf",
-                fontFamily = "Noto Sans Display",
-                fontSubFamily = "Italic",
-                typographicFamily = "",
-                typographicSubfamily = "",
-                fontWeight = FontWeight.Normal,
-                fontWidth = 100,
-                isItalic = true,
-                slant = -12,
-                useSystemFont = false,
-                samplingPointSizeSDF = 48,
-                samplingPointSizeBitmap = 64
-            };
-            fontRequests[2] = new FontRequest
-            {
-                fontAssetPath = "Notosans/NotoSansDisplay-Bold.ttf",
-                fontFamily = "Noto Sans Display",
-                fontSubFamily = "Bold",
-                typographicFamily = "",
-                typographicSubfamily = "",
-                fontWeight = FontWeight.Bold,
-                fontWidth = 100,
-                isItalic = false,
-                slant = 0,
-                useSystemFont = false,
-                samplingPointSizeSDF = 48,
-                samplingPointSizeBitmap = 64
-            };
-            fontRequests[3] = new FontRequest
-            {
-                fontAssetPath = "Notosans/NotoSansDisplay-BoldItalic.ttf",
-                fontFamily = "Noto Sans Display",
-                fontSubFamily = "Bold Italic",
-                typographicFamily = "",
-                typographicSubfamily = "",
-                fontWeight = FontWeight.Bold,
-                fontWidth = 100,
-                isItalic = true,
-                slant = -12,
-                useSystemFont = false,
-                samplingPointSizeSDF = 48,
-                samplingPointSizeBitmap = 64
-            };
-            fontRequests[4] = new FontRequest
-            {
-                fontAssetPath = "Emoji/Noto-COLRv1.ttf",
-                fontFamily = "Noto Color Emoji",
-                fontSubFamily = "Regular",
-                typographicFamily = "",
-                typographicSubfamily = "",
-                fontWeight = FontWeight.Normal,
-                fontWidth = 100,
-                isItalic = false,
-                slant = 0,
-                useSystemFont = false,
-                samplingPointSizeSDF = 48,
-                samplingPointSizeBitmap = 64
-            };
+            InitializeFontRequests(fontRequests);
+            fontBlobReferences = new NativeArray<BlobAssetReference<FontBlob>>(5, Allocator.Persistent);            
             for (int i = 0, ii = fontRequests.Length; i < ii; i++)
                 fontBlobReferences[i] = FontBlobber.GetRuntimeFontBlob(fontRequests[i]);
 
@@ -204,6 +128,86 @@ namespace TextMeshDOTS.Authoring
             //}
 
             frameCount++;
+        }
+        static void InitializeFontRequests(NativeArray<FontRequest> fontRequests)
+        {
+            //use FontUtility Scriptable Object to extract the following needed information
+            //see ReadMe for more details how
+            fontRequests[0] = new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Regular",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                fontWeight = FontWeight.Normal,
+                fontWidth = 100,
+                isItalic = false,
+                slant = 0,
+                useSystemFont = false,
+                samplingPointSizeSDF = 64,
+                samplingPointSizeBitmap = 64
+            };
+            fontRequests[1] = new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-Italic.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Italic",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                fontWeight = FontWeight.Normal,
+                fontWidth = 100,
+                isItalic = true,
+                slant = -12,
+                useSystemFont = false,
+                samplingPointSizeSDF = 64,
+                samplingPointSizeBitmap = 64
+            };
+            fontRequests[2] = new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-Bold.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Bold",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                fontWeight = FontWeight.Bold,
+                fontWidth = 100,
+                isItalic = false,
+                slant = 0,
+                useSystemFont = false,
+                samplingPointSizeSDF = 64,
+                samplingPointSizeBitmap = 64
+            };
+            fontRequests[3] = new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-BoldItalic.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Bold Italic",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                fontWeight = FontWeight.Bold,
+                fontWidth = 100,
+                isItalic = true,
+                slant = -12,
+                useSystemFont = false,
+                samplingPointSizeSDF = 64,
+                samplingPointSizeBitmap = 64
+            };
+            fontRequests[4] = new FontRequest
+            {
+                fontAssetPath = "Emoji/Noto-COLRv1.ttf",
+                fontFamily = "Noto Color Emoji",
+                fontSubFamily = "Regular",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                fontWeight = FontWeight.Normal,
+                fontWidth = 100,
+                isItalic = false,
+                slant = 0,
+                useSystemFont = false,
+                samplingPointSizeSDF = 64,
+                samplingPointSizeBitmap = 64
+            };
         }
     }
 }

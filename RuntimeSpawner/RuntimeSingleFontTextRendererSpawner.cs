@@ -26,24 +26,8 @@ namespace TextMeshDOTS.Authoring
         {
             initialized = false;
             textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref state);
-            
-            //use FontUtility Scriptable Object to extract the following needed information
-            //see ReadMe for more details how
-            var fontRequest = new FontRequest 
-            { 
-                fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",
-                fontFamily = "Noto Sans Display",
-                fontSubFamily = "Regular",
-                typographicFamily = "",
-                typographicSubfamily = "",
-                fontWeight = FontWeight.Normal,
-                fontWidth = 100,
-                isItalic = false,
-                slant = 0,
-                useSystemFont = false,
-                samplingPointSizeSDF = 64,
-                samplingPointSizeBitmap = 64
-            };
+
+            var fontRequest = GetFontRequest();
             singleFontReference = FontBlobber.GetRuntimeFontBlob(fontRequest);
             textBaseConfiguration = new TextBaseConfiguration
             {
@@ -178,6 +162,26 @@ namespace TextMeshDOTS.Authoring
             //}
 
             frameCount++;
-        }        
+        }
+        public FontRequest GetFontRequest()
+        {
+            //use FontUtility Scriptable Object to extract the following needed information
+            //see ReadMe for more details how
+            return new FontRequest
+            {
+                fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",
+                fontFamily = "Noto Sans Display",
+                fontSubFamily = "Regular",
+                typographicFamily = "",
+                typographicSubfamily = "",
+                fontWeight = FontWeight.Normal,
+                fontWidth = 100,
+                isItalic = false,
+                slant = 0,
+                useSystemFont = false,
+                samplingPointSizeSDF = 64,
+                samplingPointSizeBitmap = 64
+            };
+        }
     }
 }

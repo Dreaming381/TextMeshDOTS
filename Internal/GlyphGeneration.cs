@@ -36,8 +36,7 @@ namespace TextMeshDOTS
             var characters = calliString.GetEnumerator();
 
             var fontAssetRefs = fontAssetArray.fontAssetRefs;
-            LayoutConfig layoutConfig = default;
-            layoutConfig.Reset(textBaseConfiguration);
+            var layoutConfig = new LayoutConfig(in textBaseConfiguration);
 
             XMLTag currentTag=default;
             int tagsCounter = 0;

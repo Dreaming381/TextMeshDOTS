@@ -2,6 +2,8 @@ using Unity.Entities;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.TextCore.Text;
+using UnityEngine.UIElements;
+using Unity.Collections;
 
 namespace TextMeshDOTS.Authoring
 { 
@@ -20,51 +22,62 @@ namespace TextMeshDOTS.Authoring
             if (authoring.gradients == null)
                 return;
 
-            if (authoring.gradients.Count > 12)
+            if (authoring.gradients.Count > 24) //160byte per gradient, stored in FixedList4096Bytes in shapeJob
             {
-                Debug.Log("TextMeshDOTS supports currently only 12 gradients");
+                Debug.Log("TextMeshDOTS supports currently only 24 gradients"); 
                 return;
             }
             var entity = GetEntity(TransformUsageFlags.None);
-            var calliByte = AddBuffer<TextColorGradient>(entity);
+            var textColorGradients = AddBuffer<TextColorGradient>(entity);
             for (int i = 0, ii = authoring.gradients.Count; i < ii; i++)
             {
                 var gradient = authoring.gradients[i];
-                TextColorGradient textColorGradient;
-                if (gradient.colorMode==ColorGradientMode.HorizontalGradient)
+                TextColorGradient textColorGradient; 
+                switch (gradient.colorMode)
                 {
-                    textColorGradient = new TextColorGradient
-                    {
-                        nameHash = TextHelper.GetValueHash(gradient.name),
-                        topLeft = gradient.topLeft,
-                        topRight = gradient.topRight,
-                        bottomLeft = gradient.topLeft,
-                        bottomRight = gradient.topRight,
-                    };
-                } 
-                else if (gradient.colorMode == ColorGradientMode.VerticalGradient)
-                {
-                    textColorGradient = new TextColorGradient
-                    {
-                        nameHash = TextHelper.GetValueHash(gradient.name),
-                        topLeft = gradient.topLeft,
-                        topRight = gradient.topLeft,
-                        bottomLeft = gradient.bottomLeft,
-                        bottomRight = gradient.bottomLeft,
-                    };
-                }
-                else
-                {
-                    textColorGradient = new TextColorGradient
-                    {
-                        nameHash = TextHelper.GetValueHash(gradient.name),
-                        topLeft = gradient.topLeft,
-                        topRight = gradient.topRight,
-                        bottomLeft = gradient.bottomLeft,
-                        bottomRight = gradient.bottomRight,
-                    };
-                }
-                calliByte.Add(textColorGradient);
+                    case ColorGradientMode.VerticalGradient:
+                        textColorGradient = new TextColorGradient
+                        {
+                            nameHash = TextHelper.GetValueHash(gradient.name),
+                            topLeft = gradient.topLeft,
+                            topRight = gradient.topLeft,
+                            bottomLeft = gradient.bottomLeft,
+                            bottomRight = gradient.bottomLeft,
+                        };
+                        break;
+                    case ColorGradientMode.HorizontalGradient:
+                        textColorGradient = new TextColorGradient
+                        {
+                            nameHash = TextHelper.GetValueHash(gradient.name),
+                            topLeft = gradient.topLeft,
+                            topRight = gradient.topRight,
+                            bottomLeft = gradient.topLeft,
+                            bottomRight = gradient.topRight,
+                        };
+                        break;
+                    case ColorGradientMode.Single:
+                        textColorGradient = new TextColorGradient
+                        {
+                            nameHash = TextHelper.GetValueHash(gradient.name),
+                            topLeft = gradient.topLeft,
+                            topRight = gradient.topLeft,
+                            bottomLeft = gradient.topLeft,
+                            bottomRight = gradient.topLeft,
+                        };
+                        break;
+                    case ColorGradientMode.FourCornersGradient:
+                    default:
+                        textColorGradient = new TextColorGradient
+                        {
+                            nameHash = TextHelper.GetValueHash(gradient.name),
+                            topLeft = gradient.topLeft,
+                            topRight = gradient.topRight,
+                            bottomLeft = gradient.bottomLeft,
+                            bottomRight = gradient.bottomRight,
+                        };
+                        break;
+                }                
+                textColorGradients.Add(textColorGradient);
             }                
         }        
     }    

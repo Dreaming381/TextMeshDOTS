@@ -149,7 +149,6 @@ namespace TextMeshDOTS
             m_gradient = default;
             m_gradientStack = default;
 
-            m_gradientStack.Add(m_gradient);
             m_htmlColorStack.Clear();
             m_htmlColorStack.Add(m_htmlColor);
             m_underlineColorStack.Clear();
