@@ -14,7 +14,6 @@ namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
     [DisableAutoCreation]
-    [CreateBefore(typeof(NativeFontLoaderSystem))]
     partial struct RuntimeMultiFontTextRendererSpawner : ISystem
     {
         bool initialized;

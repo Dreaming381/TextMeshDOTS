@@ -8,13 +8,11 @@ using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.Rendering;
-using TextMeshDOTS.TextProcessing;
 
 namespace TextMeshDOTS.Authoring
 {
     [BurstCompile]
     [DisableAutoCreation]
-    [CreateBefore(typeof(NativeFontLoaderSystem))]
     partial struct RuntimeSingleFontTextRendererSpawner : ISystem
     {
         bool initialized;
