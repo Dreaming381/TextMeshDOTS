@@ -42,7 +42,7 @@ namespace TextMeshDOTS.Authoring
                 isItalic = false,
                 slant = 0,
                 useSystemFont = false,
-                samplingPointSizeSDF = 48,
+                samplingPointSizeSDF = 64,
                 samplingPointSizeBitmap = 64
             };
             singleFontReference = FontBlobber.GetRuntimeFontBlob(fontRequest);
