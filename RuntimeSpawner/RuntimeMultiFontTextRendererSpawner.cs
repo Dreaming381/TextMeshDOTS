@@ -8,7 +8,6 @@ using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.Rendering;
-using TextMeshDOTS.TextProcessing;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -29,10 +28,11 @@ namespace TextMeshDOTS.Authoring
             initialized = false;
             textRenderArchetype = TextMeshDOTSArchetypes.GetMultiFontParentTextArchetype(ref state);
             childTextRendererArchtype = TextMeshDOTSArchetypes.GetMultiFontChildTextArchetype(ref state);
-            fontRequests=new NativeArray<FontRequest>(5, Allocator.Persistent);
+
+            fontRequests =new NativeArray<FontRequest>(5, Allocator.Persistent);
             fontBlobReferences = new NativeArray<BlobAssetReference<FontBlob>>(5, Allocator.Persistent);
             //use FontUtility Scriptable Object to extract the following needed information
-            //(drop font into respective field, run context menu "Extract Font Data")
+            //see ReadMe for more details how
             fontRequests[0] = new FontRequest
             {
                 fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",

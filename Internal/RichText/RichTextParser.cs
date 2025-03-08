@@ -41,6 +41,8 @@ namespace TextMeshDOTS.RichText
                 {
                     isValidHtmlTag = true;
                     GetTagType(nameHashCode, ref tag);
+                    //calliStringRaw.GetSubString(ref m_htmlTag, startByteIndex, tagByteCount);
+                    //Debug.Log($"{m_htmlTag} {nameHashCode}");
                     tag.startID = position;
                     tag.endID = enumerator.NextRuneByteIndex - unicode.LengthInUtf8Bytes(); //could also do -1 as '<' is known to be just 1 byte           
                     switch (tagValue.type)
@@ -60,6 +62,7 @@ namespace TextMeshDOTS.RichText
                             //Debug.Log($"Color: {m_htmlTag} {tagValue.valueLength} {(Color32)tagValue.ColorValue}");
                             break;
                         case TagValueType.StringValue:
+                            tag.value.valueHash = valueHashCode;
                             GetStringValueTagType(valueHashCode, ref tag);
                             //Debug.Log($"StringValue: {tag.tagType} {tag.value.stringValue}");
                             break;
@@ -375,6 +378,16 @@ namespace TextMeshDOTS.RichText
                 case 1065846:  // </align>
                 case 976214:  // </ALIGN>
                     tag.tagType = TagType.Align;
+                    tag.isClosing = true;
+                    return;
+                case 100149144:  // <gradient>
+                case 69403544:    // <GRADIENT>
+                    tag.tagType = TagType.Gradient;
+                    tag.isClosing = false;
+                    return;
+                case 371094791:  // </gradient>
+                case 340349191:  // </GRADIENT>
+                    tag.tagType = TagType.Gradient;
                     tag.isClosing = true;
                     return;
                 case 281955:  // <color> <color=#FF00FF> or <color=#FF00FF00>

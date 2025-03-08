@@ -51,7 +51,13 @@ for rendering. The included HDRP and URP shader are wrapper around the TextMeshP
     the TextRenderer, or via rich text tags such as \<b\>, \<i>. Alternatively \<font\> can be used to explicitly select a font.
     TextMeshDOTS can simulate bold and italic when those variants are missing, but this should be the exception and not the default.    
   - Type in some text or rich text  
-  -	You should now see the text    
+  -	You should now see the text
+  - Optional use of Gradients:
+    - Add empty `GameObject`, and `TextColorGradient` component on it
+    - Add any number  gradients to the list. You need to name the gradients to be able to select them 
+      via the richtext tag \<gradient=name of gradient\> For horizontal gradients, specify at least the top left & right color. 
+      For vertical gradients at least top & bottom-left. Otherwise specify all corner.
+
 
 (2) Runtime instantiation workflow
   -	Generate backend mesh and materials: `Menue --> TextMeshDOTS --> Text BackendMesh`, `Menue --> TextMeshDOTS --> Generate materials`
@@ -72,7 +78,8 @@ for rendering. The included HDRP and URP shader are wrapper around the TextMeshP
 
 # Supported Richtext Tags
 
-\<align=...\> \<allcaps\>, \<alpha=xx\>, \<b\>, \<color=...\>, \<cspace=xx\>, \<font=...\>, \<font-weight=xxx\>, \<font-width=xxx.x\>, 
+\<align=...\> \<allcaps\>, \<alpha=xx\>, \<b\>, \<color=...\>, \<cspace=xx\>, \<gradient=...\>
+\<font=...\>, \<font-weight=xxx\>, \<font-width=xxx.x\>, 
 \<fraction\>, \<i>, \<indent=xx> \<lowercase\>, \<sub\>, 
 \<sup\>, \<size=xx\>, \<space=000.00\>, \<mspace=xx.x\>, \<smallcaps\>, 
 <scale=xx.x>, \<rotate=00\>, \<voffset=00\>.  Permitted size units are 'pt','px', 'em' and '%' or nothing 

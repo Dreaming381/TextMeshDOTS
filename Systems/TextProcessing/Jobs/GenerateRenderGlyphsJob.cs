@@ -20,6 +20,8 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
+        public Entity textColorGradientEntity;
+        [ReadOnly] public BufferLookup<TextColorGradient> textColorGradientLookup;
 
         [ReadOnly] public ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup;
         [ReadOnly] public ComponentLookup<FontAssetRef> fontAssetRefLookup;
@@ -53,8 +55,12 @@ namespace TextMeshDOTS.TextProcessing
             var glyphMappingBuffers = chunk.GetBufferAccessor(ref glyphMappingElementHandle);
             var glyphMappingMasks = chunk.GetNativeArray(ref glyphMappingMaskHandle);
             var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
-            var textRenderControls = chunk.GetNativeArray(ref textRenderControlHandle);           
-            
+            var textRenderControls = chunk.GetNativeArray(ref textRenderControlHandle);
+
+            var textColorGradient = textColorGradientEntity != Entity.Null ? textColorGradientLookup[textColorGradientEntity] : default;
+
+            TextColorGradientArray textColorGradientArray = default;
+            textColorGradientArray.Initialize(textColorGradientEntity, textColorGradientLookup);
 
             // Optional
             var additionalFontMaterialEntityBuffers = chunk.GetBufferAccessor(ref additionalFontMaterialEntityHandle);
@@ -81,6 +87,7 @@ namespace TextMeshDOTS.TextProcessing
                 else
                     fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
 
+
                 GlyphGeneration.CreateRenderGlyphs(ref fontAssetArray, 
                                                    fontEntities, 
                                                    ref dynamicFontAssetsLookup,
@@ -90,7 +97,8 @@ namespace TextMeshDOTS.TextProcessing
                                                    in calliBytes,
                                                    in glyphOTFs,
                                                    in xmlTags,
-                                                   in textBaseConfiguration);
+                                                   in textBaseConfiguration,
+                                                   ref textColorGradientArray);
 
                 if (glyphMappingBuffers.Length > 0)
                 {

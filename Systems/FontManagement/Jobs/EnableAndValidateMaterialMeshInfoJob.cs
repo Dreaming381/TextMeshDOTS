@@ -30,8 +30,8 @@ namespace TextmeshDOTS
                         textRendererMaterialMeshInfo.MaterialID = dynamicFontAsset.fontMaterialID;
                 }
             }
-            else
-                Debug.Log($"Unexpected: TextRender requieres FontMaterial that is not yet registered with hybridRenderer");
+            //else
+            //    Debug.Log($"Unexpected: TextRender requieres FontMaterial that is not yet registered with hybridRenderer");
         }
     }
 }

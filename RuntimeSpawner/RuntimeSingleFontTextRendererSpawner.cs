@@ -26,8 +26,9 @@ namespace TextMeshDOTS.Authoring
         {
             initialized = false;
             textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref state);
+            
             //use FontUtility Scriptable Object to extract the following needed information
-            //(drop font into respective field, run context menu "Extract Font Data")
+            //see ReadMe for more details how
             var fontRequest = new FontRequest 
             { 
                 fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",

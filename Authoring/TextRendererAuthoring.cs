@@ -9,7 +9,6 @@ using Unity.Rendering;
 using UnityEngine.Rendering;
 using System.Collections.Generic;
 
-
 namespace TextMeshDOTS.Authoring
 {
     [DisallowMultipleComponent]
@@ -44,10 +43,10 @@ namespace TextMeshDOTS.Authoring
         [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. Otherwise fonts need to be located in StreamingAssets folder")]
         public bool useSystemFonts = false;
         [Tooltip("Drop here all fonts and their family members you like to use. Family members are selected based on choosen FontStyle.)")]
-        public Object[] fonts;
+        public Object[] fonts;        
     }
 
-    class TestAuthoringBaker : Baker<TextRendererAuthoring>
+    class TextRendererBaker : Baker<TextRendererAuthoring>
     {
         public override void Bake(TextRendererAuthoring authoring)
         {
@@ -119,7 +118,7 @@ namespace TextMeshDOTS.Authoring
             var textBaseConfiguraton = new TextBaseConfiguration
             {
                 fontSize = authoring.fontSize,
-                color = authoring.color,
+                color = authoring.color,                
                 maxLineWidth = math.select(float.MaxValue, authoring.maxLineWidth, authoring.wordWrap),
                 lineJustification = authoring.horizontalAlignment,
                 verticalAlignment = authoring.verticalAlignment,

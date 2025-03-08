@@ -16,6 +16,7 @@ namespace TextMeshDOTS.RichText
         FontWeight,
         FontWidth,
         Fraction,
+        Gradient,
         Italic,
         Indent,
         LineHeight,

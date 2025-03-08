@@ -21,7 +21,7 @@ namespace TextMeshDOTS
                                ref ComponentLookup<FontBlobReference> fontBlobReferenceLookup)
         {
             Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
-            for (int i = 0; i < additionalFontMaterialEntities.Length; i++)
+            for (int i = 0, ii= additionalFontMaterialEntities.Length; i <ii ; i++)
             {
                 if (fontBlobReferenceLookup.TryGetComponent(additionalFontMaterialEntities[i].entity, out var blobRef))
                 {

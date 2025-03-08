@@ -51,6 +51,7 @@ namespace TextMeshDOTS.TextProcessing
 
             var fontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
             var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
+            SystemAPI.TryGetSingletonEntity<TextColorGradient>(out Entity textColorGradientEntity);
             state.Dependency = new GenerateRenderGlyphsJob
             {
                 renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
@@ -70,6 +71,9 @@ namespace TextMeshDOTS.TextProcessing
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),
                 xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(true),
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
+
+                textColorGradientEntity = textColorGradientEntity,
+                textColorGradientLookup = SystemAPI.GetBufferLookup<TextColorGradient>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(m_query, state.Dependency);

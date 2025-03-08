@@ -1,4 +1,6 @@
 using TextMeshDOTS.RichText;
+using Unity.Collections;
+using Unity.Entities;
 using UnityEngine;
 
 namespace TextMeshDOTS
@@ -30,6 +32,10 @@ namespace TextMeshDOTS
         public FixedStack512Bytes<Color32> m_underlineColorStack;
         public Color32 m_strikethroughColor;
         public FixedStack512Bytes<Color32> m_strikethroughColorStack;
+
+        public bool useGradient;
+        public TextColorGradient m_gradient;
+        public FixedStack512Bytes<TextColorGradient> m_gradientStack;
 
         public float m_lineOffset;
         public float m_lineHeight;
@@ -80,6 +86,9 @@ namespace TextMeshDOTS
             m_underlineColor = Color.white;
             m_strikethroughColor = Color.white;
 
+            useGradient = false;
+            m_gradient = default;
+            m_gradientStack = default;
             m_htmlColorStack = default;
             m_htmlColorStack.Add(m_htmlColor);
             m_underlineColorStack = default;
@@ -136,7 +145,11 @@ namespace TextMeshDOTS
             m_htmlColor = textBaseConfiguration.color;
             m_underlineColor = Color.white;
             m_strikethroughColor = Color.white;
+            useGradient = false;
+            m_gradient = default;
+            m_gradientStack = default;
 
+            m_gradientStack.Add(m_gradient);
             m_htmlColorStack.Clear();
             m_htmlColorStack.Add(m_htmlColor);
             m_underlineColorStack.Clear();
@@ -164,7 +177,7 @@ namespace TextMeshDOTS
 
             m_highlightStateStack.Clear();
         }
-        internal void Update(ref XMLTag tag, in TextBaseConfiguration textBaseConfiguration)
+        internal void Update(ref XMLTag tag, in TextBaseConfiguration textBaseConfiguration, ref TextColorGradientArray textColorGradients)
         {
             switch (tag.tagType)
             {
@@ -289,9 +302,38 @@ namespace TextMeshDOTS
                     else
                         m_lineJustification = m_lineJustificationStack.RemoveExceptRoot();
                     return;
+                case TagType.Gradient:
+                    if (!tag.isClosing)
+                    {                        
+                        var gradientNameHash = tag.value.valueHash;
+                        for (int i = 0, ii = textColorGradients.Length; i < ii; i++)
+                        {
+                            var gradient = textColorGradients[i];
+                            if (gradient.nameHash == gradientNameHash)
+                            {
+                                m_gradient = gradient;
+                                m_gradientStack.Add(m_gradient);
+                                useGradient = true;
+                                return;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        useGradient = false;
+                        if (m_gradientStack.Length == 1)
+                        {                            
+                            m_gradientStack.Pop();
+                            Debug.Log($"{m_htmlColor}");
+                        }
+                        else
+                            m_gradient = m_gradientStack.RemoveExceptRoot();
+                    }
+                    return;
                 case TagType.Color:
                     if (!tag.isClosing)
                     {
+                        useGradient = false;
                         if (tag.value.type == TagValueType.ColorValue)
                             m_htmlColor = tag.value.ColorValue;
                         else if (tag.value.type == TagValueType.StringValue)

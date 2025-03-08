@@ -5,7 +5,7 @@ using UnityEngine;
 namespace TextMeshDOTS.RichText
 {   
         
-    [StructLayout(LayoutKind.Explicit, Size = 12)]
+    [StructLayout(LayoutKind.Explicit, Size = 16)]
     public struct TagValue
     {
         [FieldOffset(0)]
@@ -27,6 +27,8 @@ namespace TextMeshDOTS.RichText
         [FieldOffset(6)]
         internal int valueLength;
         [FieldOffset(10)]
+        internal int valueHash;
+        [FieldOffset(15)]
         internal StringValue stringValue;
 
         internal float NumericalValue

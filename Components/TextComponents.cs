@@ -1,11 +1,45 @@
 using System;
 using TextMeshDOTS.RichText;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.TextCore.Text;
 
 namespace TextMeshDOTS
 {
+    /// <summary>
+    /// Definition of color gradients
+    /// </summary>
+    [Serializable]
+    public struct TextMeshDOTSColorGradient
+    {
+        [SerializeField]
+        public string name;
+        [SerializeField]
+        public ColorGradientMode colorMode;
+        [SerializeField]
+        public Color topLeft;
+        [SerializeField]
+        public Color topRight;
+        [SerializeField]
+        public Color bottomLeft;
+        [SerializeField]
+        public Color bottomRight;
+    }
+    /// <summary>
+    /// Definition of color gradients
+    /// </summary>
+    [InternalBufferCapacity(0)]
+    public struct TextColorGradient : IBufferElementData
+    {
+        public int nameHash;
+        public Color32 topLeft;
+        public Color32 topRight;
+        public Color32 bottomLeft;
+        public Color32 bottomRight;
+    }
+
     /// <summary>
     /// The base settings of the text before any rich text tags or animations are applied.
     /// Usage: ReadWrite
@@ -14,6 +48,7 @@ namespace TextMeshDOTS
     {
         public float fontSize;        
         public Color32 color;
+
         public FontStyles fontStyles; //readout of bold style only during authoring, otherwise this library will use fontweight (selectable via xml tags)
         public FontWeight fontWeight; //selectable via xml tags
         public float fontWidth;   //selectable via xml tags

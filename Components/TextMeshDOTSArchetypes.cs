@@ -59,8 +59,7 @@ namespace TextMeshDOTS
             componentTypeStaging[12] = ComponentType.ReadWrite<RenderBounds>();
             componentTypeStaging[13] = ComponentType.ReadWrite<PerInstanceCullingTag>();
             componentTypeStaging[14] = ComponentType.ReadWrite<MaterialMeshInfo>();
-            componentTypeStaging[15] = ComponentType.ReadWrite<RenderFilterSettings>();
-            
+            componentTypeStaging[15] = ComponentType.ReadWrite<RenderFilterSettings>();            
 
             return state.EntityManager.CreateArchetype(componentTypeStaging);
         }

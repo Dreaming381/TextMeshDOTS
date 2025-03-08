@@ -6,6 +6,7 @@ using Unity.Mathematics;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Burst.CompilerServices;
 using UnityEngine;
+using System.Globalization;
 
 
 namespace TextMeshDOTS
@@ -22,7 +23,8 @@ namespace TextMeshDOTS
                                                        in DynamicBuffer<CalliByte> calliBytesBuffer,
                                                        in DynamicBuffer<GlyphOTF> glyphOTFBuffer,
                                                        in DynamicBuffer<XMLTag> xmlTagBuffer,
-                                                       in TextBaseConfiguration textBaseConfiguration)
+                                                       in TextBaseConfiguration textBaseConfiguration,
+                                                       ref TextColorGradientArray textColorGradientArray)
         {
             //Debug.Log("CreateRenderGlyphs");
             renderGlyphs.Clear();
@@ -106,7 +108,7 @@ namespace TextMeshDOTS
                     {                        
                         currentTag = xmlTagBuffer[tagsCounter++];
                         richTextOffset += currentTag.Length;
-                        layoutConfig.Update(ref currentTag, textBaseConfiguration);                       
+                        layoutConfig.Update(ref currentTag, textBaseConfiguration, ref textColorGradientArray);                       
                         nextSegmentEndID = tagsCounter < xmlTagBuffer.Length ? xmlTagBuffer[tagsCounter].startID - 1 : calliString.Length;
                         cleanedSegmentLength = nextSegmentEndID - currentTag.endID;                        
                         nextTagPositionInCleanedText = cluster + cleanedSegmentLength;
@@ -253,10 +255,36 @@ namespace TextMeshDOTS
                 #endregion
 
                 #region Setup Color
-                renderGlyph.blColor = layoutConfig.m_htmlColor;
-                renderGlyph.tlColor = layoutConfig.m_htmlColor;
-                renderGlyph.trColor = layoutConfig.m_htmlColor;
-                renderGlyph.brColor = layoutConfig.m_htmlColor;
+                
+                if (layoutConfig.useGradient) //&& !isColorGlyph)
+                {
+                    var gradient = layoutConfig.m_gradient;
+                    renderGlyph.blColor = gradient.bottomLeft;
+                    renderGlyph.tlColor = gradient.topLeft;
+                    renderGlyph.trColor = gradient.topRight;
+                    renderGlyph.brColor = gradient.bottomRight;
+                    //if (m_ColorGradientPresetIsTinted)
+                    //{
+                    //    textInfo.textElementInfo[m_CharacterCount].vertexBottomLeft.color *= m_ColorGradientPreset.bottomLeft;
+                    //    textInfo.textElementInfo[m_CharacterCount].vertexTopLeft.color *= m_ColorGradientPreset.topLeft;
+                    //    textInfo.textElementInfo[m_CharacterCount].vertexTopRight.color *= m_ColorGradientPreset.topRight;
+                    //    textInfo.textElementInfo[m_CharacterCount].vertexBottomRight.color *= m_ColorGradientPreset.bottomRight;
+                    //}
+                    //else
+                    //{
+                    //    textInfo.textElementInfo[m_CharacterCount].vertexBottomLeft.color = TextGeneratorUtilities.MinAlpha(m_ColorGradientPreset.bottomLeft, vertexColor);
+                    //    textInfo.textElementInfo[m_CharacterCount].vertexTopLeft.color = TextGeneratorUtilities.MinAlpha(m_ColorGradientPreset.topLeft, vertexColor);
+                    //    textInfo.textElementInfo[m_CharacterCount].vertexTopRight.color = TextGeneratorUtilities.MinAlpha(m_ColorGradientPreset.topRight, vertexColor);
+                    //    textInfo.textElementInfo[m_CharacterCount].vertexBottomRight.color = TextGeneratorUtilities.MinAlpha(m_ColorGradientPreset.bottomRight, vertexColor);
+                    //}
+                }
+                else
+                {
+                    renderGlyph.blColor = layoutConfig.m_htmlColor;
+                    renderGlyph.tlColor = layoutConfig.m_htmlColor;
+                    renderGlyph.trColor = layoutConfig.m_htmlColor;
+                    renderGlyph.brColor = layoutConfig.m_htmlColor;
+                }
                 #endregion
 
                 #region Pack Scale into renderGlyph.scale

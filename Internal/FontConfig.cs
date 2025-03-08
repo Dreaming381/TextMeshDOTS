@@ -117,6 +117,7 @@ namespace TextMeshDOTS
                         else 
                         {
                             //fetch name of font from calliStringRaw Buffer
+                            //To-Do: better to store valueHash in tag struct
                             FixedString128Bytes stringValue = default; //should not happen too often, so should be OK to allocate here
                             calliStringRaw.GetSubString(ref stringValue, tag.value.valueStart, tag.value.valueLength);
                             m_fontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(stringValue); 
@@ -135,7 +136,6 @@ namespace TextMeshDOTS
                             m_fontMaterialIndex = fontIndex;
                     }
                     return;
-
             }
         }
     }    
