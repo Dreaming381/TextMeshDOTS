@@ -5,6 +5,7 @@ using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering;
 using Unity.Jobs;
 using Unity.Collections;
+using UnityEngine;
 
 
 namespace TextMeshDOTS.TextProcessing
@@ -18,12 +19,15 @@ namespace TextMeshDOTS.TextProcessing
         EntityQuery textRendererQ, fontEntitiesQ, fontstateQ;
         static readonly ProfilerMarker marker = new ProfilerMarker("hb_shape");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
+        NativeList<FontEntityGlyph> missingGlyphs;
 
         bool m_skipChangeFilter;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
+            missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.Persistent);
+
             fontstateQ = SystemAPI.QueryBuilder()
                 .WithAll<FontState>()
                 .WithNone<FontsDirtyTag>()
@@ -44,8 +48,9 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<DynamicFontAsset>()
                 .Build();
 
-            textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>());
-            textRendererQ.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
+            //do not filter on query in release version, rather determine in jobs if chunk needs to be processed or not
+            //textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>()); 
+            //textRendererQ.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             state.RequireForUpdate(fontstateQ);
@@ -55,14 +60,10 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (textRendererQ.IsEmpty)
-                return;
+            //if (textRendererQ.IsEmpty)
+            //    return;
             //Debug.Log("Shape system");
-
-            var missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.TempJob);
-
-            var fontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
-            var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
+            
             state.Dependency = new ExtractTagsJob
             {
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
@@ -71,6 +72,8 @@ namespace TextMeshDOTS.TextProcessing
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(textRendererQ, state.Dependency);
 
+            var fontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
+            var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
             state.Dependency = new ShapeJob
             {
                 marker = marker,
@@ -105,7 +108,15 @@ namespace TextMeshDOTS.TextProcessing
                 newMissingGlyphs = missingGlyphs,
             }.ScheduleParallel(fontEntitiesQ, state.Dependency);
 
-            missingGlyphs.Dispose(state.Dependency);
+            state.Dependency = new ClearMissingGlyphJob
+            {
+                missingGlyphs = missingGlyphs,
+            }.Schedule(state.Dependency);
+        }
+        [BurstCompile]
+        public void OnDestroy(ref SystemState state)
+        {
+            if (missingGlyphs.IsCreated) missingGlyphs.Dispose();
         }
     }
 }

@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: e5e0ca122f3e3484993ee63e3b0a6433
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - visualTreeAsset: {fileID: 9197481963319205126, guid: 67155fd47e9ae474ea8f22dd51da2fc4,
+      type: 3}
+  - fontItemAsset: {fileID: 9197481963319205126, guid: 3ac99a80eb17983469e28e2d4e185347,
+      type: 3}
+  - fontAssetRefTemplate: {fileID: 9197481963319205126, guid: c6872f1bd4964e24fa343a101743fd5b,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -75,6 +75,15 @@ for rendering. The included HDRP and URP shader are wrapper around the TextMeshP
       only one unified path for triggering runtime font loading/unloading (via `FontBlobReference`)
   -	Hit play
   
+(3) Changing text at Runtime
+  - Text is stored the `CalliString` DynamicBuffer. Querry for that buffer and change it. All changed chunks will be re-processed 
+    to generate the data requiered for rendering, and the entire GPU Buffer will be rebuild.
+    - NOTE: Currently, TextMeshDOTS does not support incremental updates of the GPU buffer for only the changed entities 
+   (in contrast to [Latios Framework/Calligraphics](https://github.com/Dreaming381/Latios-Framework/tree/master/Calligraphics)). 
+    So even if just 1 entity out of 10,000 entitites changes, the entire GPU buffer will be rebuild. This could 
+    incure a significant performence hit if you change text of just 1 entity every frame. The technical 
+   reason for that is complexity related to avoiding GPU buffer fragmentation. (open to pull requests if someone figures out 
+   how to use `ThreadedSparseUploader` (which comes with Entity Graphics Package) for such incremental updates)
 
 # Supported Richtext Tags
 

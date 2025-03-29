@@ -18,6 +18,15 @@ namespace TextMeshDOTS.TextProcessing
         }
     }
     [BurstCompile]
+    public partial struct ClearMissingGlyphJob : IJob
+    {
+        public NativeList<FontEntityGlyph> missingGlyphs;
+        public void Execute()
+        {
+            missingGlyphs.Clear();
+        }
+    }
+    [BurstCompile]
     public partial struct CopyMissingGlyphsToFontEntitiesJob : IJobEntity
     {
         [ReadOnly] public NativeList<FontEntityGlyph> newMissingGlyphs;

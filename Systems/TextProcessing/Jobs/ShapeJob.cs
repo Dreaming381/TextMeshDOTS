@@ -8,6 +8,7 @@ using TextMeshDOTS.HarfBuzz;
 using System;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 using TextMeshDOTS.Rendering;
+using UnityEngine;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -38,7 +39,7 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            if (!(chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
+            if (!(chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
                   chunk.DidChange(ref xmlTagHandle, lastSystemVersion) ||
                   chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
                 return;

@@ -1,6 +1,5 @@
-using System;
+﻿using System;
 using TextMeshDOTS.RichText;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -190,33 +189,17 @@ namespace TextMeshDOTS
     [Flags]
     public enum FontStyles
     {
-        Normal = 0,
-        Bold = 0x1,
-        Italic = 0x2,
-        //Underline = 0x4,
-        LowerCase = 0x8,
-        UpperCase = 0x10,
-        SmallCaps = 0x20,
-        //Strikethrough = 0x40,
-        Superscript = 0x80,
-        Subscript = 0x100,
-        //Highlight = 0x200,
-        Fraction = 0x400,
-    }
-    [Flags]
-    public enum AuthoringFontStyles
-    {
-        N = 0,
-        B = 0x1,
-        I = 0x2,
-        //Underline = 0x4,
-        LC = 0x8,
-        UC = 0x10,
-        SC = 0x20,
-        //Strikethrough = 0x40,
-        Sup = 0x80,
-        Sub = 0x100,
-        //Highlight = 0x200,
-        Frac = 0x400,
-    }
+        [InspectorName("N")] Normal = 0,
+        [InspectorName("B")] Bold = 0x1,
+        [InspectorName("I")] Italic = 0x2,
+        //[InspectorName("_")] Underline = 0x4,
+        [InspectorName("low")] LowerCase = 0x8,
+        [InspectorName("UPP")] UpperCase = 0x10,
+        [InspectorName("Sᴍᴀʟʟ")] SmallCaps = 0x20,
+        //[InspectorName("-")] Strikethrough = 0x40,
+        [InspectorName("x²")] Superscript = 0x80,
+        [InspectorName("x₂")] Subscript = 0x100,
+        //[InspectorName("[]")] Highlight = 0x200,
+        [InspectorName("½")] Fraction = 0x400,
+    }    
 }

@@ -1,0 +1,20 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/FontInfo.uss?fileID=7433441132597879392&amp;guid=19fe9008d8d16b54bac8385633eaf5af&amp;type=3#FontInfo" />
+    <engine:VisualElement data-source-type="TextMeshDOTS.Authoring.FontInfo, TextmeshDOTS" style="flex-grow: 1;">
+        <engine:TextField label="Path" binding-path="fontAssetPath" name="FontAssetPath" />
+        <engine:VisualElement style="flex-grow: 1; flex-direction: row;">
+            <engine:VisualElement class="wide-field" style="flex-grow: 1;">
+                <engine:TextField label="Family" binding-path="fontFamily" name="FontFamily" />
+                <engine:TextField label="SubFamily" binding-path="fontSubFamily" name="FontSubFamily" />
+                <engine:TextField label="Typographic Family" binding-path="typographicFamily" name="TypographicFamily" />
+                <engine:TextField label="Typographic Subfamily" binding-path="typographicSubfamily" name="TypographicSubfamily" />
+            </engine:VisualElement>
+            <engine:VisualElement name="VisualElement" class="narrow-field" style="flex-grow: 1;">
+                <engine:IntegerField label="Weight" binding-path="weight" name="Weight" />
+                <engine:IntegerField label="Width" name="Width" binding-path="width" />
+                <engine:Toggle label="Italic?" name="IsItalic" binding-path="isItalic" />
+                <engine:IntegerField label="Slant" binding-path="slant" name="Slant" />
+            </engine:VisualElement>
+        </engine:VisualElement>
+    </engine:VisualElement>
+</engine:UXML>

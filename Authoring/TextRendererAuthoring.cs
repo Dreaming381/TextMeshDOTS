@@ -18,7 +18,7 @@ namespace TextMeshDOTS.Authoring
         [TextArea(5, 10)]
         public string text;
         [EnumButtons]
-        public AuthoringFontStyles fontStyles = AuthoringFontStyles.N;
+        public FontStyles fontStyles = FontStyles.Normal;
         public float fontSize = 12f;
 
         [Tooltip("Sampling point size is used to set the font scale. See https://harfbuzz.github.io/harfbuzz-hb-font.html#hb-font-set-scale")]
@@ -43,7 +43,9 @@ namespace TextMeshDOTS.Authoring
         [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. Otherwise fonts need to be located in StreamingAssets folder")]
         public bool useSystemFonts = false;
         [Tooltip("Drop here all fonts and their family members you like to use. Family members are selected based on choosen FontStyle.)")]
-        public Object[] fonts;        
+        public Object[] fonts;
+        //public FontCollectionAsset fontCollectionAsset;
+        //public string selectedFont;
     }
 
     class TextRendererBaker : Baker<TextRendererAuthoring>
@@ -123,8 +125,8 @@ namespace TextMeshDOTS.Authoring
                 lineJustification = authoring.horizontalAlignment,
                 verticalAlignment = authoring.verticalAlignment,
                 isOrthographic = authoring.isOrthographic,
-                fontStyles = (FontStyles)authoring.fontStyles,
-                fontWeight = ((FontStyles)authoring.fontStyles & FontStyles.Bold)== FontStyles.Bold ? FontWeight.Bold : FontWeight.Normal,
+                fontStyles = authoring.fontStyles,
+                fontWeight = (authoring.fontStyles & FontStyles.Bold)== FontStyles.Bold ? FontWeight.Bold : FontWeight.Normal,
                 fontWidth = (int)FontWidth.Normal, //cannot be set from UI, 
                 wordSpacing = authoring.wordSpacing,
                 lineSpacing = authoring.lineSpacing,

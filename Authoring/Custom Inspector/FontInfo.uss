@@ -1,0 +1,16 @@
+.narrow-field {
+    max-width: 153px;
+    -unity-text-align: upper-left;
+}
+
+.narrow-field .unity-base-field__label {
+    min-width: 64px;
+    -unity-text-align: upper-right;
+}
+
+.narrow-field .unity-base-field__input {
+}
+
+.wide-field {
+    max-width: 311px;
+}
