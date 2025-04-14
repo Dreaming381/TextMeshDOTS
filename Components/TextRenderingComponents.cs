@@ -67,14 +67,14 @@ namespace TextMeshDOTS.Rendering
 
         // Assign a UnityEngine.Color32 to these.
         public PackedColor blColor; //64
-        public PackedColor tlColor;
-        public PackedColor trColor;
-        public PackedColor brColor;
+        public PackedColor tlColor; //68
+        public PackedColor trColor; //72
+        public PackedColor brColor; //76
 
-        public int  unicode; //not needed anywhere-->remove from struct?
-        public float shear;  //72 Should be equal to topLeft.x - bottomLeft.x
-        public float scale;  //80
-        public float rotationCCW;  //88 Radians
+        public int  unicode;        //80 not needed anywhere-->remove from struct?
+        public float shear;         //84 Should be equal to topLeft.x - bottomLeft.x
+        public float scale;         //88
+        public float rotationCCW;   //92
     }
 
     public struct PackedColor

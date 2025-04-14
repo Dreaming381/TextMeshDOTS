@@ -9,7 +9,7 @@ namespace TextMeshDOTS.Rendering
     [RequireMatchingQueriesForUpdate]
     [BurstCompile]
     [UpdateAfter(typeof(GenerateGlyphsSystem))]
-    [UpdateAfter(typeof(RegisterFontMaterialSystem))]
+    //[UpdateAfter(typeof(RegisterFontMaterialSystem))]
     //[DisableAutoCreation]
     public partial struct TextRenderingUpdateSystem : ISystem
     {

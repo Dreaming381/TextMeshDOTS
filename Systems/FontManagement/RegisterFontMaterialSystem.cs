@@ -9,27 +9,43 @@ using UnityEngine.Rendering;
 
 namespace TextMeshDOTS.TextProcessing
 {
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateAfter(typeof(UpdateFontAtlasSystem))]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]    
+    [CreateAfter(typeof(EntitiesGraphicsSystem))]
+    [UpdateInGroup(typeof(PresentationSystemGroup))]
+    //[UpdateAfter(typeof(UpdateFontAtlasSystem))]
     [RequireMatchingQueriesForUpdate]
     partial class RegisterFontMaterialSystem : SystemBase
     {
         EntityQuery changedFontEntitiesQ, fontEntitiesQ, fontstateQ, textRendererQ;
         EntitiesGraphicsSystem hybridRenderer;
 
-        Material textMeshDOTSMaterial;
-        Material urpUnlitMaterial;
+        Material sdfMaterial;
+        Material colrMaterial;
         Mesh backendMesh;
         BatchMeshID backendMeshID;
         
         protected override void OnCreate()
         {
-
             hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
             backendMesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
             backendMeshID = BatchMeshID.Null;
-            textMeshDOTSMaterial = Resources.Load<Material>(TextMaterialUtility.kSDF_URP_Material);
-            urpUnlitMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_URP_Material);
+            var srpType = GraphicsSettings.defaultRenderPipeline.GetType().ToString();
+            if (srpType.Contains("HDRenderPipelineAsset"))
+            {
+                //Debug.Log("High Definition Render Pipeline (HDRP) is being used.");
+                sdfMaterial = Resources.Load<Material>(TextMaterialUtility.kSDF_HDRP_Material);
+                colrMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_HDRP_Material);
+            }
+            else if (srpType.Contains("UniversalRenderPipelineAsset") || srpType.Contains("LightweightRenderPipelineAsset"))
+            {
+                //Debug.Log("Universal Render Pipeline (URP) is being used.");
+                sdfMaterial = Resources.Load<Material>(TextMaterialUtility.kSDF_URP_Material);
+                colrMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_URP_Material);
+            }
+            else
+                Debug.LogError("TextMeshDOTS does not work with the Built-in (Legacy) Render Pipeline");
+            
+            
 
             fontstateQ = SystemAPI.QueryBuilder()
                 .WithAll<FontState>()
@@ -81,7 +97,7 @@ namespace TextMeshDOTS.TextProcessing
 
                 if (dynamicFontAsset.textureType == TextureType.SDF)
                 {
-                    var material = Object.Instantiate(textMeshDOTSMaterial);
+                    var material = Object.Instantiate(sdfMaterial);
                     material.mainTexture = dynamicFontAsset.texture;
                     dynamicFontAsset.debugMaterial = material;
                     dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
@@ -89,7 +105,7 @@ namespace TextMeshDOTS.TextProcessing
                 }
                 else
                 {
-                    var material = Object.Instantiate(urpUnlitMaterial);
+                    var material = Object.Instantiate(colrMaterial);
                     material.mainTexture = dynamicFontAsset.texture;
                     dynamicFontAsset.debugMaterial = material;
                     dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
