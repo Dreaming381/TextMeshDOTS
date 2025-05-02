@@ -2,9 +2,7 @@ using System;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Collections;
 using static TextMeshDOTS.HarfBuzz.DrawDelegates;
-using Unity.Burst;
 using AOT;
-using UnityEngine;
 
 
 namespace TextMeshDOTS.HarfBuzz
@@ -14,20 +12,6 @@ namespace TextMeshDOTS.HarfBuzz
         public IntPtr ptr;
         public uint FaceCount => HB.hb_face_count(ptr);
         public uint Length => HB.hb_blob_get_length(ptr);
-
-        //public Blob(string filename)
-        //{
-        //    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(filename + "\0"); //IMPORTANT! interop with c++ requieres null terminated char*
-        //    unsafe
-        //    {
-        //        Debug.Log($"Last bytes is NULL? {bytes[^1] == 0} {bytes[^1]}");
-        //        fixed (byte* text = bytes)
-        //        {
-        //            ptr = HB.hb_blob_create_from_file(text);
-        //            Debug.Log(System.Text.Encoding.UTF8.GetString(text, bytes.Length));
-        //        }
-        //    }
-        //}
 
         public Blob(string filename)
         {

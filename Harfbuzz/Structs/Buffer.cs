@@ -1,7 +1,6 @@
 using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Entities;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -11,9 +10,9 @@ namespace TextMeshDOTS.HarfBuzz
         public Buffer(Direction direction, Script script, Language language)
         {
             ptr = HB.hb_buffer_create();
-            HB.hb_buffer_set_direction(ptr, direction);
-            HB.hb_buffer_set_script(ptr, script);
-            HB.hb_buffer_set_language(ptr, language);
+            Direction = direction;
+            Script = script;
+            Language = language;
         }
         public Buffer(bool dummyProperty)
         {
@@ -37,18 +36,7 @@ namespace TextMeshDOTS.HarfBuzz
             get { return HB.hb_buffer_get_flags(ptr); }
             set { HB.hb_buffer_set_flags(ptr, value); }
         }
-        //public IntPtr Language
-        //{
-        //    get => HB.hb_buffer_get_language(ptr);
-        //    set => HB.hb_buffer_set_language(ptr, value);
-        //}
-        //public string GetLanguageAsString()
-        //{
-        //    HB.hb_language_to_string(HB.hb_buffer_get_language(ptr));
 
-        //}
-
-        //public ContentType ContentType => HB.hb_buffer_get_content_type(ptr);
         public ContentType ContentType
         {
             get => HB.hb_buffer_get_content_type(ptr);
@@ -86,20 +74,10 @@ namespace TextMeshDOTS.HarfBuzz
             {
                 HB.hb_buffer_add_utf8(ptr, text, bytes.Length, 0, bytes.Length);
             }
-            
-            //HB.hb_buffer_add_utf8(ptr, text, text.Length, 0, text.Length);
         }
-        public void AddText(DynamicBuffer<byte> text, uint startIndex, int length)
+        public void AddText<T>(T text, uint startIndex, int length) where T : unmanaged, INativeList<byte>, IUTF8Bytes
         {
-            HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafeReadOnlyPtr(), text.Length, startIndex, length);
-        }
-        public void AddText(NativeArray<byte> text, uint startIndex, int length)
-        {
-            HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafeReadOnlyPtr(), text.Length, startIndex, length);
-        }
-        public void AddText(NativeText text, uint startIndex, int length)
-        {
-            HB.hb_buffer_add_utf8(ptr, (byte*)text.GetUnsafePtr(), text.Length, startIndex, length);
+            HB.hb_buffer_add_utf8(ptr, text.GetUnsafePtr(), text.Length, startIndex, length);
         }
         public void ClearContent()
         {
@@ -118,40 +96,16 @@ namespace TextMeshDOTS.HarfBuzz
             HB.hb_buffer_destroy(ptr);
         }
 
-        public NativeArray<GlyphInfo> GetGlyphInfo()
-        {
-            uint length;
-            var glyphInfoPtr = HB.hb_buffer_get_glyph_infos(ptr, out length);
-            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<GlyphInfo>((void*)glyphInfoPtr, (int)length, Allocator.Invalid);
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            NativeArrayUnsafeUtility.SetAtomicSafetyHandle<GlyphInfo>(ref result, AtomicSafetyHandle.GetTempMemoryHandle());
-#endif
-            return result;
-        }
         public unsafe ReadOnlySpan<GlyphInfo> GetGlyphInfosSpan()
         {
-            uint length;
-            var infoPtrs = HB.hb_buffer_get_glyph_infos(ptr, out length);
+            var infoPtrs = HB.hb_buffer_get_glyph_infos(ptr, out uint length);
             return new ReadOnlySpan<GlyphInfo>(infoPtrs, (int)length);
         }
 
-        public NativeArray<GlyphPosition> GetGlyphPositions()
-        {
-            uint length;
-            var glyphInfoPtr = HB.hb_buffer_get_glyph_positions(ptr, out length);
-            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<GlyphPosition>((void*)glyphInfoPtr, (int)length, Allocator.Invalid);
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-                    NativeArrayUnsafeUtility.SetAtomicSafetyHandle<GlyphPosition>(ref result, AtomicSafetyHandle.GetTempMemoryHandle());
-#endif
-            return result;
-        }
         public unsafe ReadOnlySpan<GlyphPosition> GetGlyphPositionsSpan()
         {
-            uint length;
-            var infoPtrs = HB.hb_buffer_get_glyph_positions(ptr, out length);
+            var infoPtrs = HB.hb_buffer_get_glyph_positions(ptr, out uint length);
             return new ReadOnlySpan<GlyphPosition>(infoPtrs, (int)length);
         }
     }
-
-    
 }
