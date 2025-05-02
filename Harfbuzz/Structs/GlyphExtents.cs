@@ -20,11 +20,7 @@ namespace TextMeshDOTS
         {
             return new GlyphRect(x, y, width + 2*padding, height +2 * padding);
         }
-        public float2 GetOffsetToZero()
-        {
-            return new float2(x_bearing, height-y_bearing);
-        }
-        public int size => height * width;
+
         public override string ToString()
         {
             return $"x_bearing {x_bearing} y_bearing {y_bearing} width {width} height {height}";
