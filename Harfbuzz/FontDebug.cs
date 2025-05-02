@@ -8,7 +8,7 @@ namespace TextMeshDOTS.HarfBuzz
     {
         public static void GetNameTags(Face face)
         {
-            var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
             var result = new FixedString128Bytes();
             var values = Enum.GetValues(typeof(NameID));
             foreach (NameID value in values)

@@ -11,7 +11,7 @@ namespace TextMeshDOTS.HarfBuzz
         public IntPtr ptr;
         public DrawDelegates(bool dummyProperty)
         {
-            ptr = HB.hb_draw_funcs_create();
+            ptr = Harfbuzz.hb_draw_funcs_create();
             FunctionPointer<MoveToDelegate> moveToFunctionPointer = BurstCompiler.CompileFunctionPointer<MoveToDelegate>(HB_draw_move_to_func_t);
             FunctionPointer<MoveToDelegate> lineToFunctionPointer = BurstCompiler.CompileFunctionPointer<MoveToDelegate>(HB_draw_move_to_func_t);
             FunctionPointer<QuadraticToDelegate> quadraticToFunctionPointer = BurstCompiler.CompileFunctionPointer<QuadraticToDelegate>(HB_draw_quadratic_to_func_t);
@@ -19,18 +19,18 @@ namespace TextMeshDOTS.HarfBuzz
             FunctionPointer<CloseDelegate> closeFunctionPointer = BurstCompiler.CompileFunctionPointer<CloseDelegate>(HB_draw_close_path_func_t);
             FunctionPointer<ReleaseDelegate> releaseFunctionPointer = BurstCompiler.CompileFunctionPointer<ReleaseDelegate>(Test);
 
-            HB.hb_draw_funcs_set_move_to_func(ptr, moveToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_draw_funcs_set_line_to_func(ptr, lineToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_draw_funcs_set_quadratic_to_func(ptr, quadraticToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_draw_funcs_set_cubic_to_func(ptr, cubicToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
-            HB.hb_draw_funcs_set_close_path_func(ptr, closeFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            Harfbuzz.hb_draw_funcs_set_move_to_func(ptr, moveToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            Harfbuzz.hb_draw_funcs_set_line_to_func(ptr, lineToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            Harfbuzz.hb_draw_funcs_set_quadratic_to_func(ptr, quadraticToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            Harfbuzz.hb_draw_funcs_set_cubic_to_func(ptr, cubicToFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
+            Harfbuzz.hb_draw_funcs_set_close_path_func(ptr, closeFunctionPointer, IntPtr.Zero, releaseFunctionPointer);
 
-            HB.hb_draw_funcs_make_immutable(ptr);
+            Harfbuzz.hb_draw_funcs_make_immutable(ptr);
         }
 
         public void Dispose()
         {
-            HB.hb_draw_funcs_destroy(ptr);
+            Harfbuzz.hb_draw_funcs_destroy(ptr);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(ReleaseDelegate))]

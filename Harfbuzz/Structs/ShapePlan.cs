@@ -12,20 +12,20 @@ namespace TextMeshDOTS.HarfBuzz
         {
             unsafe
             {
-                ptr = HB.hb_shape_plan_create_cached(face.ptr, ref props, (IntPtr)features.GetUnsafePtr(), (uint)features.Length, shaper_list);
+                ptr = Harfbuzz.hb_shape_plan_create_cached(face.ptr, ref props, (IntPtr)features.GetUnsafePtr(), (uint)features.Length, shaper_list);
             }            
         }
         public void Execute(Font font, Buffer buffer, NativeList<Feature> features)
         {
             unsafe
             {
-                HB.hb_shape_plan_execute(ptr, font, buffer, (IntPtr)features.GetUnsafePtr(), (uint)features.Length);
+                Harfbuzz.hb_shape_plan_execute(ptr, font, buffer, (IntPtr)features.GetUnsafePtr(), (uint)features.Length);
             }
         }
 
         public void Dispose()
         {
-            HB.hb_shape_plan_destroy(ptr);
+            Harfbuzz.hb_shape_plan_destroy(ptr);
         }
     }    
 }

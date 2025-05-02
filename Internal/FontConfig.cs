@@ -30,7 +30,7 @@ namespace TextMeshDOTS
             m_fontWeightStack.Clear();
             m_fontWeightStack.Add(m_fontWeight);
 
-            m_fontWidth = textBaseConfiguration.fontWidth;
+            m_fontWidth = textBaseConfiguration.fontWidthValue;
             m_fontWidthStack.Clear();
             m_fontWidthStack.Add(m_fontWidth);
 

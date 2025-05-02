@@ -26,13 +26,13 @@ namespace TextMeshDOTS
         internal void FinalizeOpenTypeFeatures(int position)
         {
             if (smallCapsStartID != -1)
-                values.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, (uint)smallCapsStartID, (uint)position));
+                values.Add(new Feature(Harfbuzz.HB_TAG('s', 'm', 'c', 'p'), 1, (uint)smallCapsStartID, (uint)position));
             if (subscriptStartID != -1)
-                values.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, (uint)subscriptStartID, (uint)position));
+                values.Add(new Feature(Harfbuzz.HB_TAG('s', 'u', 'b', 's'), 1, (uint)subscriptStartID, (uint)position));
             if (superscriptStartID != -1)
-                values.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, (uint)superscriptStartID, (uint)position));
+                values.Add(new Feature(Harfbuzz.HB_TAG('s', 'u', 'p', 's'), 1, (uint)superscriptStartID, (uint)position));
             if (fractionStartID != -1)
-                values.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, (uint)position));
+                values.Add(new Feature(Harfbuzz.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, (uint)position));
         }
         internal void Update(ref XMLTag tag, int position)
         {
@@ -46,7 +46,7 @@ namespace TextMeshDOTS
                     }
                     else
                     {
-                        values.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, (uint)smallCapsStartID, (uint)position));
+                        values.Add(new Feature(Harfbuzz.HB_TAG('s', 'm', 'c', 'p'), 1, (uint)smallCapsStartID, (uint)position));
                         smallCapsStartID = -1;
                     }
                     return;
@@ -58,7 +58,7 @@ namespace TextMeshDOTS
                     }
                     else
                     {
-                        values.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, (uint)subscriptStartID, (uint)position));
+                        values.Add(new Feature(Harfbuzz.HB_TAG('s', 'u', 'b', 's'), 1, (uint)subscriptStartID, (uint)position));
                         subscriptStartID = -1;
                     }
                     return;
@@ -70,7 +70,7 @@ namespace TextMeshDOTS
                     }
                     else
                     {
-                        values.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, (uint)superscriptStartID, (uint)position));
+                        values.Add(new Feature(Harfbuzz.HB_TAG('s', 'u', 'p', 's'), 1, (uint)superscriptStartID, (uint)position));
                         superscriptStartID = -1;
                     }
                     return;
@@ -82,7 +82,7 @@ namespace TextMeshDOTS
                     }
                     else
                     {
-                        values.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, (uint)position));
+                        values.Add(new Feature(Harfbuzz.HB_TAG('f', 'r', 'a', 'c'), 1, (uint)fractionStartID, (uint)position));
                         fractionStartID = -1;
                     }
                     return;
@@ -92,13 +92,13 @@ namespace TextMeshDOTS
         public void SetGlobalFeatures(in TextBaseConfiguration textBaseConfiguration, uint textLendth)
         {
             if ((textBaseConfiguration.fontStyles & FontStyles.SmallCaps) == FontStyles.SmallCaps)
-                values.Add(new Feature(HB.HB_TAG('s', 'm', 'c', 'p'), 1, 0, textLendth));
+                values.Add(new Feature(Harfbuzz.HB_TAG('s', 'm', 'c', 'p'), 1, 0, textLendth));
             if ((textBaseConfiguration.fontStyles & FontStyles.Subscript) == FontStyles.Subscript)
-                values.Add(new Feature(HB.HB_TAG('s', 'u', 'b', 's'), 1, 0, textLendth));
+                values.Add(new Feature(Harfbuzz.HB_TAG('s', 'u', 'b', 's'), 1, 0, textLendth));
             if ((textBaseConfiguration.fontStyles & FontStyles.Superscript) == FontStyles.Superscript)
-                values.Add(new Feature(HB.HB_TAG('s', 'u', 'p', 's'), 1, 0, textLendth));
+                values.Add(new Feature(Harfbuzz.HB_TAG('s', 'u', 'p', 's'), 1, 0, textLendth));
             if ((textBaseConfiguration.fontStyles & FontStyles.Fraction) == FontStyles.Fraction)
-                values.Add(new Feature(HB.HB_TAG('f', 'r', 'a', 'c'), 1, 0, textLendth));
+                values.Add(new Feature(Harfbuzz.HB_TAG('f', 'r', 'a', 'c'), 1, 0, textLendth));
         }
         public void Clear()
         {

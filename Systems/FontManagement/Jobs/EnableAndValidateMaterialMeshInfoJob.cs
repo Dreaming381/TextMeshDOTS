@@ -1,11 +1,9 @@
-using TextMeshDOTS;
-using TextMeshDOTS.Rendering.Authoring;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS
 {
     [WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)]
     public partial struct EnableAndValidateMaterialMeshInfoJob : IJobEntity

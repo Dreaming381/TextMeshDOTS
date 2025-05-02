@@ -24,7 +24,7 @@ namespace TextMeshDOTS.HarfBuzz
         //}
         public Feature(string feature)
         {
-            bool result = HB.hb_feature_from_string(feature, -1, out this);
+            bool result = Harfbuzz.hb_feature_from_string(feature, -1, out this);
         }
         public Feature(uint tag, uint value, uint start, uint end)
         {

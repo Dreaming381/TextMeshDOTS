@@ -119,7 +119,7 @@ namespace TextMeshDOTS.Authoring
             calliString.Append(authoring.text);
             var textBaseConfiguraton = new TextBaseConfiguration
             {
-                fontSize = authoring.fontSize,
+                fontSize = (half)authoring.fontSize,
                 color = authoring.color,                
                 maxLineWidth = math.select(float.MaxValue, authoring.maxLineWidth, authoring.wordWrap),
                 lineJustification = authoring.horizontalAlignment,
@@ -127,10 +127,10 @@ namespace TextMeshDOTS.Authoring
                 isOrthographic = authoring.isOrthographic,
                 fontStyles = authoring.fontStyles,
                 fontWeight = (authoring.fontStyles & FontStyles.Bold)== FontStyles.Bold ? FontWeight.Bold : FontWeight.Normal,
-                fontWidth = (int)FontWidth.Normal, //cannot be set from UI, 
-                wordSpacing = authoring.wordSpacing,
-                lineSpacing = authoring.lineSpacing,
-                paragraphSpacing = authoring.paragraphSpacing,
+                fontWidth = FontWidth.Normal, //cannot be set from UI, 
+                wordSpacing = (half)authoring.wordSpacing,
+                lineSpacing = (half)authoring.lineSpacing,
+                paragraphSpacing = (half)authoring.paragraphSpacing,
             };
             AddComponent(entity, textBaseConfiguraton);
             AddBuffer<RenderGlyph>(entity);

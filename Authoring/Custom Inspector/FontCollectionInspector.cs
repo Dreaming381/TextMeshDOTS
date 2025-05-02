@@ -2,7 +2,7 @@ using TextMeshDOTS.Authoring;
 using UnityEditor;
 using UnityEngine.UIElements;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS
 {
     [CustomEditor(typeof(FontCollectionAsset))]
     public class FontCollectionInspector : Editor

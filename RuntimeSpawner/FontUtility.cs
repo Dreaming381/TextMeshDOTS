@@ -51,7 +51,7 @@ namespace TextMeshDOTS.Authoring
                 var font = new Font(face.ptr);
 
                 //fetch name of fontFamily and subFamily, generate hash code from that used to lookup this font
-                var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+                var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
 
                 var initialCapacity = 125u; //FixedString128Bytes.Capacity
                 var tmp = new FixedString128Bytes();

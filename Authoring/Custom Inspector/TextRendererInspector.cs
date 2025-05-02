@@ -3,7 +3,7 @@
 //using UnityEditor.UIElements;
 //using UnityEngine.UIElements;
 
-//namespace TextmeshDOTS
+//namespace TextMeshDOTS
 //{
 //    [CustomEditor(typeof(TextRendererAuthoring))]
 //    public class TextRendererInspector : Editor

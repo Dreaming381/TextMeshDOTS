@@ -36,25 +36,25 @@ namespace TextMeshDOTS.HarfBuzz
 
         public Language(string language, int len)
         {
-            ptr = HB.hb_language_from_string(language, len);
+            ptr = Harfbuzz.hb_language_from_string(language, len);
         }
         public Language(string language)
         {
-            ptr = HB.hb_language_from_string(language, -1);
+            ptr = Harfbuzz.hb_language_from_string(language, -1);
         }
         /// <summary>
         /// Converts captial letter <see href="https://learn.microsoft.com/en-us/typography/opentype/spec/languagetags">Opentype language tags</see> into BCP 47 language subtags
         /// </summary>
         public Language(uint tag)
         {
-            ptr = HB.hb_ot_tag_to_language(tag);
+            ptr = Harfbuzz.hb_ot_tag_to_language(tag);
         }
         public override string ToString()
         {
             string result;
             unsafe
             {
-                result = Marshal.PtrToStringUTF8(HB.hb_language_to_string(ptr));
+                result = Marshal.PtrToStringUTF8(Harfbuzz.hb_language_to_string(ptr));
             }
             return result;
         }

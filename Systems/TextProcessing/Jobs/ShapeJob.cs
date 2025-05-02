@@ -51,7 +51,7 @@ namespace TextMeshDOTS.TextProcessing
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
             var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
 
-            var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
             //var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
             var segmentProperties = new SegmentProperties(Direction.LTR, Script.LATIN, language);
             var buffer = new Buffer(true);

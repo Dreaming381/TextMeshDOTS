@@ -69,7 +69,7 @@ namespace TextMeshDOTS.TextProcessing
             var upem = face.GetUnitsPerEM;
 
             //get width of space -->is there no easier way to do this?        
-            var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
+            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
             var buffer = new Buffer(Direction.LTR, Script.LATIN, language);
             buffer.ContentType = ContentType.UNICODE;
             buffer.Add(0x20, 0);

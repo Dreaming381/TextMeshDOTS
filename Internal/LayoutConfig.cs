@@ -66,7 +66,7 @@ namespace TextMeshDOTS
             fontWeightStack = default;
             fontWeightStack.Add(fontWeight);
 
-            fontWidth = textBaseConfiguration.fontWidth;
+            fontWidth = textBaseConfiguration.fontWidthValue;
             fontWidthStack = default;
             fontWidthStack.Add(fontWidth);
 
@@ -126,7 +126,7 @@ namespace TextMeshDOTS
             fontWeightStack.Clear();
             fontWeightStack.Add(fontWeight);
 
-            fontWidth = textBaseConfiguration.fontWidth;
+            fontWidth = textBaseConfiguration.fontWidthValue;
             fontWidthStack.Clear();
             fontWidthStack.Add(fontWidth);
            

@@ -10,18 +10,18 @@ namespace TextMeshDOTS.HarfBuzz
     public struct Blob : IDisposable
     {
         public IntPtr ptr;
-        public uint FaceCount => HB.hb_face_count(ptr);
-        public uint Length => HB.hb_blob_get_length(ptr);
+        public uint FaceCount => Harfbuzz.hb_face_count(ptr);
+        public uint Length => Harfbuzz.hb_blob_get_length(ptr);
 
         public Blob(string filename)
         {
-            ptr = HB.hb_blob_create_from_file(filename); //returned blob is immutable            
+            ptr = Harfbuzz.hb_blob_create_from_file(filename); //returned blob is immutable            
         }
         unsafe public Blob(void* data, uint length, MemoryMode memoryMode)
         {
             //FunctionPointer<ReleaseDelegate> releaseFunctionPointer = BurstCompiler.CompileFunctionPointer<ReleaseDelegate>(OnBlobDisposed);
             ReleaseDelegate releaseDelegate = new ReleaseDelegate(OnBlobDisposed);
-            ptr = HB.hb_blob_create(data, length, memoryMode, IntPtr.Zero, releaseDelegate); //returned blob is immutable
+            ptr = Harfbuzz.hb_blob_create(data, length, memoryMode, IntPtr.Zero, releaseDelegate); //returned blob is immutable
         }
         //public Blob(string filename, out bool success)
         //{
@@ -41,7 +41,7 @@ namespace TextMeshDOTS.HarfBuzz
             NativeArray<byte> result;
             unsafe
             {
-                var bytes = HB.hb_blob_get_data(ptr, out length);
+                var bytes = Harfbuzz.hb_blob_get_data(ptr, out length);
                 result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>((void*)bytes, (int)length, Allocator.Invalid);
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
                 NativeArrayUnsafeUtility.SetAtomicSafetyHandle<byte>(ref result, AtomicSafetyHandle.GetTempMemoryHandle());
@@ -49,15 +49,15 @@ namespace TextMeshDOTS.HarfBuzz
             }
             return result;
         }
-        public bool IsImmutable() => HB.hb_blob_is_immutable(ptr);
+        public bool IsImmutable() => Harfbuzz.hb_blob_is_immutable(ptr);
         public void MakeImmutable()
         {
-            HB.hb_blob_make_immutable(ptr);
+            Harfbuzz.hb_blob_make_immutable(ptr);
         }
 
         public void Dispose()
         {
-            HB.hb_blob_destroy(ptr);
+            Harfbuzz.hb_blob_destroy(ptr);
         }
 
         [MonoPInvokeCallback(typeof(ReleaseDelegate))]

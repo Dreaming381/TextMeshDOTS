@@ -6,7 +6,7 @@ using static TextMeshDOTS.HarfBuzz.PaintDelegates;
 
 namespace TextMeshDOTS.HarfBuzz
 {
-    public static unsafe class HB
+    public static unsafe class Harfbuzz
     {
         private const string HarfBuzz = "harfbuzz";
         private const CallingConvention CallConvention = CallingConvention.Cdecl;

@@ -31,13 +31,13 @@ namespace TextMeshDOTS.Authoring
             singleFontReference = FontBlobber.GetRuntimeFontBlob(fontRequest);
             textBaseConfiguration = new TextBaseConfiguration
             {
-                fontSize = 12,
+                fontSize = (half)12,
                 color=Color.white,
                 fontStyles = FontStyles.Normal,
                 maxLineWidth = 30,
-                wordSpacing = 0,
-                lineSpacing = 0,
-                paragraphSpacing = 0,
+                wordSpacing = (half)0,
+                lineSpacing = (half)0,
+                paragraphSpacing = (half)0,
                 lineJustification = HorizontalAlignmentOptions.Left,
                 verticalAlignment = VerticalAlignmentOptions.TopBase,
                 isOrthographic = false,

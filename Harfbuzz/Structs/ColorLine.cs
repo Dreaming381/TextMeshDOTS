@@ -15,12 +15,12 @@ namespace TextMeshDOTS.HarfBuzz
         {
             uint count = 16;
             colorStops = new NativeArray<ColorStop>((int)count, Allocator.Temp);
-            var len = HB.hb_color_line_get_color_stops(ptr, 0, ref count, (IntPtr)colorStops.GetUnsafePtr());
+            var len = Harfbuzz.hb_color_line_get_color_stops(ptr, 0, ref count, (IntPtr)colorStops.GetUnsafePtr());
             if (len > count)
             {
                 Debug.Log("capacity of 16 was not sufficient, increasing");
                 colorStops = new NativeArray<ColorStop>((int)len, Allocator.Temp);
-                HB.hb_color_line_get_color_stops(ptr, 0, ref len, (IntPtr)colorStops.GetUnsafePtr());
+                Harfbuzz.hb_color_line_get_color_stops(ptr, 0, ref len, (IntPtr)colorStops.GetUnsafePtr());
             }
             //for (int i = 0; i < len; i++)
             //{
@@ -34,7 +34,7 @@ namespace TextMeshDOTS.HarfBuzz
 
         public PaintExtend GetExtend()
         {
-            return HB.hb_color_line_get_extend(ptr);
+            return Harfbuzz.hb_color_line_get_extend(ptr);
         }
     };
     //struct hb_color_line_t
