@@ -50,23 +50,8 @@ namespace TextMeshDOTS.TextProcessing
             font.GetBaseline(Direction.LTR, Script.LATIN, out int baseLine);
             font.GetFontExtentsForDirection(Direction.LTR, out FontExtents fontExtents);
 
-            face.GetSizeParams(out uint design_size, out uint subfamily_id, out uint subfamily_name_id, out uint range_start, out uint range_end);
-
             font.GetMetrics(MetricTag.CAP_HEIGHT, out int capHeight);
             font.GetMetrics(MetricTag.X_HEIGHT, out int xHeight);
-
-            font.GetMetrics(MetricTag.SUBSCRIPT_EM_X_SIZE, out int subScriptEmXSize);
-            font.GetMetrics(MetricTag.SUBSCRIPT_EM_Y_SIZE, out int subScriptEmYSize);
-            font.GetMetrics(MetricTag.SUBSCRIPT_EM_X_OFFSET, out int subScriptEmXOffset);
-            font.GetMetrics(MetricTag.SUBSCRIPT_EM_Y_OFFSET, out int subScriptEmYOffset);
-
-            font.GetMetrics(MetricTag.SUPERSCRIPT_EM_X_SIZE, out int superScriptEmXSize);
-            font.GetMetrics(MetricTag.SUPERSCRIPT_EM_Y_SIZE, out int superScriptEmYSize);
-            font.GetMetrics(MetricTag.SUPERSCRIPT_EM_X_OFFSET, out int superScriptEmXOffset);
-            font.GetMetrics(MetricTag.SUPERSCRIPT_EM_Y_OFFSET, out int superScriptEmYOffset);
-
-            var scale = font.GetScale();
-            var upem = face.GetUnitsPerEM;
 
             //get width of space -->is there no easier way to do this?        
             var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
@@ -96,25 +81,8 @@ namespace TextMeshDOTS.TextProcessing
             fontBlobRoot.descender = fontExtents.descender;
             fontBlobRoot.baseLine = baseLine;
 
-            fontBlobRoot.designSize = design_size;
-            fontBlobRoot.subfamilyNameID = subfamily_name_id;
-            fontBlobRoot.rangeStart = range_start;
-            fontBlobRoot.rangeEnd = range_end;
-            fontBlobRoot.unitsPerEm = face.GetUnitsPerEM;
-            fontBlobRoot.scale = font.GetScale(); 
-
             fontBlobRoot.capHeight = capHeight;
             fontBlobRoot.xHeight = xHeight;
-
-            fontBlobRoot.subScriptEmXSize = subScriptEmXSize;
-            fontBlobRoot.subScriptEmYSize = subScriptEmYSize;
-            fontBlobRoot.subScriptEmXOffset = subScriptEmXOffset;
-            fontBlobRoot.subScriptEmYOffset = subScriptEmYOffset;
-
-            fontBlobRoot.superScriptEmXSize = superScriptEmXSize;
-            fontBlobRoot.superScriptEmYSize = superScriptEmYSize;
-            fontBlobRoot.superScriptEmXOffset = superScriptEmXOffset;
-            fontBlobRoot.superScriptEmYOffset = superScriptEmYOffset;
 
             int count = placedGlyphs.Length == 0 ? 1 : placedGlyphs.Length;
             var characterHashMapBuilder = builder.AllocateHashMap(ref fontBlobRoot.glyphs, count);
@@ -149,25 +117,8 @@ namespace TextMeshDOTS.TextProcessing
             fontBlobRoot.descender = dynamicFontData.descender;
             fontBlobRoot.baseLine = dynamicFontData.baseLine;
 
-            fontBlobRoot.designSize = dynamicFontData.designSize;
-            fontBlobRoot.subfamilyNameID = dynamicFontData.subfamilyNameID;
-            fontBlobRoot.rangeStart = dynamicFontData.rangeStart;
-            fontBlobRoot.rangeEnd = dynamicFontData.rangeEnd;
-            fontBlobRoot.unitsPerEm = dynamicFontData.unitsPerEm;
-            fontBlobRoot.scale = dynamicFontData.scale;
-
             fontBlobRoot.capHeight = dynamicFontData.capHeight;
             fontBlobRoot.xHeight = dynamicFontData.xHeight;
-
-            fontBlobRoot.subScriptEmXSize = dynamicFontData.subScriptEmXSize;
-            fontBlobRoot.subScriptEmYSize = dynamicFontData.subScriptEmYSize;
-            fontBlobRoot.subScriptEmXOffset = dynamicFontData.subScriptEmXOffset;
-            fontBlobRoot.subScriptEmYOffset = dynamicFontData.subScriptEmYOffset;
-
-            fontBlobRoot.superScriptEmXSize = dynamicFontData.superScriptEmXSize;
-            fontBlobRoot.superScriptEmYSize = dynamicFontData.superScriptEmYSize;
-            fontBlobRoot.superScriptEmXOffset = dynamicFontData.superScriptEmXOffset;
-            fontBlobRoot.superScriptEmYOffset = dynamicFontData.superScriptEmYOffset;
 
             var newLength = dynamicFontData.glyphs.Count + newGlyphs.Length;
 
@@ -185,16 +136,6 @@ namespace TextMeshDOTS.TextProcessing
 
             dynamicFontDataReference.Dispose();
             dynamicFontDataReference = result;
-            //replace existing blob with new blob, dispose old blob
-            //unsafe
-            //{
-            //    var a = (BlobAssetReference<DynamicFontBlob>*)dynamicFontDataReference.GetUnsafePtr();
-            //    var b = (BlobAssetReference<DynamicFontBlob>*)result.GetUnsafePtr();
-            //    var temp = *a;
-            //    *a = *b;
-            //    *b = temp;
-            //}            
-            //result.Dispose();
         }
     }    
 }

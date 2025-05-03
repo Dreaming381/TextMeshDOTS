@@ -6,7 +6,6 @@ using Unity.Mathematics;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Burst.CompilerServices;
 using UnityEngine;
-using System.Globalization;
 
 
 namespace TextMeshDOTS
@@ -15,11 +14,9 @@ namespace TextMeshDOTS
     internal static class GlyphGeneration
     {
         internal static unsafe void CreateRenderGlyphs(ref FontAssetArray fontAssetArray,
-                                                        NativeArray<Entity> fontEntities,
                                                        ref ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup,
                                                        ref ComponentLookup<FontAssetRef> fontAssetRefLookup,                                                       
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
-                                                       ref GlyphMappingWriter mappingWriter,
                                                        in DynamicBuffer<CalliByte> calliBytesBuffer,
                                                        in DynamicBuffer<GlyphOTF> glyphOTFBuffer,
                                                        in DynamicBuffer<XMLTag> xmlTagBuffer,
@@ -46,13 +43,11 @@ namespace TextMeshDOTS
             int nextTagPositionInCleanedText = cleanedSegmentLength;
             //Debug.Log($"{currentTag.tagType} {cleanedSegmentLength} {nextTagPositionInCleanedText}");
 
-            int characterCount = 0;
             int lastWordStartCharacterGlyphIndex = 0;
             FixedList512Bytes<int> characterGlyphIndicesWithPreceedingSpacesInLine = default;
-            int accumulatedSpaces = 0;
             int startOfLineGlyphIndex = 0;
             int lastCommittedStartOfLineGlyphIndex = -1;
-            int lineCount = 0;
+            bool isFirstLine = true;
             bool isLineStart = true;
             float currentLineHeight = 0f;
             float ascentLineDelta = 0;
@@ -60,7 +55,6 @@ namespace TextMeshDOTS
             float accumulatedVerticalOffset = 0f;
             float maxLineAscender = float.MinValue;
             float maxLineDescender = float.MaxValue;
-            //float xAdvance = 0f;
 
 
             Entity currentFontEntity = glyphOTFBuffer[0].fontEntity;
@@ -120,7 +114,7 @@ namespace TextMeshDOTS
                 characters.GotoByteIndex(richTextOffset + cluster); 
                 currentRune = characters.Current;
 
-                if (lineCount == 0)
+                if (isFirstLine)
                     topAnchor = GetTopAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale, topAnchor);
                 bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale, bottomAnchor);
 
@@ -182,13 +176,11 @@ namespace TextMeshDOTS
                 // Set Padding based on selected font style
                 #region Handle Style Padding
                 float boldSpacingAdjustment = 0;
-                float style_padding = 0;
                 //if bold is requested and current font is not bold (=it has not been found), then simulate bold
                 bool simulateBold = (layoutConfig.fontWeight >= FontWeight.Bold && currentFontAssetRef.weight < FontWeight.Bold);
                 if (simulateBold)
                 {
                     //Debug.Log($"Simulate Bold {currentFontAssetRef.weight} {(int)FontWeight.Bold}");
-                    style_padding = 0;
                     boldSpacingAdjustment = currentFont.boldStyleSpacing;
                 }
                 #endregion Handle Style Padding
@@ -199,7 +191,7 @@ namespace TextMeshDOTS
 
                 // top left is used to position bottom left and top right
                 float2 topLeft;
-                topLeft.x = layoutConfig.m_xAdvance + (x_bearing * layoutConfig.m_fxScale - currentFont.materialPadding - style_padding + glyphOTF.xOffset) * currentElementScale;
+                topLeft.x = layoutConfig.m_xAdvance + (x_bearing * layoutConfig.m_fxScale - currentFont.materialPadding + glyphOTF.xOffset) * currentElementScale;
                 topLeft.y = baselineOffset + (y_bearing + currentFont.materialPadding + glyphOTF.yOffset) * currentElementScale + layoutConfig.m_baselineOffset + m_subAndSupscriptOffset;
 
                 float2 bottomLeft;
@@ -207,7 +199,7 @@ namespace TextMeshDOTS
                 bottomLeft.y = topLeft.y - ((glyphHeight + currentFont.materialPadding * 2) * currentElementScale);
 
                 float2 topRight;
-                topRight.x = bottomLeft.x + (glyphWidth * layoutConfig.m_fxScale + currentFont.materialPadding * 2 + style_padding * 2) * currentElementScale;
+                topRight.x = bottomLeft.x + (glyphWidth * layoutConfig.m_fxScale + currentFont.materialPadding * 2) * currentElementScale;
                 topRight.y = topLeft.y;
 
                 // Bottom right unused
@@ -216,13 +208,13 @@ namespace TextMeshDOTS
                 #region Setup UVA
                 var glyphRect = glyphBlob.glyphRect;
                 float2 blUVA, tlUVA, trUVA, brUVA;
-                blUVA.x = (glyphRect.x - currentFont.materialPadding - style_padding) / currentFont.atlasWidth;
-                blUVA.y = (glyphRect.y - currentFont.materialPadding - style_padding) / currentFont.atlasHeight;
+                blUVA.x = (glyphRect.x - currentFont.materialPadding) / currentFont.atlasWidth;
+                blUVA.y = (glyphRect.y - currentFont.materialPadding) / currentFont.atlasHeight;
 
                 tlUVA.x = blUVA.x;
-                tlUVA.y = (glyphRect.y + currentFont.materialPadding + style_padding + glyphRect.height) / currentFont.atlasHeight;
+                tlUVA.y = (glyphRect.y + currentFont.materialPadding + glyphRect.height) / currentFont.atlasHeight;
 
-                trUVA.x = (glyphRect.x + currentFont.materialPadding + style_padding + glyphRect.width) / currentFont.atlasWidth;
+                trUVA.x = (glyphRect.x + currentFont.materialPadding + glyphRect.width) / currentFont.atlasWidth;
                 trUVA.y = tlUVA.y;
 
                 brUVA.x = trUVA.x;
@@ -305,9 +297,9 @@ namespace TextMeshDOTS
                     // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
                     float shear_value = currentFont.italicsStyleSlant * 0.01f;
                     float midPoint = ((currentFont.capHeight - (currentFont.baseLine + layoutConfig.m_baselineOffset + m_subAndSupscriptOffset)) / 2) * fontScaleMultiplier;
-                    float topShear = shear_value * ((y_bearing + currentFont.materialPadding + style_padding - midPoint) * currentElementScale);
+                    float topShear = shear_value * ((y_bearing + currentFont.materialPadding - midPoint) * currentElementScale);
                     bottomShear = shear_value *
-                                        ((y_bearing - glyphHeight - currentFont.materialPadding - style_padding - midPoint) *
+                                        ((y_bearing - glyphHeight - currentFont.materialPadding - midPoint) *
                                          currentElementScale);
 
                     topLeft.x += topShear;
@@ -324,19 +316,11 @@ namespace TextMeshDOTS
                 #endregion
 
                 #region Store vertex information for the character or sprite.
-                if (isLineStart)
-                {
-                    mappingWriter.AddLineStart(renderGlyphs.Length);
-                    mappingWriter.AddWordStart(renderGlyphs.Length);
-                }
                 renderGlyph.trPosition = topRight;
                 renderGlyph.blPosition = bottomLeft;
                 if (Hint.Likely(currentRune.value != 10)) //do not render LF 
                 {
                     renderGlyphs.Add(renderGlyph);
-                    mappingWriter.AddCharNoTags(characterCount - 1, true);
-                    mappingWriter.AddCharWithTags(k, true);
-                    mappingWriter.AddBytes(characters.NextRuneByteIndex, currentRune.LengthInUtf8Bytes(), true);
                 }
                 #endregion
 
@@ -411,7 +395,7 @@ namespace TextMeshDOTS
                                                      textBaseConfiguration.maxLineWidth,
                                                      overrideMode);
                     startOfLineGlyphIndex = renderGlyphs.Length;
-                    if (lineCount > 0)
+                    if (!isFirstLine)
                     {
                         accumulatedVerticalOffset += currentLineHeight + ascentLineDelta;
                         if (lastCommittedStartOfLineGlyphIndex != startOfLineGlyphIndex)
@@ -429,11 +413,11 @@ namespace TextMeshDOTS
                     maxLineAscender = float.MinValue;
                     maxLineDescender = float.MaxValue;
 
-                    lineCount++;
+                    isFirstLine = false;
                     isLineStart = true;
                     bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale);
 
-                    layoutConfig.m_xAdvance = 0 + layoutConfig.m_tagIndent;
+                    layoutConfig.m_xAdvance = layoutConfig.m_tagIndent;
                     previousRune = currentRune;
                     continue;
                 }
@@ -455,7 +439,6 @@ namespace TextMeshDOTS
                         // We drop this space character instead and allow the next
                         // character to line-wrap, space or not.
                         dropSpace = true;
-                        accumulatedSpaces--;
                     }
 
                     var yOffsetChange = 0f;  //font.lineHeight * currentElementScale;
@@ -470,7 +453,7 @@ namespace TextMeshDOTS
                                                          textBaseConfiguration.maxLineWidth,
                                                          layoutConfig.m_lineJustification);
 
-                        if (lineCount > 0)
+                        if (!isFirstLine)
                         {
                             accumulatedVerticalOffset += currentLineHeight + ascentLineDelta;
                             ApplyVerticalOffsetToGlyphs(ref glyphsLine, accumulatedVerticalOffset);
@@ -486,7 +469,7 @@ namespace TextMeshDOTS
 
                         startOfLineGlyphIndex = lastWordStartCharacterGlyphIndex;
                         isLineStart = true;
-                        lineCount++;
+                        isFirstLine = false;
 
                         layoutConfig.m_xAdvance -= xOffsetChange;
 
@@ -511,12 +494,6 @@ namespace TextMeshDOTS
                     currentRune.value == 8205)  //Zero width joiner
                 {
                     lastWordStartCharacterGlyphIndex = renderGlyphs.Length;
-                    mappingWriter.AddWordStart(renderGlyphs.Length);
-                }
-
-                if (glyphOTF.codepoint == 1)
-                {
-                    accumulatedSpaces++;
                 }
                 #endregion
                 previousRune = currentRune;
@@ -531,13 +508,13 @@ namespace TextMeshDOTS
                     overrideMode = HorizontalAlignmentOptions.Left;
                 }
                 ApplyHorizontalAlignmentToGlyphs(ref finalGlyphsLine, ref characterGlyphIndicesWithPreceedingSpacesInLine, textBaseConfiguration.maxLineWidth, overrideMode);
-                if (lineCount > 0)
+                if (!isFirstLine)
                 {
                     accumulatedVerticalOffset += currentLineHeight;
                     ApplyVerticalOffsetToGlyphs(ref finalGlyphsLine, accumulatedVerticalOffset);
                 }
             }
-            lineCount++;
+            isFirstLine = false;
             ApplyVerticalAlignmentToGlyphs(ref renderGlyphs, topAnchor, bottomAnchor, accumulatedVerticalOffset, textBaseConfiguration.verticalAlignment);
         }
 

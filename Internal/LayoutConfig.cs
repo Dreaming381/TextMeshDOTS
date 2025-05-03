@@ -54,8 +54,6 @@ namespace TextMeshDOTS
         public short m_fxRotationAngleCCW_degree;
         public float m_fxScale;
 
-        public FixedStack512Bytes<HighlightState> m_highlightStateStack;
-
         public LayoutConfig(in TextBaseConfiguration textBaseConfiguration)
         {
             m_fontScaleMultiplier = 1;
@@ -113,8 +111,6 @@ namespace TextMeshDOTS
 
             m_fxRotationAngleCCW_degree = 0;
             m_fxScale = 1;
-
-            m_highlightStateStack = default;
         }
         public void Reset(in TextBaseConfiguration textBaseConfiguration)
         {
@@ -173,8 +169,6 @@ namespace TextMeshDOTS
 
             m_fxRotationAngleCCW_degree = 0;
             m_fxScale = 1;
-
-            m_highlightStateStack.Clear();
         }
         internal void Update(ref XMLTag tag, in TextBaseConfiguration textBaseConfiguration, ref TextColorGradientArray textColorGradients)
         {

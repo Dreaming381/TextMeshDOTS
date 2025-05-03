@@ -57,7 +57,7 @@ namespace TextMeshDOTS.TextProcessing
             var buffer = new Buffer(true);
             var openTypeFeatures = new OpenTypeFeatureConfig(16, Allocator.Temp);            
 
-            //shape plans can be cached..no use case found yet where there this makes a signifiant difference
+            //shape plans can be cached..no use case found yet where there this makes a significant difference
             //var shaperList = HB.hb_shape_list_shapers();
             //var shapePlanCache = new NativeHashMap<FontAssetRef, ShapePlan>(16, Allocator.Temp);
 
@@ -137,7 +137,6 @@ namespace TextMeshDOTS.TextProcessing
                 int tagsCounter = 0;
                 XMLTag currentTag;
 
-                int richTextStartID = 0;
                 var currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
 
                 //copy text into buffer used for shaping, convert case while doing so
@@ -167,7 +166,7 @@ namespace TextMeshDOTS.TextProcessing
                         cleanedString.Append(currentRune);
                 }
 
-                richTextStartID = 0;
+                var richTextStartID = 0;
                 var cleanedEnd = 0;
                 var cleanedStart = 0;
                 tagsCounter = 0;
