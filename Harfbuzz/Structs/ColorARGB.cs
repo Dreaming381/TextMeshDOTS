@@ -72,22 +72,18 @@ namespace TextMeshDOTS.HarfBuzz
         #region Color interoperability
         public static implicit operator ColorARGB(Color c)
         {
-            return new ColorARGB(
-                (byte)math.round(math.clamp(0, 1, c.a) * 255f), 
-                (byte)math.round(math.clamp(0, 1, c.r) * 255f), 
-                (byte)math.round(math.clamp(0, 1, c.g) * 255f), 
-                (byte)math.round(math.clamp(0, 1, c.b) * 255f));
+            return (Color32)c;
         }
 
         public static implicit operator Color(ColorARGB c)
         {
-            return new Color(c.r / 255f, c.g / 255f, c.b / 255f, c.a / 255f);
+            return (Color32)c;
         }
         #endregion
 
         public static ColorARGB Lerp(ColorARGB a, ColorARGB b, float t)
         {
-            t = math.clamp(0, 1, t);
+            t = math.saturate(t);
             return new ColorARGB(
                 (byte)(a.a + (b.a - a.a) * t),
                 (byte)(a.r + (b.r - a.r) * t),

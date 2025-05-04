@@ -55,24 +55,7 @@ namespace TextMeshDOTS
         public float descender;//depends on language and script direction, so risky to do it here.
         public float baseLine;   //depends on language and script direction, so risky to do it here.
 
-        public float designSize;
-        public float subfamilyNameID;
-        public float rangeStart;
-        public float rangeEnd;
-        public float unitsPerEm;
-        public float2 scale;
-
         public float capHeight;
         public float xHeight;
-
-        public float subScriptEmXSize;
-        public float subScriptEmYSize;
-        public float subScriptEmXOffset;
-        public float subScriptEmYOffset;
-
-        public float superScriptEmXSize;
-        public float superScriptEmYSize;
-        public float superScriptEmXOffset;
-        public float superScriptEmYOffset;
     }    
 }

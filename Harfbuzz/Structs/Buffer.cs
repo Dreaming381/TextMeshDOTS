@@ -83,7 +83,7 @@ namespace TextMeshDOTS.HarfBuzz
         {
             Harfbuzz.hb_buffer_clear_contents(ptr);
         }
-        public bool AllocationSucessfull()
+        public bool AllocationSuccessful()
         {
             return Harfbuzz.hb_buffer_allocation_successful(ptr);
         }

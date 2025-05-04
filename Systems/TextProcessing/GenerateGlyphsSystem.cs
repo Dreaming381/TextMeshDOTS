@@ -49,16 +49,13 @@ namespace TextMeshDOTS.TextProcessing
                 return;
             //Debug.Log("Generate glyphs system");
 
-            var fontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
             var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
             SystemAPI.TryGetSingletonEntity<TextColorGradient>(out Entity textColorGradientEntity);
             state.Dependency = new GenerateRenderGlyphsJob
             {
                 renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
-                glyphMappingElementHandle = SystemAPI.GetBufferTypeHandle<GlyphMappingElement>(false),
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
-                fontEntities = fontEntities,
                 fontEntitiesLookup = fontEntitiesLookup,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
@@ -66,7 +63,6 @@ namespace TextMeshDOTS.TextProcessing
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 dynamicFontAssetsLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(true),
                 fontAssetRefLookup = SystemAPI.GetComponentLookup<FontAssetRef>(true),
-                glyphMappingMaskHandle = SystemAPI.GetComponentTypeHandle<GlyphMappingMask>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),
                 xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(true),

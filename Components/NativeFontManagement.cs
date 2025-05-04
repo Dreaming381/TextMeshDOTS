@@ -205,17 +205,7 @@ namespace TextMeshDOTS
     {
         public int Compare(FontEntityGlyph a, FontEntityGlyph b)
         {
-            if (a.entity == b.entity)
-            {
-                return 0;                
-            }
-            else
-            {
-                if (a.entity.Index > b.entity.Index)
-                    return 1;
-                else
-                    return -1;
-            }
+            return a.entity.CompareTo(b.entity);
         }
     }
     #endregion
