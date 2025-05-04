@@ -120,8 +120,8 @@ namespace TextMeshDOTS.TextProcessing
                             cleanedString.Append(currentRune);
                     }
                     //find font Entity requested by combination of font family and style
-                    fontConfiguration.m_fontFamilyHash = fontAssetRefs[0].familyHash;                    
-                    var fontIndex = fontConfiguration.GetFontIndex(ref fontAssetArray);                    
+                    var fontIndex = fontConfiguration.GetFontIndex(ref fontAssetArray);
+                    //Debug.Log($"Index of font {} is {fontIndex}");
                     if (fontIndex != -1)
                         fontConfiguration.m_fontMaterialIndex = fontIndex;
 

@@ -12,7 +12,7 @@ namespace TextMeshDOTS
         [ReadOnly] public ComponentLookup<DynamicFontAsset> dynamicFontAssetLookup;
         public void Execute(in FontBlobReference fontBlobReference, EnabledRefRW<MaterialMeshInfo> textRendererState, ref MaterialMeshInfo textRendererMaterialMeshInfo)
         {
-            var fontAssetRef = fontBlobReference.value.Value.fontAssetRef;
+            var fontAssetRef = fontBlobReference.value;
             var foundFont = fontEntityLookup.TryGetValue(fontAssetRef, out Entity fontEntity);
             if (foundFont)
             {

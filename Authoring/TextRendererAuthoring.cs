@@ -7,7 +7,6 @@ using Unity.Mathematics;
 using Unity.Entities.Graphics;
 using Unity.Rendering;
 using UnityEngine.Rendering;
-using System.Collections.Generic;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -21,11 +20,6 @@ namespace TextMeshDOTS.Authoring
         public FontStyles fontStyles = FontStyles.Normal;
         public float fontSize = 12f;
 
-        [Tooltip("Sampling point size is used to set the font scale. See https://harfbuzz.github.io/harfbuzz-hb-font.html#hb-font-set-scale")]
-        [Range(64, 96)]
-        public int samplingPointSizeSDF = 64;
-        [Range(64, 256)]
-        public int samplingPointSizeBitmap = 64;
         public Color32 color = Color.white;
 
         public HorizontalAlignmentOptions horizontalAlignment = HorizontalAlignmentOptions.Left;
@@ -40,12 +34,12 @@ namespace TextMeshDOTS.Authoring
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
 
-        [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. Otherwise fonts need to be located in StreamingAssets folder")]
-        public bool useSystemFonts = false;
-        [Tooltip("Drop here all fonts and their family members you like to use. Family members are selected based on choosen FontStyle.)")]
-        public Object[] fonts;
-        //public FontCollectionAsset fontCollectionAsset;
-        //public string selectedFont;
+        public FontCollectionAsset fontCollectionAsset;
+        //To-Do
+        //use custom inspector that offer FontCollectionAsset.fontFamilies as a dropsdown. 
+        //right now custom inspector does not work when TextRendererAuthoring.fontCollectionAsset is null 
+        [Tooltip("Type here the name of one of the font families listed in FontCollectionAsset.fontFamilies")]
+        public string selectedFont;
     }
 
     class TextRendererBaker : Baker<TextRendererAuthoring>
@@ -53,23 +47,8 @@ namespace TextMeshDOTS.Authoring
         public override void Bake(TextRendererAuthoring authoring)
         {
             int fontCount = 0;
-            if (authoring.fonts == null || (fontCount = authoring.fonts.Length) == 0)
+            if (authoring.fontCollectionAsset == null || (fontCount = authoring.fontCollectionAsset.fontRequests.Count) == 0)
                 return;
-
-            HashSet<int> redundancyCheck = new HashSet<int>(fontCount);
-            for (int i = 0; i < fontCount; i++)
-            {
-                var font = authoring.fonts[i];
-                if(font == null) 
-                    return;
-                var hashCode = font.name.GetHashCode();
-                if (redundancyCheck.Contains(hashCode))
-                {
-                    //Debug.Log($"List of fonts contains redundancies");
-                    return;
-                }
-                redundancyCheck.Add(hashCode);
-            }
 
             var layer = GetLayer();
 
@@ -88,18 +67,15 @@ namespace TextMeshDOTS.Authoring
             AddComponent(entity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
             AddComponent<TextShaderIndex>(entity);
 
-            var additionalEntities = new NativeList<Entity>(16, Allocator.Temp);
-
+            //add for each font in FontCollectionAsset an additional render entity to enable use of this font
+            var additionalEntities = new NativeList<Entity>(fontCount, Allocator.Temp);
             for (int i = 0; i < fontCount; i++)
             {
-                var fontItem = authoring.fonts[i];
+                var fontItem = authoring.fontCollectionAsset.fontRequests[i];
                 if (i > 0)
-                    AddAdditionalFontEntity(fontItem, authoring.useSystemFonts, authoring.samplingPointSizeSDF, authoring.samplingPointSizeBitmap, additionalEntities, renderFilterSettings);
+                    AddAdditionalFontEntity(fontItem.fontAssetRef, additionalEntities, renderFilterSettings);
                 else
-                {
-                    var fontBlobRef = BakeFontAsset(fontItem,authoring.useSystemFonts, authoring.samplingPointSizeSDF, authoring.samplingPointSizeBitmap);
-                    AddComponent(entity, new FontBlobReference { value = fontBlobRef });
-                }
+                    AddComponent(entity, new FontBlobReference { value = fontItem.fontAssetRef });
             }
 
             if (additionalEntities.Length > 0)
@@ -119,14 +95,15 @@ namespace TextMeshDOTS.Authoring
             calliString.Append(authoring.text);
             var textBaseConfiguraton = new TextBaseConfiguration
             {
+                defaultFontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(authoring.selectedFont),
                 fontSize = (half)authoring.fontSize,
-                color = authoring.color,                
+                color = authoring.color,
                 maxLineWidth = math.select(float.MaxValue, authoring.maxLineWidth, authoring.wordWrap),
                 lineJustification = authoring.horizontalAlignment,
                 verticalAlignment = authoring.verticalAlignment,
                 isOrthographic = authoring.isOrthographic,
                 fontStyles = authoring.fontStyles,
-                fontWeight = (authoring.fontStyles & FontStyles.Bold)== FontStyles.Bold ? FontWeight.Bold : FontWeight.Normal,
+                fontWeight = (authoring.fontStyles & FontStyles.Bold) == FontStyles.Bold ? FontWeight.Bold : FontWeight.Normal,
                 fontWidth = FontWidth.Normal, //cannot be set from UI, 
                 wordSpacing = (half)authoring.wordSpacing,
                 lineSpacing = (half)authoring.lineSpacing,
@@ -135,19 +112,8 @@ namespace TextMeshDOTS.Authoring
             AddComponent(entity, textBaseConfiguraton);
             AddBuffer<RenderGlyph>(entity);
         }
-        BlobAssetReference<FontBlob> BakeFontAsset(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap)
-        {            
-            var customHash = new Unity.Entities.Hash128((uint)fontItem.GetHashCode(), (uint)useSystemFont.GetHashCode(), 0, 0);
-            if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<FontBlob> blobReference))
-            {
-                blobReference = FontBlobber.BakeFontBlob(fontItem, useSystemFont, samplingPointSizeSDF, samplingPointSizeBitmap);
-
-                // Register the Blob Asset to the Baker for de-duplication and reverting.
-                AddBlobAssetWithCustomHash<FontBlob>(ref blobReference, customHash);
-            }
-            return blobReference;
-        }
-        void AddAdditionalFontEntity(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
+        
+        void AddAdditionalFontEntity(FontAssetRef fontAssetRef, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
         {
             var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
             AddEntityGraphicsComponents(newEntity, renderFilterSettings);
@@ -156,8 +122,7 @@ namespace TextMeshDOTS.Authoring
             AddComponent(newEntity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
             AddComponent<TextShaderIndex>(newEntity);
 
-            var fontBlobRef = BakeFontAsset(fontItem, useSystemFont, samplingPointSizeSDF, samplingPointSizeBitmap);
-            AddComponent(newEntity, new FontBlobReference { value = fontBlobRef});
+            AddComponent(newEntity, new FontBlobReference { value = fontAssetRef });
             additionalEntities.Add(newEntity);
         }
 

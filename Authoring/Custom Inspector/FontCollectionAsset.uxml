@@ -2,6 +2,6 @@
     <editor:PropertyField binding-path="systemFonts" name="systemFonts" />
     <editor:PropertyField binding-path="streamingAssetFonts" name="streamingAssetFonts" />
     <engine:Button text="Process!" name="ProcessButton" />
-    <editor:PropertyField name="fontInfos" binding-path="fontInfos" />
+    <editor:PropertyField name="fontRequests" binding-path="fontRequests" />
     <editor:PropertyField binding-path="fontFamilies" name="fontFamilies" />
 </engine:UXML>

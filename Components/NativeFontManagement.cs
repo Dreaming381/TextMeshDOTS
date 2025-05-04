@@ -15,7 +15,8 @@ namespace TextMeshDOTS
     /// <summary> Reference to raw otf and ttf font data</summary>
     public struct FontBlobReference : IComponentData
     {
-        public BlobAssetReference<FontBlob> value;
+        public FontAssetRef value;
+        //public BlobAssetReference<FontBlob> value; //FontBlob is redundant to FontRequest struct
     }
     #endregion
 
@@ -95,6 +96,7 @@ namespace TextMeshDOTS
     /// width ("condensed", normal"), and italic. Slant is ignored in such font matching (see GetHashcode) 
     /// because slant value cannot be "guessed" and requested by user during typesetting 
     /// </summary>
+    [Serializable]
     public struct FontAssetRef : IEquatable<FontAssetRef>, IComponentData
     {
         //Font selection logic: https://www.high-logic.com/font-editor/fontcreator/tutorials/font-family-settings

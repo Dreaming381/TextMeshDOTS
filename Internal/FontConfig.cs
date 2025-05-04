@@ -22,7 +22,7 @@ namespace TextMeshDOTS
         {
             m_fontStyles = textBaseConfiguration.fontStyles;
 
-            m_fontFamilyHash = fontAssetArray.fontAssetRefs[0].familyHash;
+            m_fontFamilyHash = textBaseConfiguration.defaultFontFamilyHash;
             m_fontFamilyHashStack.Clear();
             m_fontFamilyHashStack.Add(m_fontFamilyHash);
 

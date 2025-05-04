@@ -15,7 +15,8 @@ namespace TextMeshDOTS
         ///// Do NOT use the managed string version to compute the hash!
         ///// </summary>
         //not used right now
-        //public ulong defaultFontFamilyHash; 
+        //public ulong defaultFontFamilyHash;        
+        public int defaultFontFamilyHash;
 
         /// <summary>
         /// The line width of the font, in world units, only if word wrapping is enabled

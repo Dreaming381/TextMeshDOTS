@@ -5,6 +5,7 @@ using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 using Object = UnityEngine.Object;
 
@@ -13,63 +14,85 @@ namespace TextMeshDOTS.Authoring
     [CreateAssetMenu(fileName = "FontCollectionAsset", menuName = "TextMeshDOTS/Font Collection Asset")]
     public class FontCollectionAsset : ScriptableObject
     {
-        [Tooltip("Supported types: .otf .ttf .ttc")]
+        [Tooltip("Drop here Unity Font assets of system font files (.otf .ttf .ttc). Disable in those Unity Font assets \"Include Font Data\" to ensure these fonts are NOT included in your build.")]
         public List<Object> systemFonts;
-        [Tooltip("Supported types: .otf .ttf .ttc")]
+        [Tooltip("Drop here .otf .ttf .ttc files located in Asset/StreamingAssets(/subfolder)")]
         public List<Object> streamingAssetFonts;
-        public List<FontInfo> fontInfos;
+        public List<FontRequest> fontRequests;
         public List<string> fontFamilies;
         public void ProcessFonts()
         {
             Debug.Log("Process Fonts");
-            if (fontInfos == null)
-                fontInfos = new List<FontInfo>(streamingAssetFonts.Count);
+            if (fontRequests == null)
+                fontRequests = new List<FontRequest>(streamingAssetFonts.Count);
             else
-                fontInfos.Clear();
+                fontRequests.Clear();
 
             for (int i = 0, ii = systemFonts.Count; i < ii; i++)
             {
-                if (GetFontInfo(systemFonts[i], true, out FontInfo fontInfo))
-                    fontInfos.Add(fontInfo);
+                var fontFile = systemFonts[i];
+                if (GetFontInfo(fontFile, true, out FontRequest fontInfo))
+                {
+                    if(!fontRequests.Contains(fontInfo))
+                        fontRequests.Add(fontInfo);
+                    else
+                    {
+                        Debug.LogError($"font {fontFile.name} has been added more than once to the list of fonts");
+                        return;
+                    }    
+                }
                 else
                 {
-                    fontInfos.Clear();
+                    fontRequests.Clear();
+                    Debug.LogError("Error processing system fonts");
                     return;
                 }
             }
 
             for (int i = 0, ii = streamingAssetFonts.Count; i < ii; i++)
             {
-                if (GetFontInfo(streamingAssetFonts[i], false, out FontInfo fontInfo))
-                    fontInfos.Add(fontInfo);
+                var fontFile = streamingAssetFonts[i];
+                if (GetFontInfo(fontFile, false, out FontRequest fontInfo))
+                {
+                    if (!fontRequests.Contains(fontInfo))
+                        fontRequests.Add(fontInfo);
+                    else
+                    {
+                        Debug.LogError($"font {fontFile.name} has been added more than once to the list of fonts");
+                        return;
+                    }
+                }
                 else
                 {
-                    fontInfos.Clear();
+                    fontRequests.Clear();
+                    Debug.LogError("Error processing streamingAsset fonts");
                     return;
                 }
             }
 
             if (fontFamilies == null)
-                fontFamilies = new List<string>(fontInfos.Count);
+                fontFamilies = new List<string>(fontRequests.Count);
             else
                 fontFamilies.Clear();
-            for (int i = 0, ii = fontInfos.Count; i < ii; i++)
+            for (int i = 0, ii = fontRequests.Count; i < ii; i++)
             {
-                var fontInfo = fontInfos[i];
-                var fontFamily = fontInfo.typographicFamily == String.Empty ? fontInfo.fontFamily : fontInfo.typographicFamily;
+                var fontInfo = fontRequests[i];
+                var fontFamily = fontInfo.typographicFamily == String.Empty ? fontInfo.fontFamily.ToString() : fontInfo.typographicFamily.ToString();
                 if (!fontFamilies.Contains(fontFamily))
                     fontFamilies.Add(fontFamily);
             }
             //ensure values are serialized
             EditorUtility.SetDirty(this);
         }
-        bool GetFontInfo(Object fontItem, bool systemFont, out FontInfo fontInfo)
+        bool GetFontInfo(Object fontItem, bool useSystemFont, out FontRequest fontInfo)
         {
             var fontAssetPath = AssetDatabase.GetAssetPath(fontItem);
-            fontInfo = new FontInfo();
+            fontInfo = new FontRequest();
             bool isTrueType = fontAssetPath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
             bool isOpentype = fontAssetPath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
-            fontInfo.fontAssetPath = systemFont ? "" : fontAssetPath;
+            //fontInfo.fontAssetPath = useSystemFont ? "" : fontAssetPath;
+            fontInfo.fontAssetPath = useSystemFont ? string.Empty : fontAssetPath.Substring(fontAssetPath.IndexOf("StreamingAssets") + 16);
+            fontInfo.useSystemFont = useSystemFont;
             if (isOpentype || isTrueType)
             {
                 var fontBytes = File.ReadAllBytes(fontAssetPath);
@@ -109,11 +132,18 @@ namespace TextMeshDOTS.Authoring
                 tmp.Length = (int)textSize;
                 fontInfo.typographicSubfamily = tmp.ToString();
 
-                fontInfo.weight = (int)font.GetStyleTag(StyleTag.WEIGHT);
+                fontInfo.weight = (FontWeight)(byte)(font.GetStyleTag(StyleTag.WEIGHT)/100);
                 fontInfo.width = (int)font.GetStyleTag(StyleTag.WIDTH);
                 var italic = (byte)font.GetStyleTag(StyleTag.ITALIC);
                 fontInfo.isItalic = italic == 1 ? true : false;
                 fontInfo.slant = (int)font.GetStyleTag(StyleTag.SLANT_ANGLE);
+
+                //Sampling point size is used to set the font scale.
+                //See https://harfbuzz.github.io/harfbuzz-hb-font.html#hb-font-set-scale hardwire for now
+                fontInfo.samplingPointSizeSDF = 64;
+                fontInfo.samplingPointSizeBitmap = 64;
+                fontInfo.fontAssetRef = new FontAssetRef(fontInfo.fontFamily, fontInfo.typographicFamily, fontInfo.weight, fontInfo.width, fontInfo.isItalic, fontInfo.slant);
+
                 font.Dispose();
                 face.Dispose();
                 blob.Dispose();
@@ -125,27 +155,5 @@ namespace TextMeshDOTS.Authoring
                 return false;
             }
         }
-    }
-    [Serializable]
-    public struct FontInfo
-    {
-        [SerializeField]
-        public string fontAssetPath;
-        [SerializeField]
-        public string fontFamily;
-        [SerializeField]
-        public string fontSubFamily;
-        [SerializeField]
-        public string typographicFamily;
-        [SerializeField]
-        public string typographicSubfamily;
-        [SerializeField]
-        public int weight;
-        [SerializeField]
-        public int width;
-        [SerializeField]
-        public bool isItalic;
-        [SerializeField]
-        public int slant;
-    }
+    }       
 }
