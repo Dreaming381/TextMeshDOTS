@@ -15,8 +15,13 @@ namespace TextMeshDOTS
             public IntPtr facePtr;
         }
 
+        // These are zero-sized and unused currently.
         public NativeList<FaceEntry> faceEntries;
         public NativeArray<UnsafeList<IntPtr>> perThreadFontCaches;
+
+        // These are temporary. Something like fontAssetRefToFaceIndexMap, but it will probably be refined.
+        public NativeHashMap<int, Entity> faceIndexToFontEntityMap; 
+        public NativeHashMap<FontAssetRef, int> fontAssetRefToFaceIndexMap;
 
         public IntPtr GetOrCreateFont(int faceIndex, int threadIndex)
         {
@@ -35,7 +40,8 @@ namespace TextMeshDOTS
             if (faceEntries.IsCreated)
             {
                 var jh = new DisposeInnerJob { table = this }.Schedule(inputDeps);
-                return JobHandle.CombineDependencies(faceEntries.Dispose(jh), perThreadFontCaches.Dispose(jh));
+                jh = faceIndexToFontEntityMap.Dispose(jh); // Temporary
+                return JobHandle.CombineDependencies(faceEntries.Dispose(jh), perThreadFontCaches.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
             }
             return inputDeps;
         }

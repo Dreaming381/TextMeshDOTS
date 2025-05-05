@@ -7,8 +7,7 @@ namespace TextMeshDOTS.HarfBuzz
     [InternalBufferCapacity(0)]
     public struct GlyphOTF : IBufferElementData
     {
-        public Entity fontEntity;
-        public uint codepoint;
+        internal GlyphTable.Key glyphKey;
         public uint cluster;
         public int xAdvance;
         public int yAdvance;

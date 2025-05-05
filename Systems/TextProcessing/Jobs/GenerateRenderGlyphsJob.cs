@@ -13,6 +13,7 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<RenderGlyph> renderGlyphHandle;
         public ComponentTypeHandle<TextRenderControl> textRenderControlHandle;
 
+        [ReadOnly] internal FontTable fontTable;
         [ReadOnly] public NativeArray<FontAssetRef> fontEntitiesLookup;
         [ReadOnly] public EntityTypeHandle entitesHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
@@ -74,7 +75,8 @@ namespace TextMeshDOTS.TextProcessing
                     fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
 
 
-                GlyphGeneration.CreateRenderGlyphs(ref fontAssetArray, 
+                GlyphGeneration.CreateRenderGlyphs(ref fontTable,
+                                                   ref fontAssetArray, 
                                                    ref dynamicFontAssetsLookup,
                                                    ref fontAssetRefLookup,
                                                    ref renderGlyphs,

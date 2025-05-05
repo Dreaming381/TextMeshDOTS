@@ -81,6 +81,7 @@ namespace TextMeshDOTS.TextProcessing
 
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
 
+                fontTable = SystemAPI.GetSingleton<FontTable>(),
                 fontEntities = fontEntities,
                 fontAssetRefs = fontEntitiesLookup,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),

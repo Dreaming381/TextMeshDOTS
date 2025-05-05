@@ -35,12 +35,13 @@ namespace TextMeshDOTS.TextProcessing
             }
             else
             {
+                //Debug.Log($"Create new blob to add {placedGlyphs.Length} glyphs on {fontEntity.ToFixedString()}");
                 dynamicFontAsset.blob = CreateDynamicFontData(ref atlasData, placedGlyphs, face, font);
-                //Debug.Log($"Create new blob to add {placedGlyphs.Length} glyphs");
+                
             }            
             dynamicFontAssetLookup[fontEntity] = dynamicFontAsset;
         }
-        public static BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(
+        public BlobAssetReference<DynamicFontBlob> CreateDynamicFontData(
             ref AtlasData atlasData,
             NativeList<GlyphBlob> placedGlyphs,
             Face face, 
@@ -90,6 +91,7 @@ namespace TextMeshDOTS.TextProcessing
             {
                 var glyphBlob = new GlyphBlob { glyphID = glyph.glyphID, glyphExtents = glyph.glyphExtents, glyphRect = glyph.glyphRect };
                 characterHashMapBuilder.Add(glyph.glyphID, glyphBlob);
+                //UnityEngine.Debug.Log($"Added glyph ID: {glyph.glyphID} to {fontEntity.ToFixedString()}");
             }
 
             var result = builder.CreateBlobAssetReference<DynamicFontBlob>(Allocator.Persistent);
