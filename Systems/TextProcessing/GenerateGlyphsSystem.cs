@@ -11,7 +11,7 @@ namespace TextMeshDOTS.TextProcessing
     [UpdateAfter(typeof(UpdateFontAtlasSystem))]
     public partial struct GenerateGlyphsSystem : ISystem
     {
-        EntityQuery m_query, fontstateQ, fontEntitiesQ;
+        EntityQuery m_query, fontstateQ;
 
         bool m_skipChangeFilter;
 
@@ -22,6 +22,7 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAll<FontState>()
                       .WithNone<FontsDirtyTag>()
                       .Build();
+
             m_query = SystemAPI.QueryBuilder()
                       .WithAllRW<RenderGlyph>()
                       .WithAll<CalliByte>()
@@ -30,12 +31,7 @@ namespace TextMeshDOTS.TextProcessing
                       .WithAll<TextBaseConfiguration>()
                       .WithAllRW<TextRenderControl>()
                       .Build();
-            fontEntitiesQ = SystemAPI.QueryBuilder()
-                .WithAll<FontAssetRef>()
-                .WithAll<UsedGlyphs>()
-                .WithAll<MissingGlyphs>()
-                .WithAll<DynamicFontAsset>()
-                .Build();
+
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<GlyphOTF>());
             state.RequireForUpdate(fontstateQ);
@@ -49,7 +45,6 @@ namespace TextMeshDOTS.TextProcessing
                 return;
             //Debug.Log("Generate glyphs system");
 
-            var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
             SystemAPI.TryGetSingletonEntity<TextColorGradient>(out Entity textColorGradientEntity);
             state.Dependency = new GenerateRenderGlyphsJob
             {
@@ -57,7 +52,6 @@ namespace TextMeshDOTS.TextProcessing
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
                 fontTable = SystemAPI.GetSingleton<FontTable>(),
-                fontEntitiesLookup = fontEntitiesLookup,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),

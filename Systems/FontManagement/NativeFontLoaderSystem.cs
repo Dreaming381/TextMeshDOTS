@@ -21,7 +21,7 @@ namespace TextMeshDOTS.TextProcessing
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     partial struct NativeFontLoaderSystem : ISystem
     {
-        EntityQuery textRendererQ, changedFontRequestQ, fontEntitiesQ, fontstateQ;
+        EntityQuery textRendererQ, changedFontRequestQ, fontstateQ;
         EntityArchetype nativeFontDataArchetype, fontStateArchetype;
         DrawDelegates drawFunctions;
         PaintDelegates paintFunctions;
@@ -59,12 +59,6 @@ namespace TextMeshDOTS.TextProcessing
                 .Build();
             changedFontRequestQ.SetChangedVersionFilter(ComponentType.ReadWrite<FontRequest>());
 
-            fontEntitiesQ = SystemAPI.QueryBuilder()
-                .WithAll<FontAssetRef>()
-                .WithAll<FontAssetMetadata>()
-                .WithAll<AtlasData>()
-                .Build();
-
             drawFunctions = new DrawDelegates(true);
             paintFunctions =  new PaintDelegates(true);
             state.RequireForUpdate(fontstateQ);
@@ -77,7 +71,6 @@ namespace TextMeshDOTS.TextProcessing
             if (changedFontRequestQ.IsEmpty)
                 return;
 
-            var existingFontEntities = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
             var changedFontRequestBuffer = changedFontRequestQ.GetSingletonBuffer<FontRequest>();
             var fontTable = SystemAPI.GetSingletonRW<FontTable>().ValueRW;
             state.CompleteDependency();
@@ -88,11 +81,11 @@ namespace TextMeshDOTS.TextProcessing
 
             for (int i = 0, ii = fontRequests.Length; i < ii; i++)
             {
-                var fontBlobReference = fontRequests[i];
-                if (!existingFontEntities.Contains(fontBlobReference.fontAssetRef))
+                var fontRequest = fontRequests[i];
+                if (!(fontTable.fontAssetRefToFaceIndexMap.TryGetValue(fontRequest.fontAssetRef, out int id) && fontTable.faceIndexToFontEntityMap.ContainsKey(id)))
                 {
                     newFontsAdded = true;
-                    LoadFont(fontBlobReference, ref state, ref fontTable);
+                    LoadFont(fontRequest, ref state, ref fontTable);
                 }
             }
 
@@ -103,24 +96,14 @@ namespace TextMeshDOTS.TextProcessing
             if (!newFontsAdded) 
             {                
                 //validate MaterialMeshInfo (TextRender connected to correct FontAssets?)
-                var allFontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
-                var fontEntityLookup = new NativeHashMap<FontAssetRef, Entity>(existingFontEntities.Length, state.WorldUpdateAllocator);
                 var dynamicFontAssetLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(false);
-                var fontAssetRefLookup = SystemAPI.GetComponentLookup<FontAssetRef>(false);
-                for (int i = 0, ii = allFontEntities.Length; i < ii; i++)
-                {
-                    var entity = allFontEntities[i];
-                    var fontAssetRef = fontAssetRefLookup[entity];
-                    fontEntityLookup.Add(fontAssetRef, entity);
-                }
-
                 var validateMaterialMeshInfoJob = new EnableAndValidateMaterialMeshInfoJob
-                {
-                    fontEntityLookup = fontEntityLookup,
+                {                    
+                    fontAssetRefToFaceIndexMap = fontTable.fontAssetRefToFaceIndexMap,
+                    faceIndexToFontEntityMap = fontTable.faceIndexToFontEntityMap,
                     dynamicFontAssetLookup = dynamicFontAssetLookup,
                 };
                 state.Dependency = validateMaterialMeshInfoJob.ScheduleParallel(textRendererQ, state.Dependency);
-
                 return;
             }
 

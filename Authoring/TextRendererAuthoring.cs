@@ -14,14 +14,18 @@ namespace TextMeshDOTS.Authoring
     [AddComponentMenu("TextMeshDOTS/Text Renderer")]
     public class TextRendererAuthoring : MonoBehaviour
     {
+        public FontCollectionAsset fontCollectionAsset;
+        [Tooltip("Select the default font family for this TextRenderer. Ensure to assign the font collection asset first")]
+        public string defaultFont;
+
         [TextArea(5, 10)]
         public string text;
+
         [EnumButtons]
         public FontStyles fontStyles = FontStyles.Normal;
+
         public float fontSize = 12f;
-
         public Color32 color = Color.white;
-
         public HorizontalAlignmentOptions horizontalAlignment = HorizontalAlignmentOptions.Left;
         public VerticalAlignmentOptions verticalAlignment = VerticalAlignmentOptions.TopAscent;
         public bool wordWrap = true;
@@ -33,21 +37,15 @@ namespace TextMeshDOTS.Authoring
         public float lineSpacing = 0;
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
-
-        public FontCollectionAsset fontCollectionAsset;
-        //To-Do
-        //use custom inspector that offer FontCollectionAsset.fontFamilies as a dropsdown. 
-        //right now custom inspector does not work when TextRendererAuthoring.fontCollectionAsset is null 
-        [Tooltip("Type here the name of one of the font families listed in FontCollectionAsset.fontFamilies")]
-        public string selectedFont;
     }
 
     class TextRendererBaker : Baker<TextRendererAuthoring>
     {
         public override void Bake(TextRendererAuthoring authoring)
         {
+            DependsOn(authoring.fontCollectionAsset);
             int fontCount = 0;
-            if (authoring.fontCollectionAsset == null || (fontCount = authoring.fontCollectionAsset.fontRequests.Count) == 0)
+            if (authoring.fontCollectionAsset == null || (fontCount = authoring.fontCollectionAsset.fontRequests.Count) == 0 || authoring.defaultFont == string.Empty)
                 return;
 
             var layer = GetLayer();
@@ -95,7 +93,7 @@ namespace TextMeshDOTS.Authoring
             calliString.Append(authoring.text);
             var textBaseConfiguraton = new TextBaseConfiguration
             {
-                defaultFontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(authoring.selectedFont),
+                defaultFontFamilyHash = TextHelper.GetHashCodeCaseInSensitive(authoring.defaultFont),
                 fontSize = (half)authoring.fontSize,
                 color = authoring.color,
                 maxLineWidth = math.select(float.MaxValue, authoring.maxLineWidth, authoring.wordWrap),

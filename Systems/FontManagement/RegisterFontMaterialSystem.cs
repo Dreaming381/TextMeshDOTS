@@ -15,7 +15,7 @@ namespace TextMeshDOTS.TextProcessing
     [RequireMatchingQueriesForUpdate]
     partial class RegisterFontMaterialSystem : SystemBase
     {
-        EntityQuery changedFontEntitiesQ, fontEntitiesQ, fontstateQ, textRendererQ;
+        EntityQuery changedFontEntitiesQ, fontstateQ, textRendererQ;
         EntitiesGraphicsSystem hybridRenderer;
 
         Material sdfMaterial;
@@ -42,9 +42,7 @@ namespace TextMeshDOTS.TextProcessing
                 colrMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_URP_Material);
             }
             else
-                Debug.LogError("TextMeshDOTS does not work with the Built-in (Legacy) Render Pipeline");
-            
-            
+                Debug.LogError("TextMeshDOTS does not work with the Built-in (Legacy) Render Pipeline");            
 
             fontstateQ = SystemAPI.QueryBuilder()
                 .WithAll<FontState>()
@@ -55,12 +53,6 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<FontBlobReference>()
                 .WithAll<MaterialMeshInfo>()
                 .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)
-                .Build();
-
-            fontEntitiesQ = SystemAPI.QueryBuilder()
-                .WithAll<FontAssetRef>()
-                .WithAll<DynamicFontAsset>()
-                .WithAll<NativeFontPointer>()
                 .Build();
 
             changedFontEntitiesQ = SystemAPI.QueryBuilder()
@@ -113,18 +105,12 @@ namespace TextMeshDOTS.TextProcessing
                 dynamicFontAssetLookup[entity] = dynamicFontAsset;
             }
 
-            var allFontEntities = fontEntitiesQ.ToEntityArray(WorldUpdateAllocator);
-            var fontEntityLookup = new NativeHashMap<FontAssetRef, Entity>(allFontEntities.Length, WorldUpdateAllocator);
-            for(int i = 0, ii = allFontEntities.Length; i < ii; i++)
-            {
-                var entity = allFontEntities[i];
-                var fontAssetRef = fontAssetRefLookup[entity];
-                fontEntityLookup.Add(fontAssetRef, entity);
-            }
-
+            var fontTable = SystemAPI.GetSingleton<FontTable>();
+            CompleteDependency(); //needed?
             var updateMaterialMeshInfoJob = new EnableAndValidateMaterialMeshInfoJob
             {
-                fontEntityLookup = fontEntityLookup,
+                fontAssetRefToFaceIndexMap = fontTable.fontAssetRefToFaceIndexMap,
+                faceIndexToFontEntityMap = fontTable.faceIndexToFontEntityMap,
                 dynamicFontAssetLookup = dynamicFontAssetLookup,
             };
             Dependency = updateMaterialMeshInfoJob.ScheduleParallel(textRendererQ, Dependency);

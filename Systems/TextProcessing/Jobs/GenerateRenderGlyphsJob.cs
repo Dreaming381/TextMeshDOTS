@@ -14,7 +14,6 @@ namespace TextMeshDOTS.TextProcessing
         public ComponentTypeHandle<TextRenderControl> textRenderControlHandle;
 
         [ReadOnly] internal FontTable fontTable;
-        [ReadOnly] public NativeArray<FontAssetRef> fontEntitiesLookup;
         [ReadOnly] public EntityTypeHandle entitesHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;

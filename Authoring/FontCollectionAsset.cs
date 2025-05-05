@@ -14,7 +14,7 @@ namespace TextMeshDOTS.Authoring
     [CreateAssetMenu(fileName = "FontCollectionAsset", menuName = "TextMeshDOTS/Font Collection Asset")]
     public class FontCollectionAsset : ScriptableObject
     {
-        [Tooltip("Drop here Unity Font assets of system font files (.otf .ttf .ttc). Disable in those Unity Font assets \"Include Font Data\" to ensure these fonts are NOT included in your build.")]
+        [Tooltip("Drop here Unity Font assets of system font files (.otf .ttf .ttc). Disable \"Include Font Data\" option in these Unity Font assets to ensure fonts are NOT included in your build.")]
         public List<Object> systemFonts;
         [Tooltip("Drop here .otf .ttf .ttc files located in Asset/StreamingAssets(/subfolder)")]
         public List<Object> streamingAssetFonts;

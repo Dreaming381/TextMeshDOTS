@@ -1,11 +1,29 @@
 using Unity.Collections;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace TextMeshDOTS
 {
+    ///// <summary>
+    ///// PropertyDrawer for a FixedString128Bytes using UE Elements
+    ///// </summary>
+    //[CustomPropertyDrawer(typeof(FixedString128Bytes))]
+    //public class FixedString128BytesPropertyDrawer : PropertyDrawer
+    //{
+    //    public override VisualElement CreatePropertyGUI(SerializedProperty property)
+    //    {
+
+    //        var textField = new TextField(property.displayName);
+    //        textField.value = property.boxedValue.ToString(); //how to make it bindable in both directions?
+    //        return textField;
+    //    }
+    //}
+
+
     /// <summary>
-    /// PropertyDrawer for a FixedString128Bytes
+    /// PropertyDrawer for a FixedString128Bytes using ImGUI
     /// </summary>
     [CustomPropertyDrawer(typeof(FixedString128Bytes))]
     public class FixedString128BytesPropertyDrawer : PropertyDrawer

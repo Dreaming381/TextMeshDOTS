@@ -72,8 +72,6 @@ namespace TextMeshDOTS.TextProcessing
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(textRendererQ, state.Dependency);
 
-            var fontEntities = fontEntitiesQ.ToEntityArray(state.WorldUpdateAllocator);
-            var fontEntitiesLookup = fontEntitiesQ.ToComponentDataArray<FontAssetRef>(state.WorldUpdateAllocator);
             state.Dependency = new ShapeJob
             {
                 marker = marker,
@@ -82,8 +80,6 @@ namespace TextMeshDOTS.TextProcessing
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
 
                 fontTable = SystemAPI.GetSingleton<FontTable>(),
-                fontEntities = fontEntities,
-                fontAssetRefs = fontEntitiesLookup,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),

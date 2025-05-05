@@ -8,13 +8,13 @@ namespace TextMeshDOTS
     [WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)]
     public partial struct EnableAndValidateMaterialMeshInfoJob : IJobEntity
     {
-        [ReadOnly] public NativeHashMap<FontAssetRef, Entity> fontEntityLookup;
+        [ReadOnly] public NativeHashMap<int, Entity> faceIndexToFontEntityMap;
+        [ReadOnly] public NativeHashMap<FontAssetRef, int> fontAssetRefToFaceIndexMap;
         [ReadOnly] public ComponentLookup<DynamicFontAsset> dynamicFontAssetLookup;
         public void Execute(in FontBlobReference fontBlobReference, EnabledRefRW<MaterialMeshInfo> textRendererState, ref MaterialMeshInfo textRendererMaterialMeshInfo)
         {
             var fontAssetRef = fontBlobReference.value;
-            var foundFont = fontEntityLookup.TryGetValue(fontAssetRef, out Entity fontEntity);
-            if (foundFont)
+            if (fontAssetRefToFaceIndexMap.TryGetValue(fontAssetRef, out var id) && faceIndexToFontEntityMap.TryGetValue(id, out var fontEntity))
             {
                 var dynamicFontAsset = dynamicFontAssetLookup[fontEntity];
                 if (textRendererState.ValueRO == false)  //if rendering is not enabled, then enable it

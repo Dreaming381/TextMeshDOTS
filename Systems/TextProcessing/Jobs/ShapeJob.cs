@@ -22,8 +22,6 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
 
         [ReadOnly] internal FontTable fontTable;
-        [ReadOnly] public NativeArray<Entity> fontEntities;
-        [ReadOnly] public NativeArray<FontAssetRef> fontAssetRefs;
         [ReadOnly] public EntityTypeHandle entitesHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
@@ -222,11 +220,9 @@ namespace TextMeshDOTS.TextProcessing
             buffer.BufferFlag = BufferFlag.REMOVE_DEFAULT_IGNORABLES | BufferFlag.BOT | BufferFlag.EOT;
 
             var fontAssetRef = fontAssetArray[fontMaterialIndex];
-            var fontEntityID = fontAssetRefs.IndexOf(fontAssetRef);
-            var fontEntity = fontEntities[fontEntityID];
-            var nativeFontPointer = nativeFontPointerLookup[fontEntity];
-            var font = nativeFontPointer.font;
             var faceIndex = fontTable.fontAssetRefToFaceIndexMap[fontAssetRef];
+            var fontEntity = fontTable.faceIndexToFontEntityMap[faceIndex];
+            var nativeFontPointer = nativeFontPointerLookup[fontEntity];
             var renderFormat = (nativeFontPointer.face.HasCOLR() || nativeFontPointer.face.HasColorBitmap()) ? RenderFormat.Bitmap8888 : RenderFormat.SDF8;
             //UnityEngine.Debug.Log($"fontEntity: {fontEntity.ToFixedString()}, from faceIndex: {fontTable.faceIndexToFontEntityMap[faceIndex].ToFixedString()}");
             //if (!shapePlanCache.TryGetValue(fontAssetRef, out var shapePlan))
@@ -239,7 +235,7 @@ namespace TextMeshDOTS.TextProcessing
             //marker.End();
 
             marker.Begin();
-            font.Shape(buffer, features);
+            nativeFontPointer.font.Shape(buffer, features);
             marker.End();
 
             var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();

@@ -1,25 +1,44 @@
-//using TextMeshDOTS.Authoring;
-//using UnityEditor;
-//using UnityEditor.UIElements;
-//using UnityEngine.UIElements;
+using System.Collections.Generic;
+using TextMeshDOTS.Authoring;
+using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 
-//namespace TextMeshDOTS
-//{
-//    [CustomEditor(typeof(TextRendererAuthoring))]
-//    public class TextRendererInspector : Editor
-//    {
-//        public VisualTreeAsset visualTreeAsset;
+namespace TextMeshDOTS
+{
+    [CustomEditor(typeof(TextRendererAuthoring))]
+    public class TextRendererInspector : Editor
+    {
+        public VisualTreeAsset visualTreeAsset;
+        PropertyField fontCollectionAssetProperty;
+        DropdownField fonts;
+        List<string> emptyList = new();
 
-//        public override VisualElement CreateInspectorGUI()
-//        {
-//            VisualElement myInspector = new VisualElement();
-//            var container = visualTreeAsset.Instantiate();
-//            var fonts = container.Q<DropdownField>();
-//            //To-do: does not work when TextRendererAuthoring.fontCollectionAsset is not set yet. 
-//            fonts.choices = ((TextRendererAuthoring)this.target).fontCollectionAsset.fontFamilies;
-//            myInspector.Add(container);
+        public override VisualElement CreateInspectorGUI()
+        {
+            VisualElement myInspector = new VisualElement();
+            var container = visualTreeAsset.Instantiate();
 
-//            return myInspector;
-//        }
-//    }
-//}
+            fontCollectionAssetProperty = container.Q<PropertyField>("fontCollectionAsset");
+            fonts = container.Q<DropdownField>();
+
+            //try to add dropdown
+            AddFontDropDown();
+
+            //react to changes in fontCollectionAsset assignment: clear or add dropdown
+            fontCollectionAssetProperty.RegisterValueChangeCallback((propertyChanged) => AddFontDropDown());
+
+            myInspector.Add(container);
+            return myInspector;
+        }
+ 
+        void AddFontDropDown()
+        {
+            var fontCollectionAsset = ((TextRendererAuthoring)this.target).fontCollectionAsset;
+            if (fontCollectionAsset != null)
+                fonts.choices = fontCollectionAsset.fontFamilies;
+            else
+                fonts.choices = emptyList;            
+        }
+    }    
+}
