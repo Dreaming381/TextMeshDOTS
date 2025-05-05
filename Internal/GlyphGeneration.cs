@@ -13,7 +13,8 @@ namespace TextMeshDOTS
 
     internal static class GlyphGeneration
     {
-        internal static unsafe void CreateRenderGlyphs(ref FontAssetArray fontAssetArray,
+        internal static unsafe void CreateRenderGlyphs(ref FontTable fontTable,
+                                                       ref FontAssetArray fontAssetArray,
                                                        ref ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup,
                                                        ref ComponentLookup<FontAssetRef> fontAssetRefLookup,                                                       
                                                        ref DynamicBuffer<RenderGlyph> renderGlyphs,
@@ -56,8 +57,8 @@ namespace TextMeshDOTS
             float maxLineAscender = float.MinValue;
             float maxLineDescender = float.MaxValue;
 
-
-            Entity currentFontEntity = glyphOTFBuffer[0].fontEntity;
+            var currentFaceIndex = glyphOTFBuffer[0].glyphKey.faceIndex;
+            Entity currentFontEntity = fontTable.faceIndexToFontEntityMap[currentFaceIndex];
             var dynamicFontBlobReference = dynamicFontAssetsLookup[currentFontEntity].blob;
             if (!dynamicFontBlobReference.IsCreated)
             {
@@ -81,11 +82,12 @@ namespace TextMeshDOTS
             for (int k = 0, length = glyphOTFBuffer.Length; k < length; k++)
             {
                 var glyphOTF = glyphOTFBuffer[k];
+                var glyphOTFFontEntity = fontTable.faceIndexToFontEntityMap[glyphOTF.glyphKey.faceIndex];
 
                 var cluster = (int)glyphOTF.cluster; //cluster is char index in cleaned text = aligned with glyphOTF buffer
-                if (currentFontEntity != glyphOTF.fontEntity)
+                if (currentFontEntity != glyphOTFFontEntity)
                 {
-                    currentFontEntity = glyphOTF.fontEntity;
+                    currentFontEntity = glyphOTFFontEntity;
                     dynamicFontBlobReference = dynamicFontAssetsLookup[currentFontEntity].blob;
                     if (!dynamicFontBlobReference.IsCreated)
                     {
@@ -119,7 +121,7 @@ namespace TextMeshDOTS
                 bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale, bottomAnchor);
 
                 #region Look up Character Data
-                if (!currentFont.glyphs.TryGetValue(glyphOTF.codepoint, out var glyphBlob))
+                if (!currentFont.glyphs.TryGetValue(glyphOTF.glyphKey.glyphIndex, out var glyphBlob))
                 {
                     Debug.LogError($"Glyph {currentRune.value} has not yet been added to texture atlas");
                     continue;

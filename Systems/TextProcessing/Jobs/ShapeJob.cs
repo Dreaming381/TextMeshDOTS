@@ -21,6 +21,7 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
         public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
 
+        [ReadOnly] internal FontTable fontTable;
         [ReadOnly] public NativeArray<Entity> fontEntities;
         [ReadOnly] public NativeArray<FontAssetRef> fontAssetRefs;
         [ReadOnly] public EntityTypeHandle entitesHandle;
@@ -225,6 +226,9 @@ namespace TextMeshDOTS.TextProcessing
             var fontEntity = fontEntities[fontEntityID];
             var nativeFontPointer = nativeFontPointerLookup[fontEntity];
             var font = nativeFontPointer.font;
+            var faceIndex = fontTable.fontAssetRefToFaceIndexMap[fontAssetRef];
+            var renderFormat = (nativeFontPointer.face.HasCOLR() || nativeFontPointer.face.HasColorBitmap()) ? RenderFormat.Bitmap8888 : RenderFormat.SDF8;
+            //UnityEngine.Debug.Log($"fontEntity: {fontEntity.ToFixedString()}, from faceIndex: {fontTable.faceIndexToFontEntityMap[faceIndex].ToFixedString()}");
             //if (!shapePlanCache.TryGetValue(fontAssetRef, out var shapePlan))
             //{                        
             //    shapePlan = new ShapePlan(nativeFontPointer.face, ref segmentProperties, features, shaperList);
@@ -256,10 +260,17 @@ namespace TextMeshDOTS.TextProcessing
                 var glyphInfo = glyphInfos[i];
                 var glyphPosition = glyphPositions[i];
                 var codepoint = glyphInfo.codepoint;
+                
                 var glyphOTF = new GlyphOTF
                 {
-                    fontEntity = fontEntity,
-                    codepoint = glyphInfo.codepoint,
+                    glyphKey = new GlyphTable.Key
+                    {
+                        faceIndex = faceIndex,
+                        glyphIndex = (ushort)glyphInfo.codepoint,
+                        format = renderFormat,
+                        textureSize = FontTextureSize.Normal,
+                        variableProfileIndex = 0
+                    },
                     cluster =  glyphInfo.cluster,
                     xAdvance = glyphPosition.xAdvance,
                     yAdvance = glyphPosition.yAdvance,
@@ -275,7 +286,10 @@ namespace TextMeshDOTS.TextProcessing
                     //ParrallelWriter. As a workaround, we create an additional list in this thread
                     //(just before chunk iteration starts), and check against that list
                     if (!chunkMissingGlyphs.Contains(fontEntityGlyph))
+                    {
                         chunkMissingGlyphs.Add(fontEntityGlyph);
+                        //UnityEngine.Debug.Log($"Requesting missing glyph {fontEntityGlyph.glyphID} for {fontEntityGlyph.entity.ToFixedString()}");
+                    }
                 }
             }
             buffer.ClearContent();
