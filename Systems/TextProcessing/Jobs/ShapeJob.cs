@@ -22,6 +22,7 @@ namespace TextMeshDOTS.TextProcessing
         public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
 
         [ReadOnly] internal FontTable fontTable;
+        [ReadOnly] internal GlyphTable glyphTable;
         [ReadOnly] public EntityTypeHandle entitesHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
@@ -32,8 +33,11 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public BufferTypeHandle<XMLTag> xmlTagHandle;
         [ReadOnly] public BufferLookup<UsedGlyphs> glyphsInUseLookup;
         public NativeList<FontEntityGlyph>.ParallelWriter missingGlyphs;
+        public NativeStream.Writer missingGlyphsStream;
 
         public uint lastSystemVersion;
+
+        UnsafeHashSet<GlyphTable.Key> chunkMissingGlyphsSet;
 
         [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -43,6 +47,11 @@ namespace TextMeshDOTS.TextProcessing
                   chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
                 return;
 
+            if (!chunkMissingGlyphsSet.IsCreated)
+                chunkMissingGlyphsSet = new UnsafeHashSet<GlyphTable.Key>(128, Allocator.Temp);
+            chunkMissingGlyphsSet.Clear();
+
+            missingGlyphsStream.BeginForEachIndex(unfilteredChunkIndex);
             //Debug.Log("Shape job");
             var entities = chunk.GetNativeArray(entitesHandle);
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
@@ -273,6 +282,11 @@ namespace TextMeshDOTS.TextProcessing
                     xOffset = glyphPosition.xOffset,
                     yOffset = glyphPosition.yOffset,
                 };
+                if (!glyphTable.glyphHashToIdMap.ContainsKey(glyphOTF.glyphKey))
+                {
+                    chunkMissingGlyphsSet.Add(glyphOTF.glyphKey);
+                    missingGlyphsStream.Write(glyphOTF.glyphKey);
+                }
                 glyphOTFs.Add(glyphOTF);
                 if (!glyphsInUse.Contains(codepoint))
                 {

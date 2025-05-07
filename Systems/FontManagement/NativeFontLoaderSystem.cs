@@ -225,6 +225,10 @@ namespace TextMeshDOTS.TextProcessing
                 id = fontTable.fontAssetRefToFaceIndexMap.Count;
                 fontTable.fontAssetRefToFaceIndexMap.Add(fontRequest.fontAssetRef, id);
                 fontTable.faceIndexToFontEntityMap.Add(id, fontEntity);
+                fontTable.faceEntries.Add(new FontTable.FaceEntry
+                {
+                    facePtr = face.ptr
+                });
             }
         }        
     }

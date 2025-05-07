@@ -65,7 +65,7 @@ namespace TextMeshDOTS
                 }
                 foreach (var entry in table.faceEntries)
                 {
-                    // Todo: Destroy Face object.
+                    // Todo: Destroy Face object once the table owns it.
                 }
 
                 // Todo: Destroy Blob objects.
@@ -138,7 +138,7 @@ namespace TextMeshDOTS
         }
 
         public NativeHashMap<Key, uint> glyphHashToIdMap;
-        public NativeList<Entry> entries;
+        public NativeList<Entry>        entries;
 
         public JobHandle TryDispose(JobHandle inputDeps)
         {
