@@ -6,7 +6,8 @@ using TextMeshDOTS.Rendering;
 using Unity.Jobs;
 using Unity.Collections;
 using UnityEngine;
-
+using Unity.Collections.LowLevel.Unsafe;
+using System;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -54,6 +55,13 @@ namespace TextMeshDOTS.TextProcessing
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             state.RequireForUpdate(fontstateQ);
+
+            var glyphTable = new GlyphTable
+            {
+                entries = new NativeList<GlyphTable.Entry>(1024, Allocator.Persistent),
+                glyphHashToIdMap = new NativeHashMap<GlyphTable.Key, uint>(1024, Allocator.Persistent)
+            };
+            state.EntityManager.CreateSingleton(glyphTable);
         }
 
 
@@ -72,14 +80,22 @@ namespace TextMeshDOTS.TextProcessing
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(textRendererQ, state.Dependency);
 
+            var chunkCount = textRendererQ.CalculateChunkCountWithoutFiltering();
+            var missingGlyphStream = new NativeStream(chunkCount, state.WorldUpdateAllocator);
+            var glyphTable = SystemAPI.GetSingletonRW<GlyphTable>().ValueRW;
+            var fontTable = SystemAPI.GetSingleton<FontTable>();
+
+
             state.Dependency = new ShapeJob
             {
                 marker = marker,
                 marker2 = marker2,
 
                 missingGlyphs = missingGlyphs.AsParallelWriter(),
+                missingGlyphsStream = missingGlyphStream.AsWriter(),
 
-                fontTable = SystemAPI.GetSingleton<FontTable>(),
+                glyphTable = glyphTable,
+                fontTable = fontTable,
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
@@ -94,6 +110,22 @@ namespace TextMeshDOTS.TextProcessing
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(textRendererQ, state.Dependency);
+
+            var missingGlyphsToAdd = new NativeList<GlyphTable.Key>(state.WorldUpdateAllocator);
+            state.Dependency = new AllocateNewGlyphsJob
+            {
+                fontTable = fontTable,
+                glyphTable = glyphTable,
+                missingGlyphsStream = missingGlyphStream.AsReader(),
+                missingGlyphsToAdd = missingGlyphsToAdd
+            }.Schedule(state.Dependency);
+
+            state.Dependency = new PopulateNewGlyphsJob
+            {
+                fontTable = fontTable,
+                glyphEntries = glyphTable.entries.AsDeferredJobArray(),
+                missingGlyphs = missingGlyphsToAdd.AsDeferredJobArray()
+            }.Schedule(missingGlyphsToAdd, 32, state.Dependency);
 
             state.Dependency = new SortMissingGlyphJob
             {
@@ -114,6 +146,96 @@ namespace TextMeshDOTS.TextProcessing
         public void OnDestroy(ref SystemState state)
         {
             if (missingGlyphs.IsCreated) missingGlyphs.Dispose();
+            state.CompleteDependency();
+            SystemAPI.GetSingletonRW<GlyphTable>().ValueRW.TryDispose(default).Complete();
+        }
+
+        [BurstCompile]
+        struct AllocateNewGlyphsJob : IJob
+        {
+            [ReadOnly] public FontTable fontTable;
+            public GlyphTable glyphTable;
+            public NativeStream.Reader missingGlyphsStream;
+            public NativeList<GlyphTable.Key> missingGlyphsToAdd;
+
+            public void Execute()
+            {
+                // Deduplicate
+                var requestCount = missingGlyphsStream.Count();
+                var uniqueMissingGlyphSet = new UnsafeHashSet<GlyphTable.Key>(requestCount, Allocator.Temp);
+                for (int chunk = 0; chunk < missingGlyphsStream.ForEachCount; chunk++)
+                {
+                    var elementsInChunk = missingGlyphsStream.BeginForEachIndex(chunk);
+                    for (int i = 0; i < elementsInChunk; i++)
+                    {
+                        var key = missingGlyphsStream.Read<GlyphTable.Key>();
+                        uniqueMissingGlyphSet.Add(key);
+                    }
+                }
+
+                missingGlyphsToAdd.Capacity = uniqueMissingGlyphSet.Count;
+                uint nextIndex = (uint)glyphTable.glyphHashToIdMap.Count;
+                foreach (var key in uniqueMissingGlyphSet)
+                {
+                    missingGlyphsToAdd.AddNoResize(key);
+                    var nextId = nextIndex;
+                    Bits.SetBits(ref nextId, 30, 2, (uint)key.format);
+                    glyphTable.glyphHashToIdMap.Add(key, nextId);
+                    nextIndex++;
+                }
+            }
+        }
+
+        [BurstCompile]
+        struct PopulateNewGlyphsJob : IJobParallelForDefer
+        {
+            [ReadOnly] public NativeArray<GlyphTable.Key> missingGlyphs;
+            [ReadOnly] public FontTable fontTable;
+            [NativeDisableParallelForRestriction] public NativeArray<GlyphTable.Entry> glyphEntries;
+
+            [NativeSetThreadIndex]
+            int threadIndex;
+
+            GlyphTable.Key lastKey;
+            [NativeDisableUnsafePtrRestriction] IntPtr lastFont;
+            bool initialized;
+
+            public void Execute(int i)
+            {
+                var missingGlyph = missingGlyphs[i];
+                var font = lastFont;
+
+                if (!initialized || RequiresFontSetup(lastKey, missingGlyph))
+                {
+                    font = fontTable.GetOrCreateFont(missingGlyph.faceIndex, threadIndex);
+                    var samplingSize = missingGlyph.textureSize.GetSamplingSize();
+                    Harfbuzz.hb_font_set_scale(font, samplingSize, samplingSize);
+                }
+
+                Harfbuzz.hb_font_get_glyph_extents(font, missingGlyph.glyphIndex, out var extents);
+
+                var newEntry = new GlyphTable.Entry
+                {
+                    key = missingGlyph,
+                    refCount = 0,
+                    x = -1,
+                    y = -1,
+                    z = -1,
+                    width = (short)extents.width,
+                    height = (short)(-extents.height),  // For legacy reasons, Harfbuzz returns height as negative.
+                    xBearing = (short)extents.x_bearing,
+                    yBearing = (short)extents.y_bearing  // Harfbuzz is y-up
+                };
+                var baseIndex = glyphEntries.Length - missingGlyphs.Length;
+                glyphEntries[baseIndex + i] = newEntry;
+            }
+
+            bool RequiresFontSetup(GlyphTable.Key lastKey, GlyphTable.Key thisKey)
+            {
+                var a = lastKey.packed & 0xffffffffffff0000;
+                var b = thisKey.packed & 0xffffffffffff0000;
+                return a != b;
+            }
         }
     }
 }
