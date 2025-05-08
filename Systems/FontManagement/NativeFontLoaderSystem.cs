@@ -6,6 +6,7 @@ using TextMeshDOTS.HarfBuzz.Bitmap;
 using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
@@ -36,10 +37,15 @@ namespace TextMeshDOTS.TextProcessing
 
             var faceIndexToFontEntityMap = new NativeHashMap<int, Entity>(64, Allocator.Persistent);
             var fontAssetRefToFaceIndexMap = new NativeHashMap<FontAssetRef, int>(64, Allocator.Persistent);
+            var perThreadFontCaches = new NativeArray<UnsafeList<IntPtr>>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, Allocator.Persistent);
+            for (int i = 0; i < perThreadFontCaches.Length; i++)
+            {
+                perThreadFontCaches[i] = new UnsafeList<IntPtr>(64, Allocator.Persistent);
+            }
             state.EntityManager.CreateSingleton(new FontTable
             {
                 faceEntries = new NativeList<FontTable.FaceEntry>(Allocator.Persistent),
-                perThreadFontCaches = new NativeArray<Unity.Collections.LowLevel.Unsafe.UnsafeList<IntPtr>>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, Allocator.Persistent),
+                perThreadFontCaches = perThreadFontCaches,
                 faceIndexToFontEntityMap = faceIndexToFontEntityMap,
                 fontAssetRefToFaceIndexMap = fontAssetRefToFaceIndexMap
             });
@@ -229,6 +235,12 @@ namespace TextMeshDOTS.TextProcessing
                 {
                     facePtr = face.ptr
                 });
+                for (int i = 0; i < fontTable.perThreadFontCaches.Length; i++)
+                {
+                    var list = fontTable.perThreadFontCaches[i];
+                    list.Add(default);
+                    fontTable.perThreadFontCaches[i] = list;
+                }
             }
         }        
     }

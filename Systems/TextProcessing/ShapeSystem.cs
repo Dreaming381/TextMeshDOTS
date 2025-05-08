@@ -183,6 +183,7 @@ namespace TextMeshDOTS.TextProcessing
                     glyphTable.glyphHashToIdMap.Add(key, nextId);
                     nextIndex++;
                 }
+                glyphTable.entries.AddReplicate(default, missingGlyphsToAdd.Length);
             }
         }
 

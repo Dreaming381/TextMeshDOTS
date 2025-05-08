@@ -52,6 +52,8 @@ namespace TextMeshDOTS.TextProcessing
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
                 fontTable = SystemAPI.GetSingleton<FontTable>(),
+                glyphTable = SystemAPI.GetSingleton<GlyphTable>(),
+                
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
