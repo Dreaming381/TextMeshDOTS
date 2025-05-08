@@ -71,7 +71,7 @@ namespace TextMeshDOTS.Rendering
         public PackedColor trColor; //72
         public PackedColor brColor; //76
 
-        public int  unicode;        //80 not needed anywhere-->remove from struct?
+        public uint  glyphID;        //80 not needed anywhere-->remove from struct?
         public float shear;         //84 Should be equal to topLeft.x - bottomLeft.x
         public float scale;         //88
         public float rotationCCW;   //92

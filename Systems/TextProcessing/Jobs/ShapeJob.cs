@@ -203,6 +203,7 @@ namespace TextMeshDOTS.TextProcessing
             }           
             //add missing glyphs identifed in chunks processed by this thread to missingGlyphs
             missingGlyphs.AddRangeNoResize(chunkMissingGlyphs);
+            missingGlyphsStream.EndForEachIndex();
             buffer.Dispose();
         }
         void Shape(Buffer buffer,

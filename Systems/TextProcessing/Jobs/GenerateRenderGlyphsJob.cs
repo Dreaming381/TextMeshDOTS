@@ -14,6 +14,7 @@ namespace TextMeshDOTS.TextProcessing
         public ComponentTypeHandle<TextRenderControl> textRenderControlHandle;
 
         [ReadOnly] internal FontTable fontTable;
+        [ReadOnly] internal GlyphTable glyphTable;
         [ReadOnly] public EntityTypeHandle entitesHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
@@ -75,6 +76,7 @@ namespace TextMeshDOTS.TextProcessing
 
 
                 GlyphGeneration.CreateRenderGlyphs(ref fontTable,
+                                                   ref glyphTable,
                                                    ref fontAssetArray, 
                                                    ref dynamicFontAssetsLookup,
                                                    ref fontAssetRefLookup,

@@ -14,6 +14,7 @@ namespace TextMeshDOTS
     internal static class GlyphGeneration
     {
         internal static unsafe void CreateRenderGlyphs(ref FontTable fontTable,
+                                                       ref GlyphTable glyphTable,
                                                        ref FontAssetArray fontAssetArray,
                                                        ref ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup,
                                                        ref ComponentLookup<FontAssetRef> fontAssetRefLookup,                                                       
@@ -190,6 +191,7 @@ namespace TextMeshDOTS
                 // Determine the position of the vertices of the Character or Sprite.
                 #region Calculate Vertices Position
                 var renderGlyph = new RenderGlyph();
+                renderGlyph.glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
 
                 // top left is used to position bottom left and top right
                 float2 topLeft;
