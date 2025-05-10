@@ -9,6 +9,7 @@ using UnityEngine;
 using Unity.Collections.LowLevel.Unsafe;
 using System;
 using Font = TextMeshDOTS.HarfBuzz.Font;
+using System.Collections.Generic;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -127,15 +128,22 @@ namespace TextMeshDOTS.TextProcessing
                 missingGlyphs = missingGlyphsToAdd.AsDeferredJobArray()
             }.Schedule(missingGlyphsToAdd, 32, state.Dependency);
 
-            state.Dependency = new SortMissingGlyphJob
+            state.Dependency = new TempAddMissingGlyphsToFontEntitiesJob
             {
-                missingGlyphs = missingGlyphs,
+                fontTable = fontTable,
+                missingGlyphs = missingGlyphsToAdd.AsDeferredJobArray(),
+                missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false)
             }.Schedule(state.Dependency);
 
-            state.Dependency = new CopyMissingGlyphsToFontEntitiesJob
-            {
-                newMissingGlyphs = missingGlyphs,
-            }.ScheduleParallel(fontEntitiesQ, state.Dependency);
+            //state.Dependency = new SortMissingGlyphJob
+            //{
+            //    missingGlyphs = missingGlyphs,
+            //}.Schedule(state.Dependency);
+            //
+            //state.Dependency = new CopyMissingGlyphsToFontEntitiesJob
+            //{
+            //    newMissingGlyphs = missingGlyphs,
+            //}.ScheduleParallel(fontEntitiesQ, state.Dependency);
 
             state.Dependency = new ClearMissingGlyphJob
             {
@@ -237,6 +245,39 @@ namespace TextMeshDOTS.TextProcessing
                 var a = lastKey.packed & 0xffffffffffff0000;
                 var b = thisKey.packed & 0xffffffffffff0000;
                 return a != b;
+            }
+        }
+
+        [BurstCompile]
+        struct TempAddMissingGlyphsToFontEntitiesJob : IJob
+        {
+            [ReadOnly] public FontTable fontTable;
+            public NativeArray<GlyphTable.Key> missingGlyphs;
+
+            public BufferLookup<MissingGlyphs> missingGlyphsLookup;
+
+            public void Execute()
+            {
+                missingGlyphs.Sort(new KeySorter());
+
+                for (int i = 0; i < missingGlyphs.Length; i++)
+                {
+                    var key = missingGlyphs[i];
+                    var entity = fontTable.faceIndexToFontEntityMap[key.faceIndex];
+                    var buffer = missingGlyphsLookup[entity];
+                    buffer.Add(new MissingGlyphs { glyphID = key.glyphIndex });
+                }
+            }
+
+            struct KeySorter : IComparer<GlyphTable.Key>
+            {
+                public int Compare(GlyphTable.Key x, GlyphTable.Key y)
+                {
+                    var result = x.faceIndex.CompareTo(y.faceIndex);
+                    if (result == 0)
+                        return x.glyphIndex.CompareTo(y.glyphIndex);
+                    return result;
+                }
             }
         }
     }
