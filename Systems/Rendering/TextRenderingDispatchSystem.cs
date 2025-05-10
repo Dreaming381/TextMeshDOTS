@@ -1,3 +1,5 @@
+using TextMeshDOTS.HarfBuzz;
+using TextMeshDOTS.TextProcessing;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -116,6 +118,14 @@ namespace TextMeshDOTS.Rendering
 
             if (m_changedGlyphsQuery.IsEmpty)
                 return;
+
+            new TempPatchUVsJob
+            {
+                atlasLookup = SystemAPI.GetComponentLookup<AtlasData>(true),
+                dynamicFontLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(true),
+                fontTable = SystemAPI.GetSingleton<FontTable>(),
+                glyphTable = SystemAPI.GetSingleton<GlyphTable>()
+            }.ScheduleParallel(m_changedGlyphsQuery);
             
             try
             {

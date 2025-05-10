@@ -6,7 +6,7 @@ using Unity.Jobs;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Burst;
 using Unity.Mathematics;
-
+using TextMeshDOTS.Rendering;
 
 namespace TextMeshDOTS.TextProcessing
 {

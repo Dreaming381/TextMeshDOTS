@@ -2,9 +2,49 @@ using Unity.Burst.Intrinsics;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using TextMeshDOTS.HarfBuzz;
+using Unity.Mathematics;
 
 namespace TextMeshDOTS.Rendering
 {
+    [BurstCompile]
+    partial struct TempPatchUVsJob : IJobEntity
+    {
+        [ReadOnly] public FontTable fontTable;
+        [ReadOnly] public GlyphTable glyphTable;
+        [ReadOnly] public ComponentLookup<AtlasData> atlasLookup;
+        [ReadOnly] public ComponentLookup<DynamicFontAsset> dynamicFontLookup;
+
+        public void Execute(ref DynamicBuffer<RenderGlyphOld> glyphBuffer)
+        {
+            for (int i = 0; i < glyphBuffer.Length; i++)
+            {
+                ref var glyph = ref glyphBuffer.ElementAt(i);
+                var entry = glyphTable.GetEntry(glyph.glyphID);
+                var fontEntity = fontTable.faceIndexToFontEntityMap[entry.key.faceIndex];
+                var atlas = atlasLookup[fontEntity];
+                var glyphBlob = dynamicFontLookup[fontEntity].blob.Value.glyphs[entry.key.glyphIndex];
+
+                var glyphRect = glyphBlob.glyphRect;
+                float2 blUVA, tlUVA, trUVA, brUVA;
+                blUVA.x = (glyphRect.x - atlas.padding) / (float)atlas.atlasWidth;
+                blUVA.y = (glyphRect.y - atlas.padding) / (float)atlas.atlasHeight;
+
+                tlUVA.x = blUVA.x;
+                tlUVA.y = (glyphRect.y + atlas.padding + glyphRect.height) / (float)atlas.atlasHeight;
+
+                trUVA.x = (glyphRect.x + atlas.padding + glyphRect.width) / (float)atlas.atlasWidth;
+                trUVA.y = tlUVA.y;
+
+                brUVA.x = trUVA.x;
+                brUVA.y = blUVA.y;
+
+                glyph.blUVA = blUVA;
+                glyph.trUVA = trUVA;
+            }
+        }
+    }
+
     // Schedule Single
     [BurstCompile]
     struct GatherGlyphUploadOperationsJobChunk : IJobChunk
