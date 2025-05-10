@@ -1,3 +1,4 @@
+using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering.Authoring;
 using Unity.Collections;
 using Unity.Entities;

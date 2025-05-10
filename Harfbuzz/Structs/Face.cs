@@ -1,4 +1,5 @@
 using System;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
 
 namespace TextMeshDOTS.HarfBuzz
@@ -6,12 +7,20 @@ namespace TextMeshDOTS.HarfBuzz
     public struct Face : IDisposable
     {
         public IntPtr ptr;
+
+        //cache a couple of face meta data to avoid fetching them upon every face access
+        public SDFOrientation sdfOrientation;
+        internal RenderFormat renderFormat;
         public uint GlyphCount => Harfbuzz.hb_face_get_glyph_count(ptr);
         public bool HasVarData => Harfbuzz.hb_ot_var_has_data(ptr);
 
         public Face(IntPtr blob, uint index)
         {
+            sdfOrientation= default;
+            renderFormat = default;
             ptr = Harfbuzz.hb_face_create(blob, index);
+            renderFormat = HasCOLR() || HasColorBitmap() ? RenderFormat.Bitmap8888 : RenderFormat.SDF8;
+            sdfOrientation = HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
         }
         public uint UnitsPerEM
         {

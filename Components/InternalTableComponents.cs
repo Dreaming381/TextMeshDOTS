@@ -1,40 +1,31 @@
 using System;
-using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 
-namespace TextMeshDOTS
+namespace TextMeshDOTS.HarfBuzz
 {
     internal partial struct FontTable : ICollectionComponent
     {
-        public struct FaceEntry
-        {
-            public IntPtr facePtr;
-
-            //cache a couple of face meta data to avoid fetching them upon every face access
-            public SDFOrientation sdfOrientation;
-            public RenderFormat renderFormat;
-        }
+        [NativeDisableUnsafePtrRestriction] public Face face;
 
         // These are zero-sized and unused currently.
-        public NativeList<FaceEntry> faceEntries;
-        public NativeArray<UnsafeList<IntPtr>> perThreadFontCaches;
+        public NativeList<Face> faces;
+        public NativeArray<UnsafeList<Font>> perThreadFontCaches;
 
         // These are temporary. Something like fontAssetRefToFaceIndexMap, but it will probably be refined.
         public NativeHashMap<int, Entity> faceIndexToFontEntityMap; 
         public NativeHashMap<FontAssetRef, int> fontAssetRefToFaceIndexMap;
 
-        public IntPtr GetOrCreateFont(int faceIndex, int threadIndex)
+        public Font GetOrCreateFont(int faceIndex, int threadIndex)
         {
             var fonts = perThreadFontCaches[threadIndex];
             var font = fonts[faceIndex];
-            if (font == IntPtr.Zero)
+            if (font.ptr == IntPtr.Zero)
             {
-                font = Harfbuzz.hb_font_create(faceEntries[faceIndex].facePtr);
+                font = new Font(faces[faceIndex].ptr);
                 fonts[faceIndex] = font;
             }
             return font;
@@ -42,11 +33,11 @@ namespace TextMeshDOTS
 
         public JobHandle TryDispose(JobHandle inputDeps)
         {
-            if (faceEntries.IsCreated)
+            if (faces.IsCreated)
             {
                 var jh = new DisposeInnerJob { table = this }.Schedule(inputDeps);
                 jh = faceIndexToFontEntityMap.Dispose(jh); // Temporary
-                return JobHandle.CombineDependencies(faceEntries.Dispose(jh), perThreadFontCaches.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
+                return JobHandle.CombineDependencies(faces.Dispose(jh), perThreadFontCaches.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
             }
             return inputDeps;
         }
@@ -62,13 +53,13 @@ namespace TextMeshDOTS
                     var list = table.perThreadFontCaches[thread];
                     foreach (var font in list)
                     {
-                        if (font == IntPtr.Zero)
+                        if (font.ptr == IntPtr.Zero)
                             continue;
-                        Harfbuzz.hb_font_destroy(font);
+                        font.Dispose();
                     }
                     list.Dispose();
                 }
-                foreach (var entry in table.faceEntries)
+                foreach (var entry in table.faces)
                 {
                     // Todo: Destroy Face object once the table owns it.
                 }
@@ -78,7 +69,7 @@ namespace TextMeshDOTS
         }
     }
 
-    enum RenderFormat : byte
+    internal enum RenderFormat : byte
     {
         SDF8 = 0,
         SDF16 = 1,

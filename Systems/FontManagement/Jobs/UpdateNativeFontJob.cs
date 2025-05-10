@@ -27,15 +27,10 @@ namespace TextMeshDOTS.TextProcessing
         public void Execute()
         {
             var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
-            var faceEntry = fontTable.faceEntries[fontAssetMetaData.faceIndex];
-            var fontPtr = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
+            var face = fontTable.faces[fontAssetMetaData.faceIndex];
+            var font = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
             var samplingSize = FontTextureSize.Normal.GetSamplingSize();
-            Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
-            Face face = default;
-            face.ptr = faceEntry.facePtr;
-
-            Font font = default;
-            font.ptr = fontPtr;
+            font.SetScale(samplingSize, samplingSize);
 
             var atlasData = atlasDataLookup[fontEntity];            
 

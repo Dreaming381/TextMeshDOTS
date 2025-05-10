@@ -42,12 +42,10 @@ namespace TextMeshDOTS.TextProcessing
                 return;//glyph has no size, nothing needs to be renderered/added to texture
 
             var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
-            var faceEntry = fontTable.faceEntries[fontAssetMetaData.faceIndex];
-            var fontPtr = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
+            var face = fontTable.faces[fontAssetMetaData.faceIndex];
+            var font = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
             var samplingSize = FontTextureSize.Normal.GetSamplingSize();
-            Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
-            Font font = default;
-            font.ptr = fontPtr;
+            font.SetScale(samplingSize, samplingSize);
 
             var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);
 
@@ -61,7 +59,7 @@ namespace TextMeshDOTS.TextProcessing
                 //render SDF into the reserved padded atlas texture  window 
                 var atlasRect = usedGlyphRects[glyphIndex];
                 //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-                SDF_SPMD.SDFGenerateSubDivisionLineEdges(faceEntry.sdfOrientation, ref drawData, textureData, atlasRect, atlasData.padding, atlasData.atlasWidth, atlasData.atlasHeight, atlasData.padding);
+                SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation, ref drawData, textureData, atlasRect, atlasData.padding, atlasData.atlasWidth, atlasData.atlasHeight, atlasData.padding);
             }
             else
                 Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");

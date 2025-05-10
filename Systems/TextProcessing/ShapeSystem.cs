@@ -8,6 +8,7 @@ using Unity.Collections;
 using UnityEngine;
 using Unity.Collections.LowLevel.Unsafe;
 using System;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -197,24 +198,23 @@ namespace TextMeshDOTS.TextProcessing
             int threadIndex;
 
             GlyphTable.Key lastKey;
-            [NativeDisableUnsafePtrRestriction] IntPtr lastFontPtr;
+            [NativeDisableUnsafePtrRestriction] Font lastFont;
             bool initialized;
 
             public void Execute(int i)
             {
                 var missingGlyph = missingGlyphs[i];
-                var fontPtr = lastFontPtr;
+                var font = lastFont;
 
                 if (!initialized || RequiresFontSetup(lastKey, missingGlyph))
                 {
-                    fontPtr = fontTable.GetOrCreateFont(missingGlyph.faceIndex, threadIndex);
+                    font = fontTable.GetOrCreateFont(missingGlyph.faceIndex, threadIndex);
                     var samplingSize = missingGlyph.textureSize.GetSamplingSize();
-                    Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
-                    initialized = true;
-                    lastFontPtr = fontPtr;
+                    font.SetScale(samplingSize, samplingSize);
+                    //initialized = true; //initialized variable is currently not set, should this not be set to true here?
+                    //lastFont = fontPtr; //lastFont variable is currently not set, should this not be set here?
                 }
-
-                Harfbuzz.hb_font_get_glyph_extents(fontPtr, missingGlyph.glyphIndex, out var extents);
+                font.GetGlyphExtents(missingGlyph.glyphIndex, out var extents);
 
                 var newEntry = new GlyphTable.Entry
                 {
@@ -224,7 +224,7 @@ namespace TextMeshDOTS.TextProcessing
                     y = -1,
                     z = -1,
                     width = (short)extents.width,
-                    height = (short)(-extents.height),  // For legacy reasons, Harfbuzz returns height as negative.
+                    height = (short)(extents.height),  
                     xBearing = (short)extents.x_bearing,
                     yBearing = (short)extents.y_bearing  // Harfbuzz is y-up
                 };

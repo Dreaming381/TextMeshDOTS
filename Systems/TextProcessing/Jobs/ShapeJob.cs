@@ -238,22 +238,12 @@ namespace TextMeshDOTS.TextProcessing
             var fontAssetRef = fontAssetArray[fontMaterialIndex];
             var faceIndex = fontTable.fontAssetRefToFaceIndexMap[fontAssetRef];
             var fontEntity = fontTable.faceIndexToFontEntityMap[faceIndex];
-            var faceEntry = fontTable.faceEntries[faceIndex];
-            var renderFormat = faceEntry.renderFormat;
+            var face = fontTable.faces[faceIndex];
+            var renderFormat = face.renderFormat;
 
-            var fontPtr = lastFontPtr;
-
-            if (!initialized)
-            {
-                fontPtr = fontTable.GetOrCreateFont(faceIndex, threadIndex);
-                var samplingSize = FontTextureSize.Normal.GetSamplingSize();
-                Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
-                initialized = true;
-                lastFontPtr = fontPtr;
-            }
-            Font font = default;
-            font.ptr = fontPtr;
-
+            var font = fontTable.GetOrCreateFont(faceIndex, threadIndex);
+            var samplingSize = FontTextureSize.Normal.GetSamplingSize();
+            font.SetScale(samplingSize, samplingSize);
 
             //UnityEngine.Debug.Log($"fontEntity: {fontEntity.ToFixedString()}, from faceIndex: {fontTable.faceIndexToFontEntityMap[faceIndex].ToFixedString()}");
             //if (!shapePlanCache.TryGetValue(fontAssetRef, out var shapePlan))

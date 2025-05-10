@@ -8,6 +8,7 @@ using UnityEngine;
 using Unity.Collections.LowLevel.Unsafe;
 using TextMeshDOTS.HarfBuzz;
 using Font = TextMeshDOTS.HarfBuzz.Font;
+using static Codice.CM.WorkspaceServer.DataStore.WkTree.WriteWorkspaceTree;
 
 
 namespace TextMeshDOTS.TextProcessing
@@ -41,11 +42,10 @@ namespace TextMeshDOTS.TextProcessing
             var freeGlyphRects = freeGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
             var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
-            var fontPtr = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
+            var face = fontTable.faces[fontAssetMetaData.faceIndex];
+            var font = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
             var samplingSize = FontTextureSize.Normal.GetSamplingSize();
-            Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
-            Font font = default;           
-            font.ptr = fontPtr;
+            font.SetScale(samplingSize, samplingSize);
 
             var glyphsToPlace = new NativeList<GlyphBlob>(256, Allocator.Temp);
 

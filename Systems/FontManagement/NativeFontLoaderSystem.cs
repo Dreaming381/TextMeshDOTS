@@ -37,14 +37,14 @@ namespace TextMeshDOTS.TextProcessing
 
             var faceIndexToFontEntityMap = new NativeHashMap<int, Entity>(64, Allocator.Persistent);
             var fontAssetRefToFaceIndexMap = new NativeHashMap<FontAssetRef, int>(64, Allocator.Persistent);
-            var perThreadFontCaches = new NativeArray<UnsafeList<IntPtr>>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, Allocator.Persistent);
+            var perThreadFontCaches = new NativeArray<UnsafeList<Font>>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, Allocator.Persistent);
             for (int i = 0; i < perThreadFontCaches.Length; i++)
             {
-                perThreadFontCaches[i] = new UnsafeList<IntPtr>(64, Allocator.Persistent);
+                perThreadFontCaches[i] = new UnsafeList<Font>(64, Allocator.Persistent);
             }
             state.EntityManager.CreateSingleton(new FontTable
             {
-                faceEntries = new NativeList<FontTable.FaceEntry>(Allocator.Persistent),
+                faces = new NativeList<Face>(Allocator.Persistent),
                 perThreadFontCaches = perThreadFontCaches,
                 faceIndexToFontEntityMap = faceIndexToFontEntityMap,
                 fontAssetRefToFaceIndexMap = fontAssetRefToFaceIndexMap,
@@ -159,18 +159,15 @@ namespace TextMeshDOTS.TextProcessing
             }
             
             var face = new Face(blob.ptr, 0);
-            var font = new Font(face.ptr);
-
             var fontAssetMetadata = new FontAssetMetadata { family = family, subfamily = subFamily, faceIndex = fontTable.fontAssetRefToFaceIndexMap.Count };
 
             //initialize texture. To save space, review how to initialize it with size 0
             //(as done by TextCore), and only increase once needed
             DynamicFontAsset dynamicFontAsset;
             AtlasData atlasData;
-            RenderFormat renderFormat;
+
             if (face.HasCOLR() || face.HasColorBitmap())
             {
-                renderFormat = RenderFormat.Bitmap8888;
                 atlasData = new AtlasData
                 {
                     atlasHeight = 2048,
@@ -185,7 +182,6 @@ namespace TextMeshDOTS.TextProcessing
             }
             else
             {
-                renderFormat= RenderFormat.SDF8;
                 atlasData = new AtlasData
                 {
                     atlasHeight = 2048,
@@ -202,7 +198,6 @@ namespace TextMeshDOTS.TextProcessing
                 texture2D.Apply();
                 dynamicFontAsset = new DynamicFontAsset { texture = texture2D, textureType = TextureType.SDF};
             }
-            font.SetScale(atlasData.samplingPointSize, atlasData.samplingPointSize);
 
             var drawAndPaintFunctions = new DrawAndPaintFunctions
             {
@@ -229,12 +224,7 @@ namespace TextMeshDOTS.TextProcessing
                 id = fontTable.fontAssetRefToFaceIndexMap.Count;
                 fontTable.fontAssetRefToFaceIndexMap.Add(fontRequest.fontAssetRef, id);
                 fontTable.faceIndexToFontEntityMap.Add(id, fontEntity);
-                fontTable.faceEntries.Add(new FontTable.FaceEntry
-                {
-                    facePtr = face.ptr,
-                    sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT,
-                    renderFormat = renderFormat,                    
-                });
+                fontTable.faces.Add(face);
                 for (int i = 0; i < fontTable.perThreadFontCaches.Length; i++)
                 {
                     var list = fontTable.perThreadFontCaches[i];

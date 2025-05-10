@@ -42,12 +42,13 @@ namespace TextMeshDOTS.TextProcessing
                 return;//glyph has no size, nothing needs to be renderered/added to texture
 
             var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
-            var faceEntry = fontTable.faceEntries[fontAssetMetaData.faceIndex];
-            var fontPtr = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
+            var face = fontTable.faces[fontAssetMetaData.faceIndex];
+            var font = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
             var samplingSize = FontTextureSize.Normal.GetSamplingSize();
-            Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
-            Font font = default;
-            font.ptr = fontPtr;
+            font.SetScale(samplingSize, samplingSize);
+
+            //var font = new Font(faceEntry.facePtr);
+            //font.SetScale(64, 64);
 
             var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);
             var paintData = new PaintData(drawAndPaintFunctions.drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
