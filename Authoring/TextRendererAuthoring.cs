@@ -108,7 +108,7 @@ namespace TextMeshDOTS.Authoring
                 paragraphSpacing = (half)authoring.paragraphSpacing,
             };
             AddComponent(entity, textBaseConfiguraton);
-            AddBuffer<RenderGlyph>(entity);
+            AddBuffer<RenderGlyphOld>(entity);
         }
         
         void AddAdditionalFontEntity(FontAssetRef fontAssetRef, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)

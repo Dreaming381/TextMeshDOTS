@@ -18,7 +18,7 @@ namespace TextMeshDOTS
                                                        ref FontAssetArray fontAssetArray,
                                                        ref ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup,
                                                        ref ComponentLookup<FontAssetRef> fontAssetRefLookup,                                                       
-                                                       ref DynamicBuffer<RenderGlyph> renderGlyphs,
+                                                       ref DynamicBuffer<RenderGlyphOld> renderGlyphs,
                                                        in DynamicBuffer<CalliByte> calliBytesBuffer,
                                                        in DynamicBuffer<GlyphOTF> glyphOTFBuffer,
                                                        in DynamicBuffer<XMLTag> xmlTagBuffer,
@@ -190,7 +190,7 @@ namespace TextMeshDOTS
 
                 // Determine the position of the vertices of the Character or Sprite.
                 #region Calculate Vertices Position
-                var renderGlyph = new RenderGlyph();
+                var renderGlyph = new RenderGlyphOld();
                 renderGlyph.glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
 
                 // top left is used to position bottom left and top right
@@ -478,7 +478,7 @@ namespace TextMeshDOTS
                         layoutConfig.m_xAdvance -= xOffsetChange;
 
                         // Adjust the vertices of the previous render glyphs in the word
-                        var glyphPtr = (RenderGlyph*)renderGlyphs.GetUnsafePtr();
+                        var glyphPtr = (RenderGlyphOld*)renderGlyphs.GetUnsafePtr();
                         for (int i = lastWordStartCharacterGlyphIndex; i < renderGlyphs.Length; i++)
                         {
                             glyphPtr[i].blPosition.y -= yOffsetChange;
@@ -552,7 +552,7 @@ namespace TextMeshDOTS
             }
         }
 
-        static unsafe void ApplyHorizontalAlignmentToGlyphs(ref NativeArray<RenderGlyph> glyphs,
+        static unsafe void ApplyHorizontalAlignmentToGlyphs(ref NativeArray<RenderGlyphOld> glyphs,
                                                             ref FixedList512Bytes<int> characterGlyphIndicesWithPreceedingSpacesInLine,
                                                             float width,
                                                             HorizontalAlignmentOptions alignMode)
@@ -563,7 +563,7 @@ namespace TextMeshDOTS
                 return;
             }
 
-            var glyphsPtr = (RenderGlyph*)glyphs.GetUnsafePtr();
+            var glyphsPtr = (RenderGlyphOld*)glyphs.GetUnsafePtr();
             if ((alignMode) == HorizontalAlignmentOptions.Center)
             {
                 float offset = glyphsPtr[glyphs.Length - 1].trPosition.x / 2f;
@@ -603,7 +603,7 @@ namespace TextMeshDOTS
             characterGlyphIndicesWithPreceedingSpacesInLine.Clear();
         }
 
-        static unsafe void ApplyVerticalOffsetToGlyphs(ref NativeArray<RenderGlyph> glyphs, float accumulatedVerticalOffset)
+        static unsafe void ApplyVerticalOffsetToGlyphs(ref NativeArray<RenderGlyphOld> glyphs, float accumulatedVerticalOffset)
         {
             for (int i = 0; i < glyphs.Length; i++)
             {
@@ -614,13 +614,13 @@ namespace TextMeshDOTS
             }
         }
 
-        static unsafe void ApplyVerticalAlignmentToGlyphs(ref DynamicBuffer<RenderGlyph> glyphs,
+        static unsafe void ApplyVerticalAlignmentToGlyphs(ref DynamicBuffer<RenderGlyphOld> glyphs,
                                                           float topAnchor,
                                                           float bottomAnchor,
                                                           float accumulatedVerticalOffset,
                                                           VerticalAlignmentOptions alignMode)
         {
-            var glyphsPtr = (RenderGlyph*)glyphs.GetUnsafePtr();
+            var glyphsPtr = (RenderGlyphOld*)glyphs.GetUnsafePtr();
             switch (alignMode)
             {
                 case VerticalAlignmentOptions.TopBase:

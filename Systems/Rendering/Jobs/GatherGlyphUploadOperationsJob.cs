@@ -9,7 +9,7 @@ namespace TextMeshDOTS.Rendering
     [BurstCompile]
     struct GatherGlyphUploadOperationsJobChunk : IJobChunk
     {
-        [ReadOnly] public BufferTypeHandle<RenderGlyph> renderGlyphHandle;
+        [ReadOnly] public BufferTypeHandle<RenderGlyphOld> renderGlyphHandle;
         [ReadOnly] public BufferTypeHandle<RenderGlyphMask> glyphMaskHandle;    //only valid for multi-font
         public ComponentTypeHandle<TextShaderIndex> textShaderIndexHandle;
         public ComponentLookup<GlyphCountThisFrame> glyphCountThisFrameLookup;
@@ -54,9 +54,9 @@ namespace TextMeshDOTS.Rendering
                 {
                     Kind = GpuUploadOperation.UploadOperationKind.Memcpy,
                     Src = buffer.GetUnsafeReadOnlyPtr(),
-                    DstOffset = (int)glyphCountThisFrame * sizeof(RenderGlyph),
+                    DstOffset = (int)glyphCountThisFrame * sizeof(RenderGlyphOld),
                     DstOffsetInverse = -1,
-                    Size = buffer.Length * sizeof(RenderGlyph), //still need to upload entire GlyphBuffer (including masked out glyphs) to ensure the child entities have the data they need
+                    Size = buffer.Length * sizeof(RenderGlyphOld), //still need to upload entire GlyphBuffer (including masked out glyphs) to ensure the child entities have the data they need
                 });
                 glyphCountThisFrame += (uint)buffer.Length;
             }

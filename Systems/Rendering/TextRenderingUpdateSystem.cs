@@ -23,7 +23,7 @@ namespace TextMeshDOTS.Rendering
             state.EntityManager.AddComponent(state.SystemHandle, TextMeshDOTSArchetypes.GetTextStatisticsTypeset());
 
             m_singleFontQuery = SystemAPI.QueryBuilder()
-                     .WithAll<RenderGlyph>()
+                     .WithAll<RenderGlyphOld>()
                      .WithAllRW<RenderBounds>()
                      .WithAllRW<TextRenderControl>()
                      .WithAllRW<MaterialMeshInfo>()
@@ -32,7 +32,7 @@ namespace TextMeshDOTS.Rendering
             m_singleFontQuery.AddChangedVersionFilter(ComponentType.ReadOnly<TextRenderControl>());
 
             m_multiFontQuery = SystemAPI.QueryBuilder()
-                     .WithAll<RenderGlyph>()
+                     .WithAll<RenderGlyphOld>()
                      .WithAll<FontMaterialSelectorForGlyph>()
                      .WithAll<AdditionalFontMaterialEntity>()
                      .WithAllRW<RenderBounds>()
@@ -61,7 +61,7 @@ namespace TextMeshDOTS.Rendering
                 boundsLookup = SystemAPI.GetComponentLookup<RenderBounds>(false),
                 controlLookup = SystemAPI.GetComponentLookup<TextRenderControl>(false),
                 entityHandle = SystemAPI.GetEntityTypeHandle(),
-                glyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(true),
+                glyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyphOld>(true),
                 glyphMaskLookup = SystemAPI.GetBufferLookup<RenderGlyphMask>(false),
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
                 materialMeshInfoLookup = SystemAPI.GetComponentLookup<MaterialMeshInfo>(false),

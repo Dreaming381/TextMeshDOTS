@@ -13,7 +13,7 @@ namespace TextMeshDOTS.Rendering
     struct UpdateMultiFontJobChunk : IJobChunk
     {
         [ReadOnly] public EntityTypeHandle entityHandle;
-        [ReadOnly] public BufferTypeHandle<RenderGlyph> glyphHandle;
+        [ReadOnly] public BufferTypeHandle<RenderGlyphOld> glyphHandle;
         [ReadOnly] public BufferTypeHandle<FontMaterialSelectorForGlyph> selectorHandle;
         [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalEntityHandle;
         [NativeDisableParallelForRestriction] public ComponentLookup<RenderBounds> boundsLookup;
