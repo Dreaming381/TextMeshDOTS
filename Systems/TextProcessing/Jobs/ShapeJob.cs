@@ -32,7 +32,6 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<XMLTag> xmlTagHandle;
         [ReadOnly] public BufferLookup<UsedGlyphs> glyphsInUseLookup;
-        public NativeList<FontEntityGlyph>.ParallelWriter missingGlyphs;
         public NativeStream.Writer missingGlyphsStream;
 
         public uint lastSystemVersion;
@@ -81,7 +80,6 @@ namespace TextMeshDOTS.TextProcessing
 
             FontAssetArray fontAssetArray = default;
             bool hasMultipleFonts = additionalFontMaterialEntityBuffers.Length > 0;
-            var chunkMissingGlyphs = new NativeList<FontEntityGlyph>(1024, Allocator.Temp);
             var cleanedText = new NativeList<byte>(1024, Allocator.Temp);
             LayoutConfig2 layoutConfig2 =default;
             FontConfig fontConfiguration = default;
@@ -140,7 +138,7 @@ namespace TextMeshDOTS.TextProcessing
                         fontConfiguration.m_fontMaterialIndex = fontIndex;
 
                     openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)text.Length);
-                    Shape(buffer, cleanedString, 0, cleanedString.Length, ref segmentProperties, ref fontAssetArray, fontConfiguration.m_fontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
+                    Shape(buffer, cleanedString, 0, cleanedString.Length, ref segmentProperties, ref fontAssetArray, fontConfiguration.m_fontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer);
                     continue;
                 }
 
@@ -199,7 +197,7 @@ namespace TextMeshDOTS.TextProcessing
                     openTypeFeatures.FinalizeOpenTypeFeatures(cleanedText.Length);
                     openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedText.Length);
                     var cleanedSegmentLength = cleanedEnd - cleanedStart;
-                    Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref segmentProperties, ref fontAssetArray, currentFontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer, chunkMissingGlyphs);
+                    Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref segmentProperties, ref fontAssetArray, currentFontMaterialIndex, openTypeFeatures.values, glyphOTFs, hasMultipleFonts, m_selectorBuffer);
                     currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
                     cleanedStart = cleanedEnd;
                     if (tagsCounter == xmlTagBuffer.Length) //last loop in order to shape text between last tag and end of rich text buffer
@@ -208,7 +206,6 @@ namespace TextMeshDOTS.TextProcessing
                 cleanedString.Clear();
             }           
             //add missing glyphs identifed in chunks processed by this thread to missingGlyphs
-            missingGlyphs.AddRangeNoResize(chunkMissingGlyphs);
             missingGlyphsStream.EndForEachIndex();
             buffer.Dispose();
         }
@@ -223,8 +220,7 @@ namespace TextMeshDOTS.TextProcessing
             NativeList<Feature> features,
             DynamicBuffer<GlyphOTF> glyphOTFs,
             bool hasMultipleFonts,
-            DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer,
-            NativeList<FontEntityGlyph> chunkMissingGlyphs)
+            DynamicBuffer<FontMaterialSelectorForGlyph> m_selectorBuffer)
         {
             if (startIndex + length == text.Length && text[^1] == 0)
                 length--; //last byte of CalliBytes buffer appears to be always '0', which should not be shaped. 
@@ -296,23 +292,13 @@ namespace TextMeshDOTS.TextProcessing
                 };
                 if (!glyphTable.glyphHashToIdMap.ContainsKey(glyphOTF.glyphKey))
                 {
-                    chunkMissingGlyphsSet.Add(glyphOTF.glyphKey);
-                    missingGlyphsStream.Write(glyphOTF.glyphKey);
+                    // We use the hashset to avoid redundantly adding the same glyph for this chunk.
+                    // The missingGlyphsStream may still have redundancies between chunks, but this reduces
+                    // some of the work while still maintaining determinism.
+                    if (chunkMissingGlyphsSet.Add(glyphOTF.glyphKey))
+                        missingGlyphsStream.Write(glyphOTF.glyphKey);
                 }
                 glyphOTFs.Add(glyphOTF);
-                if (!glyphsInUse.Contains(codepoint))
-                {
-                    var fontEntityGlyph = new FontEntityGlyph { entity = fontEntity, glyphID = codepoint };
-                    //we do not want to add redundantly the same glyph to missingGlyphs,
-                    //so preferably we check if glyph has already been added. Does not work due to 
-                    //ParrallelWriter. As a workaround, we create an additional list in this thread
-                    //(just before chunk iteration starts), and check against that list
-                    if (!chunkMissingGlyphs.Contains(fontEntityGlyph))
-                    {
-                        chunkMissingGlyphs.Add(fontEntityGlyph);
-                        //UnityEngine.Debug.Log($"Requesting missing glyph {fontEntityGlyph.glyphID} for {fontEntityGlyph.entity.ToFixedString()}");
-                    }
-                }
             }
             buffer.ClearContent();
             features.Clear();

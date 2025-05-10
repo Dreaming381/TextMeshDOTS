@@ -19,18 +19,15 @@ namespace TextMeshDOTS.TextProcessing
     //[DisableAutoCreation]
     public partial struct ShapeSystem : ISystem
     {
-        EntityQuery textRendererQ, fontEntitiesQ, fontstateQ;
+        EntityQuery textRendererQ, fontstateQ;
         static readonly ProfilerMarker marker = new ProfilerMarker("hb_shape");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
-        NativeList<FontEntityGlyph> missingGlyphs;
 
         bool m_skipChangeFilter;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.Persistent);
-
             fontstateQ = SystemAPI.QueryBuilder()
                 .WithAll<FontState>()
                 .WithNone<FontsDirtyTag>()
@@ -43,13 +40,6 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<TextBaseConfiguration>()
                 .WithAll<FontBlobReference>()
                 .Build();            
-
-            fontEntitiesQ = SystemAPI.QueryBuilder()
-                .WithAll<FontAssetRef>()
-                .WithAll<UsedGlyphs>()
-                .WithAll<MissingGlyphs>()
-                .WithAll<DynamicFontAsset>()
-                .Build();
 
             //do not filter on query in release version, rather determine in jobs if chunk needs to be processed or not
             //textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>()); 
@@ -93,7 +83,6 @@ namespace TextMeshDOTS.TextProcessing
                 marker = marker,
                 marker2 = marker2,
 
-                missingGlyphs = missingGlyphs.AsParallelWriter(),
                 missingGlyphsStream = missingGlyphStream.AsWriter(),
 
                 glyphTable = glyphTable,
@@ -134,26 +123,10 @@ namespace TextMeshDOTS.TextProcessing
                 missingGlyphs = missingGlyphsToAdd.AsDeferredJobArray(),
                 missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false)
             }.Schedule(state.Dependency);
-
-            //state.Dependency = new SortMissingGlyphJob
-            //{
-            //    missingGlyphs = missingGlyphs,
-            //}.Schedule(state.Dependency);
-            //
-            //state.Dependency = new CopyMissingGlyphsToFontEntitiesJob
-            //{
-            //    newMissingGlyphs = missingGlyphs,
-            //}.ScheduleParallel(fontEntitiesQ, state.Dependency);
-
-            state.Dependency = new ClearMissingGlyphJob
-            {
-                missingGlyphs = missingGlyphs,
-            }.Schedule(state.Dependency);
         }
         [BurstCompile]
         public void OnDestroy(ref SystemState state)
         {
-            if (missingGlyphs.IsCreated) missingGlyphs.Dispose();
             state.CompleteDependency();
             SystemAPI.GetSingletonRW<GlyphTable>().ValueRW.TryDispose(default).Complete();
         }
@@ -219,8 +192,8 @@ namespace TextMeshDOTS.TextProcessing
                     font = fontTable.GetOrCreateFont(missingGlyph.faceIndex, threadIndex);
                     var samplingSize = missingGlyph.textureSize.GetSamplingSize();
                     font.SetScale(samplingSize, samplingSize);
-                    //initialized = true; //initialized variable is currently not set, should this not be set to true here?
-                    //lastFont = fontPtr; //lastFont variable is currently not set, should this not be set here?
+                    initialized = true;
+                    lastFont = font;
                 }
                 font.GetGlyphExtents(missingGlyph.glyphIndex, out var extents);
 
