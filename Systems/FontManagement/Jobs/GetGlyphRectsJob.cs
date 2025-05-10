@@ -5,6 +5,9 @@ using Unity.Entities;
 using UnityEngine.TextCore;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using UnityEngine;
+using Unity.Collections.LowLevel.Unsafe;
+using TextMeshDOTS.HarfBuzz;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 
 namespace TextMeshDOTS.TextProcessing
@@ -17,7 +20,8 @@ namespace TextMeshDOTS.TextProcessing
         public Entity fontEntity;
 
         [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
-        [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
+        [ReadOnly] public FontTable fontTable;
+        //[ReadOnly] public ComponentLookup<FontAssetRef> fontAssetRefLookup; //temporary link between Font Entities and FontTable
         [ReadOnly] public ComponentLookup<FontAssetMetadata> fontAssetMetadataLookup;
 
         public BufferLookup<MissingGlyphs> missingGlyphsBuffer;
@@ -25,16 +29,24 @@ namespace TextMeshDOTS.TextProcessing
         public BufferLookup<UsedGlyphRects> usedGlyphRectsBuffer;
         public BufferLookup<FreeGlyphRects> freeGlyphRectsBuffer;
 
+        [NativeSetThreadIndex]
+        int threadIndex;
+
         public void Execute()
         {
             var atlasData = atlasDataLookup[fontEntity];
-            var nativeFontPointer = nativeFontPointerLookup[fontEntity];
             var missingGlyphs = missingGlyphsBuffer[fontEntity].Reinterpret<uint>();
             var usedGlyphs = usedGlyphsBuffer[fontEntity].Reinterpret<uint>();
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
             var freeGlyphRects = freeGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
-            var font = nativeFontPointer.font;
+            var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
+            var fontPtr = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
+            var samplingSize = FontTextureSize.Normal.GetSamplingSize();
+            Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
+            Font font = default;           
+            font.ptr = fontPtr;
+
             var glyphsToPlace = new NativeList<GlyphBlob>(256, Allocator.Temp);
 
             for (int i = 0, ii = missingGlyphs.Length; i < ii; i++)
@@ -42,14 +54,14 @@ namespace TextMeshDOTS.TextProcessing
                 var glyphID = missingGlyphs[i];
                 //GetGlyphExtends is a very costly function. For a COLR glyph, rect is determined by parsing all vertices of maybe 20 sub-glyphs
                 //calling it in parallel makes things worse (mutex lock?)
-                font.GetGlyphExtents(glyphID, out GlyphExtents extends);                
+                font.GetGlyphExtents(glyphID, out GlyphExtents extends);
+                
                 var hbGlyph = new GlyphBlob { glyphID = glyphID, glyphExtents = extends};
                 glyphsToPlace.Add(hbGlyph);
             };
             var success = NativeAtlas.AddGlyphs(atlasData.padding, glyphsToPlace, placedGlyphs, usedGlyphs, usedGlyphRects, freeGlyphRects);
             if (!success)
             {
-                var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
                 Debug.Log($"{glyphsToPlace.Length} glyphs could not be placed for font {fontAssetMetaData.family} {fontAssetMetaData.subfamily} ");
                 //for (int i = 0, ii = usedGlyphs.Length; i < ii; i++)
                 //{

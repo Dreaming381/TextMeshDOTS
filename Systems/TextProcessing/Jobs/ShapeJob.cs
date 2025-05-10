@@ -9,6 +9,7 @@ using System;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 using TextMeshDOTS.Rendering;
 using UnityEngine;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -28,7 +29,6 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
         [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
-        [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<XMLTag> xmlTagHandle;
         [ReadOnly] public BufferLookup<UsedGlyphs> glyphsInUseLookup;
@@ -38,6 +38,12 @@ namespace TextMeshDOTS.TextProcessing
         public uint lastSystemVersion;
 
         UnsafeHashSet<GlyphTable.Key> chunkMissingGlyphsSet;
+
+        [NativeSetThreadIndex]
+        int threadIndex;
+
+        [NativeDisableUnsafePtrRestriction] IntPtr lastFontPtr;
+        bool initialized;
 
         [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -232,8 +238,23 @@ namespace TextMeshDOTS.TextProcessing
             var fontAssetRef = fontAssetArray[fontMaterialIndex];
             var faceIndex = fontTable.fontAssetRefToFaceIndexMap[fontAssetRef];
             var fontEntity = fontTable.faceIndexToFontEntityMap[faceIndex];
-            var nativeFontPointer = nativeFontPointerLookup[fontEntity];
-            var renderFormat = (nativeFontPointer.face.HasCOLR() || nativeFontPointer.face.HasColorBitmap()) ? RenderFormat.Bitmap8888 : RenderFormat.SDF8;
+            var faceEntry = fontTable.faceEntries[faceIndex];
+            var renderFormat = faceEntry.renderFormat;
+
+            var fontPtr = lastFontPtr;
+
+            if (!initialized)
+            {
+                fontPtr = fontTable.GetOrCreateFont(faceIndex, threadIndex);
+                var samplingSize = FontTextureSize.Normal.GetSamplingSize();
+                Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
+                initialized = true;
+                lastFontPtr = fontPtr;
+            }
+            Font font = default;
+            font.ptr = fontPtr;
+
+
             //UnityEngine.Debug.Log($"fontEntity: {fontEntity.ToFixedString()}, from faceIndex: {fontTable.faceIndexToFontEntityMap[faceIndex].ToFixedString()}");
             //if (!shapePlanCache.TryGetValue(fontAssetRef, out var shapePlan))
             //{                        
@@ -245,7 +266,7 @@ namespace TextMeshDOTS.TextProcessing
             //marker.End();
 
             marker.Begin();
-            nativeFontPointer.font.Shape(buffer, features);
+            font.Shape(buffer, features);
             marker.End();
 
             var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();

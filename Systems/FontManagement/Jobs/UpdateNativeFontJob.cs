@@ -6,6 +6,7 @@ using TextMeshDOTS.Collections;
 using TextMeshDOTS.HarfBuzz;
 using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -15,15 +16,27 @@ namespace TextMeshDOTS.TextProcessing
         public ComponentLookup<DynamicFontAsset> dynamicFontAssetLookup;
 
         public Entity fontEntity;
-        [ReadOnly] public ComponentLookup<NativeFontPointer> nativeFontPointerLookup;
+        [ReadOnly] public FontTable fontTable;
+        [ReadOnly] public ComponentLookup<FontAssetMetadata> fontAssetMetadataLookup; //temporary link between FontTable and Font Entities
         [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
         [ReadOnly] public NativeList<GlyphBlob> placedGlyphs;
 
+        [NativeSetThreadIndex]
+        int threadIndex;
+
         public void Execute()
         {
-            var nativeFontPointer = nativeFontPointerLookup[fontEntity];
-            var font = nativeFontPointer.font;
-            var face = nativeFontPointer.face;
+            var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
+            var faceEntry = fontTable.faceEntries[fontAssetMetaData.faceIndex];
+            var fontPtr = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
+            var samplingSize = FontTextureSize.Normal.GetSamplingSize();
+            Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
+            Face face = default;
+            face.ptr = faceEntry.facePtr;
+
+            Font font = default;
+            font.ptr = fontPtr;
+
             var atlasData = atlasDataLookup[fontEntity];            
 
             var dynamicFontAsset = dynamicFontAssetLookup[fontEntity];

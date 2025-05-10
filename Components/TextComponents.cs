@@ -21,7 +21,7 @@ namespace TextMeshDOTS
         public TagType tagType;
         public bool isClosing;
         public int startID; //start position raw text
-        public int endID;   //start position raw text
+        public int endID;   //end position raw text
         public int Length => endID + 1 - startID;
         public TagValue value;
         public XMLTag(bool dummy)

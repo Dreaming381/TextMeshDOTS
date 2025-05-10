@@ -1,5 +1,6 @@
 using System;
 using TextMeshDOTS.HarfBuzz;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
@@ -13,6 +14,10 @@ namespace TextMeshDOTS
         public struct FaceEntry
         {
             public IntPtr facePtr;
+
+            //cache a couple of face meta data to avoid fetching them upon every face access
+            public SDFOrientation sdfOrientation;
+            public RenderFormat renderFormat;
         }
 
         // These are zero-sized and unused currently.

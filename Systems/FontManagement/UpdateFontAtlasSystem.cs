@@ -30,7 +30,6 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<UsedGlyphs>()
                 .WithAll<UsedGlyphRects>()
                 .WithAll<FreeGlyphRects>()
-                .WithAll<NativeFontPointer>()
                 .WithAll<DynamicFontAsset>()
                 .Build();
         }
@@ -64,13 +63,14 @@ namespace TextMeshDOTS.TextProcessing
             state.Dependency.Complete();
             var glyphsToPlace = new NativeList<GlyphBlob>(1024, Allocator.TempJob);
             var placedGlyphs = new NativeList<GlyphBlob> (1024, Allocator.TempJob);
-            var fontAssetMetadataLookup = SystemAPI.GetComponentLookup<FontAssetMetadata>(true);
+            var fontTable = SystemAPI.GetSingleton<FontTable>();
+            var fontAssetMetadataLookup = SystemAPI.GetComponentLookup<FontAssetMetadata>(true); //temporary link between FontTable and Font Entities
             var atlasDataLookup = SystemAPI.GetComponentLookup<AtlasData>(true);
+            var drawAndPaintFunctionsLookup = SystemAPI.GetComponentLookup<DrawAndPaintFunctions>(true);
             var missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false);
             var usedGlyphsLookup = SystemAPI.GetBufferLookup<UsedGlyphs>(false);
             var usedGlyphRectsLookup = SystemAPI.GetBufferLookup<UsedGlyphRects>(false);
             var freeGlyphRectsLookup = SystemAPI.GetBufferLookup<FreeGlyphRects>(false);
-            var nativeFontPointerLookup = SystemAPI.GetComponentLookup<NativeFontPointer>(true);
             var dynamicFontAssetsLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(false);
 
             for (int i = 0, ii = fontsRequiringUpdate.Length; i < ii; i++)
@@ -94,9 +94,9 @@ namespace TextMeshDOTS.TextProcessing
                     placedGlyphs = placedGlyphs,
 
                     fontEntity = fontEntity,
-                    fontAssetMetadataLookup = fontAssetMetadataLookup,
-                    atlasDataLookup = atlasDataLookup,
-                    nativeFontPointerLookup = nativeFontPointerLookup,
+                    fontTable = fontTable,
+                    fontAssetMetadataLookup = fontAssetMetadataLookup, //temporary link between FontTable and Font Entities
+                    atlasDataLookup = atlasDataLookup,                    
 
                     missingGlyphsBuffer = missingGlyphsLookup,
                     usedGlyphsBuffer = usedGlyphsLookup,
@@ -112,11 +112,13 @@ namespace TextMeshDOTS.TextProcessing
                     {
                         //this managed call to texture object is reason why we cannot BURST compile the update method of this system
                         textureData = dynamicFontAsset.texture.Value.GetRawTextureData<byte>(), 
-
+                        
                         fontEntity = fontEntity,
+                        fontTable = fontTable,
+                        fontAssetMetadataLookup = fontAssetMetadataLookup, //temporary link between FontTable and Font Entities
                         placedGlyphs = placedGlyphs,
                         atlasDataLookup = atlasDataLookup,
-                        nativeFontPointerLookup = nativeFontPointerLookup,
+                        drawAndPaintFunctionsLookup = drawAndPaintFunctionsLookup,
                         usedGlyphsBuffer = usedGlyphsLookup,
                         usedGlyphRectsBuffer = usedGlyphRectsLookup,
                         marker = marker2,
@@ -131,9 +133,11 @@ namespace TextMeshDOTS.TextProcessing
                         textureData = dynamicFontAsset.texture.Value.GetRawTextureData<ColorARGB>(),
 
                         fontEntity = fontEntity,
+                        fontTable = fontTable,
+                        fontAssetMetadataLookup = fontAssetMetadataLookup, //temporary link between FontTable and Font Entities
                         placedGlyphs = placedGlyphs,
                         atlasDataLookup = atlasDataLookup,
-                        nativeFontPointerLookup = nativeFontPointerLookup,
+                        drawAndPaintFunctionsLookup = drawAndPaintFunctionsLookup,
                         usedGlyphsBuffer = usedGlyphsLookup,
                         usedGlyphRectsBuffer = usedGlyphRectsLookup,
                         marker = marker,
@@ -146,8 +150,9 @@ namespace TextMeshDOTS.TextProcessing
                     dynamicFontAssetLookup = dynamicFontAssetsLookup,
 
                     fontEntity = fontEntity,
+                    fontTable = fontTable,
+                    fontAssetMetadataLookup = fontAssetMetadataLookup, //temporary link between FontTable and Font Entities
                     atlasDataLookup = atlasDataLookup,
-                    nativeFontPointerLookup = nativeFontPointerLookup,
                     placedGlyphs = placedGlyphs,
                 };
                 state.Dependency = updateNativeFontJob.Schedule(state.Dependency);

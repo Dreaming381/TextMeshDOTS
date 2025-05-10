@@ -20,6 +20,12 @@ namespace TextMeshDOTS
     }
     #endregion
 
+    /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
+    public struct DrawAndPaintFunctions: IComponentData
+    {
+        public DrawDelegates drawFunctions;
+        public PaintDelegates paintFunctions;
+    }
 
     #region Native FontAsset Components    
 
@@ -60,16 +66,7 @@ namespace TextMeshDOTS
         public BatchMeshID backendMeshID;
         public BlobAssetReference<DynamicFontBlob> blob;
     }
-    /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
-    public struct NativeFontPointer: ICleanupComponentData
-    {
-        public SDFOrientation orientation;
-        public Blob blob;           //destroy in cleanup system
-        public Face face;           //destroy in cleanup system
-        public Font font;           //destroy in cleanup system
-        public DrawDelegates drawFunctions; //do not destroy this in cleanup system as those functions are needed for loading other fonts
-        public PaintDelegates paintFunctions; //do not destroy this in cleanup system as those functions are needed for loading other fonts
-    }
+
     /// <summary> Contains  relevant data from loading and using font</summary>
     public struct AtlasData : IComponentData
     {
@@ -88,6 +85,7 @@ namespace TextMeshDOTS
     {
         public FixedString128Bytes family;
         public FixedString128Bytes subfamily;
+        public int faceIndex; //temporary link from FontEntity to FontTable
     }
 
     /// <summary>
@@ -182,7 +180,7 @@ namespace TextMeshDOTS
 
     public struct FontEntityGlyph : IEquatable<FontEntityGlyph>
     {
-        public Entity entity;
+        public Entity entity;   //link to Font Entities
         public uint glyphID;
 
         public bool Equals(FontEntityGlyph other)

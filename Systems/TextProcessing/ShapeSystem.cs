@@ -101,7 +101,6 @@ namespace TextMeshDOTS.TextProcessing
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
-                nativeFontPointerLookup = SystemAPI.GetComponentLookup<NativeFontPointer>(),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
                 selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
@@ -198,22 +197,24 @@ namespace TextMeshDOTS.TextProcessing
             int threadIndex;
 
             GlyphTable.Key lastKey;
-            [NativeDisableUnsafePtrRestriction] IntPtr lastFont;
+            [NativeDisableUnsafePtrRestriction] IntPtr lastFontPtr;
             bool initialized;
 
             public void Execute(int i)
             {
                 var missingGlyph = missingGlyphs[i];
-                var font = lastFont;
+                var fontPtr = lastFontPtr;
 
                 if (!initialized || RequiresFontSetup(lastKey, missingGlyph))
                 {
-                    font = fontTable.GetOrCreateFont(missingGlyph.faceIndex, threadIndex);
+                    fontPtr = fontTable.GetOrCreateFont(missingGlyph.faceIndex, threadIndex);
                     var samplingSize = missingGlyph.textureSize.GetSamplingSize();
-                    Harfbuzz.hb_font_set_scale(font, samplingSize, samplingSize);
+                    Harfbuzz.hb_font_set_scale(fontPtr, samplingSize, samplingSize);
+                    initialized = true;
+                    lastFontPtr = fontPtr;
                 }
 
-                Harfbuzz.hb_font_get_glyph_extents(font, missingGlyph.glyphIndex, out var extents);
+                Harfbuzz.hb_font_get_glyph_extents(fontPtr, missingGlyph.glyphIndex, out var extents);
 
                 var newEntry = new GlyphTable.Entry
                 {

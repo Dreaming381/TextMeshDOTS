@@ -47,8 +47,11 @@ namespace TextMeshDOTS.TextProcessing
                 faceEntries = new NativeList<FontTable.FaceEntry>(Allocator.Persistent),
                 perThreadFontCaches = perThreadFontCaches,
                 faceIndexToFontEntityMap = faceIndexToFontEntityMap,
-                fontAssetRefToFaceIndexMap = fontAssetRefToFaceIndexMap
+                fontAssetRefToFaceIndexMap = fontAssetRefToFaceIndexMap,
             });
+
+            drawFunctions = new DrawDelegates(true);
+            paintFunctions = new PaintDelegates(true);
 
             fontstateQ = SystemAPI.QueryBuilder()
                 .WithAll<FontState>()
@@ -65,8 +68,7 @@ namespace TextMeshDOTS.TextProcessing
                 .Build();
             changedFontRequestQ.SetChangedVersionFilter(ComponentType.ReadWrite<FontRequest>());
 
-            drawFunctions = new DrawDelegates(true);
-            paintFunctions =  new PaintDelegates(true);
+            
             state.RequireForUpdate(fontstateQ);
             state.RequireForUpdate(changedFontRequestQ);
         }
@@ -120,8 +122,6 @@ namespace TextMeshDOTS.TextProcessing
 
         public void OnDestroy(ref SystemState state)
         {
-            drawFunctions.Dispose();
-            paintFunctions.Dispose();
             SystemAPI.GetSingletonRW<FontTable>().ValueRW.TryDispose(state.Dependency).Complete();
         }
         void LoadFont(FontRequest fontRequest, ref SystemState state, ref FontTable fontTable)
@@ -161,25 +161,16 @@ namespace TextMeshDOTS.TextProcessing
             var face = new Face(blob.ptr, 0);
             var font = new Font(face.ptr);
 
-            var sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;            
-
-            var nativeFontPointer = new NativeFontPointer { 
-                orientation = sdfOrientation, 
-                blob = blob, 
-                face = face, 
-                font = font, 
-                drawFunctions = drawFunctions,
-                paintFunctions = paintFunctions,
-            };
-
-            var fontAssetMetadata = new FontAssetMetadata { family = family, subfamily = subFamily };
+            var fontAssetMetadata = new FontAssetMetadata { family = family, subfamily = subFamily, faceIndex = fontTable.fontAssetRefToFaceIndexMap.Count };
 
             //initialize texture. To save space, review how to initialize it with size 0
             //(as done by TextCore), and only increase once needed
             DynamicFontAsset dynamicFontAsset;
             AtlasData atlasData;
+            RenderFormat renderFormat;
             if (face.HasCOLR() || face.HasColorBitmap())
             {
+                renderFormat = RenderFormat.Bitmap8888;
                 atlasData = new AtlasData
                 {
                     atlasHeight = 2048,
@@ -194,6 +185,7 @@ namespace TextMeshDOTS.TextProcessing
             }
             else
             {
+                renderFormat= RenderFormat.SDF8;
                 atlasData = new AtlasData
                 {
                     atlasHeight = 2048,
@@ -212,16 +204,22 @@ namespace TextMeshDOTS.TextProcessing
             }
             font.SetScale(atlasData.samplingPointSize, atlasData.samplingPointSize);
 
+            var drawAndPaintFunctions = new DrawAndPaintFunctions
+            {
+                drawFunctions = drawFunctions,
+                paintFunctions = paintFunctions,
+            };
+
             var fontEntity = state.EntityManager.CreateEntity(nativeFontDataArchetype);
             state.EntityManager.SetComponentData(fontEntity, fontRequest.fontAssetRef);
-            state.EntityManager.SetComponentData(fontEntity, fontAssetMetadata);            
+            state.EntityManager.SetComponentData(fontEntity, fontAssetMetadata);
             state.EntityManager.SetComponentData(fontEntity, atlasData);
             state.EntityManager.AddComponentData(fontEntity, dynamicFontAsset);
-            state.EntityManager.AddComponentData(fontEntity, nativeFontPointer);
+            state.EntityManager.AddComponentData(fontEntity, drawAndPaintFunctions);
 
             var freeGlyphRects = state.EntityManager.GetBuffer<FreeGlyphRects>(fontEntity);
-            NativeAtlas.InitializeFreeGlyphRects(ref freeGlyphRects, atlasData.atlasWidth, atlasData.atlasHeight);      
-            
+            NativeAtlas.InitializeFreeGlyphRects(ref freeGlyphRects, atlasData.atlasWidth, atlasData.atlasHeight);
+
             if (fontTable.fontAssetRefToFaceIndexMap.TryGetValue(fontRequest.fontAssetRef, out var id))
             {
                 fontTable.faceIndexToFontEntityMap[id] = fontEntity;
@@ -233,7 +231,9 @@ namespace TextMeshDOTS.TextProcessing
                 fontTable.faceIndexToFontEntityMap.Add(id, fontEntity);
                 fontTable.faceEntries.Add(new FontTable.FaceEntry
                 {
-                    facePtr = face.ptr
+                    facePtr = face.ptr,
+                    sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT,
+                    renderFormat = renderFormat,                    
                 });
                 for (int i = 0; i < fontTable.perThreadFontCaches.Length; i++)
                 {

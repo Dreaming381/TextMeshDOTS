@@ -58,7 +58,6 @@ namespace TextMeshDOTS.TextProcessing
             changedFontEntitiesQ = SystemAPI.QueryBuilder()
                 .WithAll<FontAssetRef>()
                 .WithAll<DynamicFontAsset>()
-                .WithAll<NativeFontPointer>()
                 .Build();
             changedFontEntitiesQ.SetChangedVersionFilter(ComponentType.ReadWrite<FontAssetRef>());
 

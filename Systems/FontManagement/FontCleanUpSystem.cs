@@ -17,19 +17,6 @@ namespace TextMeshDOTS.TextProcessing
             var ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
             var ecb = ecbSingleton.CreateCommandBuffer(CheckedStateRef.WorldUnmanaged);
 
-            foreach (var (nativeFontPointer, entity) in SystemAPI.Query<NativeFontPointer>()
-                .WithAll<NativeFontPointer>()
-                .WithNone<UsedGlyphs>()
-                .WithNone<MissingGlyphs>()          
-                .WithEntityAccess())
-            {                
-                //Debug.Log($"Destroy Harfbuzz font pointer");
-                nativeFontPointer.blob.Dispose();
-                nativeFontPointer.face.Dispose();
-                nativeFontPointer.font.Dispose();
-                ecb.RemoveComponent<NativeFontPointer>(entity);
-            }
-
             foreach (var (dynamicFontAsset, entity) in SystemAPI.Query<DynamicFontAsset>()
                 .WithAll<DynamicFontAsset>()
                 .WithNone<UsedGlyphs>()
@@ -46,17 +33,7 @@ namespace TextMeshDOTS.TextProcessing
             }
         }
         protected override void OnDestroy()
-        {
-            foreach (var (nativeFontPointer, entity) in SystemAPI.Query<NativeFontPointer>()
-                .WithAll<NativeFontPointer>()
-                .WithEntityAccess())
-            {
-                //Debug.Log($"Destroy Harfbuzz font pointer");
-                nativeFontPointer.blob.Dispose();
-                nativeFontPointer.face.Dispose();
-                nativeFontPointer.font.Dispose();
-            }
-            
+        {           
             //foreach (var (dynamicFontAsset, entity) in SystemAPI.Query<DynamicFontAsset>()
             //    .WithAll<DynamicFontAsset>()
             //    .WithEntityAccess())
