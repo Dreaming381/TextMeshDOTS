@@ -9,8 +9,6 @@ namespace TextMeshDOTS.HarfBuzz
 {
     internal partial struct FontTable : ICollectionComponent
     {
-        [NativeDisableUnsafePtrRestriction] public Face face;
-
         // These are zero-sized and unused currently.
         public NativeList<Face> faces;
         public NativeArray<UnsafeList<Font>> perThreadFontCaches;

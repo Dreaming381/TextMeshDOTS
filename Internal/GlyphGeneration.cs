@@ -18,7 +18,7 @@ namespace TextMeshDOTS
                                                        ref FontAssetArray fontAssetArray,
                                                        ref ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup,
                                                        ref ComponentLookup<FontAssetRef> fontAssetRefLookup,                                                       
-                                                       ref DynamicBuffer<RenderGlyph> renderGlyphs,
+                                                       ref DynamicBuffer<RenderGlyphOld> renderGlyphs,
                                                        in DynamicBuffer<CalliByte> calliBytesBuffer,
                                                        in DynamicBuffer<GlyphOTF> glyphOTFBuffer,
                                                        in DynamicBuffer<XMLTag> xmlTagBuffer,
@@ -112,6 +112,7 @@ namespace TextMeshDOTS
                         //Debug.Log($"{currentTag.tagType} {cleanedSegmentLength} {nextTagPositionInCleanedText}");
                     }
                 }
+
                 // need to add richTextOffset to fetch correct char from richtext buffer. 
                 // note: upper/lowercase is not applied in richtextBuffer (is only applied to cleaned text just before shaping)...should not cause any issues here
                 characters.GotoByteIndex(richTextOffset + cluster); 
@@ -122,21 +123,17 @@ namespace TextMeshDOTS
                 bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale, bottomAnchor);
 
                 #region Look up Character Data
-                if (!currentFont.glyphs.TryGetValue(glyphOTF.glyphKey.glyphIndex, out var glyphBlob))
-                {
-                    Debug.LogError($"Glyph {currentRune.value} has not yet been added to texture atlas");
-                    continue;
-                }
+                var glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
+                var glyphEntry = glyphTable.GetEntry(glyphID);
                 // review how to handle glyphOTF.codepoint = 0 (not defined glyph) which is retured for example for tab stop (9)
                 // see here why: https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767
                 // should not be rendered, but xAdvance should be processed
 
                 // Cache glyph metrics
-                var currentGlyphExtents = glyphBlob.glyphExtents;
-                var x_bearing = currentGlyphExtents.x_bearing;
-                var y_bearing = currentGlyphExtents.y_bearing;
-                var glyphHeight = currentGlyphExtents.height;
-                var glyphWidth = currentGlyphExtents.width;
+                int x_bearing = glyphEntry.xBearing;
+                int y_bearing   = glyphEntry.yBearing;
+                int glyphHeight = glyphEntry.height;
+                int glyphWidth  = glyphEntry.width;
 
                 float adjustedScale = layoutConfig.m_currentFontSize / currentFont.atlasSamplingPointSize * (textBaseConfiguration.isOrthographic ? 1 : 0.1f);
                 float elementAscentLine = currentFont.ascender;
@@ -190,8 +187,8 @@ namespace TextMeshDOTS
 
                 // Determine the position of the vertices of the Character or Sprite.
                 #region Calculate Vertices Position
-                var renderGlyph = new RenderGlyph();
-                renderGlyph.glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
+                var renderGlyph = new RenderGlyphOld();
+                renderGlyph.glyphID = glyphID;
 
                 // top left is used to position bottom left and top right
                 float2 topLeft;
@@ -209,25 +206,7 @@ namespace TextMeshDOTS
                 // Bottom right unused
                 #endregion
 
-                #region Setup UVA
-                var glyphRect = glyphBlob.glyphRect;
-                float2 blUVA, tlUVA, trUVA, brUVA;
-                blUVA.x = (glyphRect.x - currentFont.materialPadding) / currentFont.atlasWidth;
-                blUVA.y = (glyphRect.y - currentFont.materialPadding) / currentFont.atlasHeight;
-
-                tlUVA.x = blUVA.x;
-                tlUVA.y = (glyphRect.y + currentFont.materialPadding + glyphRect.height) / currentFont.atlasHeight;
-
-                trUVA.x = (glyphRect.x + currentFont.materialPadding + glyphRect.width) / currentFont.atlasWidth;
-                trUVA.y = tlUVA.y;
-
-                brUVA.x = trUVA.x;
-                brUVA.y = blUVA.y;
-
-                renderGlyph.blUVA = blUVA;
-                renderGlyph.trUVA = trUVA;
-                #endregion
-
+                // We don't set up UVA here, as that is the atlas texture coordinates.
                 #region Setup UVB
                 //Setup UV2 based on Character Mapping Options Selected
                 //m_horizontalMapping case TextureMappingOptions.Character
@@ -244,9 +223,9 @@ namespace TextMeshDOTS
                 brUVC.y = 0;
 
                 renderGlyph.blUVB = blUVC;
-                renderGlyph.tlUVB = tlUVA;
+                renderGlyph.tlUVB = tlUVC;
                 renderGlyph.trUVB = trUVC;
-                renderGlyph.brUVB = brUVA;
+                renderGlyph.brUVB = brUVC;
                 #endregion
 
                 #region Setup Color
@@ -478,7 +457,7 @@ namespace TextMeshDOTS
                         layoutConfig.m_xAdvance -= xOffsetChange;
 
                         // Adjust the vertices of the previous render glyphs in the word
-                        var glyphPtr = (RenderGlyph*)renderGlyphs.GetUnsafePtr();
+                        var glyphPtr = (RenderGlyphOld*)renderGlyphs.GetUnsafePtr();
                         for (int i = lastWordStartCharacterGlyphIndex; i < renderGlyphs.Length; i++)
                         {
                             glyphPtr[i].blPosition.y -= yOffsetChange;
@@ -552,7 +531,7 @@ namespace TextMeshDOTS
             }
         }
 
-        static unsafe void ApplyHorizontalAlignmentToGlyphs(ref NativeArray<RenderGlyph> glyphs,
+        static unsafe void ApplyHorizontalAlignmentToGlyphs(ref NativeArray<RenderGlyphOld> glyphs,
                                                             ref FixedList512Bytes<int> characterGlyphIndicesWithPreceedingSpacesInLine,
                                                             float width,
                                                             HorizontalAlignmentOptions alignMode)
@@ -563,7 +542,7 @@ namespace TextMeshDOTS
                 return;
             }
 
-            var glyphsPtr = (RenderGlyph*)glyphs.GetUnsafePtr();
+            var glyphsPtr = (RenderGlyphOld*)glyphs.GetUnsafePtr();
             if ((alignMode) == HorizontalAlignmentOptions.Center)
             {
                 float offset = glyphsPtr[glyphs.Length - 1].trPosition.x / 2f;
@@ -603,7 +582,7 @@ namespace TextMeshDOTS
             characterGlyphIndicesWithPreceedingSpacesInLine.Clear();
         }
 
-        static unsafe void ApplyVerticalOffsetToGlyphs(ref NativeArray<RenderGlyph> glyphs, float accumulatedVerticalOffset)
+        static unsafe void ApplyVerticalOffsetToGlyphs(ref NativeArray<RenderGlyphOld> glyphs, float accumulatedVerticalOffset)
         {
             for (int i = 0; i < glyphs.Length; i++)
             {
@@ -614,13 +593,13 @@ namespace TextMeshDOTS
             }
         }
 
-        static unsafe void ApplyVerticalAlignmentToGlyphs(ref DynamicBuffer<RenderGlyph> glyphs,
+        static unsafe void ApplyVerticalAlignmentToGlyphs(ref DynamicBuffer<RenderGlyphOld> glyphs,
                                                           float topAnchor,
                                                           float bottomAnchor,
                                                           float accumulatedVerticalOffset,
                                                           VerticalAlignmentOptions alignMode)
         {
-            var glyphsPtr = (RenderGlyph*)glyphs.GetUnsafePtr();
+            var glyphsPtr = (RenderGlyphOld*)glyphs.GetUnsafePtr();
             switch (alignMode)
             {
                 case VerticalAlignmentOptions.TopBase:

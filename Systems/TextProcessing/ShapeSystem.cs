@@ -9,6 +9,7 @@ using UnityEngine;
 using Unity.Collections.LowLevel.Unsafe;
 using System;
 using Font = TextMeshDOTS.HarfBuzz.Font;
+using System.Collections.Generic;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -18,18 +19,15 @@ namespace TextMeshDOTS.TextProcessing
     //[DisableAutoCreation]
     public partial struct ShapeSystem : ISystem
     {
-        EntityQuery textRendererQ, fontEntitiesQ, fontstateQ;
+        EntityQuery textRendererQ, fontstateQ;
         static readonly ProfilerMarker marker = new ProfilerMarker("hb_shape");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
-        NativeList<FontEntityGlyph> missingGlyphs;
 
         bool m_skipChangeFilter;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            missingGlyphs = new NativeList<FontEntityGlyph>(65536, Allocator.Persistent);
-
             fontstateQ = SystemAPI.QueryBuilder()
                 .WithAll<FontState>()
                 .WithNone<FontsDirtyTag>()
@@ -42,13 +40,6 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAll<TextBaseConfiguration>()
                 .WithAll<FontBlobReference>()
                 .Build();            
-
-            fontEntitiesQ = SystemAPI.QueryBuilder()
-                .WithAll<FontAssetRef>()
-                .WithAll<UsedGlyphs>()
-                .WithAll<MissingGlyphs>()
-                .WithAll<DynamicFontAsset>()
-                .Build();
 
             //do not filter on query in release version, rather determine in jobs if chunk needs to be processed or not
             //textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>()); 
@@ -92,7 +83,6 @@ namespace TextMeshDOTS.TextProcessing
                 marker = marker,
                 marker2 = marker2,
 
-                missingGlyphs = missingGlyphs.AsParallelWriter(),
                 missingGlyphsStream = missingGlyphStream.AsWriter(),
 
                 glyphTable = glyphTable,
@@ -127,25 +117,16 @@ namespace TextMeshDOTS.TextProcessing
                 missingGlyphs = missingGlyphsToAdd.AsDeferredJobArray()
             }.Schedule(missingGlyphsToAdd, 32, state.Dependency);
 
-            state.Dependency = new SortMissingGlyphJob
+            state.Dependency = new TempAddMissingGlyphsToFontEntitiesJob
             {
-                missingGlyphs = missingGlyphs,
-            }.Schedule(state.Dependency);
-
-            state.Dependency = new CopyMissingGlyphsToFontEntitiesJob
-            {
-                newMissingGlyphs = missingGlyphs,
-            }.ScheduleParallel(fontEntitiesQ, state.Dependency);
-
-            state.Dependency = new ClearMissingGlyphJob
-            {
-                missingGlyphs = missingGlyphs,
+                fontTable = fontTable,
+                missingGlyphs = missingGlyphsToAdd.AsDeferredJobArray(),
+                missingGlyphsLookup = SystemAPI.GetBufferLookup<MissingGlyphs>(false)
             }.Schedule(state.Dependency);
         }
         [BurstCompile]
         public void OnDestroy(ref SystemState state)
         {
-            if (missingGlyphs.IsCreated) missingGlyphs.Dispose();
             state.CompleteDependency();
             SystemAPI.GetSingletonRW<GlyphTable>().ValueRW.TryDispose(default).Complete();
         }
@@ -211,8 +192,8 @@ namespace TextMeshDOTS.TextProcessing
                     font = fontTable.GetOrCreateFont(missingGlyph.faceIndex, threadIndex);
                     var samplingSize = missingGlyph.textureSize.GetSamplingSize();
                     font.SetScale(samplingSize, samplingSize);
-                    //initialized = true; //initialized variable is currently not set, should this not be set to true here?
-                    //lastFont = fontPtr; //lastFont variable is currently not set, should this not be set here?
+                    initialized = true;
+                    lastFont = font;
                 }
                 font.GetGlyphExtents(missingGlyph.glyphIndex, out var extents);
 
@@ -237,6 +218,39 @@ namespace TextMeshDOTS.TextProcessing
                 var a = lastKey.packed & 0xffffffffffff0000;
                 var b = thisKey.packed & 0xffffffffffff0000;
                 return a != b;
+            }
+        }
+
+        [BurstCompile]
+        struct TempAddMissingGlyphsToFontEntitiesJob : IJob
+        {
+            [ReadOnly] public FontTable fontTable;
+            public NativeArray<GlyphTable.Key> missingGlyphs;
+
+            public BufferLookup<MissingGlyphs> missingGlyphsLookup;
+
+            public void Execute()
+            {
+                missingGlyphs.Sort(new KeySorter());
+
+                for (int i = 0; i < missingGlyphs.Length; i++)
+                {
+                    var key = missingGlyphs[i];
+                    var entity = fontTable.faceIndexToFontEntityMap[key.faceIndex];
+                    var buffer = missingGlyphsLookup[entity];
+                    buffer.Add(new MissingGlyphs { glyphID = key.glyphIndex });
+                }
+            }
+
+            struct KeySorter : IComparer<GlyphTable.Key>
+            {
+                public int Compare(GlyphTable.Key x, GlyphTable.Key y)
+                {
+                    var result = x.faceIndex.CompareTo(y.faceIndex);
+                    if (result == 0)
+                        return x.glyphIndex.CompareTo(y.glyphIndex);
+                    return result;
+                }
             }
         }
     }

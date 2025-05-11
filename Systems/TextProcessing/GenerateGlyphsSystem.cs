@@ -24,7 +24,7 @@ namespace TextMeshDOTS.TextProcessing
                       .Build();
 
             m_query = SystemAPI.QueryBuilder()
-                      .WithAllRW<RenderGlyph>()
+                      .WithAllRW<RenderGlyphOld>()
                       .WithAll<CalliByte>()
                       .WithAll<GlyphOTF>()
                       .WithAll<XMLTag>()
@@ -48,7 +48,7 @@ namespace TextMeshDOTS.TextProcessing
             SystemAPI.TryGetSingletonEntity<TextColorGradient>(out Entity textColorGradientEntity);
             state.Dependency = new GenerateRenderGlyphsJob
             {
-                renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
+                renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyphOld>(false),
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
                 fontTable = SystemAPI.GetSingleton<FontTable>(),

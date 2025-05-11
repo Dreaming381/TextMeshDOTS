@@ -178,35 +178,10 @@ namespace TextMeshDOTS
     public struct FontState : IComponentData { };
     public struct FontsDirtyTag : IComponentData { }
 
-    public struct FontEntityGlyph : IEquatable<FontEntityGlyph>
-    {
-        public Entity entity;   //link to Font Entities
-        public uint glyphID;
-
-        public bool Equals(FontEntityGlyph other)
-        {
-            return GetHashCode() == other.GetHashCode();
-        }
-
-        public override int GetHashCode()
-        {
-            int hashCode = 17;
-            hashCode = hashCode * -1521134295 + glyphID.GetHashCode();
-            hashCode = hashCode * -1521134295 + entity.GetHashCode();
-            return hashCode;
-        }
-    }
     public enum TextureType: byte
     {
         ARGB = 0,
         SDF = 1,
-    }
-    public struct FontEntityGlyphComparer : IComparer<FontEntityGlyph>
-    {
-        public int Compare(FontEntityGlyph a, FontEntityGlyph b)
-        {
-            return a.entity.CompareTo(b.entity);
-        }
     }
     #endregion
 }

@@ -10,7 +10,7 @@ namespace TextMeshDOTS.Rendering
     [BurstCompile]
     partial struct UpdateSingleFontJob : IJobEntity
     {
-        public unsafe void Execute(ref RenderBounds renderBounds, ref TextRenderControl textRenderControl, ref MaterialMeshInfo materialMeshInfo, in DynamicBuffer<RenderGlyph> renderGlyphBuffer)
+        public unsafe void Execute(ref RenderBounds renderBounds, ref TextRenderControl textRenderControl, ref MaterialMeshInfo materialMeshInfo, in DynamicBuffer<RenderGlyphOld> renderGlyphBuffer)
         {
             if ((textRenderControl.flags & TextRenderControl.Flags.Dirty) != TextRenderControl.Flags.Dirty)
                 return;

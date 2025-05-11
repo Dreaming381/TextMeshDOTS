@@ -1,3 +1,5 @@
+using TextMeshDOTS.HarfBuzz;
+using TextMeshDOTS.TextProcessing;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -7,7 +9,7 @@ using UnityEngine;
 namespace TextMeshDOTS.Rendering
 {
     /// <summary>
-    /// When changed RenderGlyph chunks are detected, the system builds the entire gpuTextBuffer fresh. Uploads 
+    /// When changed RenderGlyphOld chunks are detected, the system builds the entire gpuTextBuffer fresh. Uploads 
     /// into  gpuTextBuffer start at offset 0, TextShaderIndex.firstGlyphIndex also starting at 0. Patching up 
     /// chunks to accomodate changed chunks appears complicated, prone to fragmentation 
     /// --> research if it's worth it and how to do
@@ -51,17 +53,17 @@ namespace TextMeshDOTS.Rendering
         {
             //query single font entitities, and parents entities that have multiple fonts (have AdditionalFontMaterialEntity)
             m_glyphsQuery = SystemAPI.QueryBuilder()
-                       .WithAll<RenderGlyph, TextRenderControl, RenderBounds>()
+                       .WithAll<RenderGlyphOld, TextRenderControl, RenderBounds>()
                        .WithAllRW<TextShaderIndex>()
                        .Build();
 
-            //same as m_glyphsQuery, except detecing changes is RenderGlyph. This system will only run and
+            //same as m_glyphsQuery, except detecing changes is RenderGlyphOld. This system will only run and
             //fully rebuild all GPU buffer when this query has entities
             m_changedGlyphsQuery = SystemAPI.QueryBuilder()
-                       .WithAll<RenderGlyph, TextRenderControl, RenderBounds>()
+                       .WithAll<RenderGlyphOld, TextRenderControl, RenderBounds>()
                        .WithAll<TextShaderIndex>()
                        .Build();
-            m_changedGlyphsQuery.SetChangedVersionFilter(ComponentType.ReadWrite<RenderGlyph>());
+            m_changedGlyphsQuery.SetChangedVersionFilter(ComponentType.ReadWrite<RenderGlyphOld>());
             m_changedGlyphsQuery.AddChangedVersionFilter(ComponentType.ReadWrite<TextRenderControl>());
 
             //query all entities having a mask, regardless if they are parent (= have AdditionalFontMaterialEntity) or child 
@@ -72,7 +74,7 @@ namespace TextMeshDOTS.Rendering
 
             //query parents entities that have multiple fonts (have AdditionalFontMaterialEntity)
             m_glyphsAndMasksQuery = SystemAPI.QueryBuilder()
-                        .WithAll<RenderGlyph, TextRenderControl, RenderBounds>()
+                        .WithAll<RenderGlyphOld, TextRenderControl, RenderBounds>()
                         .WithAll<TextShaderIndex, TextMaterialMaskShaderIndex, RenderGlyphMask>()
                         .WithAll<AdditionalFontMaterialEntity>()
                         .Build();
@@ -116,6 +118,14 @@ namespace TextMeshDOTS.Rendering
 
             if (m_changedGlyphsQuery.IsEmpty)
                 return;
+
+            new TempPatchUVsJob
+            {
+                atlasLookup = SystemAPI.GetComponentLookup<AtlasData>(true),
+                dynamicFontLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(true),
+                fontTable = SystemAPI.GetSingleton<FontTable>(),
+                glyphTable = SystemAPI.GetSingleton<GlyphTable>()
+            }.ScheduleParallel(m_changedGlyphsQuery);
             
             try
             {
@@ -148,7 +158,7 @@ namespace TextMeshDOTS.Rendering
             var collectGlyphsJh = new GatherGlyphUploadOperationsJobChunk
             {
                 glyphCountThisFrameLookup = SystemAPI.GetComponentLookup<GlyphCountThisFrame>(false),
-                renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(true),
+                renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyphOld>(true),
                 glyphMaskHandle = SystemAPI.GetBufferTypeHandle<RenderGlyphMask>(true),
                 streamWriter = glyphStream.AsWriter(),
                 textShaderIndexHandle = SystemAPI.GetComponentTypeHandle<TextShaderIndex>(false),

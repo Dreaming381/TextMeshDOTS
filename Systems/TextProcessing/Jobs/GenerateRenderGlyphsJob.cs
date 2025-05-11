@@ -10,7 +10,7 @@ namespace TextMeshDOTS.TextProcessing
     [BurstCompile]    
     public partial struct GenerateRenderGlyphsJob : IJobChunk
     {
-        public BufferTypeHandle<RenderGlyph> renderGlyphHandle;
+        public BufferTypeHandle<RenderGlyphOld> renderGlyphHandle;
         public ComponentTypeHandle<TextRenderControl> textRenderControlHandle;
 
         [ReadOnly] internal FontTable fontTable;

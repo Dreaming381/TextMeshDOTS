@@ -4,7 +4,7 @@ using Unity.Rendering;
 
 // If you are providing a frontend, listen up!
 // Your objective is to query for all entities with two components:
-// RenderGlyph and TextRenderControl.
+// RenderGlyphOld and TextRenderControl.
 // Write to them in PresentationSystemGroup before KinemationRenderUpdateSuperSystem
 // which is inside UpdatePresentationSystemGroup.
 // If you change anything on any of the RenderGlyphs, or resize the buffer,
@@ -13,7 +13,7 @@ using Unity.Rendering;
 // For baking, you must bake whatever data you require to populate the RenderGlyphs.
 // In the namespace Latios.Kinemation.TextBackend.Authoring, call the IBaker extension
 // method BakeTextBackendMeshAndMaterial() to set up the rendering side. This will add
-// the required RenderGlyph and TextRenderControl components as well as internal rendering
+// the required RenderGlyphOld and TextRenderControl components as well as internal rendering
 // components.
 //
 // How it works:
@@ -37,6 +37,39 @@ using Unity.Rendering;
 
 namespace TextMeshDOTS.Rendering
 {
+    /// <summary>
+    /// The glyphs to be rendered based on the processed CalliByte buffer.
+    /// Copy this buffer to AnimatedRenderGlyph to apply animation to the data.
+    /// </summary>
+    [InternalBufferCapacity(0)]
+    public struct RenderGlyph : IBufferElementData
+    {
+        public float2 blPosition;
+        public float2 brPosition;
+        public float2 tlPosition;
+        public float2 trPosition;
+
+        public float2 blUVB;
+        public float2 brUVB;
+        public float2 tlUVB;
+        public float2 trUVB;
+
+        public half4 blColor;
+        public half4 brColor;
+        public half4 tlColor;
+        public half4 trColor;
+
+        // These should be normalized relative to the padded bounding box extents of [0, 1]
+        // The uploader will patch these with the atlas coordinates using math.lerp()
+        public float2 blUVA;
+        public float2 trUVA;
+
+        public uint arrayIndex;  // Converted to float in upload shader
+        public uint glyphEntryId;
+        public float scale;
+        public uint reserved;
+    }
+
     [MaterialProperty("_TextShaderIndex")]
     public struct TextShaderIndex : IComponentData
     {
@@ -53,7 +86,7 @@ namespace TextMeshDOTS.Rendering
 
     /// <summary> 96 byte glyph data </summary>
     [InternalBufferCapacity(0)]
-    public struct RenderGlyph : IBufferElementData
+    public struct RenderGlyphOld : IBufferElementData
     {
         public float2 blPosition;   //0
         public float2 trPosition;   //8   
@@ -139,7 +172,7 @@ namespace TextMeshDOTS.Rendering
 
     /// <summary>
     /// An additional rendered text entity containing a different font and material.
-    /// The additional entity shares the RenderGlyph buffer, and uses a mask to identify
+    /// The additional entity shares the RenderGlyphOld buffer, and uses a mask to identify
     /// the glyphs to render.
     /// </summary>
     [InternalBufferCapacity(0)]

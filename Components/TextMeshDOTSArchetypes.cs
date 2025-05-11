@@ -50,7 +50,7 @@ namespace TextMeshDOTS
             componentTypeStaging[3] = ComponentType.ReadWrite<GlyphOTF>();
             componentTypeStaging[4] = ComponentType.ReadWrite<CalliByte>();
             componentTypeStaging[5] = ComponentType.ReadWrite<XMLTag>();
-            componentTypeStaging[6] = ComponentType.ReadWrite<RenderGlyph>();
+            componentTypeStaging[6] = ComponentType.ReadWrite<RenderGlyphOld>();
             componentTypeStaging[7] = ComponentType.ReadWrite<TextShaderIndex>();
             componentTypeStaging[8] = ComponentType.ReadWrite<LocalTransform>();
             componentTypeStaging[9] = ComponentType.ReadWrite<LocalToWorld>();
@@ -72,7 +72,7 @@ namespace TextMeshDOTS
             componentTypeStaging[3] = ComponentType.ReadWrite<GlyphOTF>();
             componentTypeStaging[4] = ComponentType.ReadWrite<CalliByte>();
             componentTypeStaging[5] = ComponentType.ReadWrite<XMLTag>();
-            componentTypeStaging[6] = ComponentType.ReadWrite<RenderGlyph>();
+            componentTypeStaging[6] = ComponentType.ReadWrite<RenderGlyphOld>();
             componentTypeStaging[7] = ComponentType.ReadWrite<RenderGlyphMask>();
             componentTypeStaging[8] = ComponentType.ReadWrite<TextShaderIndex>();
             componentTypeStaging[9] = ComponentType.ReadWrite<TextMaterialMaskShaderIndex>();
