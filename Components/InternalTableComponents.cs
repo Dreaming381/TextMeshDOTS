@@ -4,6 +4,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -57,9 +58,11 @@ namespace TextMeshDOTS.HarfBuzz
                     }
                     list.Dispose();
                 }
-                foreach (var entry in table.faces)
+                foreach (var face in table.faces)
                 {
-                    // Todo: Destroy Face object once the table owns it.
+                    if (face.ptr == IntPtr.Zero)
+                        continue;
+                    face.Dispose();
                 }
 
                 // Todo: Destroy Blob objects.

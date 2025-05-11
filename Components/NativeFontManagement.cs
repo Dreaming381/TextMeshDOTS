@@ -1,13 +1,10 @@
 using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.HarfBuzz.Bitmap;
 using System;
-using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TextCore;
-using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
@@ -33,7 +30,7 @@ namespace TextMeshDOTS
     [InternalBufferCapacity(0)]
     public struct MissingGlyphs : IBufferElementData
     {
-        public uint glyphID;
+        internal GlyphTable.Key key;
     }
     
     /// <summary> ID's of glyphs currently placed in the texture atlas. Keep order aligend with UsedGlyphRects </summary>

@@ -5,8 +5,6 @@ using Unity.Profiling;
 using Unity.Jobs;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Burst;
-using Unity.Mathematics;
-using TextMeshDOTS.Rendering;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -64,6 +62,7 @@ namespace TextMeshDOTS.TextProcessing
             var glyphsToPlace = new NativeList<GlyphBlob>(1024, Allocator.TempJob);
             var placedGlyphs = new NativeList<GlyphBlob> (1024, Allocator.TempJob);
             var fontTable = SystemAPI.GetSingleton<FontTable>();
+            var glyphTable = SystemAPI.GetSingleton<GlyphTable>();
             var fontAssetMetadataLookup = SystemAPI.GetComponentLookup<FontAssetMetadata>(true); //temporary link between FontTable and Font Entities
             var atlasDataLookup = SystemAPI.GetComponentLookup<AtlasData>(true);
             var drawAndPaintFunctionsLookup = SystemAPI.GetComponentLookup<DrawAndPaintFunctions>(true);
@@ -75,19 +74,7 @@ namespace TextMeshDOTS.TextProcessing
 
             for (int i = 0, ii = fontsRequiringUpdate.Length; i < ii; i++)
             {
-                var fontEntity = fontsRequiringUpdate[i];
-
-                ////for unknown reasons, parallel processing backfires: each thread takes as long as a single job thread) 
-                //var missingGlyphsBuffer = missingGlyphsLookup[fontEntity].Reinterpret<uint>();
-                //var glyphExtents = new NativeList<GlyphExtents>(missingGlyphsBuffer.Length, state.WorldUpdateAllocator);
-                //var getGlyphExtentsJob = new GetGlyphExtentsJob()
-                //{
-                //    glyphExtents = glyphExtents.AsParallelWriter(),
-                //    fontEntity = fontEntity,
-                //    nativeFontPointerLookup = nativeFontPointerLookup,
-                //    missingGlyphsBuffer = missingGlyphsBuffer,
-                //};
-                //state.Dependency = getGlyphExtentsJob.Schedule(missingGlyphsBuffer.Length, 1, state.Dependency);
+                var fontEntity = fontsRequiringUpdate[i];                
 
                 var getGlyphRectsJob = new GetGlyphRectsJob()
                 {
@@ -95,6 +82,7 @@ namespace TextMeshDOTS.TextProcessing
 
                     fontEntity = fontEntity,
                     fontTable = fontTable,
+                    glyphTable = glyphTable,
                     fontAssetMetadataLookup = fontAssetMetadataLookup, //temporary link between FontTable and Font Entities
                     atlasDataLookup = atlasDataLookup,                    
 

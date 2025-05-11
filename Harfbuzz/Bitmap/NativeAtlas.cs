@@ -33,13 +33,14 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 int bestLongSideScore = int.MaxValue;
                 int bestGlyphID = 0;
                 GlyphRect bestRect = default;
+                GlyphTable.Entry glyphEntry;
                 for (int i = 0, length= glyphsToPlace.Length; i<length; i++)
                 {
-                    var glyphExtents = glyphsToPlace[i].glyphExtents;
+                    glyphEntry = glyphsToPlace[i].entry;
                     int shortSideScore = int.MaxValue;
                     int longSideScore = int.MaxValue;
 
-                    var idealRect = FindIdealRect(glyphExtents.width + doublePadding, glyphExtents.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
+                    var idealRect = FindIdealRect(glyphEntry.width + doublePadding, glyphEntry.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
 
                     if (shortSideScore < bestShortSideScore || (shortSideScore == bestShortSideScore && longSideScore < bestLongSideScore))
                     {
@@ -54,9 +55,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 {
                     RemoveRectFromFreeList(bestRect, freeRects);
                     var currentGlyph = glyphsToPlace[bestGlyphID];
-                    var glyphExtents =currentGlyph.glyphExtents;
+                    glyphEntry = currentGlyph.entry;
                     usedRects.Add(bestRect);
-                    usedGlyphs.Add(currentGlyph.glyphID);
+                    usedGlyphs.Add(glyphEntry.key.glyphIndex);
                     
                     //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlas texture window.
                     //the glyph (bounded by glyphExtents) will be renderered into the center of this window
@@ -65,8 +66,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     {
                         x = bestRect.x + padding,
                         y = bestRect.y + padding,
-                        width = glyphExtents.width,
-                        height = glyphExtents.height
+                        width = glyphEntry.width,
+                        height = glyphEntry.height
                     };
                     
                     placedGlyphs.Add(currentGlyph);
@@ -92,15 +93,15 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             int longSideScore = int.MaxValue;
 
             //var glyphRect = glyph.atlasRect;
-            var glyphExtents = glyphToPlace.glyphExtents;
-            var idealRect = FindIdealRect(glyphExtents.width + doublePadding, glyphExtents.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
+            var glyphEntry = glyphToPlace.entry;
+            var idealRect = FindIdealRect(glyphEntry.width + doublePadding, glyphEntry.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
             if (idealRect.width > 0 && idealRect.height > 0)
             {
                 //usedRects.Add(idealRect);
                 //return true;
                 RemoveRectFromFreeList(idealRect, freeRects);
                 usedRects.Add(idealRect);
-                glyphsInUse.Add(glyphToPlace.glyphID);
+                glyphsInUse.Add(glyphToPlace.entry.key.glyphIndex);
 
                 //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlast Texture windows.
                 //the glyph (dounded by glyphExtents) will be renderered into the center of this windows
@@ -109,15 +110,15 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 {
                     x = idealRect.x + padding,
                     y = idealRect.y + padding,
-                    width = glyphExtents.width,
-                    height = glyphExtents.height
+                    width = glyphEntry.width,
+                    height = glyphEntry.height
                 };
                 placedGlyph = glyphToPlace;
                 return true;
             }
             else
             {
-                Debug.Log($"Ran out of Space: glyph {glyphExtents} could not be placed");
+                Debug.Log($"Ran out of Space: glyph {glyphEntry} could not be placed");
                 placedGlyph = default;
                 return false; //no room left
             }

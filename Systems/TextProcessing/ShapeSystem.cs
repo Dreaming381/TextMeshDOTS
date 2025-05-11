@@ -39,11 +39,7 @@ namespace TextMeshDOTS.TextProcessing
                 .WithAllRW<CalliByte>()           
                 .WithAll<TextBaseConfiguration>()
                 .WithAll<FontBlobReference>()
-                .Build();            
-
-            //do not filter on query in release version, rather determine in jobs if chunk needs to be processed or not
-            //textRendererQ.SetChangedVersionFilter(ComponentType.ReadWrite<CalliByte>()); 
-            //textRendererQ.AddChangedVersionFilter(ComponentType.ReadWrite<TextBaseConfiguration>());
+                .Build();
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             state.RequireForUpdate(fontstateQ);
@@ -195,6 +191,13 @@ namespace TextMeshDOTS.TextProcessing
                     initialized = true;
                     lastFont = font;
                 }
+
+                // performance watchout:  hb_font_get_glyph_extents is a very costly function.
+                // For a COLR glyph, rect is determined by parsing all vertices of maybe 20 sub-glyphs
+                // in my tests getting glyph extents in parallel resulted in
+                // total time = thread * (single thread time) 
+                // reason unknown. Could be mutex lock. Or single thread benefits more
+                // from font acceleration structures populated with each hb_font_get_glyph_extents call
                 font.GetGlyphExtents(missingGlyph.glyphIndex, out var extents);
 
                 var newEntry = new GlyphTable.Entry
@@ -238,7 +241,7 @@ namespace TextMeshDOTS.TextProcessing
                     var key = missingGlyphs[i];
                     var entity = fontTable.faceIndexToFontEntityMap[key.faceIndex];
                     var buffer = missingGlyphsLookup[entity];
-                    buffer.Add(new MissingGlyphs { glyphID = key.glyphIndex });
+                    buffer.Add(new MissingGlyphs { key = key });
                 }
             }
 

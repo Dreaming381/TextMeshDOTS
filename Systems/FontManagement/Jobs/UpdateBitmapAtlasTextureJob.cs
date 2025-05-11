@@ -6,7 +6,6 @@ using Unity.Entities;
 using UnityEngine.TextCore;
 using UnityEngine;
 using TextMeshDOTS.HarfBuzz;
-using Font = TextMeshDOTS.HarfBuzz.Font;
 using Unity.Collections.LowLevel.Unsafe;
 
 namespace TextMeshDOTS.TextProcessing
@@ -38,7 +37,7 @@ namespace TextMeshDOTS.TextProcessing
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
             var glyphBlob = placedGlyphs[i];
-            if (glyphBlob.glyphExtents.width == 0 && glyphBlob.glyphExtents.height ==0)
+            if (glyphBlob.entry.width == 0 && glyphBlob.entry.height ==0)
                 return;//glyph has no size, nothing needs to be renderered/added to texture
 
             var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
@@ -53,12 +52,13 @@ namespace TextMeshDOTS.TextProcessing
             var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);
             var paintData = new PaintData(drawAndPaintFunctions.drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
             marker.Begin();
-            font.PaintGlyph(glyphBlob.glyphID, ref paintData, drawAndPaintFunctions.paintFunctions, 0, new ColorARGB(255, 0, 0, 0));
+            uint glyphIndex = glyphBlob.entry.key.glyphIndex;
+            font.PaintGlyph(glyphIndex, ref paintData, drawAndPaintFunctions.paintFunctions, 0, new ColorARGB(255, 0, 0, 0));
 
-            var glyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphBlob.glyphID);
-            if (glyphIndex != -1)
+            var usedGlyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphIndex);
+            if (usedGlyphIndex != -1)
             {
-                var atlasRect = usedGlyphRects[glyphIndex]; //render Bitmap into the reserved padded atlas texture  window 
+                var atlasRect = usedGlyphRects[usedGlyphIndex]; //render Bitmap into the reserved padded atlas texture  window 
                 if (paintData.imageData.Length > 0)//render PNG and SVG
                 {
                     //not implemented due to managed code
@@ -84,7 +84,7 @@ namespace TextMeshDOTS.TextProcessing
                 }
             }
             else
-                Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");            
+                Debug.Log($"{glyphBlob.entry.key.glyphIndex} not found {usedGlyphs.Length}");            
 
             marker.End();
         }

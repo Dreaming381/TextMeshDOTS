@@ -7,7 +7,6 @@ using UnityEngine.TextCore;
 using UnityEngine;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.Bitmap;
-using Font = TextMeshDOTS.HarfBuzz.Font;
 using Unity.Collections.LowLevel.Unsafe;
 
 namespace TextMeshDOTS.TextProcessing
@@ -38,7 +37,7 @@ namespace TextMeshDOTS.TextProcessing
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
             var glyphBlob = placedGlyphs[i];
-            if (glyphBlob.glyphExtents.width == 0 && glyphBlob.glyphExtents.height == 0)
+            if (glyphBlob.entry.width == 0 && glyphBlob.entry.height == 0)
                 return;//glyph has no size, nothing needs to be renderered/added to texture
 
             var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
@@ -51,18 +50,19 @@ namespace TextMeshDOTS.TextProcessing
 
             var drawData = new DrawData(256, 16, maxDeviation, Allocator.Temp);
             marker.Begin();
-            font.DrawGlyph(glyphBlob.glyphID, drawAndPaintFunctions.drawFunctions, ref drawData);
+            uint glyphIndex = glyphBlob.entry.key.glyphIndex;
+            font.DrawGlyph(glyphIndex, drawAndPaintFunctions.drawFunctions, ref drawData);
 
-            var glyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphBlob.glyphID);
-            if (glyphIndex != -1)
+            var usedGlyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphIndex);
+            if (usedGlyphIndex != -1)
             {
                 //render SDF into the reserved padded atlas texture  window 
-                var atlasRect = usedGlyphRects[glyphIndex];
+                var atlasRect = usedGlyphRects[usedGlyphIndex];
                 //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
                 SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation, ref drawData, textureData, atlasRect, atlasData.padding, atlasData.atlasWidth, atlasData.atlasHeight, atlasData.padding);
             }
             else
-                Debug.Log($"{glyphBlob.glyphID} not found {usedGlyphs.Length}");
+                Debug.Log($"{glyphBlob.entry.key.glyphIndex} not found {usedGlyphs.Length}");
             marker.End();
         }
     }    

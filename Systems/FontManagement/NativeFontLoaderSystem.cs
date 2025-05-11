@@ -232,6 +232,9 @@ namespace TextMeshDOTS.TextProcessing
                     fontTable.perThreadFontCaches[i] = list;
                 }
             }
+
+            //blob can be disposed here, face and font are disposed at world shutdown via FontTable.TryDispose 
+            blob.Dispose();
         }        
     }
 }

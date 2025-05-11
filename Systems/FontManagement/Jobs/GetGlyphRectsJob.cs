@@ -7,8 +7,6 @@ using TextMeshDOTS.HarfBuzz.Bitmap;
 using UnityEngine;
 using Unity.Collections.LowLevel.Unsafe;
 using TextMeshDOTS.HarfBuzz;
-using Font = TextMeshDOTS.HarfBuzz.Font;
-using static Codice.CM.WorkspaceServer.DataStore.WkTree.WriteWorkspaceTree;
 
 
 namespace TextMeshDOTS.TextProcessing
@@ -22,8 +20,8 @@ namespace TextMeshDOTS.TextProcessing
 
         [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
         [ReadOnly] public FontTable fontTable;
-        //[ReadOnly] public ComponentLookup<FontAssetRef> fontAssetRefLookup; //temporary link between Font Entities and FontTable
-        [ReadOnly] public ComponentLookup<FontAssetMetadata> fontAssetMetadataLookup;
+        [ReadOnly] public GlyphTable glyphTable;
+        [ReadOnly] public ComponentLookup<FontAssetMetadata> fontAssetMetadataLookup; //temporary link between Font Entities and FontTable
 
         public BufferLookup<MissingGlyphs> missingGlyphsBuffer;
         public BufferLookup<UsedGlyphs> usedGlyphsBuffer;
@@ -36,7 +34,7 @@ namespace TextMeshDOTS.TextProcessing
         public void Execute()
         {
             var atlasData = atlasDataLookup[fontEntity];
-            var missingGlyphs = missingGlyphsBuffer[fontEntity].Reinterpret<uint>();
+            var missingGlyphs = missingGlyphsBuffer[fontEntity];
             var usedGlyphs = usedGlyphsBuffer[fontEntity].Reinterpret<uint>();
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
             var freeGlyphRects = freeGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
@@ -51,12 +49,10 @@ namespace TextMeshDOTS.TextProcessing
 
             for (int i = 0, ii = missingGlyphs.Length; i < ii; i++)
             {
-                var glyphID = missingGlyphs[i];
-                //GetGlyphExtends is a very costly function. For a COLR glyph, rect is determined by parsing all vertices of maybe 20 sub-glyphs
-                //calling it in parallel makes things worse (mutex lock?)
-                font.GetGlyphExtents(glyphID, out GlyphExtents extends);
-                
-                var hbGlyph = new GlyphBlob { glyphID = glyphID, glyphExtents = extends};
+                var glyphID = glyphTable.glyphHashToIdMap[missingGlyphs[i].key];
+                var glyphEntry = glyphTable.GetEntry(glyphID);
+
+                var hbGlyph = new GlyphBlob { entry=glyphEntry };
                 glyphsToPlace.Add(hbGlyph);
             };
             var success = NativeAtlas.AddGlyphs(atlasData.padding, glyphsToPlace, placedGlyphs, usedGlyphs, usedGlyphRects, freeGlyphRects);

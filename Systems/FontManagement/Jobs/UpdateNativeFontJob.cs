@@ -7,6 +7,7 @@ using TextMeshDOTS.HarfBuzz;
 using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Entities.UniversalDelegates;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -95,10 +96,9 @@ namespace TextMeshDOTS.TextProcessing
 
             int count = placedGlyphs.Length == 0 ? 1 : placedGlyphs.Length;
             var characterHashMapBuilder = builder.AllocateHashMap(ref fontBlobRoot.glyphs, count);
-            foreach (var glyph in placedGlyphs)
-            {
-                var glyphBlob = new GlyphBlob { glyphID = glyph.glyphID, glyphExtents = glyph.glyphExtents, glyphRect = glyph.glyphRect };
-                characterHashMapBuilder.Add(glyph.glyphID, glyphBlob);
+            foreach (var glyphBlob in placedGlyphs)
+            {                
+                characterHashMapBuilder.Add(glyphBlob.entry.key.glyphIndex, glyphBlob);
                 //UnityEngine.Debug.Log($"Added glyph ID: {glyph.glyphID} to {fontEntity.ToFixedString()}");
             }
 
@@ -107,7 +107,7 @@ namespace TextMeshDOTS.TextProcessing
             fontBlobRoot = result.Value; //is this really needed as it was just constructed in place?
             return result;
         }
-        public static void PatchDynamicFontData(ref BlobAssetReference<DynamicFontBlob> dynamicFontDataReference, NativeList<GlyphBlob> newGlyphs)
+        public static void PatchDynamicFontData(ref BlobAssetReference<DynamicFontBlob> dynamicFontDataReference, NativeList<GlyphBlob> newGlyphBlobs)
         {
             ref var dynamicFontData = ref dynamicFontDataReference.Value;
             var builder = new BlobBuilder(Allocator.Temp);
@@ -130,16 +130,16 @@ namespace TextMeshDOTS.TextProcessing
             fontBlobRoot.capHeight = dynamicFontData.capHeight;
             fontBlobRoot.xHeight = dynamicFontData.xHeight;
 
-            var newLength = dynamicFontData.glyphs.Count + newGlyphs.Length;
+            var newLength = dynamicFontData.glyphs.Count + newGlyphBlobs.Length;
 
             var characterHashMapBuilder = builder.AllocateHashMap(ref fontBlobRoot.glyphs, newLength);
 
-            var oldGlyphs = dynamicFontData.glyphs.GetValueArray(Allocator.Temp);
-            for (int i = 0, length = oldGlyphs.Length; i < length; i++)
-                characterHashMapBuilder.Add(oldGlyphs[i].glyphID, oldGlyphs[i]);
+            var oldGlyphBlobs = dynamicFontData.glyphs.GetValueArray(Allocator.Temp);
+            foreach (var oldGlyphBlob in oldGlyphBlobs)
+                characterHashMapBuilder.Add(oldGlyphBlob.entry.key.glyphIndex, oldGlyphBlob);            
 
-            for (int i = 0, length = newGlyphs.Length; i < length; i++)
-                characterHashMapBuilder.Add(newGlyphs[i].glyphID, newGlyphs[i]);
+            foreach (var newGlyphBlob in newGlyphBlobs)
+                characterHashMapBuilder.Add(newGlyphBlob.entry.key.glyphIndex, newGlyphBlob);
 
             var result = builder.CreateBlobAssetReference<DynamicFontBlob>(Allocator.Persistent);
             builder.Dispose();
