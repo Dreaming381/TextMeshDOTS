@@ -18,8 +18,9 @@ namespace TextMeshDOTS.TextProcessing
 
         public Entity fontEntity;
         [ReadOnly] public FontTable fontTable;
+        [ReadOnly] public GlyphTable glyphTable;
         [ReadOnly] public ComponentLookup<FontAssetMetadata> fontAssetMetadataLookup; //temporary link between Font Entities and FontTable
-        [ReadOnly] public NativeList<GlyphBlob> placedGlyphs;
+        [ReadOnly] public NativeList<GlyphTable.Key> placedGlyphs;
         [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
         [ReadOnly] public ComponentLookup<DrawAndPaintFunctions> drawAndPaintFunctionsLookup;
         [ReadOnly] public BufferLookup<UsedGlyphs> usedGlyphsBuffer;
@@ -36,8 +37,10 @@ namespace TextMeshDOTS.TextProcessing
             var usedGlyphs = usedGlyphsBuffer[fontEntity].Reinterpret<uint>();
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
-            var glyphBlob = placedGlyphs[i];
-            if (glyphBlob.entry.width == 0 && glyphBlob.entry.height == 0)
+            var glyphID = glyphTable.glyphHashToIdMap[placedGlyphs[i]];
+            var glyphEntry = glyphTable.GetEntry(glyphID);
+
+            if (glyphEntry.width == 0 && glyphEntry.height == 0)
                 return;//glyph has no size, nothing needs to be renderered/added to texture
 
             var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
@@ -50,7 +53,7 @@ namespace TextMeshDOTS.TextProcessing
 
             var drawData = new DrawData(256, 16, maxDeviation, Allocator.Temp);
             marker.Begin();
-            uint glyphIndex = glyphBlob.entry.key.glyphIndex;
+            uint glyphIndex = glyphEntry.key.glyphIndex;
             font.DrawGlyph(glyphIndex, drawAndPaintFunctions.drawFunctions, ref drawData);
 
             var usedGlyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphIndex);
@@ -62,7 +65,7 @@ namespace TextMeshDOTS.TextProcessing
                 SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation, ref drawData, textureData, atlasRect, atlasData.padding, atlasData.atlasWidth, atlasData.atlasHeight, atlasData.padding);
             }
             else
-                Debug.Log($"{glyphBlob.entry.key.glyphIndex} not found {usedGlyphs.Length}");
+                Debug.Log($"{glyphEntry.key.glyphIndex} not found {usedGlyphs.Length}");
             marker.End();
         }
     }    

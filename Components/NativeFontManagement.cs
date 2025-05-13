@@ -61,7 +61,6 @@ namespace TextMeshDOTS
         public UnityObjectRef<Texture2D> texture;        
         public BatchMaterialID fontMaterialID;
         public BatchMeshID backendMeshID;
-        public BlobAssetReference<DynamicFontBlob> blob;
     }
 
     /// <summary> Contains  relevant data from loading and using font</summary>

@@ -17,8 +17,9 @@ namespace TextMeshDOTS.TextProcessing
 
         public Entity fontEntity;
         [ReadOnly] public FontTable fontTable;
+        [ReadOnly] public GlyphTable glyphTable;
         [ReadOnly] public ComponentLookup<FontAssetMetadata> fontAssetMetadataLookup; //temporary link between Font Entities and FontTable
-        [ReadOnly] public NativeList<GlyphBlob> placedGlyphs;
+        [ReadOnly] public NativeList<GlyphTable.Key> placedGlyphs;
         [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
         [ReadOnly] public ComponentLookup<DrawAndPaintFunctions> drawAndPaintFunctionsLookup;
 
@@ -36,23 +37,21 @@ namespace TextMeshDOTS.TextProcessing
             var usedGlyphs = usedGlyphsBuffer[fontEntity].Reinterpret<uint>();
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
 
-            var glyphBlob = placedGlyphs[i];
-            if (glyphBlob.entry.width == 0 && glyphBlob.entry.height ==0)
+            var glyphID = glyphTable.glyphHashToIdMap[placedGlyphs[i]];
+            var glyphEntry = glyphTable.GetEntry(glyphID);
+
+            if (glyphEntry.width == 0 && glyphEntry.height == 0)
                 return;//glyph has no size, nothing needs to be renderered/added to texture
 
             var fontAssetMetaData = fontAssetMetadataLookup[fontEntity];
-            var face = fontTable.faces[fontAssetMetaData.faceIndex];
             var font = fontTable.GetOrCreateFont(fontAssetMetaData.faceIndex, threadIndex);
             var samplingSize = FontTextureSize.Normal.GetSamplingSize();
             font.SetScale(samplingSize, samplingSize);
 
-            //var font = new Font(faceEntry.facePtr);
-            //font.SetScale(64, 64);
-
             var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);
             var paintData = new PaintData(drawAndPaintFunctions.drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
             marker.Begin();
-            uint glyphIndex = glyphBlob.entry.key.glyphIndex;
+            uint glyphIndex = glyphEntry.key.glyphIndex;
             font.PaintGlyph(glyphIndex, ref paintData, drawAndPaintFunctions.paintFunctions, 0, new ColorARGB(255, 0, 0, 0));
 
             var usedGlyphIndex = usedGlyphs.Reinterpret<uint>().AsNativeArray().IndexOf(glyphIndex);
@@ -84,7 +83,7 @@ namespace TextMeshDOTS.TextProcessing
                 }
             }
             else
-                Debug.Log($"{glyphBlob.entry.key.glyphIndex} not found {usedGlyphs.Length}");            
+                Debug.Log($"{glyphEntry.key.glyphIndex} not found {usedGlyphs.Length}");            
 
             marker.End();
         }

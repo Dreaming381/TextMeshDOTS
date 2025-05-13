@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using System.Runtime.CompilerServices;
 using UnityEngine.TextCore;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {    
@@ -15,10 +16,11 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             freeGlyphRectsBuffer.Reinterpret<GlyphRect>().Add(new GlyphRect(0, 0, atlasWidth, atlasHeight));
         }
 
-        public static bool AddGlyphs(
+        internal static bool AddGlyphs(
+            ref GlyphTable glyphTable,
             int padding,
-            NativeList<GlyphBlob> glyphsToPlace,
-            NativeList<GlyphBlob> placedGlyphs,
+            DynamicBuffer<GlyphTable.Key> missingGlyphs,
+            NativeList<GlyphTable.Key> placedGlyphs,
             DynamicBuffer<uint> usedGlyphs,
             DynamicBuffer<GlyphRect> usedRects,
             DynamicBuffer<GlyphRect> freeRects)
@@ -27,16 +29,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             //our current freeRect list. Then start again.
             //Sorting improves nothing, algorithm always finds best glyph to place
             var doublePadding = 2 * padding;
-            while (glyphsToPlace.Length > 0)
+            while (missingGlyphs.Length > 0)
             {                
                 int bestShortSideScore = int.MaxValue;
                 int bestLongSideScore = int.MaxValue;
                 int bestGlyphID = 0;
                 GlyphRect bestRect = default;
-                GlyphTable.Entry glyphEntry;
-                for (int i = 0, length= glyphsToPlace.Length; i<length; i++)
+                for (int i = 0, length= missingGlyphs.Length; i < length; i++)
                 {
-                    glyphEntry = glyphsToPlace[i].entry;
+                    var glyphID = glyphTable.glyphHashToIdMap[missingGlyphs[i]];
+                    var glyphEntry = glyphTable.GetEntry(glyphID);
+
                     int shortSideScore = int.MaxValue;
                     int longSideScore = int.MaxValue;
 
@@ -54,24 +57,22 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 if (bestRect.width > 0 && bestRect.height > 0)
                 {
                     RemoveRectFromFreeList(bestRect, freeRects);
-                    var currentGlyph = glyphsToPlace[bestGlyphID];
-                    glyphEntry = currentGlyph.entry;
+                    var currentGlyph = missingGlyphs[bestGlyphID];
+                    var glyphID = glyphTable.glyphHashToIdMap[currentGlyph];
+                    ref var glyphEntry = ref glyphTable.GetEntryRW(glyphID);
+
+                    //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlas texture window.
+                    //the glyph (bounded by glyphExtents) will be renderered into the center of this window
+                    //GlyphRect needs to point to non-padded Glyph, and NOT to the entire padded atlas texture window                    
+                    glyphEntry.x = (short)(bestRect.x + padding);
+                    glyphEntry.y = (short)(bestRect.y + padding);
+                    glyphEntry.padding = (short)padding;                    
+
                     usedRects.Add(bestRect);
                     usedGlyphs.Add(glyphEntry.key.glyphIndex);
                     
-                    //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlas texture window.
-                    //the glyph (bounded by glyphExtents) will be renderered into the center of this window
-                    //GlyphRect needs to point to non-padded Glyph, and NOT to the entire padded atlas texture window
-                    currentGlyph.glyphRect = new GlyphRect
-                    {
-                        x = bestRect.x + padding,
-                        y = bestRect.y + padding,
-                        width = glyphEntry.width,
-                        height = glyphEntry.height
-                    };
-                    
                     placedGlyphs.Add(currentGlyph);
-                    glyphsToPlace.RemoveAt(bestGlyphID);
+                    missingGlyphs.RemoveAt(bestGlyphID);
                 }
                 else
                 {
@@ -80,11 +81,12 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
             return true;
         }
-        public static bool TryAddGlyph(
+        internal static bool TryAddGlyph(
+            ref GlyphTable glyphTable,
             int padding,
-            GlyphBlob glyphToPlace,
-            out GlyphBlob placedGlyph,
-            DynamicBuffer<uint> glyphsInUse,            
+            GlyphTable.Key glyphToPlace,
+            out GlyphTable.Key placedGlyph,
+            DynamicBuffer<uint> glyphsInUse,
             DynamicBuffer<GlyphRect> usedRects,
             DynamicBuffer<GlyphRect> freeRects)
         {
@@ -92,27 +94,23 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             int shortSideScore = int.MaxValue;
             int longSideScore = int.MaxValue;
 
-            //var glyphRect = glyph.atlasRect;
-            var glyphEntry = glyphToPlace.entry;
-            var idealRect = FindIdealRect(glyphEntry.width + doublePadding, glyphEntry.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
-            if (idealRect.width > 0 && idealRect.height > 0)
-            {
-                //usedRects.Add(idealRect);
-                //return true;
-                RemoveRectFromFreeList(idealRect, freeRects);
-                usedRects.Add(idealRect);
-                glyphsInUse.Add(glyphToPlace.entry.key.glyphIndex);
+            var glyphID = glyphTable.glyphHashToIdMap[glyphToPlace];
+            var glyphEntry = glyphTable.GetEntry(glyphID);
 
+            var bestRect = FindIdealRect(glyphEntry.width + doublePadding, glyphEntry.height + doublePadding, freeRects, ref shortSideScore, ref longSideScore);
+            if (bestRect.width > 0 && bestRect.height > 0)
+            {
                 //currentGlyph.glyphRect = bestRect; //bestRect is the padded atlast Texture windows.
                 //the glyph (dounded by glyphExtents) will be renderered into the center of this windows
                 //GlyphRect needs to point to non-padded Glyph, and NOT to the entire padded atlas texture window
-                glyphToPlace.glyphRect = new GlyphRect
-                {
-                    x = idealRect.x + padding,
-                    y = idealRect.y + padding,
-                    width = glyphEntry.width,
-                    height = glyphEntry.height
-                };
+                glyphEntry.x = (short)(bestRect.x + padding);
+                glyphEntry.y = (short)(bestRect.y + padding);
+                glyphEntry.padding = (short)padding;
+
+                RemoveRectFromFreeList(bestRect, freeRects);
+                usedRects.Add(bestRect);
+                glyphsInUse.Add(glyphEntry.key.glyphIndex);
+
                 placedGlyph = glyphToPlace;
                 return true;
             }

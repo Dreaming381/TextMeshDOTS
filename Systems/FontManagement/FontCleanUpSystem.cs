@@ -23,8 +23,6 @@ namespace TextMeshDOTS.TextProcessing
                 .WithNone<MissingGlyphs>()         
                 .WithEntityAccess())
             {
-                //Debug.Log($"Destroy font material");
-                if(dynamicFontAsset.blob.IsCreated) dynamicFontAsset.blob.Dispose();
                 var fontMaterial = hybridRenderer.GetMaterial(dynamicFontAsset.fontMaterialID);
                 hybridRenderer.UnregisterMaterial(dynamicFontAsset.fontMaterialID);
                 UnityEngine.Object.Destroy(fontMaterial);

@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.TextCore;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -129,6 +130,7 @@ namespace TextMeshDOTS.HarfBuzz
             public short height;
             public short xBearing;
             public short yBearing;
+            public short padding;           
 
             public bool isInAtlas => x >= 0;
             // Todo:

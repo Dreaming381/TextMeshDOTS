@@ -23,17 +23,15 @@ namespace TextMeshDOTS.Rendering
                 var entry = glyphTable.GetEntry(glyph.glyphID);
                 var fontEntity = fontTable.faceIndexToFontEntityMap[entry.key.faceIndex];
                 var atlas = atlasLookup[fontEntity];
-                var glyphBlob = dynamicFontLookup[fontEntity].blob.Value.glyphs[entry.key.glyphIndex];
 
-                var glyphRect = glyphBlob.glyphRect;
                 float2 blUVA, tlUVA, trUVA, brUVA;
-                blUVA.x = (glyphRect.x - atlas.padding) / (float)atlas.atlasWidth;
-                blUVA.y = (glyphRect.y - atlas.padding) / (float)atlas.atlasHeight;
+                blUVA.x = (entry.x - entry.padding) / (float)atlas.atlasWidth;
+                blUVA.y = (entry.y - entry.padding) / (float)atlas.atlasHeight;
 
                 tlUVA.x = blUVA.x;
-                tlUVA.y = (glyphRect.y + atlas.padding + glyphRect.height) / (float)atlas.atlasHeight;
+                tlUVA.y = (entry.y + entry.padding + entry.height) / (float)atlas.atlasHeight;
 
-                trUVA.x = (glyphRect.x + atlas.padding + glyphRect.width) / (float)atlas.atlasWidth;
+                trUVA.x = (entry.x + entry.padding + entry.width) / (float)atlas.atlasWidth;
                 trUVA.y = tlUVA.y;
 
                 brUVA.x = trUVA.x;

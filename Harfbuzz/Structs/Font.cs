@@ -10,10 +10,44 @@ namespace TextMeshDOTS.HarfBuzz
     {
         public IntPtr ptr;
 
+        //cache a couple of font meta data to avoid fetching them upon every font access
+        internal int baseLine;
+        internal FontExtents fontExtents;
+        internal int capHeight;
+        internal int xHeight;
+        internal int xWidth;
         public Font(IntPtr face)
         {
             ptr = Harfbuzz.hb_font_create(face);
+            baseLine = default;
+            fontExtents = default;
+            capHeight = default;
+            xHeight = default;
+            xWidth = default;           
         }
+
+        /// <summary>
+        /// Update font metadata, some of which depends on language and script direction..so watchout when to call this method
+        /// </summary>
+        public void UpdateMetaData()
+        {
+            this.GetBaseline(Direction.LTR, Script.LATIN, out baseLine);
+            this.GetFontExtentsForDirection(Direction.LTR, out fontExtents);
+            this.GetMetrics(MetricTag.CAP_HEIGHT, out capHeight);
+            this.GetMetrics(MetricTag.X_HEIGHT, out xHeight);
+
+            // get width of space -->TO-DO: need to find an easier way to do this !!!
+            // Why is this not accessible via a metric tag such as MetricTag.X_WIDTH?
+            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+            var buffer = new Buffer(Direction.LTR, Script.LATIN, language);
+            buffer.ContentType = ContentType.UNICODE;
+            buffer.Add(0x20, 0);
+            this.Shape(buffer);
+            var glyphPosition = buffer.GetGlyphPositionsSpan();
+            xWidth = glyphPosition[0].xAdvance;
+            buffer.Dispose();
+        }
+        public int TabAdvance() => xWidth * 10;
         public float GetStyleTag(StyleTag styleTag)
         {
             return Harfbuzz.hb_style_get_value(ptr, styleTag);

@@ -59,10 +59,9 @@ namespace TextMeshDOTS.TextProcessing
             }
 
             state.Dependency.Complete();
-            var glyphsToPlace = new NativeList<GlyphBlob>(1024, Allocator.TempJob);
-            var placedGlyphs = new NativeList<GlyphBlob> (1024, Allocator.TempJob);
+            var placedGlyphs = new NativeList<GlyphTable.Key> (1024, Allocator.TempJob);
             var fontTable = SystemAPI.GetSingleton<FontTable>();
-            var glyphTable = SystemAPI.GetSingleton<GlyphTable>();
+            var glyphTable = SystemAPI.GetSingletonRW<GlyphTable>().ValueRW;
             var fontAssetMetadataLookup = SystemAPI.GetComponentLookup<FontAssetMetadata>(true); //temporary link between FontTable and Font Entities
             var atlasDataLookup = SystemAPI.GetComponentLookup<AtlasData>(true);
             var drawAndPaintFunctionsLookup = SystemAPI.GetComponentLookup<DrawAndPaintFunctions>(true);
@@ -103,6 +102,7 @@ namespace TextMeshDOTS.TextProcessing
                         
                         fontEntity = fontEntity,
                         fontTable = fontTable,
+                        glyphTable = glyphTable,
                         fontAssetMetadataLookup = fontAssetMetadataLookup, //temporary link between FontTable and Font Entities
                         placedGlyphs = placedGlyphs,
                         atlasDataLookup = atlasDataLookup,
@@ -122,6 +122,7 @@ namespace TextMeshDOTS.TextProcessing
 
                         fontEntity = fontEntity,
                         fontTable = fontTable,
+                        glyphTable = glyphTable,
                         fontAssetMetadataLookup = fontAssetMetadataLookup, //temporary link between FontTable and Font Entities
                         placedGlyphs = placedGlyphs,
                         atlasDataLookup = atlasDataLookup,
@@ -133,25 +134,12 @@ namespace TextMeshDOTS.TextProcessing
                     state.Dependency = updateAtlasTextureJob.Schedule(placedGlyphs, 1, state.Dependency);
                 }
 
-                var updateNativeFontJob = new UpdateNativeFontJob()
-                {
-                    dynamicFontAssetLookup = dynamicFontAssetsLookup,
-
-                    fontEntity = fontEntity,
-                    fontTable = fontTable,
-                    fontAssetMetadataLookup = fontAssetMetadataLookup, //temporary link between FontTable and Font Entities
-                    atlasDataLookup = atlasDataLookup,
-                    placedGlyphs = placedGlyphs,
-                };
-                state.Dependency = updateNativeFontJob.Schedule(state.Dependency);
-
                 state.Dependency.Complete(); //To-Do: remove sync point. 
 
                 dynamicFontAsset.texture.Value.Apply();
                 placedGlyphs.Clear();
             }
 
-            glyphsToPlace.Dispose(state.Dependency);
             placedGlyphs.Dispose(state.Dependency);            
             fontsRequiringUpdate.Dispose(state.Dependency);
         }

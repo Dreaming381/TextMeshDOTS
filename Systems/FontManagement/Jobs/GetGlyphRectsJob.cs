@@ -14,13 +14,13 @@ namespace TextMeshDOTS.TextProcessing
     [BurstCompile]
     struct GetGlyphRectsJob : IJob
     {
-        public NativeList<GlyphBlob> placedGlyphs;
+        public NativeList<GlyphTable.Key> placedGlyphs;
 
         public Entity fontEntity;
 
         [ReadOnly] public ComponentLookup<AtlasData> atlasDataLookup;
         [ReadOnly] public FontTable fontTable;
-        [ReadOnly] public GlyphTable glyphTable;
+        public GlyphTable glyphTable;
         [ReadOnly] public ComponentLookup<FontAssetMetadata> fontAssetMetadataLookup; //temporary link between Font Entities and FontTable
 
         public BufferLookup<MissingGlyphs> missingGlyphsBuffer;
@@ -34,7 +34,7 @@ namespace TextMeshDOTS.TextProcessing
         public void Execute()
         {
             var atlasData = atlasDataLookup[fontEntity];
-            var missingGlyphs = missingGlyphsBuffer[fontEntity];
+            var missingGlyphs = missingGlyphsBuffer[fontEntity].Reinterpret<GlyphTable.Key>();
             var usedGlyphs = usedGlyphsBuffer[fontEntity].Reinterpret<uint>();
             var usedGlyphRects = usedGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
             var freeGlyphRects = freeGlyphRectsBuffer[fontEntity].Reinterpret<GlyphRect>();
@@ -45,20 +45,10 @@ namespace TextMeshDOTS.TextProcessing
             var samplingSize = FontTextureSize.Normal.GetSamplingSize();
             font.SetScale(samplingSize, samplingSize);
 
-            var glyphsToPlace = new NativeList<GlyphBlob>(256, Allocator.Temp);
-
-            for (int i = 0, ii = missingGlyphs.Length; i < ii; i++)
-            {
-                var glyphID = glyphTable.glyphHashToIdMap[missingGlyphs[i].key];
-                var glyphEntry = glyphTable.GetEntry(glyphID);
-
-                var hbGlyph = new GlyphBlob { entry=glyphEntry };
-                glyphsToPlace.Add(hbGlyph);
-            };
-            var success = NativeAtlas.AddGlyphs(atlasData.padding, glyphsToPlace, placedGlyphs, usedGlyphs, usedGlyphRects, freeGlyphRects);
+            var success = NativeAtlas.AddGlyphs(ref glyphTable, atlasData.padding, missingGlyphs, placedGlyphs, usedGlyphs, usedGlyphRects, freeGlyphRects);
             if (!success)
             {
-                Debug.Log($"{glyphsToPlace.Length} glyphs could not be placed for font {fontAssetMetaData.family} {fontAssetMetaData.subfamily} ");
+                Debug.Log($"{missingGlyphs.Length} glyphs could not be placed for font {fontAssetMetaData.family} {fontAssetMetaData.subfamily} ");
                 //for (int i = 0, ii = usedGlyphs.Length; i < ii; i++)
                 //{
                 //    var glyphExtents= glyphsToPlace[i].glyphExtents;

@@ -4,6 +4,7 @@ using Unity.Burst;
 using Unity.Entities;
 using Unity.Collections;
 using TextMeshDOTS.HarfBuzz;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -31,6 +32,9 @@ namespace TextMeshDOTS.TextProcessing
 
 
         public uint lastSystemVersion;
+
+        [NativeSetThreadIndex]
+        int threadIndex;
 
         [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -76,8 +80,9 @@ namespace TextMeshDOTS.TextProcessing
 
 
                 GlyphGeneration.CreateRenderGlyphs(ref fontTable,
-                                                   ref glyphTable,
-                                                   ref fontAssetArray, 
+                                                   ref glyphTable, 
+                                                   threadIndex,
+                                                   ref fontAssetArray,
                                                    ref dynamicFontAssetsLookup,
                                                    ref fontAssetRefLookup,
                                                    ref renderGlyphs,

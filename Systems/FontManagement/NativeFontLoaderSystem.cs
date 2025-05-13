@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using System.Linq;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using TextMeshDOTS.Rendering;
