@@ -423,7 +423,7 @@ namespace TextMeshDOTS.Rendering
                 // optimized towards minimizing vertex shader processing. Also, more submeshes increase the minimum
                 // application build size. Calligraphics version alone I think adds 4 MB to the build, which isn't
                 // great on mobile.
-                // Current conlusion: (1) reduce number of submeshes from 16 to 10 (2) build size is determined by
+                // Current conclusion: (1) reduce number of submeshes from 16 to 10 (2) build size is determined by
                 // largest submesh (16k glyphs ~11MB), consider reducing size of mesh attributes, or remove mesh attributes
                 TextBackendBakingUtility.SetSubMesh(glyphs.Length, ref mmi);
             }

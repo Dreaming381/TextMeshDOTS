@@ -79,7 +79,6 @@ namespace TextMeshDOTS.Rendering.Authoring
             }
 
             mesh.RecalculateNormals();
-            mesh.RecalculateTangents();
             mesh.UploadMeshData(true);
 
             return mesh;
