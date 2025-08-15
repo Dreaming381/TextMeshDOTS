@@ -349,8 +349,6 @@ namespace TextMeshDOTS
                 #endregion
 
                 #region Store vertex information for the character or sprite.
-                renderGlyphOld.trPosition = topRight;
-                renderGlyphOld.blPosition = bottomLeft;
                 
                 renderGlyph.trPosition = topRight;
                 renderGlyph.tlPosition = topLeft;
