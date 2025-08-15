@@ -21,7 +21,7 @@ using Unity.Rendering;
 // How it works:
 // In the Kinemation Resources directory, there is a special Mesh baked which contains dummy
 // vertex attributes, and has multiple submeshes. Each submesh contains the triangle vertex indices
-// for various glyph counts. Inside KienmationRenderUpdateSuperSystem, for any TextRenderControl
+// for various glyph counts. Inside KinemationRenderUpdateSuperSystem, for any TextRenderControl
 // with the dirty flag, Kinemation will set the appropriate submesh on the entity's MaterialMeshInfo.
 // It will also recalculate the RenderBounds (local-space bounds).
 // In the culling loop, Kinemation will update any visible text glyphs to an upload GraphicsBuffer.

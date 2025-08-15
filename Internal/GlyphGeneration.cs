@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Burst.CompilerServices;
+using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
 
@@ -19,7 +20,8 @@ namespace TextMeshDOTS
                                                        ref FontAssetArray fontAssetArray,
                                                        ref ComponentLookup<DynamicFontAsset> dynamicFontAssetsLookup,
                                                        ref ComponentLookup<FontAssetRef> fontAssetRefLookup,                                                       
-                                                       ref DynamicBuffer<RenderGlyphOld> renderGlyphs,
+                                                       ref DynamicBuffer<RenderGlyphOld> oldRenderGlyphs,
+                                                       ref DynamicBuffer<RenderGlyph> renderGlyphs,
                                                        in DynamicBuffer<CalliByte> calliBytesBuffer,
                                                        in DynamicBuffer<GlyphOTF> glyphOTFBuffer,
                                                        in DynamicBuffer<XMLTag> xmlTagBuffer,
@@ -27,11 +29,13 @@ namespace TextMeshDOTS
                                                        ref TextColorGradientArray textColorGradientArray)
         {
             //Debug.Log("CreateRenderGlyphs");
+            oldRenderGlyphs.Clear();
             renderGlyphs.Clear();
             if (glyphOTFBuffer.IsEmpty)
                 return;
+            oldRenderGlyphs.Capacity = glyphOTFBuffer.Length; //2x speedup compared to allocation of individual items
             renderGlyphs.Capacity = glyphOTFBuffer.Length; //2x speedup compared to allocation of individual items
-
+            
             var calliString = new CalliString(calliBytesBuffer);
             var characters = calliString.GetEnumerator();
 
@@ -183,10 +187,16 @@ namespace TextMeshDOTS
 
                 // Determine the position of the vertices of the Character or Sprite.
                 #region Calculate Vertices Position
-                var renderGlyph = new RenderGlyphOld();
-                renderGlyph.glyphID = glyphID;
+                var renderGlyph = new RenderGlyph
+                {
+                    glyphEntryId = glyphID,
+                    arrayIndex = (uint)k
+                };
 
-                // top left is used to position bottom left and top right
+                var renderGlyphOld = new RenderGlyphOld();
+                renderGlyphOld.glyphID = glyphID;
+
+                // the top left is used to position the bottom left and top right
                 float2 topLeft;
                 topLeft.x = layoutConfig.m_xAdvance + (x_bearing * layoutConfig.m_fxScale - padding + glyphOTF.xOffset) * currentElementScale;
                 topLeft.y = baselineOffset + (y_bearing + padding + glyphOTF.yOffset) * currentElementScale + layoutConfig.m_baselineOffset + m_subAndSupscriptOffset;
@@ -198,8 +208,10 @@ namespace TextMeshDOTS
                 float2 topRight;
                 topRight.x = bottomLeft.x + (glyphWidth * layoutConfig.m_fxScale + padding * 2) * currentElementScale;
                 topRight.y = topLeft.y;
-
-                // Bottom right unused
+                
+                float2 bottomRight;
+                bottomRight.x = topRight.x;
+                bottomRight.y = bottomLeft.y;
                 #endregion
 
                 // We don't set up UVA here, as that is the atlas texture coordinates.
@@ -218,6 +230,11 @@ namespace TextMeshDOTS
                 trUVC.y = 1;
                 brUVC.y = 0;
 
+                renderGlyphOld.blUVB = blUVC;
+                renderGlyphOld.tlUVB = tlUVC;
+                renderGlyphOld.trUVB = trUVC;
+                renderGlyphOld.brUVB = brUVC;
+                
                 renderGlyph.blUVB = blUVC;
                 renderGlyph.tlUVB = tlUVC;
                 renderGlyph.trUVB = trUVC;
@@ -229,10 +246,19 @@ namespace TextMeshDOTS
                 if (layoutConfig.useGradient) //&& !isColorGlyph)
                 {
                     var gradient = layoutConfig.m_gradient;
-                    renderGlyph.blColor = gradient.bottomLeft;
-                    renderGlyph.tlColor = gradient.topLeft;
-                    renderGlyph.trColor = gradient.topRight;
-                    renderGlyph.brColor = gradient.bottomRight;
+                    renderGlyphOld.blColor = gradient.bottomLeft;
+                    renderGlyphOld.tlColor = gradient.topLeft;
+                    renderGlyphOld.trColor = gradient.topRight;
+                    renderGlyphOld.brColor = gradient.bottomRight;
+                    
+                    var gradientBottomLeft = gradient.bottomLeft;
+                    var gradientTopLeft = gradient.topLeft;
+                    var gradientTopRight = gradient.topRight;
+                    var gradientBottomRight = gradient.bottomRight;
+                    renderGlyph.blColor = new half4(new half(gradientBottomLeft.r), new half(gradientBottomLeft.g), new half(gradientBottomLeft.b), new half(gradientBottomLeft.a));
+                    renderGlyph.tlColor = new half4(new half(gradientTopLeft.r), new half(gradientTopLeft.g), new half(gradientTopLeft.b), new half(gradientTopLeft.a));
+                    renderGlyph.trColor = new half4(new half(gradientTopRight.r), new half(gradientTopRight.g), new half(gradientTopRight.b), new half(gradientTopRight.a));
+                    renderGlyph.brColor = new half4(new half(gradientBottomRight.r), new half(gradientBottomRight.g), new half(gradientBottomRight.b), new half(gradientBottomRight.a));
                     //if (m_ColorGradientPresetIsTinted)
                     //{
                     //    textInfo.textElementInfo[m_CharacterCount].vertexBottomLeft.color *= m_ColorGradientPreset.bottomLeft;
@@ -250,10 +276,16 @@ namespace TextMeshDOTS
                 }
                 else
                 {
-                    renderGlyph.blColor = layoutConfig.m_htmlColor;
-                    renderGlyph.tlColor = layoutConfig.m_htmlColor;
-                    renderGlyph.trColor = layoutConfig.m_htmlColor;
-                    renderGlyph.brColor = layoutConfig.m_htmlColor;
+                    renderGlyphOld.blColor = layoutConfig.m_htmlColor;
+                    renderGlyphOld.tlColor = layoutConfig.m_htmlColor;
+                    renderGlyphOld.trColor = layoutConfig.m_htmlColor;
+                    renderGlyphOld.brColor = layoutConfig.m_htmlColor;
+
+                    var layoutHtmlColor = new half4(new half(layoutConfig.m_htmlColor.r), new half(layoutConfig.m_htmlColor.g), new half(layoutConfig.m_htmlColor.b), new half(layoutConfig.m_htmlColor.a));
+                    renderGlyph.blColor = layoutHtmlColor;
+                    renderGlyph.tlColor = layoutHtmlColor;
+                    renderGlyph.trColor = layoutHtmlColor;
+                    renderGlyph.brColor = layoutHtmlColor;
                 }
                 #endregion
 
@@ -262,6 +294,7 @@ namespace TextMeshDOTS
                 if (simulateBold)
                     scale *= -1;
 
+                renderGlyphOld.scale = scale;
                 renderGlyph.scale = scale;
                 #endregion
 
@@ -285,21 +318,47 @@ namespace TextMeshDOTS
                     topLeft.x += topShear;
                     bottomLeft.x += bottomShear;
                     topRight.x += topShear;
+                    bottomRight.x += bottomShear;
 
-                    renderGlyph.shear = topLeft.x - bottomLeft.x;
+                    renderGlyphOld.shear = topLeft.x - bottomLeft.x;
                 }
                 #endregion Handle Italics & Shearing
 
+                // Needs to be done before rotation as it affects the position of the vertices and the old glyph can't handle that
+#region Store vertex information for the character or sprite of the old glyphs.
+                renderGlyphOld.trPosition = topRight;
+                renderGlyphOld.blPosition = bottomLeft;
+#endregion
+                
                 // Handle Character FX Rotation
                 #region Handle Character FX Rotation
-                renderGlyph.rotationCCW = math.radians(layoutConfig.m_fxRotationAngleCCW_degree);
+
+                float rotation = math.radians(layoutConfig.m_fxRotationAngleCCW_degree);
+                renderGlyphOld.rotationCCW = rotation;
+                if (math.abs(rotation) > 0.0001f)
+                {
+                    float2 pivot = (topLeft + bottomRight) * 0.5f;
+                    float sinRotation = math.sin(rotation);
+                    float cosRotation = math.cos(rotation);
+
+                    topLeft = RotatePoint(topLeft, pivot, sinRotation, cosRotation);
+                    bottomLeft = RotatePoint(bottomLeft, pivot, sinRotation, cosRotation);
+                    topRight = RotatePoint(topRight, pivot, sinRotation, cosRotation);
+                    bottomRight = RotatePoint(bottomRight, pivot, sinRotation, cosRotation);
+                }
                 #endregion
 
                 #region Store vertex information for the character or sprite.
+                renderGlyphOld.trPosition = topRight;
+                renderGlyphOld.blPosition = bottomLeft;
+                
                 renderGlyph.trPosition = topRight;
+                renderGlyph.tlPosition = topLeft;
                 renderGlyph.blPosition = bottomLeft;
+                renderGlyph.brPosition = bottomRight;
                 if (Hint.Likely(currentRune.value != 10)) //do not render LF 
                 {
+                    oldRenderGlyphs.Add(renderGlyphOld);
                     renderGlyphs.Add(renderGlyph);
                 }
                 #endregion
@@ -363,6 +422,7 @@ namespace TextMeshDOTS
                 //    currentRune.value == 0x2029 || textConfiguration.m_characterCount == calliString.Length - 1)
                 if (currentRune.value == 10)
                 {
+                    var oldGlyphsLine = oldRenderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex, oldRenderGlyphs.Length - startOfLineGlyphIndex);
                     var glyphsLine = renderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex, renderGlyphs.Length - startOfLineGlyphIndex);
                     var overrideMode = layoutConfig.m_lineJustification;
                     if ((overrideMode) == HorizontalAlignmentOptions.Justified)
@@ -370,17 +430,18 @@ namespace TextMeshDOTS
                         // Don't perform justified spacing for the last line in the paragraph.
                         overrideMode = HorizontalAlignmentOptions.Left;
                     }
-                    ApplyHorizontalAlignmentToGlyphs(ref glyphsLine,
+                    ApplyHorizontalAlignmentToGlyphs(ref oldGlyphsLine,
+                                                     ref glyphsLine,
                                                      ref characterGlyphIndicesWithPreceedingSpacesInLine,
                                                      textBaseConfiguration.maxLineWidth,
                                                      overrideMode);
-                    startOfLineGlyphIndex = renderGlyphs.Length;
+                    startOfLineGlyphIndex = oldRenderGlyphs.Length;
                     if (!isFirstLine)
                     {
                         accumulatedVerticalOffset += currentLineHeight + ascentLineDelta;
                         if (lastCommittedStartOfLineGlyphIndex != startOfLineGlyphIndex)
                         {
-                            ApplyVerticalOffsetToGlyphs(ref glyphsLine, accumulatedVerticalOffset);
+                            ApplyVerticalOffsetToGlyphs(ref oldGlyphsLine, ref glyphsLine, accumulatedVerticalOffset);
                             lastCommittedStartOfLineGlyphIndex = startOfLineGlyphIndex;
                         }
                     }
@@ -422,13 +483,17 @@ namespace TextMeshDOTS
                     }
 
                     var yOffsetChange = 0f;  //font.lineHeight * currentElementScale;
-                    var xOffsetChange = renderGlyphs[lastWordStartCharacterGlyphIndex].blPosition.x - bottomShear - layoutConfig.m_tagIndent;
+                    // TODO this line should be later replaced with renderGlyphs
+                    var xOffsetChange = oldRenderGlyphs[lastWordStartCharacterGlyphIndex].blPosition.x - bottomShear - layoutConfig.m_tagIndent;
                     if (xOffsetChange > 0 && !dropSpace)  // Always allow one visible character
                     {
                         // Finish line based on alignment
-                        var glyphsLine = renderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex,
+                        var oldGlyphsLine = oldRenderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex,
                                                                                   lastWordStartCharacterGlyphIndex - startOfLineGlyphIndex);
-                        ApplyHorizontalAlignmentToGlyphs(ref glyphsLine,
+                        var glyphsLine = renderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex,
+                            lastWordStartCharacterGlyphIndex - startOfLineGlyphIndex);
+                        ApplyHorizontalAlignmentToGlyphs(ref oldGlyphsLine,
+                                                         ref glyphsLine,
                                                          ref characterGlyphIndicesWithPreceedingSpacesInLine,
                                                          textBaseConfiguration.maxLineWidth,
                                                          layoutConfig.m_lineJustification);
@@ -436,7 +501,7 @@ namespace TextMeshDOTS
                         if (!isFirstLine)
                         {
                             accumulatedVerticalOffset += currentLineHeight + ascentLineDelta;
-                            ApplyVerticalOffsetToGlyphs(ref glyphsLine, accumulatedVerticalOffset);
+                            ApplyVerticalOffsetToGlyphs(ref oldGlyphsLine, ref glyphsLine, accumulatedVerticalOffset);
                             lastCommittedStartOfLineGlyphIndex = startOfLineGlyphIndex;
                         }
                         accumulatedVerticalOffset += decentLineDelta;  // Todo: Delta should be computed per glyph
@@ -454,14 +519,27 @@ namespace TextMeshDOTS
                         layoutConfig.m_xAdvance -= xOffsetChange;
 
                         // Adjust the vertices of the previous render glyphs in the word
-                        var glyphPtr = (RenderGlyphOld*)renderGlyphs.GetUnsafePtr();
-                        for (int i = lastWordStartCharacterGlyphIndex; i < renderGlyphs.Length; i++)
+                        var glyphPtr = (RenderGlyphOld*)oldRenderGlyphs.GetUnsafePtr();
+                        for (int i = lastWordStartCharacterGlyphIndex; i < oldRenderGlyphs.Length; i++)
                         {
                             glyphPtr[i].blPosition.y -= yOffsetChange;
                             glyphPtr[i].blPosition.x -= xOffsetChange;
                             glyphPtr[i].trPosition.y -= yOffsetChange;
                             glyphPtr[i].trPosition.x -= xOffsetChange;
                         }
+                        var glyphPtrNew = (RenderGlyph*)renderGlyphs.GetUnsafePtr();
+                        for (int i = lastWordStartCharacterGlyphIndex; i < renderGlyphs.Length; i++)
+                        {
+                            glyphPtrNew[i].blPosition.y -= yOffsetChange;
+                            glyphPtrNew[i].blPosition.x -= xOffsetChange;
+                            glyphPtrNew[i].tlPosition.y -= yOffsetChange;
+                            glyphPtrNew[i].tlPosition.x -= xOffsetChange;
+                            glyphPtrNew[i].trPosition.y -= yOffsetChange;
+                            glyphPtrNew[i].trPosition.x -= xOffsetChange;
+                            glyphPtrNew[i].brPosition.y -= yOffsetChange;
+                            glyphPtrNew[i].brPosition.x -= xOffsetChange;
+                        }
+
                     }
                 }
                 //Detect start of word
@@ -473,12 +551,13 @@ namespace TextMeshDOTS
                     currentRune.value == 8204 ||  //Zero width non-joiner
                     currentRune.value == 8205)  //Zero width joiner
                 {
-                    lastWordStartCharacterGlyphIndex = renderGlyphs.Length;
+                    lastWordStartCharacterGlyphIndex = oldRenderGlyphs.Length;
                 }
                 #endregion
                 previousRune = currentRune;
             }
 
+            var oldFinalGlyphsLine = oldRenderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex, oldRenderGlyphs.Length - startOfLineGlyphIndex);
             var finalGlyphsLine = renderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex, renderGlyphs.Length - startOfLineGlyphIndex);
             {
                 var overrideMode = layoutConfig.m_lineJustification;
@@ -487,15 +566,24 @@ namespace TextMeshDOTS
                     // Don't perform justified spacing for the last line.
                     overrideMode = HorizontalAlignmentOptions.Left;
                 }
-                ApplyHorizontalAlignmentToGlyphs(ref finalGlyphsLine, ref characterGlyphIndicesWithPreceedingSpacesInLine, textBaseConfiguration.maxLineWidth, overrideMode);
+                ApplyHorizontalAlignmentToGlyphs(ref oldFinalGlyphsLine, ref finalGlyphsLine, ref characterGlyphIndicesWithPreceedingSpacesInLine, textBaseConfiguration.maxLineWidth, overrideMode);
                 if (!isFirstLine)
                 {
                     accumulatedVerticalOffset += currentLineHeight;
-                    ApplyVerticalOffsetToGlyphs(ref finalGlyphsLine, accumulatedVerticalOffset);
+                    ApplyVerticalOffsetToGlyphs(ref oldFinalGlyphsLine, ref finalGlyphsLine, accumulatedVerticalOffset);
                 }
             }
             isFirstLine = false;
-            ApplyVerticalAlignmentToGlyphs(ref renderGlyphs, topAnchor, bottomAnchor, accumulatedVerticalOffset, textBaseConfiguration.verticalAlignment);
+            ApplyVerticalAlignmentToGlyphs(ref oldRenderGlyphs, ref renderGlyphs, topAnchor, bottomAnchor, accumulatedVerticalOffset, textBaseConfiguration.verticalAlignment);
+        }
+        
+        static float2 RotatePoint(float2 point, float2 pivot, float sin, float cos)
+        {
+            float2 translated = point - pivot;
+            return new float2(
+                translated.x * cos - translated.y * sin,
+                translated.x * sin + translated.y * cos
+            ) + pivot;
         }
 
         static float GetTopAnchorForConfig(ref Font font, VerticalAlignmentOptions verticalMode, float baseScale, float oldValue = float.PositiveInfinity)
@@ -528,7 +616,8 @@ namespace TextMeshDOTS
             }
         }
 
-        static unsafe void ApplyHorizontalAlignmentToGlyphs(ref NativeArray<RenderGlyphOld> glyphs,
+        static unsafe void ApplyHorizontalAlignmentToGlyphs(ref NativeArray<RenderGlyphOld> oldGlyphs,
+                                                            ref NativeArray<RenderGlyph> renderGlyphs,
                                                             ref FixedList512Bytes<int> characterGlyphIndicesWithPreceedingSpacesInLine,
                                                             float width,
                                                             HorizontalAlignmentOptions alignMode)
@@ -539,31 +628,48 @@ namespace TextMeshDOTS
                 return;
             }
 
-            var glyphsPtr = (RenderGlyphOld*)glyphs.GetUnsafePtr();
-            if ((alignMode) == HorizontalAlignmentOptions.Center)
+            var oldGlyphsPtr = (RenderGlyphOld*)oldGlyphs.GetUnsafePtr();
+            var glyphsPtr = (RenderGlyph*)renderGlyphs.GetUnsafePtr();
+            if (alignMode == HorizontalAlignmentOptions.Center)
             {
-                float offset = glyphsPtr[glyphs.Length - 1].trPosition.x / 2f;
-                for (int i = 0; i < glyphs.Length; i++)
+                float oldOffset = oldGlyphsPtr[oldGlyphs.Length - 1].trPosition.x / 2f;
+                for (int i = 0; i < oldGlyphs.Length; i++)
+                {
+                    oldGlyphsPtr[i].blPosition.x -= oldOffset;
+                    oldGlyphsPtr[i].trPosition.x -= oldOffset;
+                }
+                float offset = glyphsPtr[renderGlyphs.Length - 1].trPosition.x / 2f;
+                for (int i = 0; i < renderGlyphs.Length; i++)
                 {
                     glyphsPtr[i].blPosition.x -= offset;
                     glyphsPtr[i].trPosition.x -= offset;
+                    glyphsPtr[i].tlPosition.x -= offset;
+                    glyphsPtr[i].brPosition.x -= offset;
                 }
             }
-            else if ((alignMode) == HorizontalAlignmentOptions.Right)
+            else if (alignMode == HorizontalAlignmentOptions.Right)
             {
-                float offset = glyphsPtr[glyphs.Length - 1].trPosition.x;
-                for (int i = 0; i < glyphs.Length; i++)
+                float oldOffset = oldGlyphsPtr[oldGlyphs.Length - 1].trPosition.x;
+                for (int i = 0; i < oldGlyphs.Length; i++)
+                {
+                    oldGlyphsPtr[i].blPosition.x -= oldOffset;
+                    oldGlyphsPtr[i].trPosition.x -= oldOffset;
+                }
+                float offset = glyphsPtr[renderGlyphs.Length - 1].trPosition.x;
+                for (int i = 0; i < renderGlyphs.Length; i++)
                 {
                     glyphsPtr[i].blPosition.x -= offset;
                     glyphsPtr[i].trPosition.x -= offset;
+                    glyphsPtr[i].tlPosition.x -= offset;
+                    glyphsPtr[i].brPosition.x -= offset;
                 }
             }
             else  // Justified
             {
-                float nudgePerSpace = (width - glyphsPtr[glyphs.Length - 1].trPosition.x) / characterGlyphIndicesWithPreceedingSpacesInLine.Length;
+                float nudgePerSpace = (width - oldGlyphsPtr[oldGlyphs.Length - 1].trPosition.x) / characterGlyphIndicesWithPreceedingSpacesInLine.Length;
                 float accumulatedOffset = 0f;
                 int indexInIndices = 0;
-                for (int i = 0; i < glyphs.Length; i++)
+                for (int i = 0; i < oldGlyphs.Length; i++)
                 {
                     while (indexInIndices < characterGlyphIndicesWithPreceedingSpacesInLine.Length &&
                            characterGlyphIndicesWithPreceedingSpacesInLine[indexInIndices] == i)
@@ -572,31 +678,47 @@ namespace TextMeshDOTS
                         indexInIndices++;
                     }
 
+                    oldGlyphsPtr[i].blPosition.x += accumulatedOffset;
+                    oldGlyphsPtr[i].trPosition.x += accumulatedOffset;
+                    
                     glyphsPtr[i].blPosition.x += accumulatedOffset;
                     glyphsPtr[i].trPosition.x += accumulatedOffset;
+                    glyphsPtr[i].tlPosition.x += accumulatedOffset;
+                    glyphsPtr[i].brPosition.x += accumulatedOffset;
                 }
             }
             characterGlyphIndicesWithPreceedingSpacesInLine.Clear();
         }
 
-        static unsafe void ApplyVerticalOffsetToGlyphs(ref NativeArray<RenderGlyphOld> glyphs, float accumulatedVerticalOffset)
+        static unsafe void ApplyVerticalOffsetToGlyphs(ref NativeArray<RenderGlyphOld> oldGlyphs, ref NativeArray<RenderGlyph> glyphs, float accumulatedVerticalOffset)
         {
+            for (int i = 0; i < oldGlyphs.Length; i++)
+            {
+                var glyph = oldGlyphs[i];
+                glyph.blPosition.y -= accumulatedVerticalOffset;
+                glyph.trPosition.y -= accumulatedVerticalOffset;
+                oldGlyphs[i] = glyph;
+            }
             for (int i = 0; i < glyphs.Length; i++)
             {
                 var glyph = glyphs[i];
                 glyph.blPosition.y -= accumulatedVerticalOffset;
+                glyph.tlPosition.y -= accumulatedVerticalOffset;
                 glyph.trPosition.y -= accumulatedVerticalOffset;
+                glyph.brPosition.y -= accumulatedVerticalOffset;
                 glyphs[i] = glyph;
             }
         }
 
-        static unsafe void ApplyVerticalAlignmentToGlyphs(ref DynamicBuffer<RenderGlyphOld> glyphs,
+        static unsafe void ApplyVerticalAlignmentToGlyphs(ref DynamicBuffer<RenderGlyphOld> oldGlyphs,
+                                                          ref DynamicBuffer<RenderGlyph> glyphs,
                                                           float topAnchor,
                                                           float bottomAnchor,
                                                           float accumulatedVerticalOffset,
                                                           VerticalAlignmentOptions alignMode)
         {
-            var glyphsPtr = (RenderGlyphOld*)glyphs.GetUnsafePtr();
+            var oldGlyphsPtr = (RenderGlyphOld*)oldGlyphs.GetUnsafePtr();
+            var glyphsPtr = (RenderGlyph*)glyphs.GetUnsafePtr();
             switch (alignMode)
             {
                 case VerticalAlignmentOptions.TopBase:
@@ -608,10 +730,17 @@ namespace TextMeshDOTS
                     {
                         // Positions were calculated relative to the baseline.
                         // Shift everything down so that y = 0 is on the target line.
+                        for (int i = 0; i < oldGlyphs.Length; i++)
+                        {
+                            oldGlyphsPtr[i].blPosition.y -= topAnchor;
+                            oldGlyphsPtr[i].trPosition.y -= topAnchor;
+                        }
                         for (int i = 0; i < glyphs.Length; i++)
                         {
                             glyphsPtr[i].blPosition.y -= topAnchor;
+                            glyphsPtr[i].tlPosition.y -= topAnchor;
                             glyphsPtr[i].trPosition.y -= topAnchor;
+                            glyphsPtr[i].brPosition.y -= topAnchor;
                         }
                         break;
                     }
@@ -622,10 +751,17 @@ namespace TextMeshDOTS
                 case VerticalAlignmentOptions.BottomMean:
                     {
                         float offset = accumulatedVerticalOffset - bottomAnchor;
+                        for (int i = 0; i < oldGlyphs.Length; i++)
+                        {
+                            oldGlyphsPtr[i].blPosition.y += offset;
+                            oldGlyphsPtr[i].trPosition.y += offset;
+                        }
                         for (int i = 0; i < glyphs.Length; i++)
                         {
                             glyphsPtr[i].blPosition.y += offset;
+                            glyphsPtr[i].tlPosition.y += offset;
                             glyphsPtr[i].trPosition.y += offset;
+                            glyphsPtr[i].brPosition.y += offset;
                         }
                         break;
                     }
@@ -633,10 +769,17 @@ namespace TextMeshDOTS
                     {
                         float fullHeight = accumulatedVerticalOffset - bottomAnchor + topAnchor;
                         float offset = fullHeight / 2f;
+                        for (int i = 0; i < oldGlyphs.Length; i++)
+                        {
+                            oldGlyphsPtr[i].blPosition.y += offset;
+                            oldGlyphsPtr[i].trPosition.y += offset;
+                        }
                         for (int i = 0; i < glyphs.Length; i++)
                         {
                             glyphsPtr[i].blPosition.y += offset;
+                            glyphsPtr[i].tlPosition.y += offset;
                             glyphsPtr[i].trPosition.y += offset;
+                            glyphsPtr[i].brPosition.y += offset;
                         }
                         break;
                     }
