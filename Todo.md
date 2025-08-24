@@ -10,8 +10,8 @@ Phase 2 is currently in progress.
 
 ### Glyph Generation
 
-- [ ] Add new RenderGlyph type to entities alongside RenderGlyphOld
-- [ ] Populate RenderGlyph inside GlyphGeneration alongside RenderGlyphOld
+- [x] Add new RenderGlyph type to entities alongside RenderGlyphOld
+- [x] Populate RenderGlyph inside GlyphGeneration alongside RenderGlyphOld
 
 ### Glyph Generation Optional
 

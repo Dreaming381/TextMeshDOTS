@@ -11,7 +11,8 @@ namespace TextMeshDOTS.TextProcessing
     [BurstCompile]    
     public partial struct GenerateRenderGlyphsJob : IJobChunk
     {
-        public BufferTypeHandle<RenderGlyphOld> renderGlyphHandle;
+        public BufferTypeHandle<RenderGlyph> renderGlyphHandle;
+        public BufferTypeHandle<RenderGlyphOld> renderGlyphOldHandle;
         public ComponentTypeHandle<TextRenderControl> textRenderControlHandle;
 
         [ReadOnly] internal FontTable fontTable;
@@ -51,6 +52,7 @@ namespace TextMeshDOTS.TextProcessing
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
             var xmlTagBuffers = chunk.GetBufferAccessor(ref xmlTagHandle);
             var renderGlyphBuffers = chunk.GetBufferAccessor(ref renderGlyphHandle);
+            var renderGlyphOldBuffers = chunk.GetBufferAccessor(ref renderGlyphOldHandle);
             var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
             var textRenderControls = chunk.GetNativeArray(ref textRenderControlHandle);
 
@@ -70,6 +72,7 @@ namespace TextMeshDOTS.TextProcessing
                 var glyphOTFs = glyphOTFBuffers[indexInChunk];
                 var xmlTags = xmlTagBuffers[indexInChunk];
                 var renderGlyphs = renderGlyphBuffers[indexInChunk];
+                var renderGlyphsOld = renderGlyphOldBuffers[indexInChunk];
                 var textBaseConfiguration = textBaseConfigurations[indexInChunk];
                 var textRenderControl = textRenderControls[indexInChunk];
                  
@@ -86,6 +89,7 @@ namespace TextMeshDOTS.TextProcessing
                                                    ref dynamicFontAssetsLookup,
                                                    ref fontAssetRefLookup,
                                                    ref renderGlyphs,
+                                                   ref renderGlyphsOld,
                                                    in calliBytes,
                                                    in glyphOTFs,
                                                    in xmlTags,

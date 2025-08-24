@@ -48,7 +48,8 @@ namespace TextMeshDOTS.TextProcessing
             SystemAPI.TryGetSingletonEntity<TextColorGradient>(out Entity textColorGradientEntity);
             state.Dependency = new GenerateRenderGlyphsJob
             {
-                renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyphOld>(false),
+                renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
+                renderGlyphOldHandle = SystemAPI.GetBufferTypeHandle<RenderGlyphOld>(false),
                 textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
                 fontTable = SystemAPI.GetSingleton<FontTable>(),
