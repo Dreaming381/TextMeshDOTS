@@ -25,6 +25,7 @@ namespace TextMeshDOTS.TextProcessing
 
             m_query = SystemAPI.QueryBuilder()
                       .WithAllRW<RenderGlyphOld>()
+                      .WithAllRW<RenderGlyph>()
                       .WithAll<CalliByte>()
                       .WithAll<GlyphOTF>()
                       .WithAll<XMLTag>()
