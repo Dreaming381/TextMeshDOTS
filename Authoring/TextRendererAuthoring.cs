@@ -110,7 +110,6 @@ namespace TextMeshDOTS.Authoring
             AddComponent(entity, textBaseConfiguraton);
             AddBuffer<RenderGlyph>(entity);
             AddBuffer<RenderGlyphOld>(entity);
-            AddBuffer<RenderGlyph>(entity);
         }
         
         void AddAdditionalFontEntity(FontAssetRef fontAssetRef, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)

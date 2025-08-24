@@ -51,7 +51,6 @@ namespace TextMeshDOTS.TextProcessing
             var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
             var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
             var xmlTagBuffers = chunk.GetBufferAccessor(ref xmlTagHandle);
-            var oldRenderGlyphBuffers = chunk.GetBufferAccessor(ref oldRenderGlyphHandle);
             var renderGlyphBuffers = chunk.GetBufferAccessor(ref renderGlyphHandle);
             var renderGlyphOldBuffers = chunk.GetBufferAccessor(ref renderGlyphOldHandle);
             var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
