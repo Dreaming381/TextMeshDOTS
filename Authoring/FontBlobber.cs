@@ -37,7 +37,7 @@ namespace TextMeshDOTS.Authoring
                 else
                 {
                     fontBlobRoot.streamingAssetLocationValidated = true;
-                    fontBlobRoot.fontAssetPath = fontPath.Substring(fontPath.IndexOf("Assets/StreamingAssets") + 23);
+                    fontBlobRoot.fontAssetPath = fontPath.Substring(pathIndex + 23);
                 }
             }
             var fontBytes = File.ReadAllBytes(fontPath);
