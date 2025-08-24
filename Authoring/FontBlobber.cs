@@ -12,16 +12,34 @@ namespace TextMeshDOTS.Authoring
     {
         public static BlobAssetReference<FontBlob> BakeFontBlob(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap)
         {
-            string fontPath = default;
-#if UNITY_EDITOR
-            fontPath = AssetDatabase.GetAssetPath(fontItem);
-#endif
             var builder = new BlobBuilder(Allocator.Temp);
             ref FontBlob fontBlobRoot = ref builder.ConstructRoot<FontBlob>();
             fontBlobRoot.samplingPointSizeSDF = samplingPointSizeSDF;
             fontBlobRoot.samplingPointSizeBitmap = samplingPointSizeBitmap;
             fontBlobRoot.useSystemFont = useSystemFont;
-            fontBlobRoot.fontAssetPath = useSystemFont ? string.Empty : fontPath.Substring(fontPath.IndexOf("StreamingAssets") + 16);
+
+
+            string fontPath = default;
+#if UNITY_EDITOR
+            fontPath = AssetDatabase.GetAssetPath(fontItem);
+#endif
+            if (useSystemFont)
+                fontBlobRoot.fontAssetPath = string.Empty;
+            else
+            {
+                var pathIndex = fontPath.IndexOf("Assets/StreamingAssets");
+                if (pathIndex == -1)
+                {
+                    fontBlobRoot.streamingAssetLocationValidated = false;
+                    Debug.LogWarning($"Unless you want to use System Fonts, the source font asset MUST be in \"Assets/StreamingAssets\"! Font cannot be loaded in a build from current location \"{fontPath}\"");
+                    fontBlobRoot.fontAssetPath = Path.GetFullPath(fontPath);
+                }
+                else
+                {
+                    fontBlobRoot.streamingAssetLocationValidated = true;
+                    fontBlobRoot.fontAssetPath = fontPath.Substring(fontPath.IndexOf("Assets/StreamingAssets") + 23);
+                }
+            }
             var fontBytes = File.ReadAllBytes(fontPath);
 
             Blob blob;

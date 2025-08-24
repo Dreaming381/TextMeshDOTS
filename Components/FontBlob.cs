@@ -25,6 +25,7 @@ namespace TextMeshDOTS
         public int samplingPointSizeBitmap;
         public bool useSystemFont;        
         public FixedString512Bytes fontAssetPath; //To-Do: ensure this points to streamingAssets folder or Application persistent data path
+        public bool streamingAssetLocationValidated;
 
         public override string ToString()
         {

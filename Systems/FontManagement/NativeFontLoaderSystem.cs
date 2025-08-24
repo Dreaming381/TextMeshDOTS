@@ -83,9 +83,13 @@ namespace TextMeshDOTS.TextProcessing
                 {
                     var loadRequest = new LoadRequest { fontBlobRef = changedFontBlobReference, fontAssetRef = fontBlob.fontAssetRef };
                     if (!fontBlob.useSystemFont)
-                    {                        
-                        var fontPath = Path.Combine(Application.streamingAssetsPath, fontBlob.fontAssetPath.ToString());
-                        //Debug.Log($"Try to load {fontBlob.fontAssetPath.ToString()}, from path {Application.streamingAssetsPath} full path {fontPath}");
+                    {
+                        string fontPath;
+                        if(fontBlob.streamingAssetLocationValidated)
+                            fontPath = Path.Combine(Application.streamingAssetsPath, fontBlob.fontAssetPath.ToString());
+                        else
+                            fontPath = fontBlob.fontAssetPath.ToString();
+
                         if (!File.Exists(fontPath))
                             Debug.Log($"Could not find font in {fontPath}");
                         else
@@ -185,7 +189,7 @@ namespace TextMeshDOTS.TextProcessing
             var face = new Face(blob.ptr, 0);
             var font = new Font(face.ptr);
 
-            var sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;            
+            var sdfOrientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
 
             var nativeFontPointer = new NativeFontPointer { 
                 orientation = sdfOrientation, 
