@@ -23,14 +23,15 @@ Phase 2 is currently in progress.
 
 - [x] Identify RenderGlyphs to upload and advance residence state machine and material properties
 - [x] Identify glyphs to generate in atlas and create list of atlas array indices to modify
+- [x] Upload RenderGlyphs to GPU
 - [ ] Resize atlas arrays and acquire array indices native buffers
-- [ ] Generate glyph textures and populate RenderGlyph upload buffers
-- [ ] Commit textures and buffers to GPU
+- [ ] Generate glyph textures
+- [ ] Commit textures to GPU
 
 ### Shaders
 
-[ ] Create new RenderGlyph reader hlsl file
-[ ] Create unified atlas shader (branch on SDF8, SDF16, and Bitmap based on glyph)
+- [x] Create new RenderGlyph reader hlsl file
+- [ ] Create unified atlas shader (branch on SDF8, SDF16, and Bitmap based on glyph)
 
 ## Phase 3 - Jobify Font Loading and Optimize
 
