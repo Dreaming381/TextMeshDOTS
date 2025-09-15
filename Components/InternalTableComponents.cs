@@ -133,6 +133,10 @@ namespace TextMeshDOTS.HarfBuzz
             public short yBearing;
             public short padding;
 
+            public short xOld;
+            public short yOld;
+            public short paddingOld;
+
             public bool isInAtlas => x >= 0;
             // Todo:
         }
@@ -228,7 +232,7 @@ namespace TextMeshDOTS.HarfBuzz
             }
 
             // We did not found a suitable shelf. Create a new one.
-            var previousMaxYPlus = 0;
+            var previousMaxYPlus = (int)dimension + 1;
             var previousZ        = -1;
 
             for (int i = 0; i < shelves.Length; i++)
