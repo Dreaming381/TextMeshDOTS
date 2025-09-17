@@ -19,28 +19,34 @@ namespace TextMeshDOTS.TextProcessing
         EntityQuery changedFontEntitiesQ, fontstateQ, textRendererQ;
         EntitiesGraphicsSystem hybridRenderer;
 
-        Material sdfMaterial;
-        Material colrMaterial;
+        //Material sdfMaterial;
+        //Material colrMaterial;
+        Material unifiedMaterial;
         Mesh backendMesh;
+        BatchMaterialID unifiedMaterialID;
         BatchMeshID backendMeshID;
+        
         
         protected override void OnCreate()
         {
             hybridRenderer = World.GetExistingSystemManaged<EntitiesGraphicsSystem>();
             backendMesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
             backendMeshID = BatchMeshID.Null;
+            unifiedMaterialID = BatchMaterialID.Null;
+
             var srpType = GraphicsSettings.defaultRenderPipeline.GetType().ToString();
             if (srpType.Contains("HDRenderPipelineAsset"))
             {
                 //Debug.Log("High Definition Render Pipeline (HDRP) is being used.");
-                sdfMaterial = Resources.Load<Material>(TextMaterialUtility.kSDF_HDRP_Material);
-                colrMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_HDRP_Material);
+                //sdfMaterial = Resources.Load<Material>(TextMaterialUtility.kSDF_HDRP_Material);
+                //colrMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_HDRP_Material);
             }
             else if (srpType.Contains("UniversalRenderPipelineAsset") || srpType.Contains("LightweightRenderPipelineAsset"))
             {
                 //Debug.Log("Universal Render Pipeline (URP) is being used.");
-                sdfMaterial = Resources.Load<Material>(TextMaterialUtility.kSDF_URP_Material);
-                colrMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_URP_Material);
+                //sdfMaterial = Resources.Load<Material>(TextMaterialUtility.kSDF_URP_Material);
+                //colrMaterial = Resources.Load<Material>(TextMaterialUtility.kCOLRv1_URP_Material);
+                unifiedMaterial = Resources.Load<Material>(TextMaterialUtility.kUnified_URP_Material);
             }
             else
                 Debug.LogError("TextMeshDOTS does not work with the Built-in (Legacy) Render Pipeline");            
@@ -75,6 +81,10 @@ namespace TextMeshDOTS.TextProcessing
             if (backendMeshID == BatchMeshID.Null)
                 backendMeshID = hybridRenderer.RegisterMesh(backendMesh);
 
+            if (unifiedMaterialID == BatchMaterialID.Null)
+                unifiedMaterialID = hybridRenderer.RegisterMaterial(unifiedMaterial);
+
+
             var fontStateEntity = fontstateQ.GetSingletonEntity();
             var changedFontEntities = changedFontEntitiesQ.ToEntityArray(WorldUpdateAllocator);
             var dynamicFontAssetLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(false);
@@ -83,25 +93,8 @@ namespace TextMeshDOTS.TextProcessing
             foreach (var entity in changedFontEntities)
             {
                 var dynamicFontAsset = dynamicFontAssetLookup[entity];
-                var mainTexture = dynamicFontAsset.texture.Value;
-                mainTexture.Apply();
-
-                if (dynamicFontAsset.textureType == TextureType.SDF)
-                {
-                    var material = Object.Instantiate(sdfMaterial);
-                    material.mainTexture = dynamicFontAsset.texture;
-                    dynamicFontAsset.debugMaterial = material;
-                    dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
-                    dynamicFontAsset.backendMeshID = backendMeshID;
-                }
-                else
-                {
-                    var material = Object.Instantiate(colrMaterial);
-                    material.mainTexture = dynamicFontAsset.texture;
-                    dynamicFontAsset.debugMaterial = material;
-                    dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
-                    dynamicFontAsset.backendMeshID = backendMeshID;
-                }
+                dynamicFontAsset.fontMaterialID = unifiedMaterialID;
+                dynamicFontAsset.backendMeshID = backendMeshID;
                 dynamicFontAssetLookup[entity] = dynamicFontAsset;
             }
 
@@ -117,5 +110,58 @@ namespace TextMeshDOTS.TextProcessing
 
             EntityManager.RemoveComponent<FontsDirtyTag>(fontStateEntity);
         }
+
+        //protected override void OnUpdate()
+        //{
+        //    if (changedFontEntitiesQ.IsEmpty)
+        //        return;
+
+        //    //Debug.Log($"Register material, and link TextRender to fonts");
+        //    if (backendMeshID == BatchMeshID.Null)
+        //        backendMeshID = hybridRenderer.RegisterMesh(backendMesh);
+
+        //    var fontStateEntity = fontstateQ.GetSingletonEntity();
+        //    var changedFontEntities = changedFontEntitiesQ.ToEntityArray(WorldUpdateAllocator);
+        //    var dynamicFontAssetLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(false);
+        //    var fontAssetRefLookup = SystemAPI.GetComponentLookup<FontAssetRef>(false);
+
+        //    foreach (var entity in changedFontEntities)
+        //    {
+        //        var dynamicFontAsset = dynamicFontAssetLookup[entity];
+        //        var mainTexture = dynamicFontAsset.texture.Value;
+        //        mainTexture.Apply();
+
+        //        if (dynamicFontAsset.textureType == TextureType.SDF)
+        //        {
+        //            var material = Object.Instantiate(sdfMaterial);
+        //            material.mainTexture = dynamicFontAsset.texture;
+        //            dynamicFontAsset.debugMaterial = material;
+        //            dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
+        //            dynamicFontAsset.backendMeshID = backendMeshID;
+        //        }
+        //        else
+        //        {
+        //            var material = Object.Instantiate(colrMaterial);
+        //            material.mainTexture = dynamicFontAsset.texture;
+        //            dynamicFontAsset.debugMaterial = material;
+        //            dynamicFontAsset.fontMaterialID = hybridRenderer.RegisterMaterial(material);
+        //            dynamicFontAsset.backendMeshID = backendMeshID;
+        //        }
+
+        //        dynamicFontAssetLookup[entity] = dynamicFontAsset;
+        //    }
+
+        //    var fontTable = SystemAPI.GetSingleton<FontTable>();
+        //    CompleteDependency(); //needed?
+        //    var updateMaterialMeshInfoJob = new EnableAndValidateMaterialMeshInfoJob
+        //    {
+        //        fontAssetRefToFaceIndexMap = fontTable.fontAssetRefToFaceIndexMap,
+        //        faceIndexToFontEntityMap = fontTable.faceIndexToFontEntityMap,
+        //        dynamicFontAssetLookup = dynamicFontAssetLookup,
+        //    };
+        //    Dependency = updateMaterialMeshInfoJob.ScheduleParallel(textRendererQ, Dependency);
+
+        //    EntityManager.RemoveComponent<FontsDirtyTag>(fontStateEntity);
+        //}
     }
 }
