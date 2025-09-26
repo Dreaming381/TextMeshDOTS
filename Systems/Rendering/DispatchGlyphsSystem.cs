@@ -509,7 +509,8 @@ namespace TextMeshDOTS.Rendering
                 foreach (var glyph in glyphEntryIDsToRasterize)
                 {
                     ref var glyphEntry = ref glyphTable.GetEntryRW(glyph);
-                    atlasTable.Allocate(glyph, glyphEntry.width, glyphEntry.height, out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
+                    var doublePadding = 2 * glyphEntry.padding;
+                    atlasTable.Allocate(glyph, (short)(glyphEntry.width + doublePadding), (short)(glyphEntry.height + doublePadding), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
                     uint id  = (uint)glyphEntry.z;
                     id      |= glyph & 0xc0000000;
                     dirtyAtlasIDSet.Add(id);
@@ -562,7 +563,9 @@ namespace TextMeshDOTS.Rendering
                 {
                     font.DrawGlyph(glyphEntry.key.glyphIndex, drawDelegates, ref drawData);
                     var sdf8TextureSlice = GetSdf8TextureSlice(glyphEntry.z);
-                    var atlasRect        = new GlyphRect(glyphEntry.x, glyphEntry.y, glyphEntry.width, glyphEntry.height);
+                    var doublePadding = 2*glyphEntry.padding;
+                    var atlasRect        = new GlyphRect(glyphEntry.x, glyphEntry.y, glyphEntry.width + doublePadding, glyphEntry.height + doublePadding);
+                    //Debug.Log($"new: {atlasRect.x} {atlasRect.y} {atlasRect.width} {atlasRect.height}");
                     SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
                                                              ref drawData,
                                                              sdf8TextureSlice,
@@ -646,14 +649,23 @@ namespace TextMeshDOTS.Rendering
                     glyph.arrayIndex = (uint)entry.z;
                     // Todo: Currently we are overwriting these values because glyph generation doesn't need to augment these.
                     // Should we change that there? Or should we change the RenderGlyph comment?
-                    glyph.blUVA = new float2(entry.x, entry.y) * kTextureResolutionFloatInverse;
-                    glyph.trUVA = glyph.blUVA + new float2(entry.width, entry.height) * kTextureResolutionFloatInverse;
+
+                    if (entry.key.format == RenderFormat.SDF8)
+                    {
+                        glyph.blUVA = new float2(entry.x + entry.padding, entry.y + entry.padding) * kTextureResolutionFloatInverse;
+                        glyph.trUVA = glyph.blUVA + new float2(entry.width, entry.height) * kTextureResolutionFloatInverse;
+                    }
+                    else
+                    {
+                        glyph.blUVA = new float2(entry.x, entry.y) * kTextureResolutionFloatInverse;
+                        glyph.trUVA = glyph.blUVA + new float2(entry.width, entry.height) * kTextureResolutionFloatInverse;
+                    }
 
                     // Debug:
-                    if (i < 5 && entry.key.format == RenderFormat.SDF8)
-                    {
-                        //UnityEngine.Debug.Log($"x: {entry.x}, y: {entry.y}, width: {entry.width}, height: {entry.height}, arrayIndex: {entry.z}, blUVA: {glyph.blUVA}, trUVA: {glyph.trUVA}");
-                    }
+                    //if (i < 5 && entry.key.format == RenderFormat.SDF8)
+                    //{
+                    //    UnityEngine.Debug.Log($"x: {entry.x}, y: {entry.y}, width: {entry.width}, height: {entry.height}, arrayIndex: {entry.z}, blUVA: {glyph.blUVA}, trUVA: {glyph.trUVA}");
+                    //}
                     capture.glyphBuffer[i] = glyph;
 
                     uploadArray[capture.writeStart + i] = glyph;

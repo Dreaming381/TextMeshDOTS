@@ -61,8 +61,16 @@ namespace TextMeshDOTS.TextProcessing
             {
                 //render SDF into the reserved padded atlas texture  window 
                 var atlasRect = usedGlyphRects[usedGlyphIndex];
+                //Debug.Log($"old: {atlasRect.x} {atlasRect.y} {atlasRect.width} {atlasRect.height}");
                 //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-                SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation, ref drawData, textureData, atlasRect, atlasData.padding, atlasData.atlasWidth, atlasData.atlasHeight, atlasData.padding);
+                SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation, 
+                                                         ref drawData, 
+                                                         textureData, 
+                                                         atlasRect, 
+                                                         atlasData.padding, 
+                                                         atlasData.atlasWidth,
+                                                         atlasData.atlasHeight, 
+                                                         atlasData.padding);
             }
             else
                 Debug.Log($"{glyphEntry.key.glyphIndex} not found {usedGlyphs.Length}");

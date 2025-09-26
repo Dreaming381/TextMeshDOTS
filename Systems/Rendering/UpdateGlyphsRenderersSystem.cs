@@ -385,7 +385,8 @@ namespace TextMeshDOTS.Rendering
                 foreach (var id in entriesToRemove)
                 {
                     ref var entry = ref glyphTable.GetEntryRW(id);
-                    atlasTable.Free(id, entry.width, entry.height, entry.x, entry.y, entry.z);
+                    var doublePadding = 2 * entry.padding;
+                    atlasTable.Free(id, (short)(entry.width + doublePadding), (short)(entry.height + doublePadding), entry.x, entry.y, entry.z);
                     entry.x = -1;
                     entry.y = -1;
                     entry.z = -1;
