@@ -66,6 +66,7 @@ void GetGlyph(uint glyphIndex, uint glyphStartIndex, uint glyphCount,
         glyphEntryId = 0;
         scale = 0;
         reserved = 0u;
+        return;
     }
 
     uint baseAddress = (glyphStartIndex + glyphIndex) * 128;
