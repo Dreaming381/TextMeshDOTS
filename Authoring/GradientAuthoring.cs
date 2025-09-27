@@ -2,8 +2,6 @@ using Unity.Entities;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.TextCore.Text;
-using UnityEngine.UIElements;
-using Unity.Collections;
 
 namespace TextMeshDOTS.Authoring
 { 

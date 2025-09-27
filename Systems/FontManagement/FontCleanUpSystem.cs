@@ -19,14 +19,11 @@ namespace TextMeshDOTS.TextProcessing
 
             foreach (var (dynamicFontAsset, entity) in SystemAPI.Query<DynamicFontAsset>()
                 .WithAll<DynamicFontAsset>()
-                .WithNone<UsedGlyphs>()
-                .WithNone<MissingGlyphs>()         
                 .WithEntityAccess())
             {
                 var fontMaterial = hybridRenderer.GetMaterial(dynamicFontAsset.fontMaterialID);
                 hybridRenderer.UnregisterMaterial(dynamicFontAsset.fontMaterialID);
                 UnityEngine.Object.Destroy(fontMaterial);
-                UnityEngine.Object.Destroy(dynamicFontAsset.texture);
                 ecb.RemoveComponent<DynamicFontAsset>(entity);
             }
         }

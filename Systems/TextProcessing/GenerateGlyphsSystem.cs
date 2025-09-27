@@ -24,13 +24,11 @@ namespace TextMeshDOTS.TextProcessing
                       .Build();
 
             m_query = SystemAPI.QueryBuilder()
-                      .WithAllRW<RenderGlyphOld>()
                       .WithAllRW<RenderGlyph>()
                       .WithAll<CalliByte>()
                       .WithAll<GlyphOTF>()
                       .WithAll<XMLTag>()
                       .WithAll<TextBaseConfiguration>()
-                      .WithAllRW<TextRenderControl>()
                       .Build();
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
@@ -50,8 +48,6 @@ namespace TextMeshDOTS.TextProcessing
             state.Dependency = new GenerateRenderGlyphsJob
             {
                 renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
-                renderGlyphOldHandle = SystemAPI.GetBufferTypeHandle<RenderGlyphOld>(false),
-                textRenderControlHandle = SystemAPI.GetComponentTypeHandle<TextRenderControl>(false),
 
                 fontTable = SystemAPI.GetSingleton<FontTable>(),
                 glyphTable = SystemAPI.GetSingleton<GlyphTable>(),
@@ -60,7 +56,6 @@ namespace TextMeshDOTS.TextProcessing
                 additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
                 fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
-                dynamicFontAssetsLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(true),
                 fontAssetRefLookup = SystemAPI.GetComponentLookup<FontAssetRef>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),

@@ -28,7 +28,6 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<XMLTag> xmlTagHandle;
-        [ReadOnly] public BufferLookup<UsedGlyphs> glyphsInUseLookup;
         public NativeStream.Writer missingGlyphsStream;
 
         public uint lastSystemVersion;
@@ -270,7 +269,6 @@ namespace TextMeshDOTS.TextProcessing
             font.Shape(buffer, features);
             marker.End();
 
-            var glyphsInUse = glyphsInUseLookup[fontEntity].AsNativeArray().Reinterpret<uint>();
             var glyphInfos = buffer.GetGlyphInfosSpan();
             var glyphPositions = buffer.GetGlyphPositionsSpan();
             var capacity = glyphOTFs.Length + glyphInfos.Length;

@@ -2,9 +2,7 @@ using TextMeshDOTS.HarfBuzz;
 using System;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.TextCore;
 
 namespace TextMeshDOTS
 {
@@ -24,52 +22,14 @@ namespace TextMeshDOTS
         public PaintDelegates paintFunctions;
     }
 
-    #region Native FontAsset Components    
+    #region Native FontAsset Components   
 
-    /// <summary> Glyphs requested by hb_shape (=they are guaranteed to exist in font), </summary>
-    [InternalBufferCapacity(0)]
-    public struct MissingGlyphs : IBufferElementData
-    {
-        internal GlyphTable.Key key;
-    }
     
-    /// <summary> ID's of glyphs currently placed in the texture atlas. Keep order aligend with UsedGlyphRects </summary>
-    [InternalBufferCapacity(0)]
-    public struct UsedGlyphs : IBufferElementData
-    {
-        public uint glyphID;
-    }
-
-    /// <summary> GlyphsRects currently used in the texture atlas. Keep order aligend with GlyphsInUse </summary>
-    [InternalBufferCapacity(0)]
-    public struct UsedGlyphRects : IBufferElementData
-    {
-        public GlyphRect value;
-    }
-    /// <summary> Free GlyphsRects of texture atlas </summary>
-    [InternalBufferCapacity(0)]
-    public struct FreeGlyphRects : IBufferElementData
-    {
-        public GlyphRect value;
-    }    
- 
     /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
     public struct DynamicFontAsset : ICleanupComponentData
-    {
-        public UnityObjectRef<Material> debugMaterial;
-        public TextureType textureType;
-        public UnityObjectRef<Texture2D> texture;        
+    {  
         public BatchMaterialID fontMaterialID;
         public BatchMeshID backendMeshID;
-    }
-
-    /// <summary> Contains  relevant data from loading and using font</summary>
-    public struct AtlasData : IComponentData
-    {
-        public int atlasWidth;
-        public int atlasHeight;
-        public int padding;            //10% of atlas height or width
-        public int samplingPointSize;  //size of font (in pixel) in atlas
     }
 
     //while it is tempting to just copy FontBlobReference to font entities, it will not work:
@@ -173,11 +133,5 @@ namespace TextMeshDOTS
     }
     public struct FontState : IComponentData { };
     public struct FontsDirtyTag : IComponentData { }
-
-    public enum TextureType: byte
-    {
-        ARGB = 0,
-        SDF = 1,
-    }
     #endregion
 }

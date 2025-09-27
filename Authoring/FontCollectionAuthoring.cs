@@ -6,7 +6,6 @@ using UnityEngine;
 
 namespace TextmeshDOTS
 {
-
     [DisallowMultipleComponent]
     [AddComponentMenu("TextMeshDOTS/Font Collection")]
     public class FontCollectionAuthoring : MonoBehaviour

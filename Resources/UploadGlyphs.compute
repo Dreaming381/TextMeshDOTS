@@ -18,13 +18,13 @@ void processGlyph(uint src, uint dst)
     _dst.Store4(dst + 80, _src.Load4(src + 80));
     _dst.Store4(dst + 96, _src.Load4(src + 96));
     uint4 lastLoad = _src.Load4(src + 112);
-    float arrayIndex = (float)lastLoad.x;
+    float arrayIndex = (float) lastLoad.x;
     lastLoad.x = asuint(arrayIndex);
     _dst.Store4(dst + 112, lastLoad);
 }
 
 [numthreads(64, 1, 1)]
-void UploadGlyphs (uint threadId : SV_GroupIndex, uint3 groupIds : SV_GroupID)
+void UploadGlyphs(uint threadId : SV_GroupIndex, uint3 groupIds : SV_GroupID)
 {
     uint3 m = _meta.Load3((groupIds.x + _startOffset) * 12);
 

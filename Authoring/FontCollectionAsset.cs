@@ -5,7 +5,6 @@ using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UI;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 using Object = UnityEngine.Object;
 

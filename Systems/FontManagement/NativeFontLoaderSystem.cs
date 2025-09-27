@@ -1,6 +1,5 @@
 using System.IO;
 using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.HarfBuzz.Bitmap;
 using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Collections;
@@ -57,7 +56,7 @@ namespace TextMeshDOTS.TextProcessing
 
             textRendererQ = SystemAPI.QueryBuilder()
                 .WithAll<FontBlobReference>()
-                .WithAll<TextRenderControl>()
+                .WithAll<TextShaderIndex>()
                 .WithPresent<MaterialMeshInfo>()
                 .Build();
 
@@ -166,41 +165,6 @@ namespace TextMeshDOTS.TextProcessing
 
             //initialize texture. To save space, review how to initialize it with size 0
             //(as done by TextCore), and only increase once needed
-            DynamicFontAsset dynamicFontAsset;
-            AtlasData atlasData;
-
-            if (face.HasCOLR() || face.HasColorBitmap())
-            {
-                atlasData = new AtlasData
-                {
-                    atlasHeight = 2048,
-                    atlasWidth = 2048,
-                    padding = 8,                //10% of atlas height or width
-                    samplingPointSize = fontRequest.samplingPointSizeBitmap,    //size of font (in pixel) in atlas
-                };
-                var texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.ARGB32,false);
-                var textureData = texture2D.GetRawTextureData<ColorARGB>();
-                Blending.SetTransparent(textureData);
-                dynamicFontAsset = new DynamicFontAsset { texture = texture2D, textureType = TextureType.ARGB };
-            }
-            else
-            {
-                atlasData = new AtlasData
-                {
-                    atlasHeight = 2048,
-                    atlasWidth = 2048,
-                    padding = fontRequest.samplingPointSizeSDF / 6,  //samplingPointSizeSDF is clamped to 64..96, so padding will be clamped to 10..16
-                    samplingPointSize = fontRequest.samplingPointSizeSDF,  //size of font (in pixel) in atlas
-                };
-                var texture2D = new Texture2D(atlasData.atlasWidth, atlasData.atlasHeight, TextureFormat.Alpha8, false);
-                var rawTextureData = texture2D.GetRawTextureData<byte>();
-
-                //initialize to black
-                for (int i = 0; i < rawTextureData.Length; i++)
-                    rawTextureData[i] = 0;
-                texture2D.Apply();
-                dynamicFontAsset = new DynamicFontAsset { texture = texture2D, textureType = TextureType.SDF};
-            }
 
             var drawAndPaintFunctions = new DrawAndPaintFunctions
             {
@@ -211,12 +175,8 @@ namespace TextMeshDOTS.TextProcessing
             var fontEntity = state.EntityManager.CreateEntity(nativeFontDataArchetype);
             state.EntityManager.SetComponentData(fontEntity, fontRequest.fontAssetRef);
             state.EntityManager.SetComponentData(fontEntity, fontAssetMetadata);
-            state.EntityManager.SetComponentData(fontEntity, atlasData);
-            state.EntityManager.AddComponentData(fontEntity, dynamicFontAsset);
+            state.EntityManager.AddComponentData(fontEntity, new DynamicFontAsset { });
             state.EntityManager.AddComponentData(fontEntity, drawAndPaintFunctions);
-
-            var freeGlyphRects = state.EntityManager.GetBuffer<FreeGlyphRects>(fontEntity);
-            NativeAtlas.InitializeFreeGlyphRects(ref freeGlyphRects, atlasData.atlasWidth, atlasData.atlasHeight);
 
             if (fontTable.fontAssetRefToFaceIndexMap.TryGetValue(fontRequest.fontAssetRef, out var id))
             {

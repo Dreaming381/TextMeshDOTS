@@ -84,12 +84,6 @@ namespace TextMeshDOTS.Rendering
         public RenderGlyph glyph;
     }
 
-    [MaterialProperty("_TextShaderIndexOld")]
-    public struct TextShaderIndexOld : IComponentData
-    {
-        public uint firstGlyphIndex;
-        public uint glyphCount;
-    }
 
     [MaterialProperty("_TextShaderIndex")]
     public struct TextShaderIndex : IComponentData
@@ -128,100 +122,8 @@ namespace TextMeshDOTS.Rendering
         public uint lastTouchedGlobalSystemVersion;
 
         public JobHandle TryDispose(JobHandle inputDeps) => inputDeps;
-    }
-
-    // Only present if there are child fonts
-    [MaterialProperty("_TextMaterialMaskShaderIndex")]
-    public struct TextMaterialMaskShaderIndex : IComponentData
-    {
-        public uint firstMaskIndex;
-    }
-
-    /// <summary> 96 byte glyph data </summary>
-    [InternalBufferCapacity(0)]
-    public struct RenderGlyphOld : IBufferElementData
-    {
-        public float2 blPosition;   //0
-        public float2 trPosition;   //8   
-        public float2 blUVA;        //16
-        public float2 trUVA;        //24
-
-        public float2 blUVB;        //32
-        public float2 tlUVB;        //40
-        public float2 trUVB;        //48      
-        public float2 brUVB;        //56
-
-        // Assign a UnityEngine.Color32 to these.
-        public PackedColor blColor; //64
-        public PackedColor tlColor; //68
-        public PackedColor trColor; //72
-        public PackedColor brColor; //76
-
-        public uint  glyphID;        //80 not needed anywhere-->remove from struct?
-        public float shear;         //84 Should be equal to topLeft.x - bottomLeft.x
-        public float scale;         //88
-        public float rotationCCW;   //92
-    }
-
-    public struct PackedColor
-    {
-        public uint packedColor;
-
-        public uint a
-        {
-            get => packedColor >> 24;
-            set => packedColor = (packedColor & 0x00ffffff) | (value << 24);
-        }
-
-        public uint b
-        {
-            get => (packedColor >> 16) & 0xff;
-            set => packedColor = (packedColor & 0xff00ffff) | (value << 16);
-        }
-
-        public uint g
-        {
-            get => (packedColor >> 8) & 0xff;
-            set => packedColor = (packedColor & 0xffff00ff) | (value << 8);
-        }
-
-        public uint r
-        {
-            get => packedColor & 0xff;
-            set => packedColor = (packedColor & 0xffffff00) | value;
-        }
-
-        public static implicit operator PackedColor(UnityEngine.Color32 unityColor)
-        {
-            uint result                           = (uint)unityColor.a << 24;
-            result                               |= (uint)unityColor.b << 16;
-            result                               |= (uint)unityColor.g << 8;
-            result                               |= (uint)unityColor.r;
-            return new PackedColor { packedColor  = result };
-        }
-
-        public static implicit operator UnityEngine.Color32(PackedColor packedColor)
-        {
-            return new UnityEngine.Color32
-            {
-                r = (byte)(packedColor.packedColor & 0xff),
-                g = (byte)((packedColor.packedColor >> 8) & 0xff),
-                b = (byte)((packedColor.packedColor >> 16) & 0xff),
-                a = (byte)((packedColor.packedColor >> 24) & 0xff)
-            };
-        }
-    }
-
-    public struct TextRenderControl : IComponentData
-    {
-        public enum Flags : byte
-        {
-            None = 0,
-            Dirty = 1 << 0,
-        }
-
-        public Flags flags;
-    }
+    }  
+   
 
     /// <summary>
     /// An additional rendered text entity containing a different font and material.
@@ -243,29 +145,5 @@ namespace TextMeshDOTS.Rendering
     {
         public byte fontMaterialIndex;
     }
-
-    /// <summary>
-    /// A buffer that should be present on every entity posessing or referenced by the
-    /// AdditionalFontMaterialEntity buffer. This buffer contains the GPU mask representation,
-    /// and its contents will automatically be maintained by the Calligraphics rendering backend.
-    /// Public so that you can add/remove it or maybe even read it (if you are brave).
-    /// </summary>
-    [InternalBufferCapacity(0)]
-    public struct RenderGlyphMask : IBufferElementData
-    {
-        public uint lowerOffsetUpperMask16;
-    }
-    #region components required by TextRenderingUpdateSystem and TextRenderingDispatchSystem
-    //These singleton components will be added to TextRenderingUpdateSystem in OnCreate()
-    internal struct TextStatisticsTag : IComponentData { }
-    internal struct GlyphCountThisFrame : IComponentData
-    {
-        public uint glyphCount;
-    }
-    internal struct MaskCountThisFrame : IComponentData
-    {
-        public uint maskCount;
-    }
-    #endregion
 }
 
