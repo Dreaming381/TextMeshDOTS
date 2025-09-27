@@ -650,18 +650,8 @@ namespace TextMeshDOTS.Rendering
                     // Todo: Currently we are overwriting these values because glyph generation doesn't need to augment these.
                     // Should we change that there? Or should we change the RenderGlyph comment?
 
-                    //if (entry.key.format == RenderFormat.SDF8)
-                    {
-                        //glyph.blUVA = (new float2(entry.x, entry.y) + entry.padding) * kTextureResolutionFloatInverse;
-                        //glyph.trUVA = glyph.blUVA + new float2(entry.width, entry.height) * kTextureResolutionFloatInverse;
-                        glyph.blUVA = new float2(entry.x, entry.y) * kTextureResolutionFloatInverse;
-                        glyph.trUVA = glyph.blUVA + (new float2(entry.width, entry.height) + entry.padding * 2) * kTextureResolutionFloatInverse;
-                    }
-                    //else
-                    //{
-                    //    glyph.blUVA = new float2(entry.x, entry.y) * kTextureResolutionFloatInverse;
-                    //    glyph.trUVA = glyph.blUVA + new float2(entry.width, entry.height) * kTextureResolutionFloatInverse;
-                    //}
+                    glyph.blUVA = new float2(entry.x, entry.y) * kTextureResolutionFloatInverse;
+                    glyph.trUVA = glyph.blUVA + (new float2(entry.width, entry.height) + entry.padding * 2) * kTextureResolutionFloatInverse;
 
                     // Debug:
                     //if (i < 5 && entry.key.format == RenderFormat.SDF8)

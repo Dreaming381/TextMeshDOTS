@@ -15,11 +15,12 @@ SAMPLER(sampler_tmdBitmap);
 // Helpers
 float4 UnpackHalfColor(uint2 packedColor)
 {
-    uint4 expanded = packedColor.xyxy;
+    uint4 expanded = packedColor.xxyy;
     expanded.yw = expanded.yw >> 16u;
     expanded = expanded & 0xffffu;
     return f16tof32(expanded);
 }
+
 
 // Base APIs
 void GetGlyph(uint glyphIndex, uint glyphStartIndex, uint glyphCount,
@@ -84,9 +85,9 @@ void GetGlyph(uint glyphIndex, uint glyphStartIndex, uint glyphCount,
     tlUVB = asfloat(load48_63.xy);
     trUVB = asfloat(load48_63.zw);
 
-    uint4 load64_79 = _tmdGlyphs.Load4(baseAddress + 64);
-    blColor = UnpackHalfColor(load64_79.xy);
-    brColor = UnpackHalfColor(load64_79.zw);
+    uint4 load64_79 = _tmdGlyphs.Load4(baseAddress + 64);   //load half4 blColor and half4 brColor
+    blColor = UnpackHalfColor(load64_79.xy);                //convert blColor from half4 to float4
+    brColor = UnpackHalfColor(load64_79.zw);                //convert brColor from half4 to float4
     uint4 load80_95 = _tmdGlyphs.Load4(baseAddress + 80);
     tlColor = UnpackHalfColor(load80_95.xy);
     trColor = UnpackHalfColor(load80_95.zw);

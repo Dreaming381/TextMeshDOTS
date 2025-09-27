@@ -74,7 +74,7 @@ void DoSimpleUnlitFrag_float(float4 vertexColor, float4 uvAandB, float4 atlasInd
 		float signedDistanceToEdge = (signedDistance - 0.5) * signedDistanceRatio; // Signed distance to edge, in Texture space
 		float pixelCoverage = saturate(signedDistanceToEdge * 2.0 * screenSpaceRatio + 0.5 + isoPerimeter * signedDistanceRatio * screenSpaceRatio);	// Screen pixel coverage (alpha)
 
-		finalColor = vertexColor.xyz;
+        finalColor = vertexColor.xyz * vertexColor.w;
 		finalAlpha = vertexColor.w * pixelCoverage;
 		return;
 	}
