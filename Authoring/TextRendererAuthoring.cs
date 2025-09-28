@@ -1,12 +1,11 @@
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.Rendering;
+using TextMeshDOTS.Rendering.Authoring;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
+using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
-using Unity.Entities.Graphics;
-using Unity.Rendering;
-using UnityEngine.Rendering;
+using UnityEngine;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -37,6 +36,7 @@ namespace TextMeshDOTS.Authoring
         public float lineSpacing = 0;
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
+        public Material material;
     }
 
     class TextRendererBaker : Baker<TextRendererAuthoring>
@@ -45,46 +45,30 @@ namespace TextMeshDOTS.Authoring
         {
             DependsOn(authoring.fontCollectionAsset);
             int fontCount = 0;
-            if (authoring.fontCollectionAsset == null || (fontCount = authoring.fontCollectionAsset.fontRequests.Count) == 0 || authoring.defaultFont == string.Empty)
+            if (authoring.fontCollectionAsset == null || 
+                (fontCount = authoring.fontCollectionAsset.fontRequests.Count) == 0 || 
+                authoring.defaultFont == string.Empty || 
+                authoring.material ==null)
                 return;
 
-            var layer = GetLayer();
-
-            var renderFilterSettings = new RenderFilterSettings
-            {
-                Layer = layer,
-                RenderingLayerMask = (uint)(1 << layer),
-                ShadowCastingMode = ShadowCastingMode.Off,
-                ReceiveShadows = false,
-                MotionMode = MotionVectorGenerationMode.Object,
-                StaticShadowCaster = false,
-            };
+            var backEndMesh = Resources.Load<Mesh>(TextBackendBakingUtility.kTextBackendMeshResource);
+            
+            //add MeshFilter and MeshRender on main entity to ensure it correctly converted 
+            var meshRenderer = GetComponent<MeshRenderer>();
+            if (meshRenderer == null)
+                meshRenderer = authoring.gameObject.AddComponent<MeshRenderer>();
+            var meshFilter = GetComponent<MeshFilter>();
+            if (meshFilter == null)
+                meshFilter = authoring.gameObject.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = backEndMesh;
+            meshRenderer.material = authoring.material;
 
             var entity = GetEntity(TransformUsageFlags.Renderable);
-            AddEntityGraphicsComponents(entity, renderFilterSettings);
             AddComponent<TextShaderIndex>(entity);
-
-            //add for each font in FontCollectionAsset an additional render entity to enable use of this font
-            var additionalEntities = new NativeList<Entity>(fontCount, Allocator.Temp);
-            for (int i = 0; i < fontCount; i++)
-            {
-                var fontItem = authoring.fontCollectionAsset.fontRequests[i];
-                if (i > 0)
-                    AddAdditionalFontEntity(fontItem.fontAssetRef, additionalEntities, renderFilterSettings);
-                else
-                    AddComponent(entity, new FontBlobReference { value = fontItem.fontAssetRef });
-            }
-
-            if (additionalEntities.Length > 0)
-            {
-                var additionalEntitiesBuffer = AddBuffer<AdditionalFontMaterialEntity>(entity);
-                additionalEntitiesBuffer.Reinterpret<Entity>().AddRange(additionalEntities.AsArray());
-                AddBuffer<FontMaterialSelectorForGlyph>(entity);
-            }
-
-            //Text Content
+            var fontItem = authoring.fontCollectionAsset.fontRequests[0];
             AddBuffer<XMLTag>(entity);
             AddBuffer<GlyphOTF>(entity);
+            AddBuffer<RenderGlyph>(entity);
             var calliByte = AddBuffer<CalliByte>(entity);
             var calliString = new CalliString(calliByte);
             calliString.Append(authoring.text);
@@ -104,30 +88,7 @@ namespace TextMeshDOTS.Authoring
                 lineSpacing = (half)authoring.lineSpacing,
                 paragraphSpacing = (half)authoring.paragraphSpacing,
             };
-            AddComponent(entity, textBaseConfiguraton);
-            AddBuffer<RenderGlyph>(entity);
-        }
-        
-        void AddAdditionalFontEntity(FontAssetRef fontAssetRef, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
-        {
-            var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
-            AddEntityGraphicsComponents(newEntity, renderFilterSettings);
-            AddComponent<TextShaderIndex>(newEntity);
-
-            AddComponent(newEntity, new FontBlobReference { value = fontAssetRef });
-            additionalEntities.Add(newEntity);
-        }
-
-        //keep in sync with RenderMeshUtility.GenerateComponentTypes
-        void AddEntityGraphicsComponents(Entity entity, RenderFilterSettings renderFilterSettings)
-        {
-            AddComponent<WorldRenderBounds>(entity);
-            AddSharedComponent(entity, renderFilterSettings);
-            AddComponent<MaterialMeshInfo>(entity); 
-            SetComponentEnabled<MaterialMeshInfo>(entity, false); //enable once font texture was generated and registered with BRG
-            AddComponent<WorldToLocal_Tag>(entity);
-            AddComponent<RenderBounds>(entity);
-            AddComponent<PerInstanceCullingTag>(entity);
-        }
+            AddComponent(entity, textBaseConfiguraton);           
+        } 
     }    
 }

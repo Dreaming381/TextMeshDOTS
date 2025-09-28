@@ -122,28 +122,6 @@ namespace TextMeshDOTS.Rendering
         public uint lastTouchedGlobalSystemVersion;
 
         public JobHandle TryDispose(JobHandle inputDeps) => inputDeps;
-    }  
-   
-
-    /// <summary>
-    /// An additional rendered text entity containing a different font and material.
-    /// The additional entity shares the RenderGlyphOld buffer, and uses a mask to identify
-    /// the glyphs to render.
-    /// </summary>
-    [InternalBufferCapacity(0)]
-    public struct AdditionalFontMaterialEntity : IBufferElementData
-    {
-        public Entity entity;
-    }
-
-    /// <summary>
-    /// A per-glyph index into the font and material that should be used to render it.
-    /// Index 0 is this entity. Index 1 is the first entity in AdditionalFontMaterialEntity buffer.
-    /// </summary>
-    [InternalBufferCapacity(0)]
-    public struct FontMaterialSelectorForGlyph : IBufferElementData
-    {
-        public byte fontMaterialIndex;
     }
 }
 

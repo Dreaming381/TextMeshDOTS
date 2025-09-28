@@ -12,7 +12,6 @@
         <editor:PropertyField binding-path="paragraphSpacing" name="paragraphSpacing" />
         <editor:PropertyField binding-path="wordWrap" name="wordWrap" />
         <editor:PropertyField binding-path="isOrthographic" name="isOrthographic" />
-        <editor:PropertyField binding-path="samplingPointSizeSDF" name="SamplingPointSizeSDF" />
-        <editor:PropertyField binding-path="samplingPointSizeBitmap" name="SamplingPointSizeBitmap" />
+        <editor:PropertyField name="material" binding-path="material" />
     </engine:VisualElement>
 </engine:UXML>

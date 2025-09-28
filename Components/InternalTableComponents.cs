@@ -16,8 +16,29 @@ namespace TextMeshDOTS.HarfBuzz
         public NativeArray<UnsafeList<Font> > perThreadFontCaches;
 
         // These are temporary. Something like fontAssetRefToFaceIndexMap, but it will probably be refined.
-        public NativeHashMap<int, Entity>       faceIndexToFontEntityMap;
         public NativeHashMap<FontAssetRef, int> fontAssetRefToFaceIndexMap;
+        public NativeList<FontAssetRef> fontAssetRefs;
+
+        public int GetFontIndex(FontAssetRef desiredFontAssetRef)
+        {
+            //Debug.Log($"Search for: {desiredFontAssetRef}");
+            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            {
+                //Debug.Log($"candidate: {fontAssetRefs[i].ToString()}");
+                if (fontAssetRefs[i] == desiredFontAssetRef)
+                    return i;
+            }
+
+            //fall back to family in case we end up here
+            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            {
+                //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
+                if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash)
+                    return i;
+            }
+            //Debug.Log($"Requested font not found");
+            return -1;
+        }
 
         public Font GetOrCreateFont(int faceIndex, int threadIndex)
         {
@@ -36,8 +57,8 @@ namespace TextMeshDOTS.HarfBuzz
             if (faces.IsCreated)
             {
                 var jh = new DisposeInnerJob { table = this }.Schedule(inputDeps);
-                jh                                   = faceIndexToFontEntityMap.Dispose(jh);  // Temporary
-                return JobHandle.CombineDependencies(faces.Dispose(jh), perThreadFontCaches.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
+                jh = JobHandle.CombineDependencies(faces.Dispose(jh), perThreadFontCaches.Dispose(jh));
+                return JobHandle.CombineDependencies(jh, fontAssetRefs.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
             }
             return inputDeps;
         }

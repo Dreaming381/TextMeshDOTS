@@ -11,18 +11,13 @@ namespace TextMeshDOTS.TextProcessing
     [UpdateAfter(typeof(ShapeSystem))]
     public partial struct GenerateGlyphsSystem : ISystem
     {
-        EntityQuery m_query, fontstateQ;
+        EntityQuery m_query;
 
         bool m_skipChangeFilter;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            fontstateQ = SystemAPI.QueryBuilder()
-                      .WithAll<FontState>()
-                      .WithNone<FontsDirtyTag>()
-                      .Build();
-
             m_query = SystemAPI.QueryBuilder()
                       .WithAllRW<RenderGlyph>()
                       .WithAll<CalliByte>()
@@ -33,7 +28,6 @@ namespace TextMeshDOTS.TextProcessing
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<GlyphOTF>());
-            state.RequireForUpdate(fontstateQ);
         }
 
 
@@ -53,10 +47,6 @@ namespace TextMeshDOTS.TextProcessing
                 glyphTable = SystemAPI.GetSingleton<GlyphTable>(),
                 
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),
-                additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
-                fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
-                fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
-                fontAssetRefLookup = SystemAPI.GetComponentLookup<FontAssetRef>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(true),
                 xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(true),

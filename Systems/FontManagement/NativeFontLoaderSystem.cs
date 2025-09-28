@@ -19,20 +19,11 @@ namespace TextMeshDOTS.TextProcessing
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     partial struct NativeFontLoaderSystem : ISystem
     {
-        EntityQuery textRendererQ, changedFontRequestQ, fontstateQ;
-        EntityArchetype nativeFontDataArchetype, fontStateArchetype;
-        DrawDelegates drawFunctions;
-        PaintDelegates paintFunctions;
+        EntityQuery changedFontRequestQ;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            nativeFontDataArchetype = TextMeshDOTSArchetypes.GetNativeFontDataArchetype(ref state);
-
-            fontStateArchetype = TextMeshDOTSArchetypes.GetFontStateArchetype(ref state);
-            state.EntityManager.CreateEntity(fontStateArchetype);
-
-            var faceIndexToFontEntityMap = new NativeHashMap<int, Entity>(64, Allocator.Persistent);
             var fontAssetRefToFaceIndexMap = new NativeHashMap<FontAssetRef, int>(64, Allocator.Persistent);
             var perThreadFontCaches = new NativeArray<UnsafeList<Font>>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, Allocator.Persistent);
             for (int i = 0; i < perThreadFontCaches.Length; i++)
@@ -43,30 +34,15 @@ namespace TextMeshDOTS.TextProcessing
             {
                 faces = new NativeList<Face>(Allocator.Persistent),
                 perThreadFontCaches = perThreadFontCaches,
-                faceIndexToFontEntityMap = faceIndexToFontEntityMap,
-                fontAssetRefToFaceIndexMap = fontAssetRefToFaceIndexMap,
+                fontAssetRefs = new NativeList<FontAssetRef>(Allocator.Persistent),
+                fontAssetRefToFaceIndexMap = fontAssetRefToFaceIndexMap,               
             });
-
-            drawFunctions = new DrawDelegates(true);
-            paintFunctions = new PaintDelegates(true);
-
-            fontstateQ = SystemAPI.QueryBuilder()
-                .WithAll<FontState>()
-                .Build();
-
-            textRendererQ = SystemAPI.QueryBuilder()
-                .WithAll<FontBlobReference>()
-                .WithAll<TextShaderIndex>()
-                .WithPresent<MaterialMeshInfo>()
-                .Build();
 
             changedFontRequestQ = SystemAPI.QueryBuilder()
                 .WithAll<FontRequest>()
                 .Build();
             changedFontRequestQ.SetChangedVersionFilter(ComponentType.ReadWrite<FontRequest>());
-
             
-            state.RequireForUpdate(fontstateQ);
             state.RequireForUpdate(changedFontRequestQ);
         }
 
@@ -82,39 +58,15 @@ namespace TextMeshDOTS.TextProcessing
 
             //copy to nativeArray because LoadFont would invalidate DynamicBuffer due to structural changes
             var fontRequests = CollectionHelper.CreateNativeArray<FontRequest>(changedFontRequestBuffer.AsNativeArray(), state.WorldUpdateAllocator);            
-            bool newFontsAdded = false;
 
             for (int i = 0, ii = fontRequests.Length; i < ii; i++)
             {
                 var fontRequest = fontRequests[i];
-                if (!(fontTable.fontAssetRefToFaceIndexMap.TryGetValue(fontRequest.fontAssetRef, out int id) && fontTable.faceIndexToFontEntityMap.ContainsKey(id)))
+                if (!fontTable.fontAssetRefToFaceIndexMap.ContainsKey(fontRequest.fontAssetRef))
                 {
-                    newFontsAdded = true;
                     LoadFont(fontRequest, ref state, ref fontTable);
                 }
             }
-
-            //To-Do: determine wich fonts are actually used by TextRender. Unload all others. Likely only possible after running ShapeJob?
-
-            //even if no new fonts are found, the backer will reset all MaterialMeshInfo (disable it, values are zero
-            //-->run EnableAndValidateMaterialMeshInfoJob (same job that run after registering new materials)
-            if (!newFontsAdded) 
-            {                
-                //validate MaterialMeshInfo (TextRender connected to correct FontAssets?)
-                var dynamicFontAssetLookup = SystemAPI.GetComponentLookup<DynamicFontAsset>(false);
-                var validateMaterialMeshInfoJob = new EnableAndValidateMaterialMeshInfoJob
-                {                    
-                    fontAssetRefToFaceIndexMap = fontTable.fontAssetRefToFaceIndexMap,
-                    faceIndexToFontEntityMap = fontTable.faceIndexToFontEntityMap,
-                    dynamicFontAssetLookup = dynamicFontAssetLookup,
-                };
-                state.Dependency = validateMaterialMeshInfoJob.ScheduleParallel(textRendererQ, state.Dependency);
-                return;
-            }
-
-            var fontStateEntity = fontstateQ.GetSingletonEntity();
-            if (!SystemAPI.HasComponent<FontsDirtyTag>(fontStateEntity))
-                state.EntityManager.AddComponent<FontsDirtyTag>(fontStateEntity);
         }
 
         public void OnDestroy(ref SystemState state)
@@ -158,36 +110,14 @@ namespace TextMeshDOTS.TextProcessing
                 {
                     blob = new Blob(fontPath);
                 }
-            }
-            
-            var face = new Face(blob.ptr, 0);
-            var fontAssetMetadata = new FontAssetMetadata { family = family, subfamily = subFamily, faceIndex = fontTable.fontAssetRefToFaceIndexMap.Count };
+            }             
 
-            //initialize texture. To save space, review how to initialize it with size 0
-            //(as done by TextCore), and only increase once needed
-
-            var drawAndPaintFunctions = new DrawAndPaintFunctions
+            if (!fontTable.fontAssetRefToFaceIndexMap.ContainsKey(fontRequest.fontAssetRef))
             {
-                drawFunctions = drawFunctions,
-                paintFunctions = paintFunctions,
-            };
-
-            var fontEntity = state.EntityManager.CreateEntity(nativeFontDataArchetype);
-            state.EntityManager.SetComponentData(fontEntity, fontRequest.fontAssetRef);
-            state.EntityManager.SetComponentData(fontEntity, fontAssetMetadata);
-            state.EntityManager.AddComponentData(fontEntity, new DynamicFontAsset { });
-            state.EntityManager.AddComponentData(fontEntity, drawAndPaintFunctions);
-
-            if (fontTable.fontAssetRefToFaceIndexMap.TryGetValue(fontRequest.fontAssetRef, out var id))
-            {
-                fontTable.faceIndexToFontEntityMap[id] = fontEntity;
-            }
-            else
-            {
-                id = fontTable.fontAssetRefToFaceIndexMap.Count;
+                var id = fontTable.fontAssetRefToFaceIndexMap.Count;
+                fontTable.fontAssetRefs.Add(fontRequest.fontAssetRef);
                 fontTable.fontAssetRefToFaceIndexMap.Add(fontRequest.fontAssetRef, id);
-                fontTable.faceIndexToFontEntityMap.Add(id, fontEntity);
-                fontTable.faces.Add(face);
+                fontTable.faces.Add(new Face(blob.ptr, 0));
                 for (int i = 0; i < fontTable.perThreadFontCaches.Length; i++)
                 {
                     var list = fontTable.perThreadFontCaches[i];

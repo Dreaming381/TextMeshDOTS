@@ -2,12 +2,10 @@ using Unity.Burst;
 using Unity.Entities;
 using Unity.Profiling;
 using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.Rendering;
 using Unity.Jobs;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Font = TextMeshDOTS.HarfBuzz.Font;
-using System.Collections.Generic;
 
 namespace TextMeshDOTS.TextProcessing
 {
@@ -17,7 +15,7 @@ namespace TextMeshDOTS.TextProcessing
     //[DisableAutoCreation]
     public partial struct ShapeSystem : ISystem
     {
-        EntityQuery textRendererQ, fontstateQ;
+        EntityQuery textRendererQ;
         static readonly ProfilerMarker marker = new ProfilerMarker("hb_shape");
         static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
 
@@ -26,21 +24,14 @@ namespace TextMeshDOTS.TextProcessing
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            fontstateQ = SystemAPI.QueryBuilder()
-                .WithAll<FontState>()
-                .WithNone<FontsDirtyTag>()
-                .Build();
-
             textRendererQ = SystemAPI.QueryBuilder()
                 .WithAllRW<XMLTag>()
                 .WithAllRW<GlyphOTF>()
                 .WithAllRW<CalliByte>()           
                 .WithAll<TextBaseConfiguration>()
-                .WithAll<FontBlobReference>()
                 .Build();
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
-            state.RequireForUpdate(fontstateQ);
 
             var glyphTable = new GlyphTable
             {
@@ -56,7 +47,7 @@ namespace TextMeshDOTS.TextProcessing
         {
             //if (textRendererQ.IsEmpty)
             //    return;
-            //Debug.Log("Shape system");
+            //Debug.Log($"Shape system {textRendererQ.CalculateEntityCount()}");
             
             state.Dependency = new ExtractTagsJob
             {
@@ -81,14 +72,9 @@ namespace TextMeshDOTS.TextProcessing
 
                 glyphTable = glyphTable,
                 fontTable = fontTable,
-                entitesHandle = SystemAPI.GetEntityTypeHandle(),
-                additionalFontMaterialEntityHandle = SystemAPI.GetBufferTypeHandle<AdditionalFontMaterialEntity>(true),
                 textBaseConfigurationHandle = SystemAPI.GetComponentTypeHandle<TextBaseConfiguration>(true),
-                fontBlobReferenceHandle = SystemAPI.GetComponentTypeHandle<FontBlobReference>(true),
-                fontBlobReferenceLookup = SystemAPI.GetComponentLookup<FontBlobReference>(true),
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 glyphOTFHandle = SystemAPI.GetBufferTypeHandle<GlyphOTF>(false),
-                selectorHandle = SystemAPI.GetBufferTypeHandle<FontMaterialSelectorForGlyph>(false),
                 xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,

@@ -1,3 +1,4 @@
+using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.RichText;
 using Unity.Collections;
 using UnityEngine;
@@ -23,7 +24,7 @@ namespace TextMeshDOTS
         {
             get { return new FontAssetRef(m_fontFamilyHash, m_fontWeight, m_fontWidth, m_fontStyles); }   
         }
-    public void Reset(in TextBaseConfiguration textBaseConfiguration, ref FontAssetArray fontAssetArray)
+    public void Reset(in TextBaseConfiguration textBaseConfiguration, ref FontTable fontTable)
         {
             m_fontStyles = textBaseConfiguration.fontStyles;
 
@@ -40,12 +41,12 @@ namespace TextMeshDOTS
             m_fontWidthStack.Add(m_fontWidth);
 
             m_fontMaterialIndex = 0;
-            GetFontIndex(ref fontAssetArray);
+            GetFontIndex(ref fontTable);
         }
 
-        internal bool GetFontIndex(ref FontAssetArray fontAssetArray)
+        internal bool GetFontIndex(ref FontTable fontTable)
         {
-            var fontIndex = fontAssetArray.GetFontIndex(FontAssetRef);
+            var fontIndex = fontTable.GetFontIndex(FontAssetRef);
             if (fontIndex != -1)
             {
                 m_fontMaterialIndex = fontIndex;
@@ -63,7 +64,7 @@ namespace TextMeshDOTS
         /// In case the XMLTag  causes a change of the required font by changing any of the parameters in FontAssetRef, this method 
         /// searches the index of that font (0=main entity, >0 AdditionalFontEntity) in the provided FontAssetArray 
         /// </summary>
-        internal void GetCurrentFontIndex(ref XMLTag tag, ref FontAssetArray fontAssetArray, ref CalliString calliStringRaw)
+        internal void GetCurrentFontIndex(ref XMLTag tag, ref FontTable fontTable, ref CalliString calliStringRaw)
         {
             switch (tag.tagType)
             {
@@ -73,7 +74,7 @@ namespace TextMeshDOTS
                     else
                         m_fontStyles &= ~FontStyles.Italic;
 
-                    GetFontIndex(ref fontAssetArray);
+                    GetFontIndex(ref fontTable);
                     return;
                 case TagType.Bold:
                     if (!tag.isClosing)
@@ -84,7 +85,7 @@ namespace TextMeshDOTS
                     else
                         m_fontWeight = m_fontWeightStack.RemoveExceptRoot();
 
-                    GetFontIndex(ref fontAssetArray);
+                    GetFontIndex(ref fontTable);
                     return;                
                 case TagType.FontWeight:                   
                     if (!tag.isClosing)
@@ -95,7 +96,7 @@ namespace TextMeshDOTS
                     else
                         m_fontWeight = m_fontWeightStack.RemoveExceptRoot();
 
-                    GetFontIndex(ref fontAssetArray);
+                    GetFontIndex(ref fontTable);
                     return;
                 case TagType.FontWidth:
                     if (!tag.isClosing)
@@ -106,7 +107,7 @@ namespace TextMeshDOTS
                     else
                         m_fontWidth = m_fontWidthStack.RemoveExceptRoot();
 
-                    GetFontIndex(ref fontAssetArray);
+                    GetFontIndex(ref fontTable);
                     return;
                 case TagType.Font:
                     if (!tag.isClosing)
@@ -123,14 +124,14 @@ namespace TextMeshDOTS
                             m_fontFamilyHashStack.Add(m_fontFamilyHash);
                         }
 
-                        GetFontIndex(ref fontAssetArray);
+                        GetFontIndex(ref fontTable);
                         return;                        
                     }
                     else
                     {
                         m_fontFamilyHash = m_fontFamilyHashStack.RemoveExceptRoot();
 
-                        GetFontIndex(ref fontAssetArray);
+                        GetFontIndex(ref fontTable);
                     }
                     return;
             }

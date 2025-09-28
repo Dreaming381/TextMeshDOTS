@@ -1,49 +1,9 @@
-using TextMeshDOTS.HarfBuzz;
 using System;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine.Rendering;
 
 namespace TextMeshDOTS
 {
-    #region Baking Components
-    /// <summary> Reference to raw otf and ttf font data</summary>
-    public struct FontBlobReference : IComponentData
-    {
-        public FontAssetRef value;
-        //public BlobAssetReference<FontBlob> value; //FontBlob is redundant to FontRequest struct
-    }
-    #endregion
-
-    /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
-    public struct DrawAndPaintFunctions: IComponentData
-    {
-        public DrawDelegates drawFunctions;
-        public PaintDelegates paintFunctions;
-    }
-
-    #region Native FontAsset Components   
-
-    
-    /// <summary> Add this pointer component upon loading font to enable automatic cleanup once font entity is destroyed </summary>
-    public struct DynamicFontAsset : ICleanupComponentData
-    {  
-        public BatchMaterialID fontMaterialID;
-        public BatchMeshID backendMeshID;
-    }
-
-    //while it is tempting to just copy FontBlobReference to font entities, it will not work:
-    //font entities need to be stable during incremental baking where additional data
-    //is merged into the entiy world. Unfortunately, this can invalidate all blob pointer
-    //from a previous baking run. Adding instead the FontAssetRef and FontAssetMetadata signifiantly
-    //reduces chunk capacity for font entities, but should be "rock solid"
-    public struct FontAssetMetadata : IComponentData
-    {
-        public FixedString128Bytes family;
-        public FixedString128Bytes subfamily;
-        public int faceIndex; //temporary link from FontEntity to FontTable
-    }
-
     /// <summary>
     /// FontAssetRef is THE link between any fonts request and font entities, and consists of a hash representing the 
     /// font family, and variation axis used during typesetting such as weight ("normal", "bold", semibold"), 
@@ -131,7 +91,4 @@ namespace TextMeshDOTS
             return $"FamilyHash {familyHash} weigth {weight} width {width} isItalic {isItalic}";
         }
     }
-    public struct FontState : IComponentData { };
-    public struct FontsDirtyTag : IComponentData { }
-    #endregion
 }

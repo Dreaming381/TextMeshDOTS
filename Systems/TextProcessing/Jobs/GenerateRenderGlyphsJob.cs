@@ -16,13 +16,9 @@ namespace TextMeshDOTS.TextProcessing
         [ReadOnly] internal FontTable fontTable;
         [ReadOnly] internal GlyphTable glyphTable;
         [ReadOnly] public EntityTypeHandle entitesHandle;
-        [ReadOnly] public BufferTypeHandle<AdditionalFontMaterialEntity> additionalFontMaterialEntityHandle;
-        [ReadOnly] public ComponentTypeHandle<FontBlobReference> fontBlobReferenceHandle;
-        [ReadOnly] public ComponentLookup<FontBlobReference> fontBlobReferenceLookup;
         public Entity textColorGradientEntity;
         [ReadOnly] public BufferLookup<TextColorGradient> textColorGradientLookup;
 
-        [ReadOnly] public ComponentLookup<FontAssetRef> fontAssetRefLookup;
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
         [ReadOnly] public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
         [ReadOnly] public BufferTypeHandle<XMLTag> xmlTagHandle;
@@ -39,8 +35,7 @@ namespace TextMeshDOTS.TextProcessing
         {
             if (!(chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
                   chunk.DidChange(ref xmlTagHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
-                  chunk.DidChange(ref fontBlobReferenceHandle, lastSystemVersion)))
+                  chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion)))
                 return;
 
             //Debug.Log("Generate glyphs job");
@@ -54,11 +49,6 @@ namespace TextMeshDOTS.TextProcessing
             TextColorGradientArray textColorGradientArray = default;
             textColorGradientArray.Initialize(textColorGradientEntity, textColorGradientLookup);
 
-            // Optional
-            var additionalFontMaterialEntityBuffers = chunk.GetBufferAccessor(ref additionalFontMaterialEntityHandle);
-
-            FontAssetArray fontAssetArray = default;
-            bool hasMultipleFonts = additionalFontMaterialEntityBuffers.Length > 0;
 
             for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
             {
@@ -67,19 +57,12 @@ namespace TextMeshDOTS.TextProcessing
                 var glyphOTFs = glyphOTFBuffers[indexInChunk];
                 var xmlTags = xmlTagBuffers[indexInChunk];
                 var renderGlyphs = renderGlyphBuffers[indexInChunk];
-                var textBaseConfiguration = textBaseConfigurations[indexInChunk];
-                 
-                if (hasMultipleFonts)
-                    fontAssetArray.Initialize(rootFontMaterialEntity, additionalFontMaterialEntityBuffers[indexInChunk], ref fontBlobReferenceLookup);
-                else
-                    fontAssetArray.Initialize(fontBlobReferenceLookup[rootFontMaterialEntity].value);
+                var textBaseConfiguration = textBaseConfigurations[indexInChunk];                 
 
 
                 GlyphGeneration.CreateRenderGlyphs(ref fontTable,
                                                    ref glyphTable, 
                                                    threadIndex,
-                                                   ref fontAssetArray,
-                                                   ref fontAssetRefLookup,
                                                    ref renderGlyphs,
                                                    in calliBytes,
                                                    in glyphOTFs,
