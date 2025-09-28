@@ -3,6 +3,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Rendering;
+using UnityEngine.Rendering;
 
 // If you are providing a frontend, listen up!
 // Your objective is to query for all entities with two components:
@@ -122,6 +123,11 @@ namespace TextMeshDOTS.Rendering
         public uint lastTouchedGlobalSystemVersion;
 
         public JobHandle TryDispose(JobHandle inputDeps) => inputDeps;
+    }
+    public struct RuntimeFontMaterial : IComponentData
+    {
+        public BatchMeshID batchMeshID;
+        public BatchMaterialID batchMaterialID;
     }
 }
 
