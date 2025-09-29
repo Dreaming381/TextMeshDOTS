@@ -1,7 +1,4 @@
 using System;
-using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.Rendering.Authoring;
-using TextMeshDOTS.TextProcessing;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
@@ -13,7 +10,7 @@ using Unity.Rendering;
 
 using static Unity.Entities.SystemAPI;
 
-namespace TextMeshDOTS.Rendering
+namespace TextMeshDOTS
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
@@ -339,7 +336,7 @@ namespace TextMeshDOTS.Rendering
                 }
                 bounds = new RenderBounds { Value = new AABB { Center = center, Extents = extents } };;
 
-                TextBackendBakingUtility.SetSubMesh(glyphs.Length, ref mmi);
+                RenderingTools.SetSubMesh(glyphs.Length, ref mmi);
             }
         }
 

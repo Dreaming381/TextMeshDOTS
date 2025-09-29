@@ -1,10 +1,9 @@
-using TextMeshDOTS.TextProcessing;
 using Unity.Burst;
 using Unity.Entities;
 using Unity.Rendering;
 using static Unity.Entities.SystemAPI;
 
-namespace TextMeshDOTS.Rendering
+namespace TextMeshDOTS
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateBefore(typeof(ShapeSystem))]

@@ -7,10 +7,10 @@ using Unity.Entities;
 using Unity.Profiling;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 
-namespace TextMeshDOTS.TextProcessing
+namespace TextMeshDOTS
 {
     [BurstCompile]
-    public partial struct ShapeJob : IJobChunk
+    internal partial struct ShapeJob : IJobChunk
     {
         [ReadOnly] public ProfilerMarker marker;
         [ReadOnly] public ProfilerMarker marker2;

@@ -6,10 +6,10 @@ using Unity.Burst.Intrinsics;
 using System.IO;
 using UnityEngine;
 
-namespace TextMeshDOTS.TextProcessing
+namespace TextMeshDOTS
 {
     [BurstCompile]
-    public partial struct ExtractTagsJob : IJobChunk
+    internal partial struct ExtractTagsJob : IJobChunk
     {
         public BufferTypeHandle<XMLTag> xmlTagHandle; 
         [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
