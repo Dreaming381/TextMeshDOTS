@@ -18,6 +18,15 @@ namespace TextMeshDOTS.HarfBuzz
         {
             Harfbuzz.hb_paint_funcs_destroy(ptr);
         }
+
+        // https://github.com/harfbuzz/harfbuzz/pull/4498 changed how PaintColrLayers (format 1) and PaintComposite (format 32) are rendered.
+        // specificaly, it removes usage of push group and pop group for PaintColrLayers, and thereby alpha blending between layers
+        // Replacing call to Raserize() by call to RasterizeAndBlend() using the SRC_OVER blend mode fixes that.
+        // Where those functions are used, it is unknown if the caller was PaintColrLayers or PaintComposite
+        // See https://github.com/harfbuzz/harfbuzz/blob/9fbc2d23b5bc3436cf2d99172ea09d56d857f583/src/OT/Color/COLR/COLR.hh for implementation of
+        // PaintColrLayers and PaintComposite. Unknown if usage of RasterizeAndBlend breaks rendering of PaintComposite path.
+        // To-Do: verify using the test included in the commit
+        // Rendering algorithm for all formats: https://learn.microsoft.com/en-us/typography/opentype/spec/colr#colr-version-1-rendering-algorithm 
         public PaintDelegates(bool dummyProperty)
         {
             ptr = Harfbuzz.hb_paint_funcs_create();
@@ -115,7 +124,9 @@ namespace TextMeshDOTS.HarfBuzz
             //Debug.Log($"Paint solid color");
             var colorARGB = (ColorARGB)color;
             var solidColor = new SolidColor(colorARGB);
-            AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, solidColor, data.clipRect);
+
+            //AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, solidColor, data.clipRect);
+            AntiAliasedRasterizerTextMeshDOTS.RasterizeAndBlend(ref data.clipGlyph, data.paintSurface, solidColor, PaintCompositeMode.SRC_OVER, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -127,7 +138,9 @@ namespace TextMeshDOTS.HarfBuzz
                 return;
 
             lineGradient.InitializeColorLine(colorLine);
-            AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, lineGradient, data.clipRect);
+
+            //AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, lineGradient, data.clipRect);
+            AntiAliasedRasterizerTextMeshDOTS.RasterizeAndBlend(ref data.clipGlyph, data.paintSurface, lineGradient, PaintCompositeMode.SRC_OVER,data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(LinearOrRadialGradientDelegate))]
@@ -139,7 +152,9 @@ namespace TextMeshDOTS.HarfBuzz
                 return;
 
             radialGradient.InitializeColorLine(colorLine);
-            AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, radialGradient, data.clipRect);
+
+            //AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, radialGradient, data.clipRect);
+            AntiAliasedRasterizerTextMeshDOTS.RasterizeAndBlend(ref data.clipGlyph, data.paintSurface, radialGradient, PaintCompositeMode.SRC_OVER, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(SweepGradientDelegate))]
@@ -151,13 +166,14 @@ namespace TextMeshDOTS.HarfBuzz
             if (!sweepGradient.isValid)
                 return;
 
-            AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, sweepGradient, data.clipRect);
+            //AntiAliasedRasterizerTextMeshDOTS.Rasterize(ref data.clipGlyph, data.paintSurface, sweepGradient, data.clipRect);
+            AntiAliasedRasterizerTextMeshDOTS.RasterizeAndBlend(ref data.clipGlyph, data.paintSurface, sweepGradient, PaintCompositeMode.SRC_OVER, data.clipRect);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
         public static void HB_paint_push_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, IntPtr user_data)
         {
-            //Debug.Log($"Push group");
+            //Debug.Log($"Push group ({data.group})");
             //according to https://github.com/harfbuzz/harfbuzz/issues/3931, there should only be two intermediate surfaces requiered
             //to build COMPOSITE glyphs (foreground, background)...but emperically we find sometimes need for three (e.g. in 😱). Not clear why
             //
@@ -202,7 +218,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(PopGroupDelegate))]
         public static void HB_paint_pop_group_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, PaintCompositeMode mode, IntPtr user_data)
         {
-            //Debug.Log($"Pop group");
+            //Debug.Log($"Pop group ({data.group}, blend mode {mode})");
             NativeArray<ColorARGB> result, source, destination = default;
 
             result = data.paintSurface;
