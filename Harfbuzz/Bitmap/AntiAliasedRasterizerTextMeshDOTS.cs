@@ -2,6 +2,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Burst;
 using Unity.Burst.CompilerServices;
+using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
@@ -29,8 +30,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             //Alternatively, we could also just use 1 array, and instead of storing triangle and trapezoid areas, store the delta areas of
             //current pixel (cut by edge) vs previous pixel. The cumulative sum of those delta areas should then result in the correct coverage for
             //each pixel, however this is prone to floating point errors, and accumulation of such errors results in banding
-            var areas = new NativeArray<float>(width * height, Allocator.Temp);
-            var areas_fill = new NativeArray<float>(width * height, Allocator.Temp);
+            var arraySize = width * height;
+            var areas = new NativeArray<float>(arraySize, Allocator.Temp);
+            var areas_fill = new NativeArray<float>(arraySize, Allocator.Temp);
 
             var offset = clipRect.min;            
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
@@ -64,7 +66,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         var x1ceil = math.ceil(x1);
                         var x1i = (int)x1ceil;
                         var linestart_x0i = linestart + x0i;
-                        if (linestart_x0i < 0)  // index is out of bounds 
+                        if (linestart_x0i < 0 || linestart_x0i > arraySize - 1)  // index is out of bounds
                         {
                             x = xnext;
                             continue;
@@ -162,9 +164,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             //Alternatively, we could also just use 1 array, and instead of storing triangle and trapezoid areas, store the delta areas of
             //current pixel (cut by edge) vs previous pixel. The cumulative sum of those delta areas should then result in the correct coverage for
             //each pixel, however this is prone to floating point errors, and accumulation of such errors results in banding
-            var areas = new NativeArray<float>(width * height, Allocator.Temp);
-            var areas_fill = new NativeArray<float>(width * height, Allocator.Temp);
-
+            var arraySize = width * height;
+            var areas = new NativeArray<float>(arraySize, Allocator.Temp);
+            var areas_fill = new NativeArray<float>(arraySize, Allocator.Temp);
             var offset = clipRect.min;
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
             {
@@ -197,7 +199,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         var x1ceil = math.ceil(x1);
                         var x1i = (int)x1ceil;
                         var linestart_x0i = linestart + x0i;
-                        if (linestart_x0i < 0)  // index is out of bounds 
+                        if (linestart_x0i < 0 || linestart_x0i > arraySize-1)  // index is out of bounds 
                         {
                             x = xnext;
                             continue;

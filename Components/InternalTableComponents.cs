@@ -6,6 +6,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEngine.TextCore;
 
 namespace TextMeshDOTS
 {
@@ -154,11 +155,19 @@ namespace TextMeshDOTS
             public short yBearing;
             public short padding;
 
-            public short xOld;
-            public short yOld;
-            public short paddingOld;
-
             public bool isInAtlas => x >= 0;
+            public GlyphRect PaddedAtlasRect
+            {
+                get
+                {
+                    var doublePadding = 2 * padding;
+                    return new GlyphRect(x, y, width + doublePadding, height + doublePadding);
+                }
+            }
+            public BBox ClipRect
+            {
+                get { return new BBox(xBearing, yBearing - height, xBearing + width, yBearing); }
+            }
             // Todo:
         }
 

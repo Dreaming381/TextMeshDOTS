@@ -234,13 +234,10 @@ namespace TextMeshDOTS
                 {
                     font.DrawGlyph(glyphEntry.key.glyphIndex, drawDelegates, ref drawData);
                     var sdf8TextureSlice = GetSdf8TextureSlice(glyphEntry.z);
-                    var doublePadding = 2*glyphEntry.padding;
-                    var atlasRect        = new GlyphRect(glyphEntry.x, glyphEntry.y, glyphEntry.width + doublePadding, glyphEntry.height + doublePadding);
-                    //Debug.Log($"new: {atlasRect.x} {atlasRect.y} {atlasRect.width} {atlasRect.height}");
                     SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
                                                              ref drawData,
                                                              sdf8TextureSlice,
-                                                             atlasRect,
+                                                             glyphEntry.PaddedAtlasRect,
                                                              glyphEntry.padding,
                                                              kTextureDimension,
                                                              kTextureDimension,
@@ -252,6 +249,14 @@ namespace TextMeshDOTS
                     paintData.drawDelegates = drawDelegates;
                     paintData.clipGlyph     = drawData;
                     paintData.Clear();
+
+                    // harfbuzz is not pushing clipRects anymore for bounded glyphs as of https://github.com/harfbuzz/harfbuzz/pull/5294
+                    // Boundedness calculation as per https://learn.microsoft.com/en-us/typography/opentype/spec/colr#glyph-metrics-and-boundedness
+                    // is not quite clear. This fix here is  assuming the bound is the clipRect of the base glyph. Need to allocate paint surface here
+                    // as it is not allocated via HB_paint_push_clip_glyph_func_t for bounded glyphs
+                    paintData.clipRect = glyphEntry.ClipRect;
+                    paintData.paintSurface = new NativeArray<ColorARGB>(paintData.clipRect.intWidth * paintData.clipRect.intHeight, Allocator.Temp);
+
                     font.PaintGlyph(glyphEntry.key.glyphIndex, ref paintData, paintDelegates, 0, new ColorARGB(255, 0, 0, 0));
                     if (paintData.paintSurface.Length > 0)
                     {

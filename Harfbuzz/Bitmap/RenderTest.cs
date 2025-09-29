@@ -97,6 +97,7 @@ public class RenderTest : MonoBehaviour
         Blending.SetBlack(textureData);
 
         Buffer buffer = default;
+        BBox clipRect;
         if (!renderGlyphID)
         {
             var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
@@ -111,9 +112,12 @@ public class RenderTest : MonoBehaviour
 
         paintData = new PaintData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
         font.GetGlyphExtents(glyphID, out GlyphExtents glyphExtents);
-        //Debug.Log($"glyphExtents: {glyphExtents}");
+        paintData.clipRect = glyphExtents.ClipRect;
+        paintData.paintSurface = new NativeArray<ColorARGB>(paintData.clipRect.intWidth * paintData.clipRect.intHeight, Allocator.Temp);
+        //Debug.Log($"clipBox: {paintData.clipRect}");
+
         marker.Begin();
-        font.PaintGlyph(glyphID, ref paintData, paintFunctions, 0, new ColorARGB(255, 255, 255, 255));
+        font.PaintGlyph(glyphID, ref paintData, paintFunctions, 0, new ColorARGB(255, 0, 0, 0));
         marker.End();
 
         if (paintData.imageData.Length > 0)//render PNG and SVG
@@ -132,7 +136,7 @@ public class RenderTest : MonoBehaviour
         }
         else if (paintData.paintSurface.Length > 0) // content from COLR, or raw BGRA data from sbix, CBDT
         {
-            var clipRect = paintData.clipRect;
+            clipRect = paintData.clipRect;
             PaintUtils.BlitRawTexture(paintData.paintSurface, clipRect.intWidth, clipRect.intHeight, textureData, atlasWidth, atlasHeight, 0, 0);
         }
 

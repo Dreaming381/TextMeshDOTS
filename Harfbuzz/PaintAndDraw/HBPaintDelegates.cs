@@ -67,6 +67,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(PushTransformDelegate))]
         public static void HB_paint_push_transform_func_t (IntPtr harfBuzzPaintFunct, ref PaintData data, float xx, float yx, float xy, float yy, float dx, float dy, IntPtr user_data)
         {
+
             //Debug.Log($"Push transform");
             var transform = new float2x3
             {
@@ -89,14 +90,14 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(ColorGlyphDelegate))]
         public static bool hb_paint_color_glyph_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, uint glyphID, IntPtr font, IntPtr user_data)
         {
-            //Debug.Log($"Paint Color glyph");
+            //Debug.Log($"Paint Color glyph {glyphID}");
             return true;
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PushClipGlyphDelegate))]
         public static void HB_paint_push_clip_glyph_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, uint glyphID, IntPtr font, IntPtr user_data)
         {
-            //Debug.Log($"Push clip glyph");
+            //Debug.Log($"Push clip glyph {glyphID}");
             data.glyphID = glyphID;
             Harfbuzz.hb_font_draw_glyph(font, glyphID, data.drawDelegates, ref data.clipGlyph);
             PaintUtils.TransformGlyph(ref data.clipGlyph, data.transformStack.Peek());
@@ -105,10 +106,18 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(PushClipRectangleDelegate))]
         public static void HB_paint_push_clip_rectangle_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, float xmin, float ymin, float xmax, float ymax, IntPtr user_data)
         {
-            //Debug.Log($"Push clip rect");
+            //Debug.Log($"Push clip rect {xmin} {ymin} {xmax} {ymax}");
             var clipRect = new BBox(xmin, ymin, xmax, ymax);
-            data.clipRect = clipRect;
-            data.paintSurface = new NativeArray<ColorARGB>(clipRect.intWidth * clipRect.intHeight, Allocator.Temp);
+
+            if (data.clipRect != BBox.Empty)
+            {
+                //Debug.Log($"clipRect was already set to {data.clipRect}, new clipRect {clipRect}");
+                data.clipRect = clipRect;
+            }
+
+            var arraySize = clipRect.intWidth * clipRect.intHeight;
+            if (!data.paintSurface.IsCreated || data.paintSurface.Length != arraySize)
+                data.paintSurface = new NativeArray<ColorARGB>(arraySize, Allocator.Temp);
         }
         [BurstCompile]
         [MonoPInvokeCallback(typeof(PopDelegate))]
@@ -121,7 +130,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(ColorDelegate))]
         public static void HB_paint_color_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, bool is_foreground, uint color, IntPtr user_data)
         {
-            //Debug.Log($"Paint solid color");
+            //Debug.Log($"Paint solid color ARGB {(ColorARGB)color}");
             var colorARGB = (ColorARGB)color;
             var solidColor = new SolidColor(colorARGB);
 
@@ -348,7 +357,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(ImageDelegate))]
         public static bool hb_paint_image_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, Blob image, uint width, uint height, PaintImageFormat format, float slant, ref GlyphExtents extents, IntPtr user_data)
         {
-            Debug.Log("hb_paint_image");
+            //Debug.Log("hb_paint_image");
             data.imageFormat = format;            
             data.imageWidth = (int)width;
             data.imageHeight = (int)height;

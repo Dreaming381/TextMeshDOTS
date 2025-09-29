@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using TextMeshDOTS.HarfBuzz;
 using Unity.Mathematics;
 using UnityEngine.TextCore;
 
@@ -18,7 +19,12 @@ namespace TextMeshDOTS
         }
         public GlyphRect GetPaddedAtlasRect(int x, int y, int padding)
         {
-            return new GlyphRect(x, y, width + 2*padding, height +2 * padding);
+            var doublePadding = 2 * padding;
+            return new GlyphRect(x, y, width + doublePadding, height + doublePadding);
+        }
+        public BBox ClipRect
+        {
+            get { return new BBox ( x_bearing, y_bearing - height, x_bearing + width + 1, y_bearing + 1); }
         }
 
         public override string ToString()

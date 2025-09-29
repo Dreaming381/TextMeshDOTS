@@ -15,7 +15,7 @@ using UnityEngine.Rendering;
 namespace TextMeshDOTS
 {
     [BurstCompile]
-    //[DisableAutoCreation]
+    [DisableAutoCreation]
     partial struct RuntimeTextRendererSpawner : ISystem
     {
         int frameCount;
