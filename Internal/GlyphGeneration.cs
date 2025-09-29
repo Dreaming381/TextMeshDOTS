@@ -1,10 +1,9 @@
-﻿using TextMeshDOTS.Rendering;
+﻿using TextMeshDOTS.HarfBuzz;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
-using TextMeshDOTS.HarfBuzz;
-using Unity.Burst.CompilerServices;
 using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
@@ -62,7 +61,7 @@ namespace TextMeshDOTS
             var currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);
             var currentFontSamplingPointSize = FontTextureSize.Normal.GetSamplingSize();
             var currentFontWeigth = (FontWeight)(byte)(currentFont.GetStyleTag(StyleTag.WEIGHT) / 100);
-            var currentFontsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
+            var currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
             currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);
             currentFont.UpdateMetaData();
 
@@ -85,9 +84,10 @@ namespace TextMeshDOTS
                 var cluster = (int)glyphOTF.cluster; //cluster is char index in cleaned text = aligned with glyphOTF buffer
                 if (currentFaceIndex != glyphOTF.glyphKey.faceIndex)
                 {
+                    currentFaceIndex = glyphOTF.glyphKey.faceIndex;
                     currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);
                     currentFontWeigth = (FontWeight)(byte)(currentFont.GetStyleTag(StyleTag.WEIGHT) / 100);
-                    currentFontsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
+                    currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
                     currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);
                     currentFont.UpdateMetaData();
                 }
@@ -258,7 +258,7 @@ namespace TextMeshDOTS
                 #region Handle Italic & Shearing
                 float bottomShear = 0f;
                 //if italic is requested and current font is not italic (=it has not been found), then simulate italic
-                bool simulateItalic = (layoutConfig.m_fontStyles & FontStyles.Italic) == FontStyles.Italic && !currentFontsItalic;
+                bool simulateItalic = (layoutConfig.m_fontStyles & FontStyles.Italic) == FontStyles.Italic && !currentFontIsItalic;
                 if (simulateItalic)
                 {
                     //Debug.Log($"Simulate Italic {currentFontAssetRef.isItalic}");

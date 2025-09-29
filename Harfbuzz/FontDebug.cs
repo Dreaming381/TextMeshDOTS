@@ -13,9 +13,7 @@ namespace TextMeshDOTS.HarfBuzz
             var values = Enum.GetValues(typeof(NameID));
             foreach (NameID value in values)
             {
-                var textSize = (uint)result.Capacity;
-                face.GetFaceInfo(value, language, ref textSize, ref result);
-                result.Length = (int)textSize;
+                result = face.GetFaceInfo(value, language);
                 Debug.Log($"{value}: {result}");
                 result.Clear();
             }

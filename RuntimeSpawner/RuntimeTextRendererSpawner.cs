@@ -111,7 +111,7 @@ namespace TextMeshDOTS
                     state.EntityManager.SetComponentData(entity, materialMeshInfo);
                 }
             }
-            Debug.Log($"spawned {count} instances of {text}");
+            Debug.Log($"spawned {count * count} instances of {text}");
         }
         void SpawnText(FixedString512Bytes text, FixedString128Bytes fontFamily, float maxLineWidth, float3 position, Color textcolor,  ref SystemState state)
         {

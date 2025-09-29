@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using TextMeshDOTS.HarfBuzz;
-using Unity.Collections;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS.Authoring
@@ -53,27 +52,10 @@ namespace TextMeshDOTS.Authoring
                 //fetch name of fontFamily and subFamily, generate hash code from that used to lookup this font
                 var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
 
-                var initialCapacity = 125u; //FixedString128Bytes.Capacity
-                var tmp = new FixedString128Bytes();
-                uint textSize = initialCapacity;
-                face.GetFaceInfo(NameID.FONT_FAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontFamily = tmp.ToString();
-
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.FONT_SUBFAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontSubFamily = tmp.ToString();
-
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                typographicFamily = tmp.ToString();
-
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                typographicSubfamily = tmp.ToString();
+                fontFamily = face.GetFaceInfo(NameID.FONT_FAMILY, language).ToString();
+                fontSubFamily = face.GetFaceInfo(NameID.FONT_SUBFAMILY, language).ToString();
+                typographicFamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language).ToString();
+                typographicSubfamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language).ToString();
 
                 weight = (int)font.GetStyleTag(StyleTag.WEIGHT);
                 width = (int)font.GetStyleTag(StyleTag.WIDTH);

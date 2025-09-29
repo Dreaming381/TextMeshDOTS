@@ -128,32 +128,14 @@ namespace TextMeshDOTS.Authoring
                 //fetch name of fontFamily and subFamily, generate hash code from that used to lookup this font
                 var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
 
-                var initialCapacity = 125u; //FixedString128Bytes.Capacity
-                var tmp = new FixedString128Bytes();
-                uint textSize = initialCapacity;
-                face.GetFaceInfo(NameID.FONT_FAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontInfo.fontFamily = tmp.ToString();
 
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.FONT_SUBFAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontInfo.fontSubFamily = tmp.ToString();
-
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontInfo.typographicFamily = tmp.ToString();
-
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontInfo.typographicSubfamily = tmp.ToString();
-
+                fontInfo.fontFamily = face.GetFaceInfo(NameID.FONT_FAMILY, language);
+                fontInfo.fontSubFamily = face.GetFaceInfo(NameID.FONT_SUBFAMILY, language);
+                fontInfo.typographicFamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language);
+                fontInfo.typographicSubfamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language);
                 fontInfo.weight = (FontWeight)(byte)(font.GetStyleTag(StyleTag.WEIGHT)/100);
                 fontInfo.width = (int)font.GetStyleTag(StyleTag.WIDTH);
-                var italic = (byte)font.GetStyleTag(StyleTag.ITALIC);
-                fontInfo.isItalic = italic == 1 ? true : false;
+                fontInfo.isItalic = (byte)font.GetStyleTag(StyleTag.ITALIC) == 1 ? true : false;
                 fontInfo.slant = (int)font.GetStyleTag(StyleTag.SLANT_ANGLE);
 
                 //Sampling point size is used to set the font scale.

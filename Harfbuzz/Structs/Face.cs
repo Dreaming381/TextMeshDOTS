@@ -31,12 +31,17 @@ namespace TextMeshDOTS.HarfBuzz
         {
             Harfbuzz.hb_ot_layout_get_size_params(ptr, out design_size, out subfamily_id, out subfamily_name_id, out range_start, out range_end);
         }
-        public void GetFaceInfo(NameID name_id, Language language, ref uint textSize, ref FixedString128Bytes text)
+
+        public FixedString128Bytes GetFaceInfo(NameID name_id, Language language)
         {
-            unsafe 
+            var result = new FixedString128Bytes();
+            var textSize = (uint)result.Capacity;
+            unsafe
             {
-                Harfbuzz.hb_ot_name_get_utf8(ptr, name_id, language, ref textSize, text.GetUnsafePtr());
+                Harfbuzz.hb_ot_name_get_utf8(ptr, name_id, language, ref textSize, result.GetUnsafePtr());
             }
+            result.Length = (int)textSize;
+            return result;
         }
 
         bool HasReferenceTable(uint HB_TAG)
