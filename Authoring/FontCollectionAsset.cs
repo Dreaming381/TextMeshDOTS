@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using TextMeshDOTS.HarfBuzz;
-using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;

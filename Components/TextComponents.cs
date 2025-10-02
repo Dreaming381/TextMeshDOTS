@@ -1,9 +1,6 @@
 ﻿using System.Runtime.InteropServices;
-using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.RichText;
 using Unity.Entities;
-using Unity.Mathematics;
-
 
 namespace TextMeshDOTS
 {    

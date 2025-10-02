@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using TextMeshDOTS.HarfBuzz;
-using Unity.Mathematics;
 using UnityEngine.TextCore;
 
 namespace TextMeshDOTS
@@ -24,7 +23,7 @@ namespace TextMeshDOTS
         }
         public BBox ClipRect
         {
-            get { return new BBox ( x_bearing, y_bearing - height, x_bearing + width + 1, y_bearing + 1); }
+            get { return new BBox ( x_bearing, y_bearing - height, x_bearing + width, y_bearing); }
         }
 
         public override string ToString()

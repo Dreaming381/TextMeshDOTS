@@ -2,7 +2,6 @@ using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Burst;
 using Unity.Burst.CompilerServices;
-using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
@@ -66,7 +65,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         var x1ceil = math.ceil(x1);
                         var x1i = (int)x1ceil;
                         var linestart_x0i = linestart + x0i;
-                        if (linestart_x0i < 0 || linestart_x0i > arraySize - 1)  // index is out of bounds
+                        if (Hint.Unlikely(linestart_x0i < 0) || Hint.Unlikely(linestart_x0i > arraySize - 1))  // index is out of bounds
                         {
                             x = xnext;
                             continue;
@@ -199,7 +198,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         var x1ceil = math.ceil(x1);
                         var x1i = (int)x1ceil;
                         var linestart_x0i = linestart + x0i;
-                        if (linestart_x0i < 0 || linestart_x0i > arraySize-1)  // index is out of bounds 
+                        if (Hint.Unlikely(linestart_x0i < 0) || Hint.Unlikely(linestart_x0i > arraySize - 1))  // index is out of bounds 
                         {
                             x = xnext;
                             continue;

@@ -1,13 +1,7 @@
 using System;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.RichText;
-using Unity.Burst;
-using Unity.Burst.Intrinsics;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
-using Unity.Entities;
-using Unity.Profiling;
-using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 
 namespace TextMeshDOTS
 {
@@ -180,11 +174,7 @@ namespace TextMeshDOTS
                 }
 
 
-                /// <summary>
-                /// In case the XMLTag  causes a change of the required font by changing any of the parameters in FontAssetRef, this method 
-                /// searches the index of that font (0=main entity, >0 AdditionalFontEntity) in the provided FontAssetArray 
-                /// </summary>
-                public void GetCurrentFontIndex(ref XMLTag tag, ref FontTable fontTable, ref CalliString calliStringRaw)
+                public void Update(ref XMLTag tag, ref FontTable fontTable, ref CalliString calliStringRaw)
                 {
                     switch (tag.tagType)
                     {

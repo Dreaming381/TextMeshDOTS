@@ -8,7 +8,6 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.TextCore;
 
 namespace TextMeshDOTS
 {
@@ -253,8 +252,9 @@ namespace TextMeshDOTS
                     // harfbuzz is not pushing clipRects anymore for bounded glyphs as of https://github.com/harfbuzz/harfbuzz/pull/5294
                     // Boundedness calculation as per https://learn.microsoft.com/en-us/typography/opentype/spec/colr#glyph-metrics-and-boundedness
                     // is not quite clear. This fix here is  assuming the bound is the clipRect of the base glyph. Need to allocate paint surface here
-                    // as it is not allocated via HB_paint_push_clip_glyph_func_t for bounded glyphs
+                    // as it is not allocated via hb_paint_funcs_set_push_clip_rectangle_func for bounded glyphs
                     paintData.clipRect = glyphEntry.ClipRect;
+                    paintData.clipRect.Expand(1); //prevents rendering artifacts that occur for outlines that strech from minX to maxX of clipRect, reason unknown
                     paintData.paintSurface = new NativeArray<ColorARGB>(paintData.clipRect.intWidth * paintData.clipRect.intHeight, Allocator.Temp);
 
                     font.PaintGlyph(glyphEntry.key.glyphIndex, ref paintData, paintDelegates, 0, new ColorARGB(255, 0, 0, 0));

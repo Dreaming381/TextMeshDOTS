@@ -6,7 +6,6 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
-using Unity.Mathematics;
 
 
 public class RenderTest : MonoBehaviour
@@ -113,6 +112,7 @@ public class RenderTest : MonoBehaviour
         paintData = new PaintData(drawFunctions, 256, 4, maxDeviation, Allocator.Temp);
         font.GetGlyphExtents(glyphID, out GlyphExtents glyphExtents);
         paintData.clipRect = glyphExtents.ClipRect;
+        paintData.clipRect.Expand(1);//prevents rendering artifacts that occur for outlines that strech from minX to maxX of clipRect, reason unknown
         paintData.paintSurface = new NativeArray<ColorARGB>(paintData.clipRect.intWidth * paintData.clipRect.intHeight, Allocator.Temp);
         //Debug.Log($"clipBox: {paintData.clipRect}");
 

@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace TextMeshDOTS.RichText
 {
     public enum TagType : byte
@@ -41,6 +39,6 @@ namespace TextMeshDOTS.RichText
         VOffset,
         Unknown // Not a real tag, used to indicate an error
 
-        //gradient, margin, pos, will not be supported
+        // margin, pos, will not be supported
     }
 }

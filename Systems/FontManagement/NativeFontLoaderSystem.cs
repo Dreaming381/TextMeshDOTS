@@ -91,6 +91,7 @@ namespace TextMeshDOTS
                 else
                 {
                     blob = new Blob(unityFontReference.filePath);
+                    blob.MakeImmutable();//is this neccessary considering we dispose the blob in next instruction?
                 }                
             }
             else
@@ -109,7 +110,7 @@ namespace TextMeshDOTS
                 else
                 {
                     blob = new Blob(fontPath);
-                    blob.MakeImmutable();
+                    blob.MakeImmutable();//is this neccessary considering we dispose the blob in next instruction?
                 }
             }             
 

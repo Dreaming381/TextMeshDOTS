@@ -543,9 +543,7 @@ namespace TextMeshDOTS
                 }
                 isFirstLine = false;
                 ApplyVerticalAlignmentToGlyphs(ref renderGlyphs, topAnchor, bottomAnchor, accumulatedVerticalOffset, textBaseConfiguration.verticalAlignment);
-            }
-
-            
+            }            
         }
     }
 }

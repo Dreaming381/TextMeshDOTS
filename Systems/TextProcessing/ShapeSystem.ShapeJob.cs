@@ -177,7 +177,7 @@ namespace TextMeshDOTS
                         currentTag = xmlTagBuffer[tagsCounter];
                         var cleanedInterTagLength = (currentTag.startID - richTextStartID);
                         cleanedEnd += cleanedInterTagLength;
-                        fontConfiguration.GetCurrentFontIndex(ref currentTag, ref fontTable, ref calliString);
+                        fontConfiguration.Update(ref currentTag, ref fontTable, ref calliString);
                         openTypeFeatures.Update(ref currentTag, cleanedEnd);
                         tagsCounter++;
                         richTextStartID = currentTag.endID + 1;
