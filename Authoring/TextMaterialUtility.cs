@@ -10,7 +10,7 @@ namespace TextMeshDOTS.Rendering.Authoring
         public const string kResourcePath = "Assets/Resources";
 
         private const string kSDF_HDRP_Shader = "TextMeshDOTS/SDF-HDRP";
-        public const string kSDF_HDRP_Material = "TextMeshDOTS-HDRP";
+        public const string kSDF_HDRP_Material = "SDF-HDRP";
         public const string kSDF_HDRP_MaterialPath = "Assets/Resources/SDF-HDRP.mat";
 
         private const string kSDF_URP_Shader = "TextMeshDOTS/SDF-URP";
