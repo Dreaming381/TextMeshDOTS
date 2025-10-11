@@ -116,13 +116,19 @@ void GetGlyph(uint glyphIndex, uint glyphStartIndex, uint glyphCount,
 //    }
 //}
 
-UnityTexture2DArray GetSdf8TextureArray()
+UnityTexture2DArray GetSdf8TextureArray(out float2 texelSize)
 {
+    uint width, height, elements, numberOfLevels;
+    _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+    texelSize = 1.0f / float2(width, height);
     return UnityBuildTexture2DArrayStruct(_tmdSdf8);
 }
 
-UnityTexture2DArray GetSdf16TextureArray()
+UnityTexture2DArray GetSdf16TextureArray(out float2 texelSize)
 {
+    uint width, height, elements, numberOfLevels;
+    _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+    texelSize = 1.0f / float2(width, height);
     return UnityBuildTexture2DArrayStruct(_tmdSdf16);
 }
 
@@ -131,10 +137,6 @@ UnityTexture2DArray GetBitmapTextureArray()
     return UnityBuildTexture2DArrayStruct(_tmdBitmap);
 }
 
-float GetGlyphTexelSize()
-{
-    return 1.0 / 4096.0;
-}
 
 // Additional APIs
 
@@ -163,7 +165,8 @@ void GetGlyphCorner(uint glyphIndex, uint cornerIndex, uint glyphStartIndex, uin
         // bottom left
         position = blPosition;
         uvA = float3(blUVA, arrayIndex);
-        uvB = blUVB;
+        //uvB = blUVB;
+        uvB = float2(0, 0);
         color = blColor;
     }
     else if (cornerIndex == 1)
@@ -171,7 +174,8 @@ void GetGlyphCorner(uint glyphIndex, uint cornerIndex, uint glyphStartIndex, uin
         // top left
         position = tlPosition;
         uvA = float3(blUVA.x, trUVA.y, arrayIndex);
-        uvB = tlUVB;
+        //uvB = tlUVB;
+        uvB = float2(0, 1);
         color = tlColor;
     }
     else if (cornerIndex == 2)
@@ -179,7 +183,8 @@ void GetGlyphCorner(uint glyphIndex, uint cornerIndex, uint glyphStartIndex, uin
         // top right
         position = trPosition;
         uvA = float3(trUVA, arrayIndex);
-        uvB = trUVB;
+        //uvB = trUVB;
+        uvB = float2(1, 1);
         color = trColor;
     }
     else
@@ -187,7 +192,8 @@ void GetGlyphCorner(uint glyphIndex, uint cornerIndex, uint glyphStartIndex, uin
         // bottom right
         position = brPosition;
         uvA = float3(trUVA.x, blUVA.y, arrayIndex);
-        uvB = brUVB;
+        //uvB = brUVB;
+        uvB = float2(1, 0);
         color = brColor;
     }
 }
@@ -204,5 +210,59 @@ void GetGlyphIndexAndCornerFromQuadVertexID(uint vertexID, out uint glyphIndex, 
     glyphIndex = vertexID >> 2u;
     cornerIndex = vertexID & 3u;
 }
+void GetGlyphFromBuffer_float(float2 textShaderIndex, float vertexID, out float3 position, out float3 normal, out float3 tangent, out float4 vertexColor, out float4 uvAandB, out float4 atlasIndexScaleIsSdf16IsBitmap)
+{
+    uint glyphIndex;
+    uint cornerIndex;
+    GetGlyphIndexAndCornerFromQuadVertexID(vertexID, glyphIndex, cornerIndex);
+    uint glyphStartIndex = asuint(textShaderIndex.x);
+    uint glyphCount = asuint(textShaderIndex.y);
+    float2 position2D;
+    float3 uvA;
+    float2 uvB;
+    float4 color;
+    float scale;
+    uint glyphEntryID;
+    GetGlyphCorner(glyphIndex, cornerIndex, glyphStartIndex, glyphCount, position2D, uvA, uvB, color, scale, glyphEntryID);
+    bool isSdf16;
+    bool isBitmap;
+    ExtractGlyphFlagsFromEntryID(glyphEntryID, isSdf16, isBitmap);
+    position = float3(position2D, 0.0);
+    normal = float3(0.0, -1.0, 0.0);
+    tangent = float3(1.0, 0.0, 0.0);
+    vertexColor = color;
+    uvAandB = float4(uvA.xy, uvB);
+    atlasIndexScaleIsSdf16IsBitmap = float4(uvA.z, scale, isSdf16, isBitmap);
+}
+// UV			: Texture coordinate of the source distance field texture
+// texelSize	: texelSize of the source distance field texture
+void ScreenSpaceRatio(float2 uvA, float texelSize, out float SSR)
+{
+    SSR = rsqrt(abs(ddx(uvA.x) * ddy(uvA.y) - ddy(uvA.x) * ddx(uvA.y))) * texelSize.x;
+}
+void GenerateUV(float2 inUV, float2 tiling, float2 offset, float2 animSpeed, out float2 outUV)
+{
+    outUV = inUV * tiling + offset + (animSpeed * _Time.y);
+}
 
+void ComputeSDF(float SSR, float SD, float SDR, float isoPerimeter, float softness, out float outAlpha)
+{
+    softness *= SSR * SDR;
+    float d = (SD - 0.5) * SDR; // Signed distance to edge, in Texture space
+    outAlpha = saturate((d * 2.0 * SSR + 0.5 + isoPerimeter * SDR * SSR + softness * 0.5) / (1.0 + softness)); // Screen pixel coverage (alpha)
+}
+// Face only
+void Layer1(float alpha, float4 color0, out float4 outColor)
+{
+    color0.a *= alpha;
+    outColor = color0;
+}
+float4 Blend(float4 overlying, float4 underlying)
+{
+    overlying.rgb *= overlying.a;
+    underlying.rgb *= underlying.a;
+    float3 blended = overlying.rgb + ((1 - overlying.a) * underlying.rgb);
+    float alpha = underlying.a + (1 - underlying.a) * overlying.a;
+    return float4(blended / alpha, alpha);
+}
 #endif

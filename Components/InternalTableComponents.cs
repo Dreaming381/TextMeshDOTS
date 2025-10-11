@@ -6,7 +6,9 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.TextCore;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
@@ -23,6 +25,7 @@ namespace TextMeshDOTS
         public int GetFontIndex(FontAssetRef desiredFontAssetRef)
         {
             //Debug.Log($"Search for: {desiredFontAssetRef}");
+            //default: pefect match of family name, weight, width and italic/normal
             for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
             {
                 //Debug.Log($"candidate: {fontAssetRefs[i].ToString()}");
@@ -30,7 +33,15 @@ namespace TextMeshDOTS
                     return i;
             }
 
-            //fall back to family in case we end up here
+            //fall back to matching at least family and normal/italic
+            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            {
+                //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
+                if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash && fontAssetRefs[i].isItalic == desiredFontAssetRef.isItalic)
+                    return i;
+            }
+
+            //fall back to matching at least family
             for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
             {
                 //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");

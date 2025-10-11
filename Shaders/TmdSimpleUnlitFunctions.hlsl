@@ -4,32 +4,18 @@
 #include "TmdGlobalsApi.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/GlobalSamplers.hlsl"
 
-void DoSimpleUnlitVert_float(float2 textShaderIndex, float vertexID, out float3 position, out float3 normal, out float3 tangent, out float4 vertexColor, out float4 uvAandB, out float4 atlasIndexScaleIsSdf16IsBitmap)
+
+//adjust face weight (input: face) 
+void GetFontWeight(float isoPerimeterIN, float scale, float weightNormal, float weightBold, out float isoPerimeterOut)
 {
-	uint glyphIndex;
-	uint cornerIndex;
-	GetGlyphIndexAndCornerFromQuadVertexID(vertexID, glyphIndex, cornerIndex);
-	uint glyphStartIndex = asuint(textShaderIndex.x);
-	uint glyphCount = asuint(textShaderIndex.y);
-	float2 position2D;
-	float3 uvA;
-	float2 uvB;
-	float4 color;
-	float scale;
-	uint glyphEntryID;
-	GetGlyphCorner(glyphIndex, cornerIndex, glyphStartIndex, glyphCount, position2D, uvA, uvB, color, scale, glyphEntryID);
-	bool isSdf16;
-	bool isBitmap;
-	ExtractGlyphFlagsFromEntryID(glyphEntryID, isSdf16, isBitmap);
-	position = float3(position2D, 0.0);
-	normal = float3(0.0, -1.0, 0.0);
-	tangent = float3(1.0, 0.0, 0.0);
-	vertexColor = color;
-	uvAandB = float4(uvA.xy, uvB);
-	atlasIndexScaleIsSdf16IsBitmap = float4(uvA.z, scale, isSdf16, isBitmap);
+    float bold = step(scale, 0); //float bold = scale < 0.0;
+    float weight = lerp(weightNormal, weightBold, bold) / 4.0;
+    weight = (weight + isoPerimeterIN) * 0.5;
+    isoPerimeterOut = weight;
 }
 
-void DoSimpleUnlitFrag_float(float4 vertexColor, float4 uvAandB, float4 atlasIndexScaleIsSdf16IsBitmap, out float3 finalColor, out float finalAlpha)
+
+void SimpleUnlit_float(float4 vertexColor, float4 uvAandB, float4 atlasIndexScaleIsSdf16IsBitmap, float isoPerimeter, float softness, out float3 outColor, out float outAlpha)
 {
 	float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
 	float2 uvB = uvAandB.zw;
@@ -42,95 +28,128 @@ void DoSimpleUnlitFrag_float(float4 vertexColor, float4 uvAandB, float4 atlasInd
 		UnityTexture2DArray bitmap = GetBitmapTextureArray();
 		float4 bitmapColor = bitmap.Sample(sampler_LinearClamp, uvA);
 		bitmapColor *= vertexColor;
-		finalColor = bitmapColor.xyz;
-		finalAlpha = bitmapColor.w;
+		outColor = bitmapColor.xyz;
+		outAlpha = bitmapColor.w;
 		return;
 	}
-	else
-	{
-		float screenSpaceRatio = rsqrt(abs(ddx(uvA.x) * ddy(uvA.y) - ddy(uvA.x) * ddx(uvA.y))) * GetGlyphTexelSize();
-		
-		// For faking bold in this simple shader, we use the constant normal weight of 0 and bold weight of 0.75.
-		// After selecting the correct weight, this value is divided by 4, added to the outline width, and then divided by 2.
-		// Since we don't have outlines, we jump straight to the conclusion.
-		float isoPerimeter = scale >= 0.0 ? 0.0 : (0.75 / 8.0);
+    else
+    {
+        float SD; // SD  : Signed Distance (encoded : Distance / SDR + .5)
+        float2 texelSize;
+        if (isSdf16)
+        {
+            UnityTexture2DArray sdf = GetSdf16TextureArray(texelSize);
+            SD = sdf.Sample(sampler_LinearClamp, uvA).r;
+        }
+        else
+        {
+            UnityTexture2DArray sdf = GetSdf8TextureArray(texelSize);
+            SD = sdf.Sample(sampler_LinearClamp, uvA).r;
+        }
+        
+        float SSR;
+        ScreenSpaceRatio(uvA.xy, texelSize.x, SSR);
+        
+        float isoPerimeterOut;
+        float weightNormal = 0;
+        float weightBold = 0.75f;
+        GetFontWeight(isoPerimeter, scale, weightNormal, weightBold, isoPerimeterOut);
 
 		// The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float signedDistanceRatio = 11.0;
+        float SDR = 11.0; // SDR : Signed Distance Ratio        
+        float faceSDFAlpha;
+        ComputeSDF(SSR, SD, SDR, isoPerimeterOut, softness, faceSDFAlpha);
+        
+        float4 faceColor;
+        Layer1(faceSDFAlpha, vertexColor, faceColor);  
 
-		float signedDistance;
-		if (isSdf16)
-		{
-			UnityTexture2DArray sdf = GetSdf16TextureArray();
-			signedDistance = sdf.Sample(sampler_LinearClamp, uvA).r;
-		}
-		else
-		{
-			UnityTexture2DArray sdf = GetSdf8TextureArray();
-			signedDistance = sdf.Sample(sampler_LinearClamp, uvA).r;
-		}
-
-		float signedDistanceToEdge = (signedDistance - 0.5) * signedDistanceRatio; // Signed distance to edge, in Texture space
-		float pixelCoverage = saturate(signedDistanceToEdge * 2.0 * screenSpaceRatio + 0.5 + isoPerimeter * signedDistanceRatio * screenSpaceRatio);	// Screen pixel coverage (alpha)
-
-        finalColor = vertexColor.xyz * vertexColor.w; //this is not quite right, review from where to get background color and alpha blend with vertex color
-		finalAlpha = vertexColor.w * pixelCoverage;
-		return;
-	}
+        // determine final vertex color
+        faceColor = faceColor * vertexColor.w;
+        outColor = faceColor.xyz;
+        outAlpha = faceColor.w;
+        return;
+    }
 }
 
-void DoSimpleUnlitFragDebug_float(float4 vertexColor, float4 uvAandB, float4 atlasIndexScaleIsSdf16IsBitmap, out float3 finalColor, out float finalAlpha)
+void SimpleTextureUnlit_float(float4 vertexColor, 
+    float4 uvAandB, 
+    float4 atlasIndexScaleIsSdf16IsBitmap, 
+    float isoPerimeter, 
+    float softness, 
+    UnityTexture2D faceTexture, 
+    float2 faceUVSpeed, 
+    float2 faceTiling,
+    float2 faceOffset,
+    float4 underlayColor,
+    out float3 outColor, 
+    out float outAlpha)
 {
-	float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
-	float2 uvB = uvAandB.zw;
-	float scale = atlasIndexScaleIsSdf16IsBitmap.y;
-	bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
-	bool isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    float2 uvB = uvAandB.zw;
+    float scale = atlasIndexScaleIsSdf16IsBitmap.y;
+    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+    bool isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
 
-	if (isBitmap)
-	{
-		UnityTexture2DArray bitmap = GetBitmapTextureArray();
-		float4 bitmapColor = bitmap.Sample(sampler_LinearClamp, uvA);
-		bitmapColor *= vertexColor;
-		finalColor = bitmapColor.xyz;
-		finalAlpha = bitmapColor.w;
-		return;
-	}
-	else
-	{
-		float screenSpaceRatio = rsqrt(abs(ddx(uvA.x) * ddy(uvA.y) - ddy(uvA.x) * ddx(uvA.y))) * GetGlyphTexelSize();
-
-		// For faking bold in this simple shader, we use the constant normal weight of 0 and bold weight of 0.75.
-		// After selecting the correct weight, this value is divided by 4, added to the outline width, and then divided by 2.
-		// Since we don't have outlines, we jump straight to the conclusion.
-		float isoPerimeter = scale >= 0.0 ? 0.0 : (0.75 / 8.0);
+    if (isBitmap)
+    {
+        UnityTexture2DArray bitmap = GetBitmapTextureArray();
+        float4 bitmapColor = bitmap.Sample(sampler_LinearClamp, uvA);
+        bitmapColor *= vertexColor;
+        outColor = bitmapColor.xyz;
+        outAlpha = bitmapColor.w;
+        return;
+    }
+    else
+    {
+        float SD; // SD  : Signed Distance (encoded : Distance / SDR + .5)
+        float2 texelSize;
+        if (isSdf16)
+        {
+            UnityTexture2DArray sdf = GetSdf16TextureArray(texelSize);
+            SD = sdf.Sample(sampler_LinearClamp, uvA).r;
+        }
+        else
+        {
+            UnityTexture2DArray sdf = GetSdf8TextureArray(texelSize);
+            SD = sdf.Sample(sampler_LinearClamp, uvA).r;
+        }  
+        
+        float SSR;
+        ScreenSpaceRatio(uvA.xy, texelSize.x, SSR);
+        
+        float isoPerimeterOut;
+        float weightNormal = 0;
+        float weightBold = 0.75f;
+        GetFontWeight(isoPerimeter, scale, weightNormal, weightBold, isoPerimeterOut);        
 
 		// The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float signedDistanceRatio = 11.0;
+        float SDR = 11.0; // SDR : Signed Distance Ratio        
+        
+        //get underlay color
+        float underlaySDFAlpha;
+        ComputeSDF(SSR, SD, SDR, isoPerimeterOut, softness, underlaySDFAlpha);
+        float4 underlayColorFinal;
+        Layer1(underlaySDFAlpha, underlayColor, underlayColorFinal);        
+        
+        //get face color
+        float2 uvBOUT;
+        GenerateUV(uvB, faceTiling, faceOffset, faceUVSpeed, uvBOUT);
+        float4 textureColor = SAMPLE_TEXTURE2D(faceTexture, faceTexture.samplerstate, uvBOUT); //sampler_LinearClamp sampler_LinearRepeat
+        float4 faceColor = vertexColor * textureColor;
+        
+        float faceSDFAlpha;
+        ComputeSDF(SSR, SD, SDR, isoPerimeterOut, softness, faceSDFAlpha);        
+        float4 faceColorFinal;
+        Layer1(faceSDFAlpha, faceColor, faceColorFinal);        
 
-		float signedDistance;
-		if (isSdf16)
-		{
-			UnityTexture2DArray sdf = GetSdf16TextureArray();
-			signedDistance = sdf.Sample(sampler_LinearClamp, uvA).r;
-		}
-		else
-		{
-			UnityTexture2DArray sdf = GetSdf8TextureArray();
-			signedDistance = sdf.Sample(sampler_LinearClamp, uvA).r;
-		}
-
-		float signedDistanceToEdge = (signedDistance - 0.5) * signedDistanceRatio; // Signed distance to edge, in Texture space
-		float pixelCoverage = saturate(signedDistanceToEdge * 2.0 * screenSpaceRatio + 0.5 + isoPerimeter * signedDistanceRatio * screenSpaceRatio);	// Screen pixel coverage (alpha)
-
-		//finalColor = vertexColor.xyz; 
-		finalColor = signedDistance - 0.5; //float3(signedDistance, signedDistanceToEdge, pixelCoverage);
-		finalAlpha = 1.0; //vertexColor.w * pixelCoverage;
-		return;
-	}
+        // determine final outColor
+        float4 rgba = Blend(faceColorFinal, underlayColorFinal);
+        rgba = rgba * vertexColor.w;
+        outColor = rgba.xyz;
+        outAlpha = rgba.w;
+        return;
+    }
 }
-
-
 #endif

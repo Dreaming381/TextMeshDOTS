@@ -6,6 +6,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace TextMeshDOTS
 {
@@ -129,15 +130,14 @@ namespace TextMeshDOTS
                 float bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale);
 
                 Unicode.Rune currentRune, previousRune = Unicode.BadRune;//input text unicode
-
                 for (int k = 0, length = glyphOTFBuffer.Length; k < length; k++)
                 {
                     var glyphOTF = glyphOTFBuffer[k];
 
-
                     var cluster = (int)glyphOTF.cluster; //cluster is char index in cleaned text = aligned with glyphOTF buffer
                     if (currentFaceIndex != glyphOTF.glyphKey.faceIndex)
                     {
+                        //Debug.Log($"Switching font from {currentFaceIndex} to {glyphOTF.glyphKey.faceIndex}");
                         currentFaceIndex = glyphOTF.glyphKey.faceIndex;
                         currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);
                         currentFontWeigth = (FontWeight)(byte)(currentFont.GetStyleTag(StyleTag.WEIGHT) / 100);
@@ -229,7 +229,7 @@ namespace TextMeshDOTS
                     bool simulateBold = (layoutConfig.fontWeight >= FontWeight.Bold && currentFontWeigth < FontWeight.Bold);
                     if (simulateBold)
                     {
-                        //Debug.Log($"Simulate Bold {currentFontAssetRef.weight} {(int)FontWeight.Bold}");
+                        //Debug.Log($"Simulate Bold (current: {currentFontWeigth})");
                         boldSpacingAdjustment = 7; //this is not a property of font so might as well just set it here
                     }
                     #endregion Handle Style Padding
@@ -315,7 +315,7 @@ namespace TextMeshDOTS
                     bool simulateItalic = (layoutConfig.m_fontStyles & FontStyles.Italic) == FontStyles.Italic && !currentFontIsItalic;
                     if (simulateItalic)
                     {
-                        //Debug.Log($"Simulate Italic {currentFontAssetRef.isItalic}");
+                        Debug.Log($"Simulate Italic {currentFontIsItalic}");
                         // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
                         var italicsStyleSlant = 35; //this is not a property of font so might as well just set it here
                         float shear_value = italicsStyleSlant * 0.01f;
