@@ -8,9 +8,8 @@ namespace TextMeshDOTS.Rendering.Authoring
     public static class TextMaterialUtility
     {        
         private const string kResourcePath = "Assets/Resources";
-
-        private const string kUnified_URP_Shader = "TextMeshDOTS/TMD_Simple_Unlit";
-        private const string kUnified_URP_MaterialPath = "Assets/Resources/Unified-URP.mat";
+        //private const string kUnified_URP_Shader = "TextMeshDOTS/TMD_Simple_Unlit";
+        //private const string kUnified_URP_MaterialPath = "Assets/Resources/Unified-URP.mat";
 
 #if UNITY_EDITOR
         [UnityEditor.MenuItem("TextMeshDOTS/Generate Materials")]
@@ -22,11 +21,77 @@ namespace TextMeshDOTS.Rendering.Authoring
             Shader shader;
             Material material;
 
-            shader = Shader.Find(kUnified_URP_Shader);
+            shader = Shader.Find("TextMeshDOTS/TMD_Color_0_Outline_Lit");
             material = new Material(shader);
             material.enableInstancing = true;
             SetupUnifiedMaterialWithBlendMode(material);
-            UnityEditor.AssetDatabase.CreateAsset(material, kUnified_URP_MaterialPath);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Color_0_Outline_Lit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Color_1_Outline_Lit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Color_1_Outline_Lit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Color_3_Outline_Lit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Color_3_Outline_Lit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Color_0_Outline_Unlit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Color_0_Outline_Unlit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Color_1_Outline_Unlit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Color_1_Outline_Unlit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Color_3_Outline_Unlit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Color_3_Outline_Unlit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Texture_0_Outline_Lit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Texture_0_Outline_Lit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Texture_1_Outline_Lit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Texture_1_Outline_Lit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Texture_3_Outline_Lit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Texture_3_Outline_Lit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Texture_0_Outline_Unlit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Texture_0_Outline_Unlit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Texture_1_Outline_Unlit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Texture_1_Outline_Unlit.mat");
+
+            shader = Shader.Find("TextMeshDOTS/TMD_Texture_3_Outline_Unlit");
+            material = new Material(shader);
+            material.enableInstancing = true;
+            SetupUnifiedMaterialWithBlendMode(material);
+            UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Texture_3_Outline_Unlit.mat");
         }
 #endif
 

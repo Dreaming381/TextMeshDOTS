@@ -116,6 +116,7 @@ void GetGlyph(uint glyphIndex, uint glyphStartIndex, uint glyphCount,
 //    }
 //}
 
+
 UnityTexture2DArray GetSdf8TextureArray(out float2 texelSize)
 {
     uint width, height, elements, numberOfLevels;
@@ -136,6 +137,8 @@ UnityTexture2DArray GetBitmapTextureArray()
 {
     return UnityBuildTexture2DArrayStruct(_tmdBitmap);
 }
+
+
 
 
 // Additional APIs
@@ -228,7 +231,7 @@ void GetGlyphFromBuffer_float(float2 textShaderIndex, float vertexID, out float3
     bool isBitmap;
     ExtractGlyphFlagsFromEntryID(glyphEntryID, isSdf16, isBitmap);
     position = float3(position2D, 0.0);
-    normal = float3(0.0, -1.0, 0.0);
+    normal = float3(0.0, 0.0, -1.0); //text face is pointing forward
     tangent = float3(1.0, 0.0, 0.0);
     vertexColor = color;
     uvAandB = float4(uvA.xy, uvB);
@@ -257,12 +260,159 @@ void Layer1(float alpha, float4 color0, out float4 outColor)
     color0.a *= alpha;
     outColor = color0;
 }
-float4 Blend(float4 overlying, float4 underlying)
+float4 Blend_float(float4 overlying, float4 underlying)
 {
     overlying.rgb *= overlying.a;
     underlying.rgb *= underlying.a;
     float3 blended = overlying.rgb + ((1 - overlying.a) * underlying.rgb);
     float alpha = underlying.a + (1 - underlying.a) * overlying.a;
     return float4(blended / alpha, alpha);
+}
+void GetSurfaceNormal(UnityTexture2DArray sdf, float2 texelSize, float3 uv, bool isFront, float SDR, out float3 normal)
+{
+    float3 delta = float3(texelSize, 0.0);
+
+	// Read "height field"
+    float4 h = float4(
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uv.xy - delta.xz, uv.z).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uv.xy + delta.xz, uv.z).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uv.xy - delta.zy, uv.z).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uv.xy + delta.zy, uv.z).r);
+    
+
+    //h += _BevelOffset;
+
+    float bevelWidth = max(.01, _BevelWidth);
+
+	// Track outline
+    h -= .5;
+    h /= bevelWidth;
+    h = saturate(h + .5);
+
+    if (_InnerBevel)
+        h = 1 - abs(h * 2.0 - 1.0);
+    h = lerp(h, sin(h * 3.141592 / 2.0), float4(_BevelRoundness, _BevelRoundness, _BevelRoundness, _BevelRoundness));
+    //h = lerp(h, sin(h * 3.141592 / 2.0), float4(0, 0, 0, 0));
+    h = min(h, 1.0 - float4(_BevelClamp, _BevelClamp, _BevelClamp, _BevelClamp));
+    //h = min(h, 1.0 - float4(0,0,0,0));
+    h *= _BevelAmount * bevelWidth * SDR * -2.0;
+    //h *= 1 * bevelWidth * SDR * -2.0;
+
+    float3 va = normalize(float3(-1.0, 0.0, h.y - h.x));
+    float3 vb = normalize(float3(0.0, 1.0, h.w - h.z));
+
+    float3 f = float3(1, 1, 1);
+    if (isFront)
+        f = float3(1, 1, -1);
+    normal = cross(va, vb) * f;
+}
+float3 GetSpecular(float3 n, float3 l)
+{
+    float spec = pow(max(0.0, dot(n, l)), _ReflectivityPower);
+    return _LightColor.rgb * spec * _SpecularPower;
+}
+void EvaluateLight_float(float3 normal, float4 faceColor, out float4 color)
+{
+    normal.z = abs(normal.z);
+    float sinAngle;
+    float cosAngle;
+    sincos(_LightAngle, sinAngle, cosAngle);
+    float3 light = normalize(float3(sinAngle, cosAngle, 1.0));
+
+    float3 col = max(faceColor.rgb, 0) + GetSpecular(normal, light) * faceColor.a;
+
+    col *= 1 - (dot(normal, light) * _DiffuseShadow);
+    col *= lerp(_AmbientShadow, 1, normal.z * normal.z);
+
+    
+    color = float4(col, faceColor.a);
+}
+void SampleTexture2DArrayLIT_float(float4 uvAandB, float4 atlasIndexScaleIsSdf16IsBitmap, out bool isBitmap, out float3 normal, out float4 rgba, out float3 uvA, out float2 uvB, out float scale, out float2 texelSize)
+{
+    uint width, height, elements, numberOfLevels;
+    uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    uvB = uvAandB.zw;
+    scale = atlasIndexScaleIsSdf16IsBitmap.y;
+    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    
+    if (isBitmap)
+    {
+        _tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+        texelSize = 1.0f / float2(width, height);
+        
+        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
+        rgba = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        normal = float3(0, 0, -1);
+        return;
+    }
+    else
+    {
+        // The signed distance ratio is the padding value + 1.
+		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
+        float SDR = 11.0; // SDR : Signed Distance Ratio
+        if (isSdf16)
+        {
+            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            texelSize = 1.0f / float2(width, height);
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
+            rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
+            GetSurfaceNormal(sdf, texelSize, uvA, true, SDR, normal);
+
+        }
+        else
+        {
+            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            texelSize = 1.0f / float2(width, height);
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
+            rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
+            GetSurfaceNormal(sdf, texelSize, uvA, true, SDR, normal);
+            return;
+        }
+    }
+}
+void SampleTexture2DArrayUNLIT_float(float4 uvAandB, float4 atlasIndexScaleIsSdf16IsBitmap, out bool isBitmap, out float4 rgba, out float3 uvA, out float2 uvB, out float scale, out float2 texelSize)
+{
+    uint width, height, elements, numberOfLevels;
+    uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    uvB = uvAandB.zw;
+    scale = atlasIndexScaleIsSdf16IsBitmap.y;
+    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    
+    if (isBitmap)
+    {
+        _tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+        texelSize = 1.0f / float2(width, height);
+        
+        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
+        rgba = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        return;
+    }
+    else
+    {
+        // The signed distance ratio is the padding value + 1.
+		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
+        float SDR = 11.0; // SDR : Signed Distance Ratio
+        if (isSdf16)
+        {
+            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            texelSize = 1.0f / float2(width, height);
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
+            rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
+        }
+        else
+        {
+            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            texelSize = 1.0f / float2(width, height);
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
+            rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
+            return;
+        }
+    }
 }
 #endif
