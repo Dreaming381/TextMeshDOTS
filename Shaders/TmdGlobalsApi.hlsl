@@ -3,6 +3,7 @@
 
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Texture.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/GlobalSamplers.hlsl"
 
 uniform ByteAddressBuffer _tmdGlyphs;
 TEXTURE2D_ARRAY(_tmdSdf8);
@@ -103,46 +104,6 @@ void GetGlyph(uint glyphIndex, uint glyphStartIndex, uint glyphCount,
     reserved = load112_127.w;
 }
 
-// Todo: This causes Unity's shader compiler to break. Attempt to reenable this later.
-//UnityTexture2DArray GetSdfTextureArray(bool is16Bit)
-//{
-//    if (is16Bit)
-//    {
-//        return UnityBuildTexture2DArrayStruct(_tmdSdf16);
-//    }
-//    else
-//    {
-//        return UnityBuildTexture2DArrayStruct(_tmdSdf8);
-//    }
-//}
-
-
-UnityTexture2DArray GetSdf8TextureArray(out float2 texelSize)
-{
-    uint width, height, elements, numberOfLevels;
-    _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-    texelSize = 1.0f / float2(width, height);
-    return UnityBuildTexture2DArrayStruct(_tmdSdf8);
-}
-
-UnityTexture2DArray GetSdf16TextureArray(out float2 texelSize)
-{
-    uint width, height, elements, numberOfLevels;
-    _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-    texelSize = 1.0f / float2(width, height);
-    return UnityBuildTexture2DArrayStruct(_tmdSdf16);
-}
-
-UnityTexture2DArray GetBitmapTextureArray()
-{
-    return UnityBuildTexture2DArrayStruct(_tmdBitmap);
-}
-
-
-
-
-// Additional APIs
-
 // Corner order:  bl = 0, tl = 1, tr = 2, br = 3
 void GetGlyphCorner(uint glyphIndex, uint cornerIndex, uint glyphStartIndex, uint glyphCount, out float2 position, out float3 uvA, out float2 uvB, out float4 color, out float scale, out uint glyphEntryID)
 {
@@ -237,9 +198,32 @@ void GetGlyphFromBuffer_float(float2 textShaderIndex, float vertexID, out float3
     uvAandB = float4(uvA.xy, uvB);
     atlasIndexScaleIsSdf16IsBitmap = float4(uvA.z, scale, isSdf16, isBitmap);
 }
+
+//SDF API
+//adjust face weight
+void GetFontWeight_float(float dilationIN, float scale, float weightNormal, float weightBold, out float dilationOUT)
+{
+    float bold = step(scale, 0); //float bold = scale < 0.0;
+    float weight = lerp(weightNormal, weightBold, bold) / 4.0;
+    dilationOUT = (weight + dilationIN) * 0.5;
+}
+//adjust face weight
+void GetFontWeight2_float(float2 dilationIN, float scale, float weightNormal, float weightBold, out float2 dilationOUT)
+{
+    float bold = step(scale, 0); //float bold = scale < 0.0;
+    float weight = lerp(weightNormal, weightBold, bold) / 4.0;
+    dilationOUT = (weight + dilationIN) * 0.5;
+}
+//adjust face weight
+void GetFontWeight4_float(float4 dilationIN, float scale, float weightNormal, float weightBold, out float4 dilationOUT)
+{
+    float bold = step(scale, 0); //float bold = scale < 0.0;
+    float weight = lerp(weightNormal, weightBold, bold) / 4.0;
+    dilationOUT = (weight + dilationIN) * 0.5;
+}
 // UV			: Texture coordinate of the source distance field texture
 // texelSize	: texelSize of the source distance field texture
-void ScreenSpaceRatio(float2 uvA, float texelSize, out float SSR)
+void ScreenSpaceRatio(float2 uvA, float2 texelSize, out float SSR)
 {
     SSR = rsqrt(abs(ddx(uvA.x) * ddy(uvA.y) - ddy(uvA.x) * ddx(uvA.y))) * texelSize.x;
 }
@@ -248,55 +232,103 @@ void GenerateUV(float2 inUV, float2 tiling, float2 offset, float2 animSpeed, out
     outUV = inUV * tiling + offset + (animSpeed * _Time.y);
 }
 
-void ComputeSDF(float SSR, float SD, float SDR, float isoPerimeter, float softness, out float outAlpha)
+void ComputeSDF_float(float SSR, float SDR, float SD, float dilation, float softness, out float outAlpha)
 {
     softness *= SSR * SDR;
     float d = (SD - 0.5) * SDR; // Signed distance to edge, in Texture space
-    outAlpha = saturate((d * 2.0 * SSR + 0.5 + isoPerimeter * SDR * SSR + softness * 0.5) / (1.0 + softness)); // Screen pixel coverage (alpha)
+    outAlpha = saturate((d * 2.0 * SSR + 0.5 + dilation * SDR * SSR + softness * 0.5) / (1.0 + softness)); // Screen pixel coverage (alpha)
+}
+void ComputeSDF2_float(float SSR, float SDR, float2 SD, float2 dilation, float2 softness, out float2 outAlpha)
+{
+    softness *= SSR * SDR;
+    float2 d = (SD - 0.5f) * SDR;
+    outAlpha = saturate((d * 2.0f * SSR + 0.5f + dilation * SDR * SSR + softness * 0.5) / (1.0 + softness));
+}
+void ComputeSDF4_float(float SSR, float SDR, float4 SD, float4 dilation, float4 softness, out float4 outAlpha)
+{
+    softness *= SSR * SDR;
+    float4 d = (SD - 0.5f) * SDR;
+    outAlpha = saturate((d * 2.0f * SSR + 0.5f + dilation * SDR * SSR + softness * 0.5) / (1.0 + softness));
 }
 // Face only
-void Layer1(float alpha, float4 color0, out float4 outColor)
+void Layer1_float(float alpha, float4 color0, out float4 outColor)
 {
     color0.a *= alpha;
     outColor = color0;
 }
-float4 Blend_float(float4 overlying, float4 underlying)
+// Face + 1 Outline
+void Layer2_float(float2 alpha, float4 color0, float4 color1, out float4 outColor)
+{
+    color1.a *= alpha.y;
+    color0.rgb *= color0.a;
+    color1.rgb *= color1.a;
+    outColor = lerp(color1, color0, alpha.x);
+    outColor.rgb /= outColor.a;
+}
+// Face + 3 Outline
+void Layer4_float(float4 alpha, float4 color0, float4 color1, float4 color2, float4 color3, out float4 outColor)
+{
+    color3.a *= alpha.w;
+    color0.rgb *= color0.a;
+    color1.rgb *= color1.a;
+    color2.rgb *= color2.a;
+    color3.rgb *= color3.a;
+    outColor = lerp(lerp(lerp(color3, color2, alpha.z), color1, alpha.y), color0, alpha.x);
+    outColor.rgb /= outColor.a;
+}
+void Blend_float(float4 overlying, float4 underlying, out float4 colorOUT)
 {
     overlying.rgb *= overlying.a;
     underlying.rgb *= underlying.a;
     float3 blended = overlying.rgb + ((1 - overlying.a) * underlying.rgb);
     float alpha = underlying.a + (1 - underlying.a) * overlying.a;
-    return float4(blended / alpha, alpha);
+    colorOUT = float4(blended / alpha, alpha);
 }
-void GetSurfaceNormal(UnityTexture2DArray sdf, float2 texelSize, float3 uv, bool isFront, float SDR, out float3 normal)
+void ApplyVertexAlpha_float(
+    float4 vertexColor,
+    float4 colorIN,
+    out float4 colorOUT)
+{
+    colorOUT = colorIN * vertexColor.w;
+}
+
+// API for LIT shader
+void GetSurfaceNormal(
+    UnityTexture2DArray sdf,
+    float2 texelSize, 
+    float3 uvA,
+    float SDR,
+    bool isFront,     
+    bool innerBevel,
+    float bevelAmount,
+    float bevelWidth,
+    float bevelRoundness,
+    float bevelClamp,
+    out float3 normal)
 {
     float3 delta = float3(texelSize, 0.0);
 
 	// Read "height field"
     float4 h = float4(
-		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uv.xy - delta.xz, uv.z).r,
-		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uv.xy + delta.xz, uv.z).r,
-		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uv.xy - delta.zy, uv.z).r,
-		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uv.xy + delta.zy, uv.z).r);
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - delta.xz, uvA.z).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy + delta.xz, uvA.z).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - delta.zy, uvA.z).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy + delta.zy, uvA.z).r);
     
 
     //h += _BevelOffset;
-
-    float bevelWidth = max(.01, _BevelWidth);
+    bevelWidth = max(.01, bevelWidth);
 
 	// Track outline
     h -= .5;
     h /= bevelWidth;
     h = saturate(h + .5);
 
-    if (_InnerBevel)
+    if (innerBevel)
         h = 1 - abs(h * 2.0 - 1.0);
-    h = lerp(h, sin(h * 3.141592 / 2.0), float4(_BevelRoundness, _BevelRoundness, _BevelRoundness, _BevelRoundness));
-    //h = lerp(h, sin(h * 3.141592 / 2.0), float4(0, 0, 0, 0));
-    h = min(h, 1.0 - float4(_BevelClamp, _BevelClamp, _BevelClamp, _BevelClamp));
-    //h = min(h, 1.0 - float4(0,0,0,0));
-    h *= _BevelAmount * bevelWidth * SDR * -2.0;
-    //h *= 1 * bevelWidth * SDR * -2.0;
+    h = lerp(h, sin(h * 3.141592 / 2.0), float4(bevelRoundness, bevelRoundness, bevelRoundness, bevelRoundness));
+    h = min(h, 1.0 - float4(bevelClamp, bevelClamp, bevelClamp, bevelClamp));
+    h *= bevelAmount * bevelWidth * SDR * -2.0;
 
     float3 va = normalize(float3(-1.0, 0.0, h.y - h.x));
     float3 vb = normalize(float3(0.0, 1.0, h.w - h.z));
@@ -306,28 +338,66 @@ void GetSurfaceNormal(UnityTexture2DArray sdf, float2 texelSize, float3 uv, bool
         f = float3(1, 1, -1);
     normal = cross(va, vb) * f;
 }
-float3 GetSpecular(float3 n, float3 l)
+float3 GetSpecular(float3 normal, float3 light, float4 lightColor, float reflectivityPower, float specularPower)
 {
-    float spec = pow(max(0.0, dot(n, l)), _ReflectivityPower);
-    return _LightColor.rgb * spec * _SpecularPower;
+    float spec = pow(max(0.0, dot(normal, light)), reflectivityPower);
+    return lightColor.rgb * spec * specularPower;
 }
-void EvaluateLight_float(float3 normal, float4 faceColor, out float4 color)
+void EvaluateLight_float(
+    float3 normal, 
+    float4 faceColor,     
+    float4 lightColor,
+    float lightAngle,
+    float specularPower,
+    float reflectivityPower,     
+    float diffuseShadow, 
+    float ambientShadow,
+    out float4 color)
 {
     normal.z = abs(normal.z);
     float sinAngle;
     float cosAngle;
-    sincos(_LightAngle, sinAngle, cosAngle);
+    sincos(lightAngle, sinAngle, cosAngle);
     float3 light = normalize(float3(sinAngle, cosAngle, 1.0));
 
-    float3 col = max(faceColor.rgb, 0) + GetSpecular(normal, light) * faceColor.a;
+    float3 col = max(faceColor.rgb, 0) + GetSpecular(normal, light, lightColor, reflectivityPower, specularPower) * faceColor.a;
 
-    col *= 1 - (dot(normal, light) * _DiffuseShadow);
-    col *= lerp(_AmbientShadow, 1, normal.z * normal.z);
-
+    col *= 1 - (dot(normal, light) * diffuseShadow);
+    col *= lerp(ambientShadow, 1, normal.z * normal.z);
     
     color = float4(col, faceColor.a);
 }
-void SampleTexture2DArrayLIT_float(float4 uvAandB, float4 atlasIndexScaleIsSdf16IsBitmap, out bool isBitmap, out float3 normal, out float4 rgba, out float3 uvA, out float2 uvB, out float scale, out float2 texelSize)
+
+// Todo: This causes Unity's shader compiler to break. Attempt to reenable this later.
+//UnityTexture2DArray GetSdfTextureArray(bool is16Bit)
+//{
+//    if (is16Bit)
+//    {
+//        return UnityBuildTexture2DArrayStruct(_tmdSdf16);
+//    }
+//    else
+//    {
+//        return UnityBuildTexture2DArrayStruct(_tmdSdf8);
+//    }
+//}
+
+//API to sample Bitmap and SDF TEXTURE2D_ARRAY
+void SampleTexture2DArrayLIT_float(
+    float4 uvAandB, 
+    float4 atlasIndexScaleIsSdf16IsBitmap,
+    bool isFront,
+    bool innerBevel,
+    float bevelAmount,
+    float bevelWidth,
+    float bevelRoundness,
+    float bevelClamp,
+    out bool isBitmap,   
+    out float4 rgba, 
+    out float3 normal,
+    out float3 uvA, 
+    out float2 uvB, 
+    out float scale, 
+    out float2 texelSize)
 {
     uint width, height, elements, numberOfLevels;
     uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
@@ -358,8 +428,7 @@ void SampleTexture2DArrayLIT_float(float4 uvAandB, float4 atlasIndexScaleIsSdf16
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
             rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
-            GetSurfaceNormal(sdf, texelSize, uvA, true, SDR, normal);
-
+            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
         }
         else
         {
@@ -368,27 +437,48 @@ void SampleTexture2DArrayLIT_float(float4 uvAandB, float4 atlasIndexScaleIsSdf16
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
             rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
-            GetSurfaceNormal(sdf, texelSize, uvA, true, SDR, normal);
-            return;
+            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
         }
     }
 }
-void SampleTexture2DArrayUNLIT_float(float4 uvAandB, float4 atlasIndexScaleIsSdf16IsBitmap, out bool isBitmap, out float4 rgba, out float3 uvA, out float2 uvB, out float scale, out float2 texelSize)
+//sample SDF 5+4 times: face, outline1, outline2, outline3, underlay, and 4x for light normal
+void Sample5Texture2DArrayLIT_float(
+    float4 uvAandB,
+    float4 atlasIndexScaleIsSdf16IsBitmap,
+    bool isFront,
+    bool innerBevel,
+    float bevelAmount,
+    float bevelWidth,
+    float bevelRoundness,
+    float bevelClamp,
+    float2 underlayColorOffset,
+    float2 outlineColor1Offset,
+    float2 outlineColor2Offset,
+    float2 outlineColor3Offset,
+    out bool isBitmap,
+    out float4 bitmapColor,
+    out float SSR,
+    out float4 SD,      //x: face, y: outline1, z: outline2, w: outline3
+    out float underlaySD,    
+    out float3 normal,    
+    out float2 uvB,
+    out float scale)
 {
     uint width, height, elements, numberOfLevels;
-    uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
     uvB = uvAandB.zw;
     scale = atlasIndexScaleIsSdf16IsBitmap.y;
     bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
     isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    SD = float4(0, 0, 0, 0);
     
     if (isBitmap)
-    {
-        _tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-        texelSize = 1.0f / float2(width, height);
-        
+    {         
         UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
-        rgba = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        normal = float3(0, 0, -1);
+        underlaySD = 0;    
+        SSR = 0;
         return;
     }
     else
@@ -396,23 +486,425 @@ void SampleTexture2DArrayUNLIT_float(float4 uvAandB, float4 atlasIndexScaleIsSdf
         // The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
         float SDR = 11.0; // SDR : Signed Distance Ratio
+        bitmapColor = float4(0,0,0,0);
+        
         if (isSdf16)
         {
             _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-            texelSize = 1.0f / float2(width, height);
+            float2 texelSize = 1.0f / float2(width, height);
+            float offSetScale = SDR * texelSize.x;            
+            
+            outlineColor1Offset *= offSetScale;
+            outlineColor2Offset *= offSetScale;
+            outlineColor3Offset *= offSetScale;
+            underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
-            rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;             
+            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, uvA.z).r;            
+            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, uvA.z).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            
+            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
         }
         else
         {
             _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-            texelSize = 1.0f / float2(width, height);
+            float2 texelSize = 1.0f / float2(width, height);
+            float offSetScale = SDR * texelSize.x;
+            
+            outlineColor1Offset *= offSetScale;
+            outlineColor2Offset *= offSetScale;
+            outlineColor3Offset *= offSetScale;
+            underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
-            rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
-            return;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
+            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, uvA.z).r;
+            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, uvA.z).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            
+            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
         }
     }
+}
+//sample SDF 5 times: face, outline1, outline2, outline3, underlay
+void Sample5Texture2DArrayUNLIT_float(
+    float4 uvAandB,
+    float4 atlasIndexScaleIsSdf16IsBitmap,    
+    float2 underlayColorOffset,
+    float2 outlineColor1Offset,
+    float2 outlineColor2Offset,
+    float2 outlineColor3Offset,
+    out bool isBitmap,
+    out float4 bitmapColor,
+    out float SSR,
+    out float4 SD, //x: face, y: outline1, z: outline2, w: outline3
+    out float underlaySD,
+    out float2 uvB,
+    out float scale)
+{
+    uint width, height, elements, numberOfLevels;
+    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    uvB = uvAandB.zw;
+    scale = atlasIndexScaleIsSdf16IsBitmap.y;
+    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    SD = float4(0, 0, 0, 0);
+    
+    if (isBitmap)
+    {
+        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        underlaySD = 0;
+        SSR = 0;
+        return;
+    }
+    else
+    {
+        // The signed distance ratio is the padding value + 1.
+		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
+        float SDR = 11.0; // SDR : Signed Distance Ratio
+        bitmapColor = float4(0, 0, 0, 0);
+        
+        if (isSdf16)
+        {
+            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            float offSetScale = SDR * texelSize.x;
+            
+            outlineColor1Offset *= offSetScale;
+            outlineColor2Offset *= offSetScale;
+            outlineColor3Offset *= offSetScale;
+            underlayColorOffset *= offSetScale;
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
+            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, uvA.z).r;
+            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, uvA.z).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+        else
+        {
+            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            float offSetScale = SDR * texelSize.x;
+            
+            outlineColor1Offset *= offSetScale;
+            outlineColor2Offset *= offSetScale;
+            outlineColor3Offset *= offSetScale;
+            underlayColorOffset *= offSetScale;
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
+            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, uvA.z).r;
+            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, uvA.z).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+    }
+}
+
+//sample SDF 3+4 times: face, outline1, underlay, and 4x for light normal
+void Sample3Texture2DArrayLIT_float(
+    float4 uvAandB,
+    float4 atlasIndexScaleIsSdf16IsBitmap,
+    bool isFront,
+    bool innerBevel,
+    float bevelAmount,
+    float bevelWidth,
+    float bevelRoundness,
+    float bevelClamp,
+    float2 underlayColorOffset,
+    float2 outlineColor1Offset,
+    out bool isBitmap,
+    out float4 bitmapColor,
+    out float SSR,
+    out float2 SD, //x: face, y: outline1
+    out float underlaySD,
+    out float3 normal,
+    out float2 uvB,
+    out float scale)
+{
+    uint width, height, elements, numberOfLevels;
+    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    uvB = uvAandB.zw;
+    scale = atlasIndexScaleIsSdf16IsBitmap.y;
+    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    SD = float2(0, 0);
+    
+    if (isBitmap)
+    {
+        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        normal = float3(0, 0, -1);
+        underlaySD = 0;
+        SSR = 0;
+        return;
+    }
+    else
+    {
+        // The signed distance ratio is the padding value + 1.
+		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
+        float SDR = 11.0; // SDR : Signed Distance Ratio
+        bitmapColor = float4(0, 0, 0, 0);
+        
+        if (isSdf16)
+        {
+            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            float offSetScale = SDR * texelSize.x;
+            
+            outlineColor1Offset *= offSetScale;
+            underlayColorOffset *= offSetScale;
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            
+            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+        else
+        {
+            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            float offSetScale = SDR * texelSize.x;
+            
+            outlineColor1Offset *= offSetScale;
+            underlayColorOffset *= offSetScale;
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            
+            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+    }
+}
+//sample SDF 3 times: face, outline1, underlay
+void Sample3Texture2DArrayUNLIT_float(
+    float4 uvAandB,
+    float4 atlasIndexScaleIsSdf16IsBitmap,   
+    float2 underlayColorOffset,
+    float2 outlineColor1Offset,
+    out bool isBitmap,
+    out float4 bitmapColor,
+    out float SSR,
+    out float2 SD, //x: face, y: outline1
+    out float underlaySD,
+    out float2 uvB,
+    out float scale)
+{
+    uint width, height, elements, numberOfLevels;
+    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    uvB = uvAandB.zw;
+    scale = atlasIndexScaleIsSdf16IsBitmap.y;
+    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    SD = float2(0, 0);
+    
+    if (isBitmap)
+    {
+        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        underlaySD = 0;
+        SSR = 0;
+        return;
+    }
+    else
+    {
+        // The signed distance ratio is the padding value + 1.
+		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
+        float SDR = 11.0; // SDR : Signed Distance Ratio
+        bitmapColor = float4(0, 0, 0, 0);
+        
+        if (isSdf16)
+        {
+            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            float offSetScale = SDR * texelSize.x;
+            
+            outlineColor1Offset *= offSetScale;
+            underlayColorOffset *= offSetScale;
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+        else
+        {
+            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            float offSetScale = SDR * texelSize.x;
+            
+            outlineColor1Offset *= offSetScale;
+            underlayColorOffset *= offSetScale;
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+    }
+}
+//sample SDF 1+4 times: face, and 4x for light normal
+void Sample1Texture2DArrayLIT_float(
+    float4 uvAandB,
+    float4 atlasIndexScaleIsSdf16IsBitmap,
+    bool isFront,
+    bool innerBevel,
+    float bevelAmount,
+    float bevelWidth,
+    float bevelRoundness,
+    float bevelClamp,
+    out bool isBitmap,
+    out float4 bitmapColor,
+    out float SSR,
+    out float SD, //x: face
+    out float3 normal,
+    out float2 uvB,
+    out float scale)
+{
+    uint width, height, elements, numberOfLevels;
+    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    uvB = uvAandB.zw;
+    scale = atlasIndexScaleIsSdf16IsBitmap.y;
+    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    SD = 0;
+    
+    if (isBitmap)
+    {
+        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        normal = float3(0, 0, -1);
+        SSR = 0;
+        return;
+    }
+    else
+    {
+        // The signed distance ratio is the padding value + 1.
+		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
+        float SDR = 11.0; // SDR : Signed Distance Ratio
+        bitmapColor = float4(0, 0, 0, 0);
+        
+        if (isSdf16)
+        {
+            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            
+            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+        else
+        {
+            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            
+            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+    }
+}
+//sample SDF 1 time: face
+void Sample1Texture2DArrayUNLIT_float(
+    float4 uvAandB,
+    float4 atlasIndexScaleIsSdf16IsBitmap,    
+    out bool isBitmap,
+    out float4 bitmapColor,
+    out float SSR,
+    out float SD, //x: face
+    out float2 uvB,
+    out float scale)
+{
+    uint width, height, elements, numberOfLevels;
+    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
+    uvB = uvAandB.zw;
+    scale = atlasIndexScaleIsSdf16IsBitmap.y;
+    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+    SD = 0;
+    
+    if (isBitmap)
+    {
+        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        SSR = 0;
+        return;
+    }
+    else
+    {
+        // The signed distance ratio is the padding value + 1.
+		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
+        float SDR = 11.0; // SDR : Signed Distance Ratio
+        bitmapColor = float4(0, 0, 0, 0);
+        
+        if (isSdf16)
+        {
+            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+        else
+        {
+            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+            float2 texelSize = 1.0f / float2(width, height);
+            
+            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+            
+            ScreenSpaceRatio(uvA.xy, texelSize, SSR);
+        }
+    }
+}
+
+void SampleFaceTexture_float(
+    float4 vertexColor,
+    float2 uvB,
+    UnityTexture2D faceTexture,
+    float2 faceUVSpeed,
+    float2 faceTiling,
+    float2 faceOffset,
+    out float4 colorOUT)
+{
+    float2 uvBOUT;
+    GenerateUV(uvB, faceTiling, faceOffset, faceUVSpeed, uvBOUT);
+    float4 textureColor = SAMPLE_TEXTURE2D(faceTexture, faceTexture.samplerstate, uvBOUT); //sampler_LinearClamp sampler_LinearRepeat
+    colorOUT = vertexColor * textureColor;
 }
 #endif
