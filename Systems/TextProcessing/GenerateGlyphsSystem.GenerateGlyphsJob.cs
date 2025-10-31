@@ -315,7 +315,7 @@ namespace TextMeshDOTS
                     bool simulateItalic = (layoutConfig.m_fontStyles & FontStyles.Italic) == FontStyles.Italic && !currentFontIsItalic;
                     if (simulateItalic)
                     {
-                        Debug.Log($"Simulate Italic {currentFontIsItalic}");
+                        //Debug.Log($"Simulate Italic {currentFontIsItalic}");
                         // Shift Top vertices forward by half (Shear Value * height of character) and Bottom vertices back by same amount.
                         var italicsStyleSlant = 35; //this is not a property of font so might as well just set it here
                         float shear_value = italicsStyleSlant * 0.01f;
