@@ -178,7 +178,7 @@ namespace TextMeshDOTS
                 var blob = new Blob(fontAssetPath);
                 for (int i = 0, ii = blob.FaceCount; i < ii; i++)
                 {
-                    var face = new Face(blob.ptr, 0);
+                    var face = new Face(blob.ptr, (uint)i);
                     var fontReference = new FontReference();
                     fontReference.filePath = fontAssetPath;
                     fontReference.faceIndex = i;
