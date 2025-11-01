@@ -52,10 +52,10 @@ namespace TextMeshDOTS.Authoring
                 //fetch name of fontFamily and subFamily, generate hash code from that used to lookup this font
                 var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
 
-                fontFamily = face.GetFaceInfo(NameID.FONT_FAMILY, language).ToString();
-                fontSubFamily = face.GetFaceInfo(NameID.FONT_SUBFAMILY, language).ToString();
-                typographicFamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language).ToString();
-                typographicSubfamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language).ToString();
+                fontFamily = face.GetName(NameID.FONT_FAMILY, language).ToString();
+                fontSubFamily = face.GetName(NameID.FONT_SUBFAMILY, language).ToString();
+                typographicFamily = face.GetName(NameID.TYPOGRAPHIC_FAMILY, language).ToString();
+                typographicSubfamily = face.GetName(NameID.TYPOGRAPHIC_SUBFAMILY, language).ToString();
 
                 weight = (int)font.GetStyleTag(StyleTag.WEIGHT);
                 width = (int)font.GetStyleTag(StyleTag.WIDTH);

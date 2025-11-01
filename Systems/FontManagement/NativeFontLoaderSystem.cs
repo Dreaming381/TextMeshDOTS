@@ -13,6 +13,12 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
+
+    // To-Do: re-design to be able to load collection fonts (contains multiple subfamilies),
+    // and variable fonts in response the requested variation axis (width, weight etc)
+    // of TextRenderer (e.g. generate FontRequests after XML tag extraction)
+
+
     //[DisableAutoCreation]
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
@@ -28,7 +34,8 @@ namespace TextMeshDOTS
         public void OnCreate(ref SystemState state)
         {
             //schedule fetching of metadata for installed system fonts
-            string[] systemFonts = UnityEngine.Font.GetPathsToOSFonts();
+            var systemFonts = UnityEngine.Font.GetPathsToOSFonts();
+
             systemFontsNative = new NativeArray<FixedString512Bytes>(systemFonts.Length, Allocator.Persistent);
             for (int i = 0, ii = systemFonts.Length; i < ii; i++)
                 systemFontsNative[i] = new FixedString512Bytes(systemFonts[i]);
@@ -151,8 +158,31 @@ namespace TextMeshDOTS
                     list.Add(default);
                     fontTable.perThreadFontCaches[i] = list;
                 }
-            }
 
+                ////test loading of collection fonts and variable fonts
+                //for (int i = 0, ii = blob.FaceCount; i < ii; i++)
+                //{
+                //    face = new Face(blob.ptr, i);
+                //    if(face.HasVarData)
+                //    {
+                //        var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+                //        Debug.Log($"found {face.AxisCount} variation axis, {face.NamedInstanceCount} named instances");
+
+                //        //fetch a list of named variations
+                //        for (int k = 0, kk = (int)face.NamedInstanceCount; k < kk; k++)
+                //            Debug.Log($"nameID for index {k}: {face.GetSubFamilyNameId(k)} {face.GetName(face.GetSubFamilyNameId(k), language)} ");                        
+
+                //        //fetch a list of all variation axis
+                //        face.GetAxisInfos(0, 0, out NativeList<AxisInfo> axisInfos);
+                //        for (int k = 0, kk = axisInfos.Length; k < kk; k++)
+                //            Debug.Log($"{axisInfos[k]} (axis name: {face.GetName(axisInfos[k].nameID, language)})");                        
+
+                //        //var foundAxisInfo = face.FindAxisInfo((uint)Axis.WEIGHT, out var axisInfo);
+                //        //Debug.Log($"{foundAxisInfo} {axisInfo}");
+                //    }
+                //    face.Dispose();
+                //}
+            }
             //blob can be disposed here, face and font are disposed at world shutdown via FontTable.TryDispose 
             blob.Dispose();
         }
@@ -172,21 +202,35 @@ namespace TextMeshDOTS
         static bool GetFontInfo(string fontAssetPath, Language language, NativeList<FontReference> fontReferences)
         {
             bool isTrueType = fontAssetPath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
+            bool isTrueTypeCollection = fontAssetPath.EndsWith("ttc", System.StringComparison.OrdinalIgnoreCase);
             bool isOpentype = fontAssetPath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
-            if (isOpentype || isTrueType)
+            if (isOpentype || isTrueType || isTrueTypeCollection)
             {
                 var blob = new Blob(fontAssetPath);
+                //if (isTrueTypeCollection)
+                //    Debug.Log(fontAssetPath);
                 for (int i = 0, ii = blob.FaceCount; i < ii; i++)
                 {
-                    var face = new Face(blob.ptr, (uint)i);
+                    var face = new Face(blob.ptr, i);
                     var fontReference = new FontReference();
                     fontReference.filePath = fontAssetPath;
                     fontReference.faceIndex = i;
-                    fontReference.fontFamily = face.GetFaceInfo(NameID.FONT_FAMILY, language);
-                    fontReference.fontSubFamily = face.GetFaceInfo(NameID.FONT_SUBFAMILY, language);
-                    fontReference.typographicFamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language);
-                    fontReference.typographicSubfamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language);
+                    fontReference.fontFamily = face.GetName(NameID.FONT_FAMILY, language);
+                    fontReference.fontSubFamily = face.GetName(NameID.FONT_SUBFAMILY, language);
+                    fontReference.typographicFamily = face.GetName(NameID.TYPOGRAPHIC_FAMILY, language);
+                    fontReference.typographicSubfamily = face.GetName(NameID.TYPOGRAPHIC_SUBFAMILY, language);
                     fontReferences.Add(fontReference);
+
+                    if (isTrueTypeCollection)
+                    {
+                        var font = new Font(face.ptr);
+                        var weight = (int)font.GetStyleTag(StyleTag.WEIGHT);
+                        var width = (int)font.GetStyleTag(StyleTag.WIDTH);
+                        string isItalic = (byte)font.GetStyleTag(StyleTag.ITALIC) == 1 ? "italic, " : "";
+                        var slant = (int)font.GetStyleTag(StyleTag.SLANT_ANGLE);
+
+                        //Debug.Log($"{fontReference} (weight {weight}, width {width}, {isItalic}slant {slant})");
+                    }
                     face.Dispose();
                 }
                 blob.Dispose();
@@ -252,7 +296,10 @@ namespace TextMeshDOTS
             public static bool operator !=(FontReference target, FontReference other) { return !target.Equals(other); }
             public override string ToString()
             {
-                return $"{fontFamily} {fontSubFamily} {typographicFamily} {typographicSubfamily}";
+                if(typographicFamily != "")
+                    return $"{fontFamily} - {fontSubFamily} (typographic: {typographicFamily} - {typographicSubfamily})";
+                else
+                    return $"{fontFamily} - {fontSubFamily}";
             }
         }
     }

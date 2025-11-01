@@ -1,6 +1,9 @@
 using System;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+using UnityEngine;
+using UnityEngine.LightTransport;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -13,12 +16,14 @@ namespace TextMeshDOTS.HarfBuzz
         internal RenderFormat renderFormat;
         public uint GlyphCount => Harfbuzz.hb_face_get_glyph_count(ptr);
         public bool HasVarData => Harfbuzz.hb_ot_var_has_data(ptr);
+        public uint AxisCount => Harfbuzz.hb_ot_var_get_axis_count(ptr);
+        public uint NamedInstanceCount => Harfbuzz.hb_ot_var_get_named_instance_count(ptr);        
 
-        public Face(IntPtr blob, uint index)
+        public Face(IntPtr blob, int index)
         {
             sdfOrientation= default;
             renderFormat = default;
-            ptr = Harfbuzz.hb_face_create(blob, index);
+            ptr = Harfbuzz.hb_face_create(blob, (uint)index);
             renderFormat = HasCOLR() || HasColorBitmap() ? RenderFormat.Bitmap8888 : RenderFormat.SDF8;
             sdfOrientation = HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
         }
@@ -32,7 +37,7 @@ namespace TextMeshDOTS.HarfBuzz
             Harfbuzz.hb_ot_layout_get_size_params(ptr, out design_size, out subfamily_id, out subfamily_name_id, out range_start, out range_end);
         }
 
-        public FixedString128Bytes GetFaceInfo(NameID name_id, Language language)
+        public FixedString128Bytes GetName(NameID name_id, Language language)
         {
             var result = new FixedString128Bytes();
             var textSize = (uint)result.Capacity;
@@ -42,6 +47,37 @@ namespace TextMeshDOTS.HarfBuzz
             }
             result.Length = (int)textSize;
             return result;
+        }
+
+        public NameID GetSubFamilyNameId(int index)
+        {
+            return Harfbuzz.hb_ot_var_named_instance_get_subfamily_name_id(ptr, (uint)index);
+        }
+        public bool FindAxisInfo(uint axis_tag, out AxisInfo axisInfo)
+        {
+            return Harfbuzz.hb_ot_var_find_axis_info(ptr, axis_tag, out axisInfo);
+        }
+        public void GetAxisInfos(int startOffset, int offset, out NativeList<AxisInfo> axisInfos)
+        {
+            uint axisCount = 16;
+            
+            axisInfos = new NativeList<AxisInfo>((int)axisCount, Allocator.Temp);
+            axisInfos.Length = (int)axisCount;
+            uint len = default;
+            unsafe
+            {
+                len = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref axisCount, (IntPtr)axisInfos.GetUnsafePtr());
+            }
+            if (len > axisCount)
+            {
+                Debug.Log("capacity of 16 was not sufficient, increasing");
+                axisInfos = new NativeList<AxisInfo>((int)len, Allocator.Temp);
+                unsafe
+                {
+                    len = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref len, (IntPtr)axisInfos.GetUnsafePtr());
+                }
+            }
+            axisInfos.Length = (int)len;
         }
 
         bool HasReferenceTable(uint HB_TAG)

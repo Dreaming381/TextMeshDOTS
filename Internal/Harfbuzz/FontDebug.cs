@@ -13,7 +13,7 @@ namespace TextMeshDOTS.HarfBuzz
             var values = Enum.GetValues(typeof(NameID));
             foreach (NameID value in values)
             {
-                result = face.GetFaceInfo(value, language);
+                result = face.GetName(value, language);
                 Debug.Log($"{value}: {result}");
                 result.Clear();
             }

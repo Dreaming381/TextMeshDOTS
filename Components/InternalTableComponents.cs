@@ -59,6 +59,12 @@ namespace TextMeshDOTS
             if (font.ptr == IntPtr.Zero)
             {
                 font             = new Font(faces[faceIndex].ptr);
+
+                //test loading of Variable Font
+                if(faces[faceIndex].HasVarData)
+                {
+                    font.VariationNamedInstance = 7; // For Roboto: 0=Thin, 7 = extra...
+                }
                 fonts[faceIndex] = font;
             }
             return font;

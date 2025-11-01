@@ -155,6 +155,10 @@ namespace TextMeshDOTS
     {
         //https://learn.microsoft.com/en-us/typography/opentype/spec/os2#usweightclass
         // All values are divided by 100 for data compression
+        // To-Do: store raw value as short because there are a number of fonts deviating
+        // from the convention, e.g.
+        // Microsoft YaHei Light (C:/WINDOWS/Fonts/msyhl.ttc) has a weight of 290,
+        // Yu Gothic UI Semilight (C:/WINDOWS/Fonts/YuGothR.ttc) has a weight of 350
         Thin = 1,
         ExtraLight = 2,
         UltraLight = 2,

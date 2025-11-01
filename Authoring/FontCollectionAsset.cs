@@ -128,13 +128,13 @@ namespace TextMeshDOTS.Authoring
                 var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
 
 
-                fontInfo.fontFamily = face.GetFaceInfo(NameID.FONT_FAMILY, language);
-                fontInfo.fontSubFamily = face.GetFaceInfo(NameID.FONT_SUBFAMILY, language);
-                fontInfo.typographicFamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language);
-                fontInfo.typographicSubfamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language);
+                fontInfo.fontFamily = face.GetName(NameID.FONT_FAMILY, language);
+                fontInfo.fontSubFamily = face.GetName(NameID.FONT_SUBFAMILY, language);
+                fontInfo.typographicFamily = face.GetName(NameID.TYPOGRAPHIC_FAMILY, language);
+                fontInfo.typographicSubfamily = face.GetName(NameID.TYPOGRAPHIC_SUBFAMILY, language);
                 fontInfo.weight = (FontWeight)(byte)(font.GetStyleTag(StyleTag.WEIGHT)/100);
                 fontInfo.width = (int)font.GetStyleTag(StyleTag.WIDTH);
-                fontInfo.isItalic = (byte)font.GetStyleTag(StyleTag.ITALIC) == 1 ? true : false;
+                fontInfo.isItalic = (byte)font.GetStyleTag(StyleTag.ITALIC) == 1;
                 fontInfo.slant = (int)font.GetStyleTag(StyleTag.SLANT_ANGLE);
 
                 //Sampling point size is used to set the font scale.

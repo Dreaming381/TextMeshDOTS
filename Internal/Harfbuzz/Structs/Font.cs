@@ -113,6 +113,24 @@ namespace TextMeshDOTS.HarfBuzz
         {
             Harfbuzz.hb_ot_layout_get_baseline(ptr, LayoutBaselineTag.ROMAN, direction, script, Harfbuzz.HB_TAG('A', 'P', 'P', 'H'), out baseline);
         }
+        public void SetVariation(uint axisTag, float value)
+        {
+            Harfbuzz.hb_font_set_variation(ptr, axisTag, value);
+        }
+        public void SetVariation(NativeList<Variation> variations)
+        {
+            unsafe
+            {
+                Harfbuzz.hb_font_set_variations(ptr, (IntPtr)variations.GetUnsafePtr(), (uint)variations.Length);
+            }            
+        }
+
+        public uint VariationNamedInstance
+        {
+            get { return Harfbuzz.hb_font_get_var_named_instance(ptr); }
+            set { Harfbuzz.hb_font_set_var_named_instance(ptr, value); }
+        }
+        
         public void Shape(Buffer buffer, NativeList<Feature> features)
         {
             unsafe

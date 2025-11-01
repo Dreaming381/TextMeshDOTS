@@ -141,11 +141,11 @@ namespace TextMeshDOTS.HarfBuzz
         #endregion
 
         #region face
-
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_face_get_glyph_count(IntPtr face);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_ot_name_get_utf8(IntPtr face, NameID name_id, Language language, ref uint text_size, byte* text);
+
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_face_is_immutable(IntPtr face);
@@ -161,13 +161,31 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern void hb_face_set_upem(IntPtr face, uint upem);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern IntPtr hb_face_create(IntPtr blob, UInt32 index);
+        internal static extern IntPtr hb_face_create(IntPtr blob, uint index);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_face_destroy(IntPtr face);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_ot_var_has_data(IntPtr face);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool hb_ot_var_find_axis_info(IntPtr face, uint axis_tag, out AxisInfo axis_info);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern uint hb_ot_var_get_axis_count(IntPtr face);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern uint hb_ot_var_get_axis_infos(IntPtr face, uint start_offset, ref uint axes_count, IntPtr axis_infos);
+        
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern uint hb_ot_var_get_named_instance_count(IntPtr face);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern NameID hb_ot_var_named_instance_get_subfamily_name_id (IntPtr face, uint instance_index);
+
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_face_reference_table(IntPtr face, uint tag);
         #endregion
@@ -230,6 +248,20 @@ namespace TextMeshDOTS.HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_font_set_scale(IntPtr font, int x_scale, int y_scale);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_font_set_variation(IntPtr font, uint axis_tag, float value);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_font_set_variations(IntPtr font, IntPtr variations, uint variations_length);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern uint hb_font_get_var_named_instance(IntPtr font);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_font_set_var_named_instance(IntPtr font, uint instance_index);
+
+
         #endregion
 
         #region buffer
