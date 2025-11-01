@@ -57,8 +57,8 @@ namespace TextMeshDOTS
             var chunkCount = textRendererQ.CalculateChunkCountWithoutFiltering();
             var missingGlyphStream = new NativeStream(chunkCount, state.WorldUpdateAllocator);
             var glyphTable = SystemAPI.GetSingletonRW<GlyphTable>().ValueRW;
-            var fontTable = SystemAPI.GetSingleton<FontTable>();
-
+            if (!SystemAPI.TryGetSingleton<FontTable>(out FontTable fontTable))
+                return;
 
             state.Dependency = new ShapeJob
             {

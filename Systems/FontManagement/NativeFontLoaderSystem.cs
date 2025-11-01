@@ -1,14 +1,13 @@
 using System;
 using System.IO;
-using System.Reflection;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
+using Unity.Jobs;
+using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Scenes;
 using UnityEngine;
-using UnityEngine.TextCore.LowLevel;
-//using static TextMeshDOTS.TextCoreExtensions;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
 
@@ -19,27 +18,41 @@ namespace TextMeshDOTS
     [RequireMatchingQueriesForUpdate]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [UpdateAfter(typeof(SceneSystemGroup))]
-    partial class NativeFontLoaderSystem : SystemBase
+    partial struct NativeFontLoaderSystem : ISystem
     {
         EntityQuery changedFontRequestQ;
-        MethodInfo methodInfo;
-        FieldInfo[] fontReference;
-        object m_fontRef;
+        NativeArray<FixedString512Bytes> systemFontsNative;
+        NativeList<FontReference> systemFontReferences;
+        JobHandle getFontMetadataJob;
 
-        protected override void OnCreate()
+        public void OnCreate(ref SystemState state)
         {
+            //schedule fetching of metadata for installed system fonts
+            string[] systemFonts = UnityEngine.Font.GetPathsToOSFonts();
+            systemFontsNative = new NativeArray<FixedString512Bytes>(systemFonts.Length, Allocator.Persistent);
+            for (int i = 0, ii = systemFonts.Length; i < ii; i++)
+                systemFontsNative[i] = new FixedString512Bytes(systemFonts[i]);
+
+            systemFontReferences = new NativeList<FontReference>(systemFonts.Length, Allocator.Persistent);
+            getFontMetadataJob = new GetFontMetadataJob()
+            {
+                systemFonts = systemFontsNative,
+                fontReferences = systemFontReferences,
+            }.Schedule();
+
+            //setup FontTable
             var fontAssetRefToFaceIndexMap = new NativeHashMap<FontAssetRef, int>(64, Allocator.Persistent);
-            var perThreadFontCaches = new NativeArray<UnsafeList<Font>>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, Allocator.Persistent);
+            var perThreadFontCaches = new NativeArray<UnsafeList<Font>>(JobsUtility.ThreadIndexCount, Allocator.Persistent);
             for (int i = 0; i < perThreadFontCaches.Length; i++)
             {
                 perThreadFontCaches[i] = new UnsafeList<Font>(64, Allocator.Persistent);
             }
-            EntityManager.CreateSingleton(new FontTable
+            state.EntityManager.CreateSingleton(new FontTable
             {
                 faces = new NativeList<Face>(Allocator.Persistent),
                 perThreadFontCaches = perThreadFontCaches,
                 fontAssetRefs = new NativeList<FontAssetRef>(Allocator.Persistent),
-                fontAssetRefToFaceIndexMap = fontAssetRefToFaceIndexMap,               
+                fontAssetRefToFaceIndexMap = fontAssetRefToFaceIndexMap,
             });
 
             changedFontRequestQ = SystemAPI.QueryBuilder()
@@ -47,65 +60,41 @@ namespace TextMeshDOTS
                 .Build();
             changedFontRequestQ.SetChangedVersionFilter(ComponentType.ReadWrite<FontRequest>());
 
-            RequireForUpdate(changedFontRequestQ);
-
-            GetSystemFontsMethod();
-        }
-
-
-        void GetSystemFontsMethod()
-        {
-            Assembly textCoreFontEngineModule = default;
-            foreach (Assembly loadedAssembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                if (loadedAssembly.GetName().Name == "UnityEngine.TextCoreFontEngineModule")
-                {
-                    textCoreFontEngineModule = loadedAssembly;
-                    //Debug.Log($"Found UnityEngine.TextCoreFontEngineModule in loaded assemblies: {loadedAssembly.FullName}");
-                    break;
-                }
-            }
-            var fontReferenceType = textCoreFontEngineModule.GetType("UnityEngine.TextCore.LowLevel.FontReference");
-            fontReference = fontReferenceType.GetFields();
-            var m_fontRef = Activator.CreateInstance(fontReferenceType);
-
-            BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Static;
-            methodInfo = typeof(FontEngine).GetMethod("TryGetSystemFontReference", bindingFlags);
-            //MakeDelegate<fontReference>(methodInfo);
-        }
-        public static Func<string, string, object, bool> MakeDelegate<U>(MethodInfo methodInfo)
-        {
-            var f = (Func<string, string, U, bool>)Delegate.CreateDelegate(typeof(Func<string, string, U, bool>), methodInfo);
-            return (a, b, c) => f(a, b, (U)c);
+            state.RequireForUpdate(changedFontRequestQ);
         }
 
         //[BurstCompile]
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (changedFontRequestQ.IsEmpty)
                 return;
 
+            getFontMetadataJob.Complete();
+
             var changedFontRequestBuffer = changedFontRequestQ.GetSingletonBuffer<FontRequest>();
             var fontTable = SystemAPI.GetSingletonRW<FontTable>().ValueRW;
-            CompleteDependency();
+            state.CompleteDependency();
 
             //copy to nativeArray because LoadFont would invalidate DynamicBuffer due to structural changes
-            var fontRequests = CollectionHelper.CreateNativeArray<FontRequest>(changedFontRequestBuffer.AsNativeArray(), WorldUpdateAllocator);            
+            var fontRequests = CollectionHelper.CreateNativeArray<FontRequest>(changedFontRequestBuffer.AsNativeArray(), state.WorldUpdateAllocator);
 
             for (int i = 0, ii = fontRequests.Length; i < ii; i++)
             {
                 var fontRequest = fontRequests[i];
                 if (!fontTable.fontAssetRefToFaceIndexMap.ContainsKey(fontRequest.fontAssetRef))
                 {
-                    LoadFont(fontRequest, ref CheckedStateRef, ref fontTable);
+                    LoadFont(fontRequest, ref state, ref fontTable);
                 }
             }
         }
 
-        protected override void OnDestroy()
+        public void OnDestroy(ref SystemState state)
         {
-            SystemAPI.GetSingletonRW<FontTable>().ValueRW.TryDispose(Dependency).Complete();
+            SystemAPI.GetSingletonRW<FontTable>().ValueRW.TryDispose(state.Dependency).Complete();
+            systemFontsNative.Dispose();
+            systemFontReferences.Dispose();
         }
+
         void LoadFont(FontRequest fontRequest, ref SystemState state, ref FontTable fontTable)
         {
             Blob blob;
@@ -117,20 +106,14 @@ namespace TextMeshDOTS
             {
                 //loading rules: https://www.high-logic.com/fontcreator/manual15/fonttype.html
 
-                object[] args = new object[] { family.ToString(), subFamily.ToString(), m_fontRef };
-                var systemFontFound = (bool)methodInfo.Invoke(null, args);
-                var result = args[2];
-
-                //if (!TryGetSystemFontReference(family.ToString(), subFamily.ToString(), out UnityFontReference unityFontReference))
-                if(!systemFontFound)
+                if (!TryGetSystemFontReference(fontRequest, out FontReference fontReference))
                 {
                     Debug.Log($"Could not find system font {family} {subFamily}");
                     return;
                 }
                 else
                 {
-                    //Debug.Log($"Found {fieldInfos[0].GetValue(result)} {fieldInfos[1].GetValue(result)} {fieldInfos[2].GetValue(result)} {fieldInfos[3].GetValue(result)}");
-                    blob = new Blob((string)fontReference[3].GetValue(result));
+                    blob = new Blob(fontReference.filePath.ToString());
                     blob.MakeImmutable();//is this neccessary considering we dispose the blob in next instruction?
                 }
             }
@@ -152,7 +135,7 @@ namespace TextMeshDOTS
                     blob = new Blob(fontPath);
                     blob.MakeImmutable();//is this neccessary considering we dispose the blob in next instruction?
                 }
-            }             
+            }
 
             if (!fontTable.fontAssetRefToFaceIndexMap.ContainsKey(fontRequest.fontAssetRef))
             {
@@ -172,6 +155,105 @@ namespace TextMeshDOTS
 
             //blob can be disposed here, face and font are disposed at world shutdown via FontTable.TryDispose 
             blob.Dispose();
-        }        
+        }
+
+        bool TryGetSystemFontReference(FontRequest fontRequest, out FontReference fontReference)
+        {
+            int index;
+            var query = new FontReference { fontFamily = fontRequest.fontFamily, fontSubFamily = fontRequest.fontSubFamily, typographicFamily = fontRequest.typographicFamily, typographicSubfamily = fontRequest.typographicSubfamily };
+            if ((index = systemFontReferences.IndexOf(query)) != -1)
+            {
+                fontReference = systemFontReferences[index];
+                return true;
+            }
+            fontReference = default;
+            return false;
+        }
+        static bool GetFontInfo(string fontAssetPath, Language language, NativeList<FontReference> fontReferences)
+        {
+            bool isTrueType = fontAssetPath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
+            bool isOpentype = fontAssetPath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
+            if (isOpentype || isTrueType)
+            {
+                var blob = new Blob(fontAssetPath);
+                for (int i = 0, ii = blob.FaceCount; i < ii; i++)
+                {
+                    var face = new Face(blob.ptr, 0);
+                    var fontReference = new FontReference();
+                    fontReference.filePath = fontAssetPath;
+                    fontReference.faceIndex = i;
+                    fontReference.fontFamily = face.GetFaceInfo(NameID.FONT_FAMILY, language);
+                    fontReference.fontSubFamily = face.GetFaceInfo(NameID.FONT_SUBFAMILY, language);
+                    fontReference.typographicFamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language);
+                    fontReference.typographicSubfamily = face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language);
+                    fontReferences.Add(fontReference);
+                    face.Dispose();
+                }
+                blob.Dispose();
+                return true;
+            }
+            else
+            {
+                Debug.LogWarning("Ensure you only have files ending with 'ttf' or 'otf' (case insensitiv) in font list");
+                return false;
+            }
+        }
+
+        struct GetFontMetadataJob : IJob
+        {
+            [ReadOnly] public NativeArray<FixedString512Bytes> systemFonts;
+            public NativeList<FontReference> fontReferences;
+
+            public void Execute()
+            {
+                var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+                for (int i = 0, ii = systemFonts.Length; i < ii; i++)
+                    GetFontInfo(systemFonts[i].ToString(), language, fontReferences);
+            }
+        }
+        public struct FontReference : IEquatable<FontReference>
+        {
+            public FixedString512Bytes filePath;
+            public int faceIndex; //ignore in equality test as it does not matter if index font file on target device and developer machine is the same
+            public FixedString128Bytes fontFamily;
+            public FixedString128Bytes fontSubFamily;
+            public FixedString128Bytes typographicFamily;
+            public FixedString128Bytes typographicSubfamily;
+
+            public override bool Equals(object obj)
+            {
+                if (obj is FontReference item)
+                {
+                    return Equals(item);
+                }
+                return false;
+            }
+            bool IEquatable<FontReference>.Equals(FontReference other)
+            {
+                return fontFamily == other.fontFamily &&
+                       fontSubFamily == other.fontSubFamily &&
+                       typographicFamily == other.typographicFamily &&
+                       typographicSubfamily == other.typographicSubfamily;
+            }
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hc = -1817952719;
+                    hc = (-1521134295) * hc + fontFamily.GetHashCode();
+                    hc = (-1521134295) * hc + fontSubFamily.GetHashCode();
+                    hc = (-1521134295) * hc + typographicFamily.GetHashCode();
+                    hc = (-1521134295) * hc + typographicSubfamily.GetHashCode();
+                    return hc;
+                }
+            }
+
+            public static bool operator ==(FontReference target, FontReference other) { return target.Equals(other); }
+            public static bool operator !=(FontReference target, FontReference other) { return !target.Equals(other); }
+            public override string ToString()
+            {
+                return $"{fontFamily} {fontSubFamily} {typographicFamily} {typographicSubfamily}";
+            }
+        }
     }
 }

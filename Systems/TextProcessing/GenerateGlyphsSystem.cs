@@ -28,6 +28,7 @@ namespace TextMeshDOTS
 
             m_skipChangeFilter = (state.WorldUnmanaged.Flags & WorldFlags.Editor) == WorldFlags.Editor;
             m_query.SetChangedVersionFilter(ComponentType.ReadWrite<GlyphOTF>());
+            SystemAPI.TryGetSingleton<FontTable>(out FontTable fontTable);
         }
 
 
@@ -38,12 +39,16 @@ namespace TextMeshDOTS
                 return;
             //Debug.Log("Generate glyphs system");
 
+            if (!SystemAPI.TryGetSingleton<FontTable>(out FontTable fontTable))
+                return;
+
             SystemAPI.TryGetSingletonEntity<TextColorGradient>(out Entity textColorGradientEntity);
+
             state.Dependency = new GenerateRenderGlyphsJob
             {
                 renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
 
-                fontTable = SystemAPI.GetSingleton<FontTable>(),
+                fontTable = fontTable,
                 glyphTable = SystemAPI.GetSingleton<GlyphTable>(),
                 
                 entitesHandle = SystemAPI.GetEntityTypeHandle(),

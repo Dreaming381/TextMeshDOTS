@@ -10,7 +10,7 @@ namespace TextMeshDOTS.HarfBuzz
     internal struct Blob : IDisposable
     {
         public IntPtr ptr;
-        public uint FaceCount => Harfbuzz.hb_face_count(ptr);
+        public int FaceCount => (int)Harfbuzz.hb_face_count(ptr);
         public uint Length => Harfbuzz.hb_blob_get_length(ptr);
 
         public Blob(string filename)
