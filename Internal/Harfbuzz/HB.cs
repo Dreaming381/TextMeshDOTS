@@ -179,13 +179,18 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern uint hb_ot_var_get_axis_count(IntPtr face);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern uint hb_ot_var_get_axis_infos(IntPtr face, uint start_offset, ref uint axes_count, IntPtr axis_infos);
+        internal static extern uint hb_ot_var_get_axis_infos(IntPtr face, uint start_offset, ref uint axes_count, AxisInfo* axis_infos);
         
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_ot_var_get_named_instance_count(IntPtr face);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern NameID hb_ot_var_named_instance_get_subfamily_name_id (IntPtr face, uint instance_index);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern NameID hb_ot_var_named_instance_get_postscript_name_id(IntPtr face, uint instance_index);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern uint hb_ot_var_named_instance_get_design_coords (IntPtr face, uint instance_index, ref uint coords_length, float* coords);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_face_reference_table(IntPtr face, uint tag);

@@ -122,7 +122,8 @@ namespace TextMeshDOTS
             struct FontConfig
             {
                 public int m_faceIndex;
-                public int m_variableProfileIndex; 
+                public NamedVariationLookup namedVariationLookup;
+                //public int m_variableProfileIndex; 
 
                 public int m_fontFamilyHash;
                 public FixedStack512Bytes<int> m_fontFamilyHashStack;
@@ -161,7 +162,9 @@ namespace TextMeshDOTS
                     m_fontWidthStack.Add(m_fontWidth);
 
                     m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
-                    m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
+                    if (fontTable.faces[m_faceIndex].HasVarData)
+                        fontTable.GetNamedVariationLookup(FontAssetRef, out namedVariationLookup);
+                    //m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
                 }
 
                 public void Update(ref XMLTag tag, ref FontTable fontTable, ref CalliString calliStringRaw)
@@ -174,8 +177,10 @@ namespace TextMeshDOTS
                             else
                                 m_isItalic = false;
 
-                            m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);                            
-                            m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
+                            m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            if (fontTable.faces[m_faceIndex].HasVarData)
+                                fontTable.GetNamedVariationLookup(FontAssetRef, out namedVariationLookup);
+                            //m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
                             return;
                         case TagType.Bold:
                             if (!tag.isClosing)
@@ -187,7 +192,9 @@ namespace TextMeshDOTS
                                 m_fontWeight = m_fontWeightStack.RemoveExceptRoot();
 
                             m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
-                            m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
+                            if (fontTable.faces[m_faceIndex].HasVarData)
+                                fontTable.GetNamedVariationLookup(FontAssetRef, out namedVariationLookup);
+                            //m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
                             return;
                         case TagType.FontWeight:
                             if (!tag.isClosing)
@@ -199,7 +206,9 @@ namespace TextMeshDOTS
                                 m_fontWeight = m_fontWeightStack.RemoveExceptRoot();
 
                             m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
-                            m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
+                            if (fontTable.faces[m_faceIndex].HasVarData)
+                                fontTable.GetNamedVariationLookup(FontAssetRef, out namedVariationLookup);
+                            //m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
                             return;
                         case TagType.FontWidth:
                             if (!tag.isClosing)
@@ -211,7 +220,9 @@ namespace TextMeshDOTS
                                 m_fontWidth = m_fontWidthStack.RemoveExceptRoot();
 
                             m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
-                            m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
+                            if (fontTable.faces[m_faceIndex].HasVarData)
+                                fontTable.GetNamedVariationLookup(FontAssetRef, out namedVariationLookup);
+                            //m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
                             return;
                         case TagType.Font:
                             if (!tag.isClosing)
@@ -229,7 +240,9 @@ namespace TextMeshDOTS
                                 }
 
                                 m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
-                                m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
+                                if (fontTable.faces[m_faceIndex].HasVarData)
+                                    fontTable.GetNamedVariationLookup(FontAssetRef, out namedVariationLookup);
+                                //m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
                                 return;
                             }
                             else
@@ -237,7 +250,9 @@ namespace TextMeshDOTS
                                 m_fontFamilyHash = m_fontFamilyHashStack.RemoveExceptRoot();
 
                                 m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
-                                m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
+                                if (fontTable.faces[m_faceIndex].HasVarData)
+                                    fontTable.GetNamedVariationLookup(FontAssetRef, out namedVariationLookup);
+                                //m_variableProfileIndex = fontTable.GetOrCreateVariableProfileIndex(VariableProfile, m_faceIndex);
                             }
                         return;
                     }

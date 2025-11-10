@@ -20,43 +20,80 @@ namespace TextMeshDOTS
 
         // These are temporary. Something like fontAssetRefToFaceIndexMap, but it will probably be refined.
         public NativeHashMap<FontAssetRef, int> fontAssetRefToFaceIndexMap;
+        //variable fonts got names instances. create FontAssetRef for each instance,
+        //and map it to index of named instance in face. Use this to lookup instance profile via FontAssetRef
+        public NativeHashMap<FontAssetRef, NamedVariationLookup> fontAssetRefToNamedVariationLookup;
         public NativeList<FontAssetRef> fontAssetRefs;
-        public NativeList<VariableProfile> variableProfiles;
+        //public NativeList<VariableProfile> variableProfiles;
 
-        public int GetOrCreateVariableProfileIndex(VariableProfile variableProfile, int faceIndex)
-        {
-            var face = faces[faceIndex];
-            if (face.HasVarData)
-            {
-                var index = variableProfiles.IndexOf(variableProfile);
-                if (index == -1)
-                    index = AddVariableProfile(variableProfile);
-                return index;
-            }
-            return -1;
-        }
+        //public int GetOrCreateVariableProfileIndex(VariableProfile variableProfile, int faceIndex)
+        //{
+        //    var face = faces[faceIndex];
+        //    if (face.HasVarData)
+        //    {
+        //        var index = variableProfiles.IndexOf(variableProfile);
+        //        if (index == -1)
+        //            index = AddVariableProfile(variableProfile);
+        //        return index;
+        //    }
+        //    return -1;
+        //}
+        //public Font SetVariableProfile(int faceIndex, int threadIndex, int variableProfileIndex)
+        //{
+        //    var variationsIn = variableProfiles[variableProfileIndex].variations;
+        //    var variationsOut = new NativeList<Variation>(variationsIn.Length, Allocator.Temp);
+        //    for (int i = 0, ii = variationsIn.Length; i < ii; i++)
+        //        variationsOut.Add(variationsIn[i]);
+
+        //    var fonts = perThreadFontCaches[threadIndex];
+        //    var font = fonts[faceIndex];
+
+        //    font.SetVariations(variationsOut);
+        //    font.currentVariableProfileIndex = variableProfileIndex;
+        //    fonts[faceIndex] = font;
+        //    return font;
+        //}
+
+        //public int AddVariableProfile(VariableProfile variableProfile)
+        //{
+        //    int currentID = variableProfiles.Length;
+        //    variableProfiles.Add(variableProfile);
+        //    return currentID;
+        //}
         public Font SetVariableProfile(int faceIndex, int threadIndex, int variableProfileIndex)
-        {
-            var variationsIn = variableProfiles[variableProfileIndex].variations;
-            var variationsOut = new NativeList<Variation>(variationsIn.Length, Allocator.Temp);
-            for (int i = 0, ii = variationsIn.Length; i < ii; i++)
-                variationsOut.Add(variationsIn[i]);
-
+        {            
             var fonts = perThreadFontCaches[threadIndex];
             var font = fonts[faceIndex];
 
-            font.SetVariations(variationsOut);
+            font.VariationNamedInstance = (uint)variableProfileIndex;
             font.currentVariableProfileIndex = variableProfileIndex;
             fonts[faceIndex] = font;
             return font;
         }
-
-        public int AddVariableProfile(VariableProfile variableProfile)
+        public bool GetNamedVariationLookup(FontAssetRef desiredFontAssetRef, out NamedVariationLookup namedVariationLookup)
         {
-            int currentID = variableProfiles.Length;
-            variableProfiles.Add(variableProfile);
-            return currentID;
+            if (fontAssetRefToNamedVariationLookup.ContainsKey(desiredFontAssetRef))
+            {
+                namedVariationLookup = fontAssetRefToNamedVariationLookup[desiredFontAssetRef];
+                return true;
+            }
+
+            //fall back to matching at least family and normal/italic
+            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            {
+                //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
+                if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash && fontAssetRefs[i].isItalic == desiredFontAssetRef.isItalic)
+                {
+                    //Debug.Log($"desired: {desiredFontAssetRef}, found fallback candidate: {fontAssetRefs[i]}");
+                    namedVariationLookup = default;
+                    namedVariationLookup.faceIndex = fontAssetRefToFaceIndexMap[fontAssetRefs[i]];
+                    return false;
+                }
+            }
+            namedVariationLookup = default;
+            return false;            
         }
+
         public int GetFaceIndex(FontAssetRef desiredFontAssetRef)
         {
             //Debug.Log($"Search for: {desiredFontAssetRef}");
@@ -98,18 +135,26 @@ namespace TextMeshDOTS
             {
                 var face = faces[faceIndex];
                 font             = new Font(face);
-                if (face.HasVarData)
-                {
-                    face.GetAxisInfos(0, 0, out NativeList<AxisInfo> axisInfos);
-                    //foreach (var item in axisInfos)
-                    //    Debug.Log(item);
-                    var variableProfile = new VariableProfile(axisInfos);
-                    var variableProfileIndex = variableProfiles.IndexOf(variableProfile);
-                    if (variableProfileIndex != -1)
-                        font.currentVariableProfileIndex = variableProfileIndex;
-                    else
-                        font.currentVariableProfileIndex = AddVariableProfile(variableProfile);
-                }
+                //if (face.HasVarData)
+                //{
+                //    Span<AxisInfo> axisInfos = stackalloc AxisInfo[16];
+                //    face.GetAxisInfos(0, 0, ref axisInfos, out uint axisCount);
+                //    //AxisInfo axisInfo;
+                //    //var language = Language.English();
+                //    //for (int k = 0, kk = axisInfos.Length; k < kk; k++)
+                //    //{
+                //    //    axisInfo = axisInfos[k];
+                //    //    Debug.Log($"Variation axis: {face.GetName(axisInfos[k].nameID, language)}");
+                //    //    Debug.Log($"{axisInfos[k]}");
+                //    //}
+
+                //    var variableProfile = new VariableProfile(ref axisInfos, axisCount);
+                //    var variableProfileIndex = variableProfiles.IndexOf(variableProfile);
+                //    if (variableProfileIndex != -1)
+                //        font.currentVariableProfileIndex = variableProfileIndex;
+                //    else
+                //        font.currentVariableProfileIndex = AddVariableProfile(variableProfile);
+                //}
 
                 fonts[faceIndex] = font;
             }
@@ -123,7 +168,7 @@ namespace TextMeshDOTS
             if (faces.IsCreated)
             {
                 var jh = new DisposeInnerJob { table = this }.Schedule(inputDeps);
-                jh = JobHandle.CombineDependencies(faces.Dispose(jh), variableProfiles.Dispose(jh), perThreadFontCaches.Dispose(jh));
+                jh = JobHandle.CombineDependencies(faces.Dispose(jh), fontAssetRefToNamedVariationLookup.Dispose(jh), perThreadFontCaches.Dispose(jh));
                 return JobHandle.CombineDependencies(jh, fontAssetRefs.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
             }
             return inputDeps;
@@ -158,6 +203,11 @@ namespace TextMeshDOTS
             }
         }
     }
+    internal struct NamedVariationLookup
+    {
+        public int faceIndex;
+        public int namedInstanceIndex;
+    }
     internal struct VariableProfile : IEquatable<VariableProfile>
     {
         public FixedList64Bytes<Variation> variations;   // space for 8 variations (8 byte per variation axis)
@@ -166,6 +216,15 @@ namespace TextMeshDOTS
         {
             variations=new FixedList64Bytes<Variation>();
             for (int i = 0, ii = axisInfos.Length; i < ii; i++)
+            {
+                var axisInfo = axisInfos[i];
+                variations.Add(new Variation(axisInfo.axisTag, axisInfo.defaultValue));
+            }
+        }
+        public VariableProfile(ref Span<AxisInfo> axisInfos, uint axisCount)
+        {
+            variations = new FixedList64Bytes<Variation>();
+            for (int i = 0; i < axisCount; i++)
             {
                 var axisInfo = axisInfos[i];
                 variations.Add(new Variation(axisInfo.axisTag, axisInfo.defaultValue));

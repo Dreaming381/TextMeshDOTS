@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.LightTransport;
+using static log4net.Appender.ColoredConsoleAppender;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -49,38 +50,68 @@ namespace TextMeshDOTS.HarfBuzz
             return result;
         }
 
-        public NameID GetSubFamilyNameId(int index)
+        public NameID GetNamedInstanceSubFamilyNameID(int instanceIndex)
         {
-            return Harfbuzz.hb_ot_var_named_instance_get_subfamily_name_id(ptr, (uint)index);
+            return Harfbuzz.hb_ot_var_named_instance_get_subfamily_name_id(ptr, (uint)instanceIndex);
         }
+        public NameID GetNamedInstancePostscriptNameID(int instanceIndex)
+        {
+            return Harfbuzz.hb_ot_var_named_instance_get_subfamily_name_id(ptr, (uint)instanceIndex);
+        }
+
+        public void GetNamedInstanceDesignCoords(int instanceIndex, ref Span<float> coords, out uint coordLength)
+        {
+            coordLength = (uint)coords.Length;            
+            uint axisCount = default;
+            unsafe
+            {
+                fixed (float* spanPtr = coords)
+                {
+                    axisCount = Harfbuzz.hb_ot_var_named_instance_get_design_coords(ptr, (uint)instanceIndex, ref coordLength, spanPtr);
+                }
+            }
+        }
+        public void GetAxisInfos(int startOffset, int offset, ref Span<AxisInfo> axisInfos, out uint axisCount)
+        {
+            axisCount = (uint)axisInfos.Length;
+            uint axisCount2 = default;
+            unsafe
+            {
+                fixed (AxisInfo* axisInfoPtr = axisInfos)
+                {
+                    axisCount2 = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref axisCount, axisInfoPtr);
+                }
+            }
+        }
+        //public void GetAxisInfos(int startOffset, int offset, out NativeList<AxisInfo> axisInfos)
+        //{
+        //    uint axisCount = 16;
+
+        //    axisInfos = new NativeList<AxisInfo>((int)axisCount, Allocator.Temp);
+        //    axisInfos.Length = (int)axisCount;
+        //    uint len = default;
+        //    unsafe
+        //    {
+        //        len = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref axisCount, (IntPtr)axisInfos.GetUnsafePtr());
+        //    }
+        //    if (len > axisCount)
+        //    {
+        //        Debug.Log("capacity of 16 was not sufficient, increasing");
+        //        axisInfos = new NativeList<AxisInfo>((int)len, Allocator.Temp);
+        //        unsafe
+        //        {
+        //            len = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref len, (IntPtr)axisInfos.GetUnsafePtr());
+        //        }
+        //    }
+        //    axisInfos.Length = (int)len;
+        //}
 
         public bool FindAxisInfo(AxisTag axisTag, out AxisInfo axisInfo)
         {
             return Harfbuzz.hb_ot_var_find_axis_info(ptr, axisTag, out axisInfo);
         }
 
-        public void GetAxisInfos(int startOffset, int offset, out NativeList<AxisInfo> axisInfos)
-        {
-            uint axisCount = 16;
-            
-            axisInfos = new NativeList<AxisInfo>((int)axisCount, Allocator.Temp);
-            axisInfos.Length = (int)axisCount;
-            uint len = default;
-            unsafe
-            {
-                len = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref axisCount, (IntPtr)axisInfos.GetUnsafePtr());
-            }
-            if (len > axisCount)
-            {
-                Debug.Log("capacity of 16 was not sufficient, increasing");
-                axisInfos = new NativeList<AxisInfo>((int)len, Allocator.Temp);
-                unsafe
-                {
-                    len = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref len, (IntPtr)axisInfos.GetUnsafePtr());
-                }
-            }
-            axisInfos.Length = (int)len;
-        }
+        
 
         bool HasReferenceTable(uint HB_TAG)
         {

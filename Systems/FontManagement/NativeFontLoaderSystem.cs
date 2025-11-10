@@ -51,14 +51,15 @@ namespace TextMeshDOTS
             var perThreadFontCaches = new NativeArray<UnsafeList<Font>>(JobsUtility.ThreadIndexCount, Allocator.Persistent);
             for (int i = 0; i < perThreadFontCaches.Length; i++)
                 perThreadFontCaches[i] = new UnsafeList<Font>(64, Allocator.Persistent);
-            
+
             state.EntityManager.CreateSingleton(new FontTable
             {
                 faces = new NativeList<Face>(Allocator.Persistent),
                 perThreadFontCaches = perThreadFontCaches,
                 fontAssetRefs = new NativeList<FontAssetRef>(Allocator.Persistent),
                 fontAssetRefToFaceIndexMap = new NativeHashMap<FontAssetRef, int>(64, Allocator.Persistent),
-                variableProfiles =  new NativeList<VariableProfile>(Allocator.Persistent)
+                fontAssetRefToNamedVariationLookup = new NativeHashMap<FontAssetRef, NamedVariationLookup>(64, Allocator.Persistent),
+                //variableProfiles = new NativeList<VariableProfile>(Allocator.Persistent)
             });
 
             changedFontRequestQ = SystemAPI.QueryBuilder()
@@ -145,7 +146,7 @@ namespace TextMeshDOTS
                     var id = fontTable.fontAssetRefToFaceIndexMap.Count;
                     fontTable.fontAssetRefs.Add(tempFontAssetRef);
                     fontTable.fontAssetRefToFaceIndexMap.Add(tempFontAssetRef, id);
-                    var face = new Face(blob, tempFontReference.faceIndex);
+                    var face = new Face(blob, tempFontReference.faceIndexInFile);
                     face.MakeImmutable();
                     fontTable.faces.Add(face);
 
@@ -155,35 +156,88 @@ namespace TextMeshDOTS
                         list.Add(default);
                         fontTable.perThreadFontCaches[k] = list;
                     }
+
+                    //setup lookup of named variable instance
+                    if (face.HasVarData)
+                    {
+                        var axisCount = (int)face.AxisCount;
+
+                        //fetch a list of all variation axis
+                        Span<AxisInfo> axisInfos = stackalloc AxisInfo[axisCount];
+                        face.GetAxisInfos(0, 0, ref axisInfos, out uint axisCount2);
+                        AxisInfo axisInfo;
+                        float coord;
+                       
+
+                        //fetch a list of named variations                        
+                        //Debug.Log($"found {axisCount} variation axis for font {fontReference.fontFamily} {fontReference.fontSubFamily}, {face.NamedInstanceCount} named instances");
+                        Span<float> coords = stackalloc float[axisCount];                        
+                        for (int k = 0, kk = (int)face.NamedInstanceCount; k < kk; k++)
+                        {
+                            var subfamilyID = face.GetNamedInstanceSubFamilyNameID(k);
+                            var postscriptID = face.GetNamedInstancePostscriptNameID(k);
+                            face.GetNamedInstanceDesignCoords(k, ref coords, out uint coordLength);
+                            var variableFontAssetRef = tempFontAssetRef;
+                            for (int f = 0, ff = (int)coordLength; f < ff; f++)
+                            {
+                                //axisInfos and coords should be aligned in length and order
+                                axisInfo = axisInfos[f];
+                                coord = coords[f];
+                                switch(axisInfo.axisTag)
+                                {
+                                    case AxisTag.WIDTH:
+                                        variableFontAssetRef.width = coord; break;
+                                    case AxisTag.WEIGHT:
+                                        variableFontAssetRef.weight = coord; break;
+                                    case AxisTag.ITALIC:
+                                        variableFontAssetRef.isItalic = (int)coord == 1; break;
+                                    case AxisTag.SLANT:
+                                        variableFontAssetRef.slant = coord; break;
+                                }
+                                //Debug.Log($"Add FontAssetRef for variation axis: {axisInfo.axisTag} {face.GetName(axisInfo.nameID, language)}, value = {coord}");
+                            }
+                            fontTable.fontAssetRefToNamedVariationLookup.Add(variableFontAssetRef, new NamedVariationLookup { faceIndex = id, namedInstanceIndex = k});
+                        }                        
+                    }
                 }
             }
 
             ////test loading of collection fonts and variable fonts
             //for (int i = 0, ii = blob.FaceCount; i < ii; i++)
             //{
-            //    face = new Face(blob.ptr, i);
+            //    var face = new Face(blob, i);
             //    if (face.HasVarData)
             //    {
-            //        var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
-            //        Debug.Log($"found {face.AxisCount} variation axis, {face.NamedInstanceCount} named instances");
+            //        var axisCount = (int)face.AxisCount;
+            //        Debug.Log($"found {axisCount} variation axis, {face.NamedInstanceCount} named instances");
+            //        Span<float> coords = stackalloc float[axisCount];
 
             //        //fetch a list of named variations
             //        for (int k = 0, kk = (int)face.NamedInstanceCount; k < kk; k++)
             //        {
-            //            var nameID = face.GetSubFamilyNameId(k);
-            //            Debug.Log($"SubFamily: {face.GetName(nameID, language)}");
+            //            var subfamilyID = face.GetNamedInstanceSubFamilyNameID(k);
+            //            var postscriptID = face.GetNamedInstancePostscriptNameID(k);
+            //            face.GetNamedInstanceDesignCoords(k, ref coords, out uint coordLength);
+
+            //            Debug.Log($"SubFamily: {face.GetName(subfamilyID, language)}");
+            //            Debug.Log($"PostScript: {face.GetName(postscriptID, language)}");
+            //            for(int f=0, ff = (int)coordLength; f<ff; f++)
+            //                Debug.Log($"{coords[f]}");
             //        }
 
             //        //fetch a list of all variation axis
-            //        face.GetAxisInfos(0, 0, out NativeList<AxisInfo> axisInfos);
+            //        Span<AxisInfo> axisInfos = stackalloc AxisInfo[axisCount];
+            //        face.GetAxisInfos(0, 0, ref axisInfos, out uint axisCount2);
+            //        AxisInfo axisInfo;
             //        for (int k = 0, kk = axisInfos.Length; k < kk; k++)
             //        {
-            //            var nameID = axisInfos[k].nameID;
-            //            Debug.Log($"Variation axis: {face.GetName(nameID, language)}");
+            //            axisInfo = axisInfos[k];
+            //            Debug.Log($"Variation axis: {face.GetName(axisInfos[k].nameID, language)}");
+            //            Debug.Log($"{axisInfos[k]}");
             //        }
 
-            //        var foundAxisInfo = face.FindAxisInfo(AxisTag.WEIGHT, out var axisInfo);
-            //        Debug.Log($"{foundAxisInfo} {axisInfo}");
+            //        //var foundAxisInfo = face.FindAxisInfo(AxisTag.WEIGHT, out axisInfo);
+            //        //Debug.Log($"{foundAxisInfo} {axisInfo}");
             //    }
             //    face.Dispose();
             //}

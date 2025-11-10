@@ -53,7 +53,7 @@ namespace TextMeshDOTS
                     }
                 }
 
-                fontReference.faceIndex = i;
+                fontReference.faceIndexInFile = i;
                 fontReference.fontFamily = face.GetName(NameID.FONT_FAMILY, language);
                 fontReference.fontSubFamily = face.GetName(NameID.FONT_SUBFAMILY, language);
                 fontReference.typographicFamily = face.GetName(NameID.TYPOGRAPHIC_FAMILY, language);

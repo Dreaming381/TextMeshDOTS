@@ -12,7 +12,7 @@ namespace TextMeshDOTS
         public FixedString128Bytes filePath; //should use FixedString512Bytes, but custom Inspector cannot display string then
         public bool streamingAssetLocationValidated;
         public bool isSystemFont;
-        public int faceIndex; 
+        public int faceIndexInFile; 
 
         //face Information
         public FixedString128Bytes fontFamily;
