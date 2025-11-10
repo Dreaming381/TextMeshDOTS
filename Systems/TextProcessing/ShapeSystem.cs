@@ -75,7 +75,8 @@ namespace TextMeshDOTS
                 xmlTagHandle = SystemAPI.GetBufferTypeHandle<XMLTag>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
-            }.ScheduleParallel(textRendererQ, state.Dependency);
+            }.Schedule(textRendererQ, state.Dependency);
+            //}.ScheduleParallel(textRendererQ, state.Dependency);
 
             var missingGlyphsToAdd = new NativeList<GlyphTable.Key>(state.WorldUpdateAllocator);
             state.Dependency = new AllocateNewGlyphsJob

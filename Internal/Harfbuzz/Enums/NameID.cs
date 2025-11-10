@@ -1,6 +1,6 @@
 namespace TextMeshDOTS.HarfBuzz
 {
-    internal enum NameID
+    internal enum NameID : uint
     {
         COPYRIGHT = 0,
         FONT_FAMILY = 1,

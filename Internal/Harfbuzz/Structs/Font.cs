@@ -2,6 +2,7 @@ using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz
 {    
@@ -9,20 +10,24 @@ namespace TextMeshDOTS.HarfBuzz
     {
         public IntPtr ptr;
 
+        //variable profile data
+        internal int currentVariableProfileIndex; 
+
         //cache a couple of font meta data to avoid fetching them upon every font access
         internal int baseLine;
         internal FontExtents fontExtents;
         internal int capHeight;
         internal int xHeight;
         internal int xWidth;
-        public Font(IntPtr face)
+        public Font(Face face)
         {
-            ptr = Harfbuzz.hb_font_create(face);
+            ptr = Harfbuzz.hb_font_create(face.ptr);
+            currentVariableProfileIndex = -1;
             baseLine = default;
             fontExtents = default;
             capHeight = default;
             xHeight = default;
-            xWidth = default;           
+            xWidth = default;
         }
 
         /// <summary>
@@ -113,11 +118,12 @@ namespace TextMeshDOTS.HarfBuzz
         {
             Harfbuzz.hb_ot_layout_get_baseline(ptr, LayoutBaselineTag.ROMAN, direction, script, Harfbuzz.HB_TAG('A', 'P', 'P', 'H'), out baseline);
         }
-        public void SetVariation(uint axisTag, float value)
+
+        public void SetVariation(AxisTag axisTag, float value)
         {
             Harfbuzz.hb_font_set_variation(ptr, axisTag, value);
         }
-        public void SetVariation(NativeList<Variation> variations)
+        public void SetVariations(NativeList<Variation> variations)
         {
             unsafe
             {

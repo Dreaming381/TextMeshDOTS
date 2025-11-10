@@ -112,10 +112,18 @@ namespace TextMeshDOTS
                 float maxLineAscender = float.MinValue;
                 float maxLineDescender = float.MaxValue;
 
-                var currentFaceIndex = glyphOTFBuffer[0].glyphKey.faceIndex;
+
+                var glyphOTF = glyphOTFBuffer[0];
+                var glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
+                var glyphEntry = glyphTable.GetEntry(glyphID);
+
+                var currentFaceIndex = glyphOTF.glyphKey.faceIndex;
                 var currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);
+                if (fontTable.faces[currentFaceIndex].HasVarData && currentFont.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
+                    currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
+
                 var currentFontSamplingPointSize = FontTextureSize.Normal.GetSamplingSize();
-                var currentFontWeigth = (FontWeight)(byte)(currentFont.GetStyleTag(StyleTag.WEIGHT) / 100);
+                var currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
                 var currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
                 currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);
                 currentFont.UpdateMetaData();
@@ -132,15 +140,37 @@ namespace TextMeshDOTS
                 Unicode.Rune currentRune, previousRune = Unicode.BadRune;//input text unicode
                 for (int k = 0, length = glyphOTFBuffer.Length; k < length; k++)
                 {
-                    var glyphOTF = glyphOTFBuffer[k];
+                    glyphOTF = glyphOTFBuffer[k];
+                    glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
+                    glyphEntry = glyphTable.GetEntry(glyphID);
 
                     var cluster = (int)glyphOTF.cluster; //cluster is char index in cleaned text = aligned with glyphOTF buffer
                     if (currentFaceIndex != glyphOTF.glyphKey.faceIndex)
                     {
                         //Debug.Log($"Switching font from {currentFaceIndex} to {glyphOTF.glyphKey.faceIndex}");
                         currentFaceIndex = glyphOTF.glyphKey.faceIndex;
+                        currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);                        
+
+                        currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
+                        currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
+                        currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);
+                        currentFont.UpdateMetaData();
+                    }
+                    if (fontTable.faces[currentFaceIndex].HasVarData && currentFont.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
+                    {
+                        currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
+                        currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
+                        currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
+                    }
+                    if (currentFaceIndex != glyphOTF.glyphKey.variableProfileIndex)
+                    {
+                        //Debug.Log($"Switching font from {currentFaceIndex} to {glyphOTF.glyphKey.faceIndex}");
+                        currentFaceIndex = glyphOTF.glyphKey.faceIndex;
                         currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);
-                        currentFontWeigth = (FontWeight)(byte)(currentFont.GetStyleTag(StyleTag.WEIGHT) / 100);
+                        if (fontTable.faces[currentFaceIndex].HasVarData && currentFont.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
+                            currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
+
+                        currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
                         currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
                         currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);
                         currentFont.UpdateMetaData();
@@ -170,8 +200,6 @@ namespace TextMeshDOTS
                     bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale, bottomAnchor);
 
                     #region Look up Character Data
-                    var glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
-                    var glyphEntry = glyphTable.GetEntry(glyphID);
                     //Debug.Log($"Render Glyph {glyphEntry.key.glyphIndex} from face {currentFaceIndex} using rect {glyphEntry.x} {glyphEntry.y} {glyphEntry.width} {glyphEntry.height} ({glyphEntry.PaddedWidth} {glyphEntry.PaddedHeight})");
                     // review how to handle glyphOTF.codepoint = 0 (not defined glyph) which is retured for example for tab stop (9)
                     // see here why: https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767
@@ -226,7 +254,7 @@ namespace TextMeshDOTS
                     #region Handle Style Padding
                     float boldSpacingAdjustment = 0;
                     //if bold is requested and current font is not bold (=it has not been found), then simulate bold
-                    bool simulateBold = (layoutConfig.fontWeight >= FontWeight.Bold && currentFontWeigth < FontWeight.Bold);
+                    bool simulateBold = (layoutConfig.fontWeight >= FontWeight.Bold.Value() && currentFontWeigth < FontWeight.Bold.Value());
                     if (simulateBold)
                     {
                         //Debug.Log($"Simulate Bold (current: {currentFontWeigth})");

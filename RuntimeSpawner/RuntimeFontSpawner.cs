@@ -19,7 +19,7 @@ namespace TextmeshDOTS
         public void OnCreate(ref SystemState state)
         {
             fontRequestQ = SystemAPI.QueryBuilder()
-                .WithAll<FontRequest>()
+                .WithAll<FontReference>()
                 .Build();
             state.RequireForUpdate(fontRequestQ);        
         }
@@ -27,7 +27,7 @@ namespace TextmeshDOTS
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            var fontRequestBuffer = fontRequestQ.GetSingletonBuffer<FontRequest>();            
+            var fontRequestBuffer = fontRequestQ.GetSingletonBuffer<FontReference>();            
             var newFontRequest = GetFontRequest();
             if (!fontRequestBuffer.AsNativeArray().Contains(newFontRequest))
                 fontRequestBuffer.Add(newFontRequest);
@@ -39,24 +39,26 @@ namespace TextmeshDOTS
         {
         
         }
-        public FontRequest GetFontRequest()
+        public FontReference GetFontRequest()
         {
             //use FontUtility Scriptable Object to extract the following needed information
             //see ReadMe for more details how
-            return new FontRequest
+            return new FontReference
             {
-                fontAssetPath = "Notosans/NotoSansDisplay-Regular.ttf",
+                filePath = "Notosans/NotoSansDisplay-Regular.ttf",
+                streamingAssetLocationValidated = true,
+                isSystemFont = false,
+                //faceIndex = default,
+
+                //face Information
                 fontFamily = "Noto Sans Display",
                 fontSubFamily = "Regular",
                 typographicFamily = "",
                 typographicSubfamily = "",
-                weight = FontWeight.Normal,
-                width = 100,
+                defaultWeight = 400,
+                defaultWidth = 100,
                 isItalic = false,
-                slant = 0,
-                useSystemFont = false,
-                samplingPointSizeSDF = 64,
-                samplingPointSizeBitmap = 64
+                slant = 0,                
             };
         }
     }

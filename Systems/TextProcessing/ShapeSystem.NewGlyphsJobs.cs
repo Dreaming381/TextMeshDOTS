@@ -1,8 +1,9 @@
-using TextMeshDOTS.HarfBuzz;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
+using UnityEngine;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
@@ -75,6 +76,9 @@ namespace TextMeshDOTS
                 if (!initialized || RequiresFontSetup(lastKey, missingGlyph))
                 {
                     font = fontTable.GetOrCreateFont(missingGlyph.faceIndex, threadIndex);
+                    if (fontTable.faces[missingGlyph.faceIndex].HasVarData && font.currentVariableProfileIndex != missingGlyph.variableProfileIndex)
+                        font = fontTable.SetVariableProfile(missingGlyph.faceIndex, threadIndex, missingGlyph.variableProfileIndex);
+
                     var samplingSize = missingGlyph.textureSize.GetSamplingSize();
                     font.SetScale(samplingSize, samplingSize);
                     initialized = true;

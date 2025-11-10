@@ -16,48 +16,26 @@ namespace TextMeshDOTS
     {
         //Font selection logic: https://www.high-logic.com/font-editor/fontcreator/tutorials/font-family-settings
         public int familyHash;    //default to typeographic family, and fall-back to family if it does not exist
-        public FontWeight weight;
+        public float weight;
         public float width;
         public bool isItalic;
         public float slant;
 
-        public FontAssetRef(FixedString128Bytes fontFamily, FixedString128Bytes typographicFamily, FontWeight fontWeight, float width, bool isItalic, float slant)
+        public FontAssetRef(FixedString128Bytes fontFamily, FixedString128Bytes typographicFamily, float weight, float width, bool isItalic, float slant)
         {
             this.familyHash = typographicFamily.IsEmpty ? TextHelper.GetHashCodeCaseInsensitive(fontFamily) : TextHelper.GetHashCodeCaseInsensitive(typographicFamily);
-            this.weight = fontWeight;
+            this.weight = weight;
             this.width = width;
             this.isItalic = isItalic;
             this.slant = slant;
         }
-        public FontAssetRef(int familyNameHashCode, FontWeight fontWeight, float fontWidth, FontStyles fontStyles)
+        public FontAssetRef(int familyNameHashCode, float weight, float width, bool isItalic, float slant = 0)
         {
-            familyHash = familyNameHashCode;
-            weight = fontWeight;
-            width = fontWidth;
-            isItalic = (fontStyles & FontStyles.Italic) == FontStyles.Italic;
-            slant = 0;
-        }
-        public FontAssetRef(int familyNameHashCode, FontWeight fontWeight, FontWidth fontWidth, FontStyles fontStyles)
-        {
-
-            familyHash = familyNameHashCode;
-            weight = fontWeight;
-            width = (float)fontWidth;
-            isItalic = (fontStyles & FontStyles.Italic) == FontStyles.Italic;
-            slant = 0;
-            //adjust according to https://learn.microsoft.com/en-us/typography/opentype/spec/os2#uswidthclass
-            switch (fontWidth)
-            {
-                case FontWidth.ExtraCondensed:
-                    width = 62.5f;
-                    break;
-                case FontWidth.SemiCondensed:
-                    width = 87.5f;
-                    break;
-                case FontWidth.SemiExpanded:
-                    width = 112.5f;
-                    break;
-            }
+            this.familyHash = familyNameHashCode;
+            this.weight = weight;
+            this.width = width;
+            this.isItalic = isItalic;
+            this.slant = slant;
         }
 
         public override bool Equals(object obj) => obj is FontAssetRef other && Equals(other);
@@ -83,7 +61,7 @@ namespace TextMeshDOTS
             hashCode = hashCode * -1521134295 + (int)weight;
             hashCode = hashCode * -1521134295 + width.GetHashCode();
             hashCode = hashCode * -1521134295 + isItalic.GetHashCode();
-            //fonts are search at runtime via FontAssetRef match. As slant angle cannot be guessed, do not inlcude this in hash
+            //fonts are searched at runtime via FontAssetRef match. As slant angle cannot be guessed, do not inlcude this in hash
             //hashCode = hashCode * -1521134295 + slant.GetHashCode();
             return hashCode;
         }

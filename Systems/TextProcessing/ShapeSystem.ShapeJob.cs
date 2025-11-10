@@ -5,6 +5,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Profiling;
+using UnityEngine;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 
 namespace TextMeshDOTS
@@ -19,7 +20,8 @@ namespace TextMeshDOTS
 
             public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
 
-            [ReadOnly] internal FontTable fontTable;
+            //[ReadOnly] internal FontTable fontTable;
+            internal FontTable fontTable;
             [ReadOnly] internal GlyphTable glyphTable;
             [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
             [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
@@ -63,7 +65,7 @@ namespace TextMeshDOTS
 
                 var cleanedString = new NativeText(1024, Allocator.Temp);
                 LayoutConfig layoutConfig = default;
-                FontConfig fontConfiguration = default;
+                FontConfig fontConfig = default;
 
                 for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
                 {
@@ -72,16 +74,16 @@ namespace TextMeshDOTS
                     var calliBytesBuffer = calliBytesBuffers[indexInChunk].Reinterpret<byte>();
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
-                    fontConfiguration.Reset(textBaseConfiguration, ref fontTable);
+                    fontConfig.Reset(textBaseConfiguration, ref fontTable);
                     layoutConfig.Reset(textBaseConfiguration);
                     glyphOTFs.Clear();
                     var calliString = new CalliString(calliBytesBuffer);
                     cleanedString.Capacity = calliString.Capacity;
 
                     if (xmlTagBuffer.Length == 0)
-                        ShapeNoRichText(calliString, ref layoutConfig, cleanedString, ref fontConfiguration, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref segmentProperties, ref buffer, ref glyphOTFs);
+                        ShapeNoRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref segmentProperties, ref buffer, ref glyphOTFs);
                     else
-                        ShapeRichText(calliString, ref layoutConfig, cleanedString, ref fontConfiguration, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref segmentProperties, ref buffer, ref glyphOTFs, ref xmlTagBuffer);
+                        ShapeRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref segmentProperties, ref buffer, ref glyphOTFs, ref xmlTagBuffer);
 
                     cleanedString.Clear();
                 }
@@ -102,7 +104,7 @@ namespace TextMeshDOTS
             void ShapeNoRichText(CalliString calliString,
                 ref LayoutConfig layoutConfig,
                 NativeText cleanedString,
-                ref FontConfig fontConfiguration,
+                ref FontConfig fontConfig,
                 ref FontTable fontTable,
                 ref OpenTypeFeatureConfig openTypeFeatures,
                 ref TextBaseConfiguration textBaseConfiguration,
@@ -111,23 +113,20 @@ namespace TextMeshDOTS
                 ref DynamicBuffer<GlyphOTF> glyphOTFs)
             {
                 var rawCharacters = calliString.GetEnumerator();
-                int currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
                 //copy text into buffer used for shaping, convert case while doing so
                 while (rawCharacters.MoveNext())
                 {
                     var currentRune = rawCharacters.Current;
                     AppendAndConvertCase(cleanedString, layoutConfig.m_fontStyles, ref currentRune);
                 }
-                //find font Entity requested by combination of font family and style
-                fontConfiguration.GetFontIndex(ref fontTable);
                 openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedString.Length);
-                Shape(buffer, cleanedString, 0, cleanedString.Length, ref segmentProperties, ref fontTable, currentFontMaterialIndex, openTypeFeatures.values, glyphOTFs);
+                Shape(buffer, cleanedString, 0, cleanedString.Length, ref segmentProperties, ref fontTable, ref fontConfig, fontConfig.m_faceIndex, fontConfig.m_variableProfileIndex, openTypeFeatures.values, glyphOTFs);
             }
 
             void ShapeRichText(CalliString calliString,
               ref LayoutConfig layoutConfig,
               NativeText cleanedString,
-              ref FontConfig fontConfiguration,
+              ref FontConfig fontConfig,
               ref FontTable fontTable,
               ref OpenTypeFeatureConfig openTypeFeatures,
               ref TextBaseConfiguration textBaseConfiguration,
@@ -139,10 +138,10 @@ namespace TextMeshDOTS
                 //text has richtext tags. Search segments where font, language, script and direction does does not change (To-Do: use ICU for that),
                 //apply opentype features requested via richtext tags, and shape
                 var rawCharacters = calliString.GetEnumerator();
-                int currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
+                var currentFaceIndex = fontConfig.m_faceIndex;
+                var currentVariableProfileIndex = fontConfig.m_variableProfileIndex;
                 int tagsCounter = 0;
                 var nextTagPosition = tagsCounter < xmlTagBuffer.Length ? xmlTagBuffer[tagsCounter].startID : calliString.Length;
-
 
                 //copy text into buffer used for shaping, convert case while doing so
                 bool keepGoing;
@@ -172,12 +171,12 @@ namespace TextMeshDOTS
                 tagsCounter = 0;
                 while (cleanedStart < cleanedString.Length)
                 {
-                    while (tagsCounter < xmlTagBuffer.Length && fontConfiguration.m_fontMaterialIndex == currentFontMaterialIndex)
+                    while (tagsCounter < xmlTagBuffer.Length && fontConfig.m_faceIndex == currentFaceIndex && fontConfig.m_variableProfileIndex == currentVariableProfileIndex)
                     {
                         currentTag = xmlTagBuffer[tagsCounter];
                         var cleanedInterTagLength = (currentTag.startID - richTextStartID);
                         cleanedEnd += cleanedInterTagLength;
-                        fontConfiguration.Update(ref currentTag, ref fontTable, ref calliString);
+                        fontConfig.Update(ref currentTag, ref fontTable, ref calliString);
                         openTypeFeatures.Update(ref currentTag, cleanedEnd);
                         tagsCounter++;
                         richTextStartID = currentTag.endID + 1;
@@ -185,8 +184,9 @@ namespace TextMeshDOTS
                     openTypeFeatures.FinalizeOpenTypeFeatures(cleanedString.Length);
                     openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedString.Length);
                     var cleanedSegmentLength = cleanedEnd - cleanedStart;
-                    Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref segmentProperties, ref fontTable, currentFontMaterialIndex, openTypeFeatures.values, glyphOTFs);
-                    currentFontMaterialIndex = fontConfiguration.m_fontMaterialIndex;
+                    Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref segmentProperties, ref fontTable, ref fontConfig, currentFaceIndex, currentVariableProfileIndex, openTypeFeatures.values, glyphOTFs);
+                    currentFaceIndex = fontConfig.m_faceIndex;
+                    currentVariableProfileIndex = fontConfig.m_variableProfileIndex;
                     cleanedStart = cleanedEnd;
                     if (tagsCounter == xmlTagBuffer.Length) //last loop in order to shape text between last tag and end of rich text buffer
                         cleanedEnd = cleanedString.Length;
@@ -194,13 +194,14 @@ namespace TextMeshDOTS
             }
 
             void Shape(Buffer buffer,
-                //NativeArray<byte> text,
                 NativeText text,
                 int startIndex,
                 int length,
                 ref SegmentProperties segmentProperties,
                 ref FontTable fontTable,
-                int fontMaterialIndex,
+                ref FontConfig fontConfig,
+                int faceIndex,
+                int variableProfileIndex,
                 NativeList<Feature> features,
                 DynamicBuffer<GlyphOTF> glyphOTFs)
             {
@@ -213,16 +214,19 @@ namespace TextMeshDOTS
                 //https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767
                 buffer.BufferFlag = BufferFlag.REMOVE_DEFAULT_IGNORABLES | BufferFlag.BOT | BufferFlag.EOT;
 
-                var fontAssetRef = fontTable.fontAssetRefs[fontMaterialIndex];
-                var faceIndex = this.fontTable.fontAssetRefToFaceIndexMap[fontAssetRef];
                 var face = this.fontTable.faces[faceIndex];
                 var renderFormat = face.renderFormat;
-
                 var font = this.fontTable.GetOrCreateFont(faceIndex, threadIndex);
+                if (face.HasVarData)
+                {                    
+                    if (font.currentVariableProfileIndex != variableProfileIndex)
+                        font = fontTable.SetVariableProfile(faceIndex, threadIndex, variableProfileIndex);
+                }
+
                 var samplingSize = FontTextureSize.Normal.GetSamplingSize();
                 font.SetScale(samplingSize, samplingSize);
 
-                //UnityEngine.Debug.Log($"fontEntity: {fontEntity.ToFixedString()}, from faceIndex: {fontTable.faceIndexToFontEntityMap[faceIndex].ToFixedString()}");
+                //Debug.Log($"faceIndex: {faceIndex} {face.GetName(NameID.FONT_FAMILY, Language.English()) }");
                 //if (!shapePlanCache.TryGetValue(fontAssetRef, out var shapePlan))
                 //{                        
                 //    shapePlan = new ShapePlan(nativeFontPointer.face, ref segmentProperties, features, shaperList);
@@ -255,7 +259,7 @@ namespace TextMeshDOTS
                             glyphIndex = (ushort)glyphInfo.codepoint,
                             format = renderFormat,
                             textureSize = FontTextureSize.Normal,
-                            variableProfileIndex = 0
+                            variableProfileIndex = variableProfileIndex
                         },
                         cluster = glyphInfo.cluster,
                         xAdvance = glyphPosition.xAdvance,
@@ -263,6 +267,7 @@ namespace TextMeshDOTS
                         xOffset = glyphPosition.xOffset,
                         yOffset = glyphPosition.yOffset,
                     };
+                    //Debug.Log($"faceIndex {faceIndex} variableProfileIndex: {variableProfileIndex} {fontTable.variableProfiles[variableProfileIndex].variations[0].value}");
                     if (!glyphTable.glyphHashToIdMap.ContainsKey(glyphOTF.glyphKey))
                     {
                         // We use the hashset to avoid redundantly adding the same glyph for this chunk.

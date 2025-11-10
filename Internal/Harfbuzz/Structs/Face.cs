@@ -19,11 +19,11 @@ namespace TextMeshDOTS.HarfBuzz
         public uint AxisCount => Harfbuzz.hb_ot_var_get_axis_count(ptr);
         public uint NamedInstanceCount => Harfbuzz.hb_ot_var_get_named_instance_count(ptr);        
 
-        public Face(IntPtr blob, int index)
+        public Face(Blob blob, int index)
         {
             sdfOrientation= default;
             renderFormat = default;
-            ptr = Harfbuzz.hb_face_create(blob, (uint)index);
+            ptr = Harfbuzz.hb_face_create(blob.ptr, (uint)index);
             renderFormat = HasCOLR() || HasColorBitmap() ? RenderFormat.Bitmap8888 : RenderFormat.SDF8;
             sdfOrientation = HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
         }
@@ -53,10 +53,12 @@ namespace TextMeshDOTS.HarfBuzz
         {
             return Harfbuzz.hb_ot_var_named_instance_get_subfamily_name_id(ptr, (uint)index);
         }
-        public bool FindAxisInfo(uint axis_tag, out AxisInfo axisInfo)
+
+        public bool FindAxisInfo(AxisTag axisTag, out AxisInfo axisInfo)
         {
-            return Harfbuzz.hb_ot_var_find_axis_info(ptr, axis_tag, out axisInfo);
+            return Harfbuzz.hb_ot_var_find_axis_info(ptr, axisTag, out axisInfo);
         }
+
         public void GetAxisInfos(int startOffset, int offset, out NativeList<AxisInfo> axisInfos)
         {
             uint axisCount = 16;

@@ -11,26 +11,61 @@ using UnityEngine.TextCore;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
-{
+{    
     internal partial struct FontTable : ICollectionComponent
     {
         // These are zero-sized and unused currently.
         public NativeList<Face>               faces;
-        public NativeArray<UnsafeList<Font> > perThreadFontCaches;
+        public NativeArray<UnsafeList<Font>>  perThreadFontCaches;
 
         // These are temporary. Something like fontAssetRefToFaceIndexMap, but it will probably be refined.
         public NativeHashMap<FontAssetRef, int> fontAssetRefToFaceIndexMap;
         public NativeList<FontAssetRef> fontAssetRefs;
+        public NativeList<VariableProfile> variableProfiles;
 
-        public int GetFontIndex(FontAssetRef desiredFontAssetRef)
+        public int GetOrCreateVariableProfileIndex(VariableProfile variableProfile, int faceIndex)
+        {
+            var face = faces[faceIndex];
+            if (face.HasVarData)
+            {
+                var index = variableProfiles.IndexOf(variableProfile);
+                if (index == -1)
+                    index = AddVariableProfile(variableProfile);
+                return index;
+            }
+            return -1;
+        }
+        public Font SetVariableProfile(int faceIndex, int threadIndex, int variableProfileIndex)
+        {
+            var variationsIn = variableProfiles[variableProfileIndex].variations;
+            var variationsOut = new NativeList<Variation>(variationsIn.Length, Allocator.Temp);
+            for (int i = 0, ii = variationsIn.Length; i < ii; i++)
+                variationsOut.Add(variationsIn[i]);
+
+            var fonts = perThreadFontCaches[threadIndex];
+            var font = fonts[faceIndex];
+
+            font.SetVariations(variationsOut);
+            font.currentVariableProfileIndex = variableProfileIndex;
+            fonts[faceIndex] = font;
+            return font;
+        }
+
+        public int AddVariableProfile(VariableProfile variableProfile)
+        {
+            int currentID = variableProfiles.Length;
+            variableProfiles.Add(variableProfile);
+            return currentID;
+        }
+        public int GetFaceIndex(FontAssetRef desiredFontAssetRef)
         {
             //Debug.Log($"Search for: {desiredFontAssetRef}");
             //default: pefect match of family name, weight, width and italic/normal
-            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            var fontIndex = fontAssetRefs.IndexOf(desiredFontAssetRef);
+            if(fontIndex != -1)
             {
-                //Debug.Log($"candidate: {fontAssetRefs[i].ToString()}");
-                if (fontAssetRefs[i] == desiredFontAssetRef)
-                    return i;
+                //Debug.Log($"desired: {desiredFontAssetRef}, found candidate: {fontAssetRefs[fontIndex]}");
+                return fontAssetRefToFaceIndexMap[fontAssetRefs[fontIndex]];
             }
 
             //fall back to matching at least family and normal/italic
@@ -38,7 +73,10 @@ namespace TextMeshDOTS
             {
                 //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
                 if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash && fontAssetRefs[i].isItalic == desiredFontAssetRef.isItalic)
-                    return i;
+                {
+                    //Debug.Log($"desired: {desiredFontAssetRef}, found fallback candidate: {fontAssetRefs[i]}");
+                    return fontAssetRefToFaceIndexMap[fontAssetRefs[i]];
+                }
             }
 
             //fall back to matching at least family
@@ -46,36 +84,46 @@ namespace TextMeshDOTS
             {
                 //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
                 if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash)
-                    return i;
+                    return fontAssetRefToFaceIndexMap[fontAssetRefs[i]];                
             }
             //Debug.Log($"Requested font not found");
             return -1;
         }
 
         public Font GetOrCreateFont(int faceIndex, int threadIndex)
-        {
+        {            
             var fonts = perThreadFontCaches[threadIndex];
             var font  = fonts[faceIndex];
             if (font.ptr == IntPtr.Zero)
             {
-                font             = new Font(faces[faceIndex].ptr);
-
-                //test loading of Variable Font
-                if(faces[faceIndex].HasVarData)
+                var face = faces[faceIndex];
+                font             = new Font(face);
+                if (face.HasVarData)
                 {
-                    font.VariationNamedInstance = 7; // For Roboto: 0=Thin, 7 = extra...
+                    face.GetAxisInfos(0, 0, out NativeList<AxisInfo> axisInfos);
+                    //foreach (var item in axisInfos)
+                    //    Debug.Log(item);
+                    var variableProfile = new VariableProfile(axisInfos);
+                    var variableProfileIndex = variableProfiles.IndexOf(variableProfile);
+                    if (variableProfileIndex != -1)
+                        font.currentVariableProfileIndex = variableProfileIndex;
+                    else
+                        font.currentVariableProfileIndex = AddVariableProfile(variableProfile);
                 }
+
                 fonts[faceIndex] = font;
             }
             return font;
         }
+
+
 
         public JobHandle TryDispose(JobHandle inputDeps)
         {
             if (faces.IsCreated)
             {
                 var jh = new DisposeInnerJob { table = this }.Schedule(inputDeps);
-                jh = JobHandle.CombineDependencies(faces.Dispose(jh), perThreadFontCaches.Dispose(jh));
+                jh = JobHandle.CombineDependencies(faces.Dispose(jh), variableProfiles.Dispose(jh), perThreadFontCaches.Dispose(jh));
                 return JobHandle.CombineDependencies(jh, fontAssetRefs.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
             }
             return inputDeps;
@@ -110,7 +158,80 @@ namespace TextMeshDOTS
             }
         }
     }
+    internal struct VariableProfile : IEquatable<VariableProfile>
+    {
+        public FixedList64Bytes<Variation> variations;   // space for 8 variations (8 byte per variation axis)
 
+        public VariableProfile(NativeList<AxisInfo> axisInfos)
+        {
+            variations=new FixedList64Bytes<Variation>();
+            for (int i = 0, ii = axisInfos.Length; i < ii; i++)
+            {
+                var axisInfo = axisInfos[i];
+                variations.Add(new Variation(axisInfo.axisTag, axisInfo.defaultValue));
+            }
+        }
+        public VariableProfile(NativeList<Variation> variationsIN)
+        {
+            variations = new FixedList64Bytes<Variation>();
+            for (int i = 0, ii = variationsIN.Length; i < ii; i++)
+                variations.Add(variationsIN[i]);            
+        }
+        public VariableProfile(float weight, float width)
+        {
+            variations = new FixedList64Bytes<Variation>() 
+            {
+                new Variation(AxisTag.WEIGHT, weight),
+                new Variation(AxisTag.WIDTH, width),
+            };
+        }
+
+        public VariableProfile(float weight, float width, NativeList<AxisInfo> axisInfos)
+        {
+            variations = new FixedList64Bytes<Variation>();
+            for (int i = 0, ii = axisInfos.Length; i < ii; i++)
+            {
+                var axisInfo = axisInfos[i];
+                switch (axisInfo.axisTag)
+                {
+                    case AxisTag.WIDTH:
+                        variations.Add(GetVariation(width, ref axisInfo));
+                        break;
+                    case AxisTag.WEIGHT:
+                        variations.Add(GetVariation(weight, ref axisInfo));
+                        break;
+                }
+            }
+        }
+        Variation GetVariation(float value, ref AxisInfo axisInfo)
+        {
+            return new Variation(axisInfo.axisTag, math.clamp(value, axisInfo.minValue, axisInfo.maxValue));
+        }
+        public override bool Equals(object obj) => obj is VariableProfile other && Equals(other);
+
+        public bool Equals(VariableProfile other)
+        {
+            return GetHashCode() == other.GetHashCode();
+        }
+
+        public static bool operator ==(VariableProfile e1, VariableProfile e2)
+        {
+            return e1.GetHashCode() == e2.GetHashCode();
+        }
+        public static bool operator !=(VariableProfile e1, VariableProfile e2)
+        {
+            return e1.GetHashCode() != e2.GetHashCode();
+        }
+        public override int GetHashCode()
+        {
+            int hashCode = 2055808453;
+            foreach (var item in variations)
+            {
+                hashCode = hashCode * -1521134295 + item.GetHashCode();
+            }
+            return hashCode;
+        }
+    }
     internal enum RenderFormat : byte
     {
         SDF8 = 0,

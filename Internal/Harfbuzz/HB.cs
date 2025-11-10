@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using Unity.Burst;
+using Unity.Collections;
 using static TextMeshDOTS.HarfBuzz.DrawDelegates;
 using static TextMeshDOTS.HarfBuzz.PaintDelegates;
 
@@ -172,7 +173,7 @@ namespace TextMeshDOTS.HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
-        internal static extern bool hb_ot_var_find_axis_info(IntPtr face, uint axis_tag, out AxisInfo axis_info);
+        internal static extern bool hb_ot_var_find_axis_info(IntPtr face, AxisTag axis_tag, out AxisInfo axis_info);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern uint hb_ot_var_get_axis_count(IntPtr face);
@@ -250,7 +251,7 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern void hb_font_set_scale(IntPtr font, int x_scale, int y_scale);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        internal static extern void hb_font_set_variation(IntPtr font, uint axis_tag, float value);
+        internal static extern void hb_font_set_variation(IntPtr font, AxisTag axis_tag, float value);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_font_set_variations(IntPtr font, IntPtr variations, uint variations_length);
@@ -370,6 +371,15 @@ namespace TextMeshDOTS.HarfBuzz
         public static uint HB_TAG(char c1, char c2, char c3, char c4)
         {
             return (((uint)c1 & 0xFF) << 24) | (((uint)c2 & 0xFF) << 16) | (((uint)c3 & 0xFF) << 8) | ((uint)c4 & 0xFF);
+        }
+        public static FixedString32Bytes HB_TAG(uint hb_tag)
+        {
+            var result = new FixedString32Bytes();
+            result.Append((char)((hb_tag >> 24) & 0xff));
+            result.Append((char)((hb_tag >> 16) & 0xff));
+            result.Append((char)((hb_tag >> 8) & 0xff));
+            result.Append((char)(hb_tag & 0xff));
+            return result;
         }
     }
 }

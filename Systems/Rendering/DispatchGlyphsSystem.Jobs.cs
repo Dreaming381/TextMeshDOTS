@@ -220,7 +220,13 @@ namespace TextMeshDOTS
                     return;
 
                 var face         = fontTable.faces[glyphEntry.key.faceIndex];
+
+                //Debug.Log($"Rasterize glyphIndex {glyphIndex} of font {face.GetName(NameID.FONT_FAMILY,Language.English())} {face.GetName(NameID.FONT_SUBFAMILY, Language.English())}");
+                
                 var font         = fontTable.GetOrCreateFont(glyphEntry.key.faceIndex, threadIndex);
+                if (face.HasVarData && font.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
+                    font = fontTable.SetVariableProfile(glyphEntry.key.faceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
+
                 var samplingSize = glyphEntry.key.textureSize.GetSamplingSize();
                 font.SetScale(samplingSize, samplingSize);
                 var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);

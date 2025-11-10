@@ -1,6 +1,6 @@
 namespace TextMeshDOTS.HarfBuzz
 {
-    internal enum Axis
+    internal enum AxisTag : uint
     {
         ITALIC = ('i' << 24) | ('t' << 16) | ('a' << 8) | 'l', //better would be HB.HB_TAG('i', 't', 'a', 'l'), but this does not work in C Sharp
         OPTICAL_SIZE = ('o' << 24) | ('p' << 16) | ('s' << 8) | 'z',

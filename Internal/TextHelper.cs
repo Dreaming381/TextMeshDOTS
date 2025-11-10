@@ -1,9 +1,80 @@
+using System.IO;
+using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
+using UnityEngine;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
     internal static class TextHelper
-    {       
+    {
+        internal static bool GetFontInfo(string fontAssetPath, bool useSystemFont, Language language, NativeList<FontReference> fontReferences)
+        {
+            bool isTrueType = fontAssetPath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
+            bool isTrueTypeCollection = fontAssetPath.EndsWith("ttc", System.StringComparison.OrdinalIgnoreCase);
+            bool isOpentype = fontAssetPath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
+            if (isOpentype || isTrueType || isTrueTypeCollection)
+            {
+                var blob = new Blob(fontAssetPath);
+                GetFaceInfo(blob, fontAssetPath, useSystemFont, language, fontReferences);                
+                blob.Dispose();
+                return true;
+            }
+            else
+            {
+                Debug.LogWarning("Ensure you only have files ending with 'ttf' or 'otf' (case insensitiv) in font list");
+                return false;
+            }
+        }
+        internal static bool GetFaceInfo(Blob blob, string fontAssetPath, bool useSystemFont, Language language, NativeList<FontReference> fontReferences)
+        {
+            for (int i = 0, ii = blob.FaceCount; i < ii; i++)
+            {
+                var face = new Face(blob, i);
+                var fontReference = new FontReference();
+                if (useSystemFont)
+                {
+                    fontReference.isSystemFont = true;
+                    fontReference.filePath = fontAssetPath;
+                }
+                else
+                {
+                    fontReference.isSystemFont = false;
+                    var pathIndex = fontAssetPath.IndexOf("Assets/StreamingAssets");
+                    if (pathIndex == -1)
+                    {
+                        Debug.LogError($"Unless you want to use System Fonts, the source font asset MUST be in \"Assets/StreamingAssets\"! Font cannot be loaded in a build from current location \"{fontAssetPath}\"");
+                        fontReference.filePath = Path.GetFullPath(fontAssetPath);
+                    }
+                    else
+                    {
+                        fontReference.streamingAssetLocationValidated = true;
+                        fontReference.filePath = fontAssetPath.Substring(pathIndex + 23);
+                    }
+                }
+
+                fontReference.faceIndex = i;
+                fontReference.fontFamily = face.GetName(NameID.FONT_FAMILY, language);
+                fontReference.fontSubFamily = face.GetName(NameID.FONT_SUBFAMILY, language);
+                fontReference.typographicFamily = face.GetName(NameID.TYPOGRAPHIC_FAMILY, language);
+                fontReference.typographicSubfamily = face.GetName(NameID.TYPOGRAPHIC_SUBFAMILY, language);
+
+                var font = new Font(face);
+                fontReference.defaultWeight = font.GetStyleTag(StyleTag.WEIGHT);
+                fontReference.defaultWidth = font.GetStyleTag(StyleTag.WIDTH);
+                fontReference.isItalic = font.GetStyleTag(StyleTag.ITALIC) == 1;
+                fontReference.slant = font.GetStyleTag(StyleTag.SLANT_ANGLE);
+
+                if (!fontReferences.Contains(fontReference))
+                    fontReferences.Add(fontReference);
+                else if(!useSystemFont)
+                    Debug.LogWarning($"font {fontReference.fontFamily} {fontReference.fontSubFamily} (system font? {fontReference.isSystemFont}) was previously added to the list of fonts");
+                
+                face.Dispose();
+                font.Dispose();
+            }
+            return true;
+        }
         public static int GetHashCodeCaseInsensitive(FixedString128Bytes text)
         {
             var s = text.GetEnumerator();

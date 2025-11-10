@@ -42,7 +42,7 @@ namespace TextMeshDOTS.Authoring
             DependsOn(authoring.fontCollectionAsset);
             int fontCount = 0;
             if (authoring.fontCollectionAsset == null || 
-                (fontCount = authoring.fontCollectionAsset.fontRequests.Count) == 0 || 
+                (fontCount = authoring.fontCollectionAsset.fontReferences.Count) == 0 || 
                 authoring.defaultFont == string.Empty || 
                 authoring.material ==null)
                 return;
@@ -61,7 +61,7 @@ namespace TextMeshDOTS.Authoring
 
             var entity = GetEntity(TransformUsageFlags.Renderable);
             AddComponent<TextShaderIndex>(entity);
-            var fontItem = authoring.fontCollectionAsset.fontRequests[0];
+            var fontItem = authoring.fontCollectionAsset.fontReferences[0];
             AddBuffer<XMLTag>(entity);
             AddBuffer<GlyphOTF>(entity);
             AddBuffer<RenderGlyph>(entity);

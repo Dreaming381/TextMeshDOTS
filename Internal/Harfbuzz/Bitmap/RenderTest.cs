@@ -169,8 +169,8 @@ internal class RenderTest : MonoBehaviour
         }
 
         blob = new Blob(filePath);
-        face = new Face(blob.ptr, 0);
-        font = new Font(face.ptr);
+        face = new Face(blob, 0);
+        font = new Font(face);
 
         //var scale = font.GetScale();        
         font.SetScale(samplingPointSize, samplingPointSize);

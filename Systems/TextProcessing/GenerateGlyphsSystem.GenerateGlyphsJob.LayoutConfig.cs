@@ -16,8 +16,8 @@ namespace TextMeshDOTS
 
                 public FontStyles m_fontStyles;
 
-                public FontWeight fontWeight;
-                public FixedStack512Bytes<FontWeight> fontWeightStack;
+                public float fontWeight;
+                public FixedStack512Bytes<float> fontWeightStack;
 
                 public float fontWidth;
                 public FixedStack512Bytes<float> fontWidthStack;
@@ -62,7 +62,7 @@ namespace TextMeshDOTS
 
                     m_fontStyles = textBaseConfiguration.fontStyles;
 
-                    fontWeight = textBaseConfiguration.fontWeight;
+                    fontWeight = textBaseConfiguration.fontWeight.Value();
                     fontWeightStack = default;
                     fontWeightStack.Add(fontWeight);
 
@@ -120,7 +120,7 @@ namespace TextMeshDOTS
 
                     m_fontStyles = textBaseConfiguration.fontStyles;
 
-                    fontWeight = textBaseConfiguration.fontWeight;
+                    fontWeight = textBaseConfiguration.fontWeight.Value();
                     fontWeightStack.Clear();
                     fontWeightStack.Add(fontWeight);
 
@@ -197,7 +197,7 @@ namespace TextMeshDOTS
                         case TagType.Bold:
                             if (!tag.isClosing)
                             {
-                                fontWeight = FontWeight.Bold;
+                                fontWeight = FontWeight.Bold.Value();
                                 fontWeightStack.Add(fontWeight);
                             }
                             else
@@ -206,7 +206,7 @@ namespace TextMeshDOTS
                         case TagType.FontWeight:
                             if (!tag.isClosing)
                             {
-                                fontWeight = (FontWeight)tag.value.NumericalValue;
+                                fontWeight = tag.value.NumericalValue;
                                 fontWeightStack.Add(fontWeight);
                             }
                             else

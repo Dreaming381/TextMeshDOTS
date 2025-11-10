@@ -46,8 +46,8 @@ namespace TextMeshDOTS.Authoring
                     }
                 }
 
-                var face = new Face(blob.ptr, 0);
-                var font = new Font(face.ptr);
+                var face = new Face(blob, 0);
+                var font = new Font(face);
 
                 //fetch name of fontFamily and subFamily, generate hash code from that used to lookup this font
                 var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
