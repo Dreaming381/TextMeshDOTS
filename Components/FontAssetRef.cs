@@ -61,7 +61,7 @@ namespace TextMeshDOTS
             hashCode = hashCode * -1521134295 + (int)weight;
             hashCode = hashCode * -1521134295 + width.GetHashCode();
             hashCode = hashCode * -1521134295 + isItalic.GetHashCode();
-            //fonts are searched at runtime via FontAssetRef match. As slant angle cannot be guessed, do not inlcude this in hash
+            //fonts are searched at runtime via FontAssetRef match. As slant angle cannot be guessed, do not include this in hash
             //hashCode = hashCode * -1521134295 + slant.GetHashCode();
             return hashCode;
         }

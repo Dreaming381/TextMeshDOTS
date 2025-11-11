@@ -14,52 +14,14 @@ namespace TextMeshDOTS
 {    
     internal partial struct FontTable : ICollectionComponent
     {
-        // These are zero-sized and unused currently.
-        public NativeList<Face>               faces;
-        public NativeArray<UnsafeList<Font>>  perThreadFontCaches;
-
-        // These are temporary. Something like fontAssetRefToFaceIndexMap, but it will probably be refined.
+        public NativeList<Face>                 faces;
+        public NativeArray<UnsafeList<Font>>    perThreadFontCaches;
         public NativeHashMap<FontAssetRef, int> fontAssetRefToFaceIndexMap;
         //variable fonts got names instances. create FontAssetRef for each instance,
         //and map it to index of named instance in face. Use this to lookup instance profile via FontAssetRef
-        public NativeHashMap<FontAssetRef, NamedVariationLookup> fontAssetRefToNamedVariationLookup;
-        public NativeList<FontAssetRef> fontAssetRefs;
-        //public NativeList<VariableProfile> variableProfiles;
+        public NativeHashMap<FontAssetRef, int> fontAssetRefToNamedVariationIndexMap;
+        public NativeList<FontAssetRef>         fontAssetRefs;
 
-        //public int GetOrCreateVariableProfileIndex(VariableProfile variableProfile, int faceIndex)
-        //{
-        //    var face = faces[faceIndex];
-        //    if (face.HasVarData)
-        //    {
-        //        var index = variableProfiles.IndexOf(variableProfile);
-        //        if (index == -1)
-        //            index = AddVariableProfile(variableProfile);
-        //        return index;
-        //    }
-        //    return -1;
-        //}
-        //public Font SetVariableProfile(int faceIndex, int threadIndex, int variableProfileIndex)
-        //{
-        //    var variationsIn = variableProfiles[variableProfileIndex].variations;
-        //    var variationsOut = new NativeList<Variation>(variationsIn.Length, Allocator.Temp);
-        //    for (int i = 0, ii = variationsIn.Length; i < ii; i++)
-        //        variationsOut.Add(variationsIn[i]);
-
-        //    var fonts = perThreadFontCaches[threadIndex];
-        //    var font = fonts[faceIndex];
-
-        //    font.SetVariations(variationsOut);
-        //    font.currentVariableProfileIndex = variableProfileIndex;
-        //    fonts[faceIndex] = font;
-        //    return font;
-        //}
-
-        //public int AddVariableProfile(VariableProfile variableProfile)
-        //{
-        //    int currentID = variableProfiles.Length;
-        //    variableProfiles.Add(variableProfile);
-        //    return currentID;
-        //}
         public Font SetVariableProfile(int faceIndex, int threadIndex, int variableProfileIndex)
         {            
             var fonts = perThreadFontCaches[threadIndex];
@@ -70,11 +32,11 @@ namespace TextMeshDOTS
             fonts[faceIndex] = font;
             return font;
         }
-        public bool GetNamedVariationLookup(FontAssetRef desiredFontAssetRef, out NamedVariationLookup namedVariationLookup)
+        public bool GetNamedVariationLookup(FontAssetRef desiredFontAssetRef, out int namedVariationIndex)
         {
-            if (fontAssetRefToNamedVariationLookup.ContainsKey(desiredFontAssetRef))
+            if (fontAssetRefToNamedVariationIndexMap.ContainsKey(desiredFontAssetRef))
             {
-                namedVariationLookup = fontAssetRefToNamedVariationLookup[desiredFontAssetRef];
+                namedVariationIndex = fontAssetRefToNamedVariationIndexMap[desiredFontAssetRef];
                 return true;
             }
 
@@ -85,19 +47,18 @@ namespace TextMeshDOTS
                 if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash && fontAssetRefs[i].isItalic == desiredFontAssetRef.isItalic)
                 {
                     //Debug.Log($"desired: {desiredFontAssetRef}, found fallback candidate: {fontAssetRefs[i]}");
-                    namedVariationLookup = default;
-                    namedVariationLookup.faceIndex = fontAssetRefToFaceIndexMap[fontAssetRefs[i]];
+                    namedVariationIndex = fontAssetRefToFaceIndexMap[fontAssetRefs[i]];
                     return false;
                 }
             }
-            namedVariationLookup = default;
+            namedVariationIndex = default;
             return false;            
         }
 
         public int GetFaceIndex(FontAssetRef desiredFontAssetRef)
         {
             //Debug.Log($"Search for: {desiredFontAssetRef}");
-            //default: pefect match of family name, weight, width and italic/normal
+            //default: perfect match of family name, weight, width and italic/normal
             var fontIndex = fontAssetRefs.IndexOf(desiredFontAssetRef);
             if(fontIndex != -1)
             {
@@ -135,40 +96,17 @@ namespace TextMeshDOTS
             {
                 var face = faces[faceIndex];
                 font             = new Font(face);
-                //if (face.HasVarData)
-                //{
-                //    Span<AxisInfo> axisInfos = stackalloc AxisInfo[16];
-                //    face.GetAxisInfos(0, 0, ref axisInfos, out uint axisCount);
-                //    //AxisInfo axisInfo;
-                //    //var language = Language.English();
-                //    //for (int k = 0, kk = axisInfos.Length; k < kk; k++)
-                //    //{
-                //    //    axisInfo = axisInfos[k];
-                //    //    Debug.Log($"Variation axis: {face.GetName(axisInfos[k].nameID, language)}");
-                //    //    Debug.Log($"{axisInfos[k]}");
-                //    //}
-
-                //    var variableProfile = new VariableProfile(ref axisInfos, axisCount);
-                //    var variableProfileIndex = variableProfiles.IndexOf(variableProfile);
-                //    if (variableProfileIndex != -1)
-                //        font.currentVariableProfileIndex = variableProfileIndex;
-                //    else
-                //        font.currentVariableProfileIndex = AddVariableProfile(variableProfile);
-                //}
-
                 fonts[faceIndex] = font;
             }
             return font;
         }
-
-
 
         public JobHandle TryDispose(JobHandle inputDeps)
         {
             if (faces.IsCreated)
             {
                 var jh = new DisposeInnerJob { table = this }.Schedule(inputDeps);
-                jh = JobHandle.CombineDependencies(faces.Dispose(jh), fontAssetRefToNamedVariationLookup.Dispose(jh), perThreadFontCaches.Dispose(jh));
+                jh = JobHandle.CombineDependencies(faces.Dispose(jh), fontAssetRefToNamedVariationIndexMap.Dispose(jh), perThreadFontCaches.Dispose(jh));
                 return JobHandle.CombineDependencies(jh, fontAssetRefs.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
             }
             return inputDeps;
@@ -203,11 +141,7 @@ namespace TextMeshDOTS
             }
         }
     }
-    internal struct NamedVariationLookup
-    {
-        public int faceIndex;
-        public int namedInstanceIndex;
-    }
+
     internal struct VariableProfile : IEquatable<VariableProfile>
     {
         public FixedList64Bytes<Variation> variations;   // space for 8 variations (8 byte per variation axis)

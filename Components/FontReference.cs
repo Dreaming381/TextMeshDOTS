@@ -24,7 +24,7 @@ namespace TextMeshDOTS
         public bool isItalic;
         public float slant;
         [SerializeField]
-        public FontAssetRef fontAssetRef => new FontAssetRef(fontFamily, typographicFamily, defaultWeight, defaultWidth, isItalic, slant);
+        public readonly FontAssetRef fontAssetRef => new FontAssetRef(fontFamily, typographicFamily, defaultWeight, defaultWidth, isItalic, slant);
 
         public override bool Equals(object obj)
         {

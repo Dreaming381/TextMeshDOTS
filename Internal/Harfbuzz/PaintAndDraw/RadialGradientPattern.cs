@@ -10,8 +10,7 @@ namespace TextMeshDOTS.HarfBuzz
     internal struct RadialGradient : IPattern
     {
         //https://github.com/foo123/Gradient/blob/80e362bea2cb7deb3ab4c2125bf6fa49a726e4be/README.md
-        NativeArray<ColorStop> m_colorStops;
-        int m_colorStopCount;
+        NativeList<ColorStop> m_colorStops;
         PaintExtend paintExtend;
         float a;
         float b;
@@ -50,15 +49,13 @@ namespace TextMeshDOTS.HarfBuzz
             c = -x0 * x0 - y0 * y0 + r0 * r0;            
 
             m_colorStops = default;
-            m_colorStopCount = 0;
             this.paintExtend = paintExtend;
             isValid = true;
         }
 
         public void InitializeColorLine(ColorLine colorLine)
         {
-            m_colorStopCount = colorLine.GetColorStops(0, out NativeArray<ColorStop> colorStops);
-            m_colorStops = colorStops;
+            colorLine.GetColorStops(0, out m_colorStops);
         }
 
         /// <summary>
@@ -96,7 +93,7 @@ namespace TextMeshDOTS.HarfBuzz
 
             PaintUtils.ApplyWrapMode(ref t, paintExtend);
             //Debug.Log($"{x} {y}: {t}");
-            return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, t);
+            return PaintUtils.SampleGradient(m_colorStops, t);
         }
     }
 }

@@ -10,8 +10,7 @@ namespace TextMeshDOTS.HarfBuzz
     internal struct SweepGradient : IPattern
     {
         //https://github.com/foo123/Gradient/blob/80e362bea2cb7deb3ab4c2125bf6fa49a726e4be/README.md
-        NativeArray<ColorStop> m_colorStops;
-        int m_colorStopCount;
+        NativeList<ColorStop> m_colorStops;
         PaintExtend paintExtend;
         float x0;
         float y0;
@@ -48,18 +47,16 @@ namespace TextMeshDOTS.HarfBuzz
             m_colorStops = default;
             minStop = default;
             maxStop = default;
-            m_colorStopCount = 0;
             this.paintExtend = paintExtend;
             isValid = true;
         }
 
         public void InitializeColorLine(ColorLine colorLine)
         {
-            m_colorStopCount = colorLine.GetColorStops(0, out NativeArray<ColorStop> colorStops);
-            m_colorStops = colorStops;
+            colorLine.GetColorStops(0, out m_colorStops);
 
-            minStop = colorStops[0].offset;
-            maxStop = colorStops[m_colorStopCount - 1].offset;
+            minStop = m_colorStops[0].offset;
+            maxStop = m_colorStops[^1].offset;
             sectorRange = (endAngle - startAngle) / (maxStop - minStop);
 
             startAngleScaled = startAngle + sectorRange * minStop;
@@ -80,7 +77,7 @@ namespace TextMeshDOTS.HarfBuzz
             angle = PaintUtils.WrapAroundLimit(angle, math.PI2);
             var t = (angle / (endAngleScaled - startAngleScaled)) - startAngle / (endAngle - startAngle);
             PaintUtils.ApplySweepWrapMode(ref t, minStop, maxStop, paintExtend);
-            return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, t);
+            return PaintUtils.SampleGradient(m_colorStops, t);
         }
         public float Interpolate(float v1, float v2, float f)
         {

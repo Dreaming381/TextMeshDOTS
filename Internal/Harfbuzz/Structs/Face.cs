@@ -83,35 +83,11 @@ namespace TextMeshDOTS.HarfBuzz
                 }
             }
         }
-        //public void GetAxisInfos(int startOffset, int offset, out NativeList<AxisInfo> axisInfos)
-        //{
-        //    uint axisCount = 16;
-
-        //    axisInfos = new NativeList<AxisInfo>((int)axisCount, Allocator.Temp);
-        //    axisInfos.Length = (int)axisCount;
-        //    uint len = default;
-        //    unsafe
-        //    {
-        //        len = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref axisCount, (IntPtr)axisInfos.GetUnsafePtr());
-        //    }
-        //    if (len > axisCount)
-        //    {
-        //        Debug.Log("capacity of 16 was not sufficient, increasing");
-        //        axisInfos = new NativeList<AxisInfo>((int)len, Allocator.Temp);
-        //        unsafe
-        //        {
-        //            len = Harfbuzz.hb_ot_var_get_axis_infos(ptr, (uint)startOffset, ref len, (IntPtr)axisInfos.GetUnsafePtr());
-        //        }
-        //    }
-        //    axisInfos.Length = (int)len;
-        //}
 
         public bool FindAxisInfo(AxisTag axisTag, out AxisInfo axisInfo)
         {
             return Harfbuzz.hb_ot_var_find_axis_info(ptr, axisTag, out axisInfo);
-        }
-
-        
+        }        
 
         bool HasReferenceTable(uint HB_TAG)
         {

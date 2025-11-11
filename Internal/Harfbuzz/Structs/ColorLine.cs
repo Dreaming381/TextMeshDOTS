@@ -7,28 +7,30 @@ using UnityEngine;
 namespace TextMeshDOTS.HarfBuzz
 {
     [StructLayout(LayoutKind.Sequential)]
-    internal unsafe struct ColorLine
+    internal struct ColorLine
     {
         IntPtr ptr;
 
-        public int GetColorStops(uint start, out NativeArray<ColorStop> colorStops)
+        public int GetColorStops(uint start, out NativeList<ColorStop> colorStops)
         {
             uint count = 16;
-            colorStops = new NativeArray<ColorStop>((int)count, Allocator.Temp);
-            var len = Harfbuzz.hb_color_line_get_color_stops(ptr, 0, ref count, (IntPtr)colorStops.GetUnsafePtr());
+            colorStops = new NativeList<ColorStop>((int)count, Allocator.Temp);
+            colorStops.Length = (int)count;
+            uint len = default;
+            unsafe
+            {
+                len = Harfbuzz.hb_color_line_get_color_stops(ptr, 0, ref count, colorStops.GetUnsafePtr());
+            }
             if (len > count)
             {
                 Debug.Log("capacity of 16 was not sufficient, increasing");
-                colorStops = new NativeArray<ColorStop>((int)len, Allocator.Temp);
-                Harfbuzz.hb_color_line_get_color_stops(ptr, 0, ref len, (IntPtr)colorStops.GetUnsafePtr());
+                colorStops = new NativeList<ColorStop>((int)len, Allocator.Temp);
+                unsafe
+                {
+                    len = Harfbuzz.hb_color_line_get_color_stops(ptr, 0, ref len, colorStops.GetUnsafePtr());
+                }
             }
-            //for (int i = 0; i < len; i++)
-            //{
-            //    var colorStop = colorStops[i];
-            //    Debug.Log($"{colorStop.offset} {colorStop.color} {colorStop.isForeground}");
-            //}
-            var colorStopSlice = new NativeSlice<ColorStop>(colorStops, 0, (int)len);
-            colorStopSlice.Sort(default(ColorStopComparer));
+            colorStops.Length = (int)len;
             return (int)len;
         }
 

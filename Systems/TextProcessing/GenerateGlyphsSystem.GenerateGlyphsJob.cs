@@ -118,8 +118,9 @@ namespace TextMeshDOTS
                 var glyphEntry = glyphTable.GetEntry(glyphID);
 
                 var currentFaceIndex = glyphOTF.glyphKey.faceIndex;
+                var currentFace = fontTable.faces[currentFaceIndex];
                 var currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);
-                if (fontTable.faces[currentFaceIndex].HasVarData && currentFont.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
+                if (currentFace.HasVarData && currentFont.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
                     currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
 
                 var currentFontSamplingPointSize = FontTextureSize.Normal.GetSamplingSize();
@@ -145,36 +146,21 @@ namespace TextMeshDOTS
                     glyphEntry = glyphTable.GetEntry(glyphID);
 
                     var cluster = (int)glyphOTF.cluster; //cluster is char index in cleaned text = aligned with glyphOTF buffer
-                    if (currentFaceIndex != glyphOTF.glyphKey.faceIndex)
+                    if (currentFaceIndex != glyphOTF.glyphKey.faceIndex || (currentFace.HasVarData && currentFont.currentVariableProfileIndex != glyphOTF.glyphKey.variableProfileIndex))
                     {
                         //Debug.Log($"Switching font from {currentFaceIndex} to {glyphOTF.glyphKey.faceIndex}");
                         currentFaceIndex = glyphOTF.glyphKey.faceIndex;
-                        currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);                        
-
-                        currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
-                        currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
-                        currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);
-                        currentFont.UpdateMetaData();
-                    }
-                    if (fontTable.faces[currentFaceIndex].HasVarData && currentFont.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
-                    {
-                        currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
-                        currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
-                        currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
-                    }
-                    if (currentFaceIndex != glyphOTF.glyphKey.variableProfileIndex)
-                    {
-                        //Debug.Log($"Switching font from {currentFaceIndex} to {glyphOTF.glyphKey.faceIndex}");
-                        currentFaceIndex = glyphOTF.glyphKey.faceIndex;
+                        currentFace = fontTable.faces[currentFaceIndex];
                         currentFont = fontTable.GetOrCreateFont(currentFaceIndex, threadIndex);
-                        if (fontTable.faces[currentFaceIndex].HasVarData && currentFont.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
-                            currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
+                        if(currentFace.HasVarData && currentFont.currentVariableProfileIndex != glyphOTF.glyphKey.variableProfileIndex)
+                            currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphOTF.glyphKey.variableProfileIndex);
 
                         currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
                         currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
                         currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);
                         currentFont.UpdateMetaData();
                     }
+                    
                     while (cluster >= nextTagPositionInCleanedText)
                     {
                         if (tagsCounter < xmlTagBuffer.Length)

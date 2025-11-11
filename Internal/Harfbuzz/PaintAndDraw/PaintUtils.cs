@@ -268,12 +268,13 @@ namespace TextMeshDOTS.HarfBuzz
                     break;
             }
         }
-        public static ColorARGB SampleGradient(NativeArray<ColorStop> stops, int colorStopCount, float u)
-        {
-            if (stops == null)
+        public static ColorARGB SampleGradient(NativeList<ColorStop> stops,  float u)
+        {            
+            if (stops.IsEmpty)
                 return new ColorARGB(255, 255, 255, 255);
 
             int stop;
+            var colorStopCount = stops.Length;
             for (stop = 0; stop < colorStopCount; stop++)
             {
                 if (u < stops[stop].offset)

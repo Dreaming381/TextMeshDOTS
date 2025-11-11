@@ -18,7 +18,6 @@ namespace TextMeshDOTS
     // and variable fonts in response the requested variation axis (width, weight etc)
     // of TextRenderer (e.g. generate FontRequests after XML tag extraction)
 
-
     //[DisableAutoCreation]
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]
@@ -58,7 +57,7 @@ namespace TextMeshDOTS
                 perThreadFontCaches = perThreadFontCaches,
                 fontAssetRefs = new NativeList<FontAssetRef>(Allocator.Persistent),
                 fontAssetRefToFaceIndexMap = new NativeHashMap<FontAssetRef, int>(64, Allocator.Persistent),
-                fontAssetRefToNamedVariationLookup = new NativeHashMap<FontAssetRef, NamedVariationLookup>(64, Allocator.Persistent),
+                fontAssetRefToNamedVariationIndexMap = new NativeHashMap<FontAssetRef, int>(64, Allocator.Persistent),
                 //variableProfiles = new NativeList<VariableProfile>(Allocator.Persistent)
             });
 
@@ -164,18 +163,15 @@ namespace TextMeshDOTS
 
                         //fetch a list of all variation axis
                         Span<AxisInfo> axisInfos = stackalloc AxisInfo[axisCount];
-                        face.GetAxisInfos(0, 0, ref axisInfos, out uint axisCount2);
+                        face.GetAxisInfos(0, 0, ref axisInfos, out _);
                         AxisInfo axisInfo;
-                        float coord;
-                       
+                        float coord;                       
 
-                        //fetch a list of named variations                        
+                        //fetch a list of named variants                        
                         //Debug.Log($"found {axisCount} variation axis for font {fontReference.fontFamily} {fontReference.fontSubFamily}, {face.NamedInstanceCount} named instances");
                         Span<float> coords = stackalloc float[axisCount];                        
                         for (int k = 0, kk = (int)face.NamedInstanceCount; k < kk; k++)
                         {
-                            var subfamilyID = face.GetNamedInstanceSubFamilyNameID(k);
-                            var postscriptID = face.GetNamedInstancePostscriptNameID(k);
                             face.GetNamedInstanceDesignCoords(k, ref coords, out uint coordLength);
                             var variableFontAssetRef = tempFontAssetRef;
                             for (int f = 0, ff = (int)coordLength; f < ff; f++)
@@ -196,53 +192,11 @@ namespace TextMeshDOTS
                                 }
                                 //Debug.Log($"Add FontAssetRef for variation axis: {axisInfo.axisTag} {face.GetName(axisInfo.nameID, language)}, value = {coord}");
                             }
-                            fontTable.fontAssetRefToNamedVariationLookup.Add(variableFontAssetRef, new NamedVariationLookup { faceIndex = id, namedInstanceIndex = k});
+                            fontTable.fontAssetRefToNamedVariationIndexMap.Add(variableFontAssetRef, k);
                         }                        
                     }
                 }
             }
-
-            ////test loading of collection fonts and variable fonts
-            //for (int i = 0, ii = blob.FaceCount; i < ii; i++)
-            //{
-            //    var face = new Face(blob, i);
-            //    if (face.HasVarData)
-            //    {
-            //        var axisCount = (int)face.AxisCount;
-            //        Debug.Log($"found {axisCount} variation axis, {face.NamedInstanceCount} named instances");
-            //        Span<float> coords = stackalloc float[axisCount];
-
-            //        //fetch a list of named variations
-            //        for (int k = 0, kk = (int)face.NamedInstanceCount; k < kk; k++)
-            //        {
-            //            var subfamilyID = face.GetNamedInstanceSubFamilyNameID(k);
-            //            var postscriptID = face.GetNamedInstancePostscriptNameID(k);
-            //            face.GetNamedInstanceDesignCoords(k, ref coords, out uint coordLength);
-
-            //            Debug.Log($"SubFamily: {face.GetName(subfamilyID, language)}");
-            //            Debug.Log($"PostScript: {face.GetName(postscriptID, language)}");
-            //            for(int f=0, ff = (int)coordLength; f<ff; f++)
-            //                Debug.Log($"{coords[f]}");
-            //        }
-
-            //        //fetch a list of all variation axis
-            //        Span<AxisInfo> axisInfos = stackalloc AxisInfo[axisCount];
-            //        face.GetAxisInfos(0, 0, ref axisInfos, out uint axisCount2);
-            //        AxisInfo axisInfo;
-            //        for (int k = 0, kk = axisInfos.Length; k < kk; k++)
-            //        {
-            //            axisInfo = axisInfos[k];
-            //            Debug.Log($"Variation axis: {face.GetName(axisInfos[k].nameID, language)}");
-            //            Debug.Log($"{axisInfos[k]}");
-            //        }
-
-            //        //var foundAxisInfo = face.FindAxisInfo(AxisTag.WEIGHT, out axisInfo);
-            //        //Debug.Log($"{foundAxisInfo} {axisInfo}");
-            //    }
-            //    face.Dispose();
-            //}
-
-
 
             //blob can be disposed here, face and font are disposed at world shutdown via FontTable.TryDispose 
             blob.Dispose();
@@ -258,8 +212,7 @@ namespace TextMeshDOTS
             }
             fontReference = default;
             return false;
-        }
-        
+        }        
 
         struct GetFontMetadataJob : IJob
         {

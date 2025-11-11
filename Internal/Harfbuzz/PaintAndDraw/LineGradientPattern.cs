@@ -10,8 +10,7 @@ namespace TextMeshDOTS.HarfBuzz
     //To-Do: implement this via matrix rotation. Would avoid  "horizontal" and "vertical" check for every pixel
     internal struct LineGradient : IPattern
     {
-        NativeArray<ColorStop> m_colorStops;
-        int m_colorStopCount;
+        NativeList<ColorStop> m_colorStops;
         PaintExtend paintExtend;
         float x01;
         float y01;
@@ -57,15 +56,13 @@ namespace TextMeshDOTS.HarfBuzz
             p0p2YIntercept = y2 + (x2 * -p0p2Slope);
 
             m_colorStops = default;
-            m_colorStopCount = 0;
             this.paintExtend = paintExtend;
             isValid = true;
         }
 
         public void InitializeColorLine(ColorLine colorLine)
         {
-            m_colorStopCount = colorLine.GetColorStops(0, out NativeArray<ColorStop> colorStops);
-            m_colorStops = colorStops;
+            colorLine.GetColorStops(0, out m_colorStops);
         }
         /// <summary> Method to turn design space coordinate into UV. Line gradient only has U </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -92,7 +89,7 @@ namespace TextMeshDOTS.HarfBuzz
             var y = designSpaceCoordinates.y;
             var u = GetU(x, y);
             PaintUtils.ApplyWrapMode(ref u, paintExtend);
-            return PaintUtils.SampleGradient(m_colorStops, m_colorStopCount, u);
+            return PaintUtils.SampleGradient(m_colorStops, u);
         }
     }
 }

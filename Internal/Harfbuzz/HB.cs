@@ -101,7 +101,7 @@ namespace TextMeshDOTS.HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern void hb_paint_funcs_make_immutable(IntPtr paintFunctions);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern uint hb_color_line_get_color_stops(IntPtr color_line, uint start, ref uint count, IntPtr color_stops);
+        public static extern uint hb_color_line_get_color_stops(IntPtr color_line, uint start, ref uint count, ColorStop* color_stops);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         public static extern PaintExtend hb_color_line_get_extend(IntPtr color_line);
         #endregion
