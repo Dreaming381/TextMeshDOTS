@@ -87,10 +87,11 @@ just one entity and one material.
     - To be able to select a default font for this `TextRenderer`, drag & drop `FontCollectionAsset` into the respective field.
       Once you have done this, you should be able to select a font family in the `Default Font` dropdown:
      ![plot](./FontFamilySelection.png)
+    - Drop a material of your choice (generated in the first step) into the respective field
+    - Type in some text or rich text
+    - You should now see the text
     - Fontsyles are changed either using the buttons on the `TextRenderer`, or via rich text tags such as \<b\> (bold), 
       \<i> (italic). The \<font\> rich text tag can be used to explicitly select a different font family.
-    - Type in some text or rich text  
-    - You should now see the text
       
   - **Optional use of Gradients**:
     - Add empty `GameObject`, and `TextColorGradient` component on it
