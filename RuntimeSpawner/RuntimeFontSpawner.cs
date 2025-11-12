@@ -28,7 +28,7 @@ namespace TextmeshDOTS
         public void OnUpdate(ref SystemState state)
         {
             var fontRequestBuffer = fontRequestQ.GetSingletonBuffer<FontReference>();            
-            var newFontRequest = GetFontRequest();
+            var newFontRequest = GetFontReference();
             if (!fontRequestBuffer.AsNativeArray().Contains(newFontRequest))
                 fontRequestBuffer.Add(newFontRequest);
             state.Enabled = false;
@@ -39,7 +39,7 @@ namespace TextmeshDOTS
         {
         
         }
-        public FontReference GetFontRequest()
+        public FontReference GetFontReference()
         {
             //use FontUtility Scriptable Object to extract the following needed information
             //see ReadMe for more details how

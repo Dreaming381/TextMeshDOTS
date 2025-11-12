@@ -9,9 +9,10 @@ namespace TextMeshDOTS
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [CreateAfter(typeof(EntitiesGraphicsSystem))]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
+    [DisableAutoCreation]
     partial class RunttimeMaterialSpawner : SystemBase
     {
-        private const string kUnified_URP_Material = "Unified-URP";
+        private const string kUnified_URP_Material = "TMD_Color_0_Outline_Unlit";
 
         EntitiesGraphicsSystem hybridRenderer;
 
