@@ -184,7 +184,8 @@ namespace TextMeshDOTS
                     openTypeFeatures.FinalizeOpenTypeFeatures(cleanedString.Length);
                     openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedString.Length);
                     var cleanedSegmentLength = cleanedEnd - cleanedStart;
-                    Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref segmentProperties, ref fontTable, ref fontConfig, currentFaceIndex, currentNamedVariationIndex, openTypeFeatures.values, glyphOTFs);
+                    if(cleanedSegmentLength > 0 ) 
+                        Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref segmentProperties, ref fontTable, ref fontConfig, currentFaceIndex, currentNamedVariationIndex, openTypeFeatures.values, glyphOTFs);
                     currentFaceIndex = fontConfig.m_faceIndex;
                     currentNamedVariationIndex = fontConfig.m_namedVariationIndex;
                     cleanedStart = cleanedEnd;
@@ -222,8 +223,13 @@ namespace TextMeshDOTS
 
                 var samplingSize = FontTextureSize.Normal.GetSamplingSize();
                 font.SetScale(samplingSize, samplingSize);
+                
+                //if(face.HasVarData)
+                //    Debug.Log($"namedVariationIndex: {namedVariationIndex} {face.GetName(NameID.FONT_FAMILY, Language.English())}, {face.GetName(face.GetNamedInstanceSubFamilyNameID(namedVariationIndex), Language.English())}");
+                //else
+                //    Debug.Log($"faceIndex: {faceIndex} {face.GetName(NameID.FONT_FAMILY, Language.English())}, {face.GetName(NameID.FONT_SUBFAMILY, Language.English())}");
+                //Debug.Log($"{text} {startIndex} {length}");
 
-                //Debug.Log($"faceIndex: {faceIndex} {face.GetName(NameID.FONT_FAMILY, Language.English()) }");
                 //if (!shapePlanCache.TryGetValue(fontAssetRef, out var shapePlan))
                 //{                        
                 //    shapePlan = new ShapePlan(nativeFontPointer.face, ref segmentProperties, features, shaperList);
@@ -264,7 +270,6 @@ namespace TextMeshDOTS
                         xOffset = glyphPosition.xOffset,
                         yOffset = glyphPosition.yOffset,
                     };
-                    //Debug.Log($"faceIndex {faceIndex} variableProfileIndex: {variableProfileIndex} {fontTable.variableProfiles[variableProfileIndex].variations[0].value}");
                     if (!glyphTable.glyphHashToIdMap.ContainsKey(glyphOTF.glyphKey))
                     {
                         // We use the hashset to avoid redundantly adding the same glyph for this chunk.

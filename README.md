@@ -5,7 +5,7 @@ forked from Dreaming381's [Latios Framework/Calligraphics](https://github.com/Dr
 ![plot](./TextMeshDOTS.png)
 
 <b>Font Support</b> Powered by [Harfbuzz](https://harfbuzz.github.io/), TextMeshDOTS is currently able to load 
-TrueType fonts, TrueType Collection fonts, and OpenType fonts. Fonts can either be inluded as an asset, or searched 
+TrueType fonts, TrueType Collection fonts, and OpenType fonts. Fonts can either be included as an asset, or searched 
 at runtime among the system fonts available on a given target platform (Windows, Linux, MacOS etc). Selection of font 
 family members ([variants](https://learn.microsoft.com/en-us/typography/opentype/spec/otvaroverview)) that differ 
 in properties such as regular/italic, font weight (normal, bold, thin, etc), font width (normal, condensed, expanded etc), 
@@ -13,7 +13,7 @@ slant, optical size etc is done per `TextRenderer` via rich text tags defining t
 no matching font variant for the defined properties can be found, TextMeshDOTS falls back to the font family, and 
 is able to simulate bold and italic. In case a font does not contain a user provided unicode character or emoji, 
 TextMeshDOTS is (for performance reasons) currently not searching for a fall back font that does contain the 
-desired character - so be sure a the selected font contains the characters or emoji you need.
+desired character - so be sure the selected font contains the characters or emoji you need.
 ![plot](./FontSelection.png)
 
 <b>Rich Text:</b> TextMeshDOTS supports many rich text tags like [TextMeshPro](https://docs.unity3d.com/Packages/com.unity.textmeshpro@4.0/manual/RichText.html) 
@@ -37,7 +37,7 @@ generated all required glyph data and font textures dynamically using the [Harfb
 library, was however limited to one 4k atlas texture per font. Handling multiple fonts remained challening, 
 which prompted Dreaming381 to vastly simplify resource management by storing all SDF and color bitmaps in ONE 
 global atlas texture array. Dreaming381 also implemented a GPU resident represetation of the glyph vertex data 
-and the global texture array. These GPU resident buffer are automaticly and incrementally updated when changes occur. 
+and the global texture array. These GPU resident buffer are automaticaly and incrementally updated when changes occur. 
 
 <b>Shader Support</b>
 The included HDRP and URP ShaderGraph shader are based on a number of custom function nodes to provide modularity for 
@@ -51,8 +51,8 @@ just one entity and one material.
 # Autoring workflow
   -	**Generate backend mesh and materials** `Menue --> TextMeshDOTS --> Text BackendMesh`, 
     `Menue --> TextMeshDOTS --> Generate HDRP (URP) materials` This only needs to be done once in 
-     a given project. The generated assets are placed into `Resources` folder. The `BackendMesh` as 
-     is expected at that location by the runtime, while the generated materials can be placed anywhere you like.
+     a given project. The generated assets are placed into `Resources` folder. The `BackendMesh` is expected     
+    at that location by the runtime, while the generated materials can be placed anywhere you like.
 
   - **Prepare fonts** Please note that pretty much any font such as "Arial" in Windows actually constists of 
    multiple font files (e.g. one for `regular`, one for `bold`, one for `italic`, one for `bold italic`. There 
@@ -60,12 +60,12 @@ just one entity and one material.
    (bold, sembibold, black etc), italic, different optical design sizes etc. You need all of these files 
    to enable TextMeshDOTS to automatically select the right font when you apply different `FontStyles`. 
    In TrueType Collection fonts, a number of pre-defined variants are stored within just one `ttc` file. 
-   Variable Fonts are simular to TrueType Collection fonts, however the files are much smaller because the 
+   Variable fonts are simular to TrueType Collection fonts, however the files are much smaller because the 
    variants are mathematically defined via parameters influencing the shape of the bezier curves. TextMeshDOTS 
    can simulate bold and italic when those variants are missing, however this should be the exception and not the default.
       1. To use `System Fonts` (fonts that can be found on target device at runtime), drop the `ttf` `ttc` and `otf` files 
          into a folder of your choice under `Assets`. Click on the font asset and uncheck `Include Font Data` to ensure
-         the file is *not* inlcuded in your build. You might wonder why to even add such fonts to your project: this 
+         the file is *not* included in your build. You might wonder why to even add such fonts to your project: this 
          is only needed to extract some data to be able to correctly identify the desired fonts at runtime on the target device. 
       2. To use `Embedded Fonts`, create under `Assets` a subfolder called `StreamingAssets`. Drag and drop all 
         `ttf` `ttc` and `otf` files you intend to use there. You can organize fonts in further subfolders as you wish.  
@@ -81,9 +81,9 @@ just one entity and one material.
     - This singleton provides all the data needed to load the fonts and populate the global font tables used by TextMeshDOTS
   
   - **Baking of Text Labels**
-    - Add empty `GameObject`, add `TextRenderer` component to it. Add optional tag components if case you like  
-      to be able to use an `EntityEquery` to process a given `TextRenderer` in e.g. systems that changes the label (e.g. to display 
-      damage status on a character)
+    - Add empty `GameObject`, add `TextRenderer` component to it. Add optional tag components in case you like  
+      to be able to use an `EntityEquery` to process a given `TextRenderer` in e.g. systems that change the label 
+      (e.g. to display damage status on a character)
     - To be able to select a default font for this `TextRenderer`, drag & drop `FontCollectionAsset` into the respective field.
       Once you have done this, you should be able to select a font family in the `Default Font` dropdown:
      ![plot](./FontFamilySelection.png)
