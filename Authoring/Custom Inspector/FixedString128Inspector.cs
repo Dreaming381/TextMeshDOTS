@@ -1,8 +1,7 @@
+#if UNITY_EDITOR
 using Unity.Collections;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace TextMeshDOTS
 {
@@ -61,3 +60,4 @@ namespace TextMeshDOTS
         #endregion
     }
 }
+#endif

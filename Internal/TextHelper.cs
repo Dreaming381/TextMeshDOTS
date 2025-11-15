@@ -16,7 +16,14 @@ namespace TextMeshDOTS
             if (isOpentype || isTrueType || isTrueTypeCollection)
             {
                 var blob = new Blob(fontAssetPath);
-                GetFaceInfo(blob, fontAssetPath, useSystemFont, language, fontReferences);                
+                FontReference baseFontReference = new FontReference();
+                baseFontReference.isSystemFont = useSystemFont;
+                if (useSystemFont)
+                    baseFontReference.filePath = fontAssetPath;
+                else
+                    ValidateStreamingAssetPath(fontAssetPath, ref baseFontReference);
+
+                GetFaceInfo(blob, language, baseFontReference, fontReferences);                
                 blob.Dispose();
                 return true;
             }
@@ -26,32 +33,30 @@ namespace TextMeshDOTS
                 return false;
             }
         }
-        internal static bool GetFaceInfo(Blob blob, string fontAssetPath, bool useSystemFont, Language language, NativeList<FontReference> fontReferences)
+        internal static void ValidateStreamingAssetPath(string fontAssetPath, ref FontReference fontReference)
+        {            
+            var pathIndex = fontAssetPath.IndexOf("Assets/StreamingAssets");
+            if (pathIndex == -1)
+            {
+                Debug.LogError($"Unless you want to use System Fonts, the source font asset MUST be in \"Assets/StreamingAssets\"! Font cannot be loaded in a build from current location \"{fontAssetPath}\"");
+                fontReference.streamingAssetLocationValidated = false;
+                fontReference.filePath = Path.GetFullPath(fontAssetPath);
+            }
+            else
+            {
+                fontReference.streamingAssetLocationValidated = true;
+                fontReference.filePath = fontAssetPath.Substring(pathIndex + 23);
+            }            
+        }
+        internal static bool GetFaceInfo(Blob blob, Language language, FontReference validatedFontReference, NativeList<FontReference> fontReferences)
         {
             for (int i = 0, ii = blob.FaceCount; i < ii; i++)
             {
                 var face = new Face(blob, i);
                 var fontReference = new FontReference();
-                if (useSystemFont)
-                {
-                    fontReference.isSystemFont = true;
-                    fontReference.filePath = fontAssetPath;
-                }
-                else
-                {
-                    fontReference.isSystemFont = false;
-                    var pathIndex = fontAssetPath.IndexOf("Assets/StreamingAssets");
-                    if (pathIndex == -1)
-                    {
-                        Debug.LogError($"Unless you want to use System Fonts, the source font asset MUST be in \"Assets/StreamingAssets\"! Font cannot be loaded in a build from current location \"{fontAssetPath}\"");
-                        fontReference.filePath = Path.GetFullPath(fontAssetPath);
-                    }
-                    else
-                    {
-                        fontReference.streamingAssetLocationValidated = true;
-                        fontReference.filePath = fontAssetPath.Substring(pathIndex + 23);
-                    }
-                }
+                fontReference.filePath = validatedFontReference.filePath;
+                fontReference.isSystemFont = validatedFontReference.isSystemFont;
+                fontReference.streamingAssetLocationValidated = validatedFontReference.streamingAssetLocationValidated;
 
                 fontReference.faceIndexInFile = i;
                 fontReference.fontFamily = face.GetName(NameID.FONT_FAMILY, language);
@@ -67,9 +72,9 @@ namespace TextMeshDOTS
 
                 if (!fontReferences.Contains(fontReference))
                     fontReferences.Add(fontReference);
-                else if(!useSystemFont)
+                else if(!validatedFontReference.isSystemFont)
                     Debug.LogWarning($"font {fontReference.fontFamily} {fontReference.fontSubFamily} (system font? {fontReference.isSystemFont}) was previously added to the list of fonts");
-                
+
                 face.Dispose();
                 font.Dispose();
             }

@@ -1,8 +1,10 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using TextMeshDOTS.Authoring;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
+
 
 namespace TextMeshDOTS
 {
@@ -44,3 +46,4 @@ namespace TextMeshDOTS
         }
     }    
 }
+#endif

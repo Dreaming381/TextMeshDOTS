@@ -9,7 +9,11 @@ namespace TextMeshDOTS.HarfBuzz
 {
     internal static unsafe class Harfbuzz
     {
+#if UNITY_IOS        
+        private const string HarfBuzz = "__Internal"; //requiered to load static library
+#else
         private const string HarfBuzz = "harfbuzz";
+#endif
         private const CallingConvention CallConvention = CallingConvention.Cdecl;
 
         #region draw

@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using TextMeshDOTS.Authoring;
 using UnityEditor;
@@ -93,3 +94,4 @@ namespace TextMeshDOTS
         }
     }
 }
+#endif

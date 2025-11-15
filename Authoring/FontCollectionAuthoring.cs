@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using TextMeshDOTS;
 using TextMeshDOTS.Authoring;
 using Unity.Collections;
@@ -16,7 +17,7 @@ namespace TextmeshDOTS
     {
         public override void Bake(FontCollectionAuthoring authoring)
         {
-            int fontCount = 0;
+            int fontCount;
             if (authoring.fontCollectionAsset == null || (fontCount = authoring.fontCollectionAsset.fontReferences.Count) == 0)
                 return;
 
@@ -32,3 +33,4 @@ namespace TextmeshDOTS
         }        
     }
 }
+#endif

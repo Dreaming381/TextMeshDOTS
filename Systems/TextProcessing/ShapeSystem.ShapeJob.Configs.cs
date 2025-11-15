@@ -156,13 +156,31 @@ namespace TextMeshDOTS
                     m_fontWidthStack.Clear();
                     m_fontWidthStack.Add(m_fontWidth);
 
-                    m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                    var defaultFaceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                    if(defaultFaceIndex == -1)
+                    {
+                        //fontTable does not contain a font of this family,
+                        //so switch default font family to the family at faceIndex 0,
+                        //leave everything else the same (weight, width etc), and search matching faceIndex
+                        //Debug.Log($"Could not find FontAssetRef: {FontAssetRef}");
+                        defaultFaceIndex = 0;
+                        var defaultFontAssetRef = fontTable.fontAssetRefs[defaultFaceIndex];
+                        m_fontFamilyHash = defaultFontAssetRef.familyHash;
+                        defaultFaceIndex = fontTable.GetFaceIndex(FontAssetRef);
+
+                        //var face = fontTable.faces[defaultFaceIndex];
+                        //var language = Language.English();
+                        //Debug.Log($"set default FontAssetRef to {FontAssetRef} ({face.GetName(NameID.FONT_FAMILY, language)} {face.GetName(NameID.FONT_SUBFAMILY, language)})");
+                    }
+                    m_faceIndex = defaultFaceIndex == -1 ? m_faceIndex : defaultFaceIndex;
+                    
                     if (fontTable.faces[m_faceIndex].HasVarData)
                         fontTable.GetNamedVariationLookup(FontAssetRef, out m_namedVariationIndex);
                 }
 
                 public void Update(ref XMLTag tag, ref FontTable fontTable, ref CalliString calliStringRaw)
                 {
+                    int newFaceIndex;
                     switch (tag.tagType)
                     {
                         case TagType.Italic:
@@ -171,7 +189,8 @@ namespace TextMeshDOTS
                             else
                                 m_isItalic = false;
 
-                            m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            newFaceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            m_faceIndex = newFaceIndex == -1 ? m_faceIndex : newFaceIndex;
                             if (fontTable.faces[m_faceIndex].HasVarData)
                                 fontTable.GetNamedVariationLookup(FontAssetRef, out m_namedVariationIndex);
                             return;
@@ -184,7 +203,8 @@ namespace TextMeshDOTS
                             else
                                 m_fontWeight = m_fontWeightStack.RemoveExceptRoot();
 
-                            m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            newFaceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            m_faceIndex = newFaceIndex == -1 ? m_faceIndex : newFaceIndex;
                             if (fontTable.faces[m_faceIndex].HasVarData)
                                 fontTable.GetNamedVariationLookup(FontAssetRef, out m_namedVariationIndex);
                             return;
@@ -197,7 +217,8 @@ namespace TextMeshDOTS
                             else
                                 m_fontWeight = m_fontWeightStack.RemoveExceptRoot();
 
-                            m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            newFaceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            m_faceIndex = newFaceIndex == -1 ? m_faceIndex : newFaceIndex;
                             if (fontTable.faces[m_faceIndex].HasVarData)
                                 fontTable.GetNamedVariationLookup(FontAssetRef, out m_namedVariationIndex);
                             return;
@@ -210,7 +231,8 @@ namespace TextMeshDOTS
                             else
                                 m_fontWidth = m_fontWidthStack.RemoveExceptRoot();
 
-                            m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            newFaceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                            m_faceIndex = newFaceIndex == -1 ? m_faceIndex : newFaceIndex;
                             if (fontTable.faces[m_faceIndex].HasVarData)
                                 fontTable.GetNamedVariationLookup(FontAssetRef, out m_namedVariationIndex);
                             return;
@@ -229,7 +251,8 @@ namespace TextMeshDOTS
                                     m_fontFamilyHashStack.Add(m_fontFamilyHash);
                                 }
 
-                                m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                                newFaceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                                m_faceIndex = newFaceIndex == -1 ? m_faceIndex : newFaceIndex;
                                 if (fontTable.faces[m_faceIndex].HasVarData)
                                     fontTable.GetNamedVariationLookup(FontAssetRef, out m_namedVariationIndex);
                                 return;
@@ -238,7 +261,8 @@ namespace TextMeshDOTS
                             {
                                 m_fontFamilyHash = m_fontFamilyHashStack.RemoveExceptRoot();
 
-                                m_faceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                                newFaceIndex = fontTable.GetFaceIndex(FontAssetRef);
+                                m_faceIndex = newFaceIndex == -1 ? m_faceIndex : newFaceIndex;
                                 if (fontTable.faces[m_faceIndex].HasVarData)
                                     fontTable.GetNamedVariationLookup(FontAssetRef, out m_namedVariationIndex);
                             }

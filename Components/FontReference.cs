@@ -9,7 +9,7 @@ namespace TextMeshDOTS
     [InternalBufferCapacity(0)]
     public struct FontReference : IEquatable<FontReference>, IBufferElementData
     {
-        public FixedString128Bytes filePath; //should use FixedString512Bytes, but custom Inspector cannot display string then
+        public FixedString512Bytes filePath;
         public bool streamingAssetLocationValidated;
         public bool isSystemFont;
         public int faceIndexInFile; 

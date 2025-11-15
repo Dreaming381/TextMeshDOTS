@@ -107,11 +107,12 @@ namespace TextMeshDOTS
                 //loading rules: https://www.high-logic.com/fontcreator/manual15/fonttype.html
                 if (!TryGetSystemFontReference(fontReference, out FontReference systemFontReference))
                 {
-                    Debug.Log($"Could not find system font {fontReference.fontFamily} {fontReference.fontSubFamily}");
+                    //Debug.Log($"Could not find system font {fontReference.fontFamily} {fontReference.fontSubFamily}");
                     return;
                 }
-                fontAssetPath = systemFontReference.filePath.ToString();
-                
+                //Debug.Log($"Found system font {systemFontReference.fontFamily} {systemFontReference.fontSubFamily} {systemFontReference.filePath}");
+                fontAssetPath = systemFontReference.filePath.ToString();                
+
             }
             else
             {
@@ -122,11 +123,12 @@ namespace TextMeshDOTS
 
                 if (!File.Exists(fontAssetPath))
                 {
-                    //Debug.Log($"Could not find font in {fontPath}");
+                    //Debug.Log($"Could not find font in {fontAssetPath}");
                     return;
                 }
             }
 
+            //Debug.Log($"Load {fontReference.fontFamily} {fontReference.fontSubFamily} {File.Exists(fontAssetPath)}");
             blob = new Blob(fontAssetPath);
             blob.MakeImmutable();//is this neccessary considering we dispose the blob in next instruction?
 
@@ -134,7 +136,7 @@ namespace TextMeshDOTS
             // while file is open, load them all to avoid opening file again
             var tempFontReferences = new NativeList<FontReference>(blob.FaceCount, Allocator.Temp);
             var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
-            TextHelper.GetFaceInfo(blob, fontAssetPath, fontReference.isSystemFont, language, tempFontReferences);
+            TextHelper.GetFaceInfo(blob, language, fontReference, tempFontReferences);
 
             for (int i = 0, ii = tempFontReferences.Length; i < ii; i++)
             {
@@ -190,7 +192,7 @@ namespace TextMeshDOTS
                                     case AxisTag.SLANT:
                                         variableFontAssetRef.slant = coord; break;
                                 }
-                                //Debug.Log($"Add FontAssetRef for variation axis: {axisInfo.axisTag} {face.GetName(axisInfo.nameID, language)}, value = {coord}");
+                                //Debug.Log($"Add FontAssetRef {tempFontAssetRef} for variation axis: {axisInfo.axisTag} {face.GetName(axisInfo.nameID, language)}, value = {coord}");
                             }
                             fontTable.fontAssetRefToNamedVariationIndexMap.Add(variableFontAssetRef, k);
                         }                        

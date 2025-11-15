@@ -1,10 +1,6 @@
 using System;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
-using UnityEngine;
-using UnityEngine.LightTransport;
-using static log4net.Appender.ColoredConsoleAppender;
 
 namespace TextMeshDOTS.HarfBuzz
 {

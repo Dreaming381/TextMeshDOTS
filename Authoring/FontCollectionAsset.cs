@@ -1,6 +1,6 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
-using System.IO;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using UnityEditor;
@@ -10,7 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace TextMeshDOTS.Authoring
 {
-#if UNITY_EDITOR
     [CreateAssetMenu(fileName = "FontCollectionAsset", menuName = "TextMeshDOTS/Font Collection Asset")]
     public class FontCollectionAsset : ScriptableObject
     {
@@ -64,5 +63,5 @@ namespace TextMeshDOTS.Authoring
             EditorUtility.SetDirty(this);
         }
     }
-#endif
 }
+#endif

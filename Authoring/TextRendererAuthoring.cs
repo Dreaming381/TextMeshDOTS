@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -61,7 +62,6 @@ namespace TextMeshDOTS.Authoring
 
             var entity = GetEntity(TransformUsageFlags.Renderable);
             AddComponent<TextShaderIndex>(entity);
-            var fontItem = authoring.fontCollectionAsset.fontReferences[0];
             AddBuffer<XMLTag>(entity);
             AddBuffer<GlyphOTF>(entity);
             AddBuffer<RenderGlyph>(entity);
@@ -88,3 +88,4 @@ namespace TextMeshDOTS.Authoring
         } 
     }    
 }
+#endif

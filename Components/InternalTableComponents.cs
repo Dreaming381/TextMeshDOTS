@@ -84,7 +84,7 @@ namespace TextMeshDOTS
                 if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash)
                     return fontAssetRefToFaceIndexMap[fontAssetRefs[i]];                
             }
-            //Debug.Log($"Requested font not found");
+            //Debug.Log($"Requested font {desiredFontAssetRef} not found");
             return -1;
         }
 
