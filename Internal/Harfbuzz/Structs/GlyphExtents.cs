@@ -28,7 +28,7 @@ namespace TextMeshDOTS
 
         public override string ToString()
         {
-            return $"x_bearing {x_bearing} y_bearing {y_bearing} width {width} height {height}";
+            return $"Bearing (x,y) {x_bearing}, {y_bearing} width {width} height {height}";
         }
     }    
 }

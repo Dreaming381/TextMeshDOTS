@@ -63,7 +63,7 @@ internal class RenderTest : MonoBehaviour
         Buffer buffer = default;
         if (!renderGlyphID)
         {
-            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+            var language = Language.English;
             buffer = new Buffer(Direction.LTR, Script.LATIN, language);
             //buffer.AddText("😉");
             buffer.AddText(character);
@@ -99,7 +99,7 @@ internal class RenderTest : MonoBehaviour
         BBox clipRect;
         if (!renderGlyphID)
         {
-            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+            var language = Language.English;
             buffer = new Buffer(Direction.LTR, Script.LATIN, language);
             buffer.AddText(character);
             font.Shape(buffer);

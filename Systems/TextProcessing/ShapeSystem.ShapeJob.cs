@@ -53,7 +53,7 @@ namespace TextMeshDOTS
                 var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
                 var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
 
-                var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+                var language = Language.English;
                 //var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
                 var segmentProperties = new SegmentProperties(Direction.LTR, Script.LATIN, language);
                 var buffer = new Buffer(true);
@@ -223,12 +223,12 @@ namespace TextMeshDOTS
 
                 var samplingSize = FontTextureSize.Normal.GetSamplingSize();
                 font.SetScale(samplingSize, samplingSize);
-                
-                //if(face.HasVarData)
-                //    Debug.Log($"namedVariationIndex: {namedVariationIndex} {face.GetName(NameID.FONT_FAMILY, Language.English())}, {face.GetName(face.GetNamedInstanceSubFamilyNameID(namedVariationIndex), Language.English())}");
+
+                //Debug.Log($"shape {text} {startIndex} {length}");
+                //if (face.HasVarData)
+                //    Debug.Log($"namedVariationIndex: {namedVariationIndex} {face.GetName(NameID.FONT_FAMILY, Language.English)}, {face.GetName(face.GetNamedInstanceSubFamilyNameID(namedVariationIndex), Language.English)}");
                 //else
-                //    Debug.Log($"faceIndex: {faceIndex} {face.GetName(NameID.FONT_FAMILY, Language.English())}, {face.GetName(NameID.FONT_SUBFAMILY, Language.English())}");
-                //Debug.Log($"{text} {startIndex} {length}");
+                //    Debug.Log($"faceIndex: {faceIndex} {face.GetName(NameID.FONT_FAMILY, Language.English)}, {face.GetName(NameID.FONT_SUBFAMILY, Language.English)}");
 
                 //if (!shapePlanCache.TryGetValue(fontAssetRef, out var shapePlan))
                 //{                        

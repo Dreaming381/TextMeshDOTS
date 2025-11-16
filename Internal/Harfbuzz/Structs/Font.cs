@@ -35,15 +35,14 @@ namespace TextMeshDOTS.HarfBuzz
         /// </summary>
         public void UpdateMetaData()
         {
-            this.GetBaseline(Direction.LTR, Script.LATIN, out baseLine);
+            this.GetBaseline(Direction.LTR, Script.LATIN, Language.English, out baseLine);
             this.GetFontExtentsForDirection(Direction.LTR, out fontExtents);
             this.GetMetrics(MetricTag.CAP_HEIGHT, out capHeight);
             this.GetMetrics(MetricTag.X_HEIGHT, out xHeight);
 
             // get width of space -->TO-DO: need to find an easier way to do this !!!
             // Why is this not accessible via a metric tag such as MetricTag.X_WIDTH?
-            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
-            var buffer = new Buffer(Direction.LTR, Script.LATIN, language);
+            var buffer = new Buffer(Direction.LTR, Script.LATIN, Language.English);
             buffer.ContentType = ContentType.UNICODE;
             buffer.Add(0x20, 0);
             this.Shape(buffer);
@@ -114,9 +113,9 @@ namespace TextMeshDOTS.HarfBuzz
         {
             Harfbuzz.hb_font_get_extents_for_direction(ptr, direction, out fontExtents);
         }
-        public void GetBaseline(Direction direction, Script script, out int baseline)
+        public void GetBaseline(Direction direction, Script script, Language language, out int baseline)
         {
-            Harfbuzz.hb_ot_layout_get_baseline(ptr, LayoutBaselineTag.ROMAN, direction, script, Harfbuzz.HB_TAG('A', 'P', 'P', 'H'), out baseline);
+            Harfbuzz.hb_ot_layout_get_baseline(ptr, LayoutBaselineTag.ROMAN, direction, script, language, out baseline);
         }
 
         public void SetVariation(AxisTag axisTag, float value)

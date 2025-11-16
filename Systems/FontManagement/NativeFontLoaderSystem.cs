@@ -135,7 +135,7 @@ namespace TextMeshDOTS
             // in case font file is a collection font, chances are that none of the faces have been loaded yet
             // while file is open, load them all to avoid opening file again
             var tempFontReferences = new NativeList<FontReference>(blob.FaceCount, Allocator.Temp);
-            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+            var language = Language.English;
             TextHelper.GetFaceInfo(blob, language, fontReference, tempFontReferences);
 
             for (int i = 0, ii = tempFontReferences.Length; i < ii; i++)
@@ -223,7 +223,7 @@ namespace TextMeshDOTS
 
             public void Execute()
             {
-                var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+                var language = Language.English;
                 for (int i = 0, ii = systemFonts.Length; i < ii; i++)
                     TextHelper.GetFontInfo(systemFonts[i].ToString(), true, language, fontReferences);
             }

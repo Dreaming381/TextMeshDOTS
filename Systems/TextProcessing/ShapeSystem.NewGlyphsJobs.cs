@@ -1,3 +1,4 @@
+using TextMeshDOTS.HarfBuzz;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -83,6 +84,7 @@ namespace TextMeshDOTS
                     font.SetScale(samplingSize, samplingSize);
                     initialized = true;
                     lastFont = font;
+                    lastKey = missingGlyph;
                 }
 
                 // performance watchout:  hb_font_get_glyph_extents is a very costly function.

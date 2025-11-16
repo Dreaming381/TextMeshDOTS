@@ -47,5 +47,9 @@ namespace TextMeshDOTS
         public int yAdvance;
         public int xOffset;
         public int yOffset;
+        public override string ToString()
+        {
+            return $"Advance (x,y): {xAdvance}, {yAdvance}  Offset (x,y): {xOffset}, {yOffset}";
+        }
     }
 }

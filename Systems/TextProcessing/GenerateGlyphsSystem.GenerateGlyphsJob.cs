@@ -181,6 +181,11 @@ namespace TextMeshDOTS
                     characters.GotoByteIndex(richTextOffset + cluster);
                     currentRune = characters.Current;
 
+                    //if (currentFace.HasVarData)
+                    //    Debug.Log($"char: {(char)currentRune.value} glyphIndex {glyphEntry.key.glyphIndex} cliprect {glyphEntry.ClipRect} glyphOTF {glyphOTF} namedVariationIndex: {currentFont.currentVariableProfileIndex} {currentFace.GetName(NameID.FONT_FAMILY, Language.English)}, {currentFace.GetName(currentFace.GetNamedInstanceSubFamilyNameID(currentFont.currentVariableProfileIndex), Language.English)}");
+                    //else
+                    //    Debug.Log($"char: {(char)currentRune.value} glyphIndex {glyphEntry.key.glyphIndex} cliprect {glyphEntry.ClipRect} glyphOTF {glyphOTF} faceIndex: {currentFaceIndex} ({currentFace.GetName(NameID.FONT_FAMILY, Language.English)}, {currentFace.GetName(NameID.FONT_SUBFAMILY, Language.English)})");
+
                     if (isFirstLine)
                         topAnchor = GetTopAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale, topAnchor);
                     bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale, bottomAnchor);

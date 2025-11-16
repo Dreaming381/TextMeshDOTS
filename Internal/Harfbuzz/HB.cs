@@ -222,7 +222,7 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern bool hb_font_is_immutable(IntPtr font);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
-        internal static extern bool hb_ot_layout_get_baseline(IntPtr font, LayoutBaselineTag baseline_tag, Direction direction, Script script_tag, uint language_tag, out int coord);
+        internal static extern bool hb_ot_layout_get_baseline(IntPtr font, LayoutBaselineTag baseline_tag, Direction direction, Script script_tag, Language language, out int coord);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_font_get_glyph_advance_for_direction(IntPtr font, uint glyph, Direction direction, out int x, out int y);
 

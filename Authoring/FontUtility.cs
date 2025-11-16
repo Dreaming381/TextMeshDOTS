@@ -50,7 +50,7 @@ namespace TextMeshDOTS.Authoring
                 var font = new Font(face);
 
                 //fetch name of fontFamily and subFamily, generate hash code from that used to lookup this font
-                var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+                var language = Language.English;
 
                 fontFamily = face.GetName(NameID.FONT_FAMILY, language).ToString();
                 fontSubFamily = face.GetName(NameID.FONT_SUBFAMILY, language).ToString();

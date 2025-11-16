@@ -28,7 +28,7 @@ namespace TextMeshDOTS.Authoring
                 this.fontReferences.Clear();          
 
             var tempFontReferences = new NativeList<FontReference>(streamingAssetFonts.Count + systemFonts.Count, Allocator.Temp);
-            var language = new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
+            var language = Language.English;
             
             for (int i = 0, ii = systemFonts.Count; i < ii; i++)
             {

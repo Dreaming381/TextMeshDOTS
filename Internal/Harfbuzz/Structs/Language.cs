@@ -22,10 +22,7 @@ namespace TextMeshDOTS.HarfBuzz
         {
             ptr = Harfbuzz.hb_ot_tag_to_language(tag);
         }
-        static public Language English()
-        {
-            return new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
-        }
+        static public Language English => new Language(Harfbuzz.HB_TAG('E', 'N', 'G', ' '));
         public override string ToString()
         {
             string result;
