@@ -1,11 +1,11 @@
 # TextMeshDOTS
 
-TextMeshDOTS renders world space text similar to TextMeshPro. Its is a standalone text package for DOTS, 
+TextMeshDOTS renders world space text similar to TextMeshPro. It is a standalone text package for DOTS, 
 forked from Dreaming381's [Latios Framework/Calligraphics](https://github.com/Dreaming381/Latios-Framework/tree/master/Calligraphics). 
 ![plot](./TextMeshDOTS.png)
 
 <b>Font Support</b> Powered by [Harfbuzz](https://harfbuzz.github.io/), TextMeshDOTS is currently able to load 
-TrueType fonts, TrueType Collection fonts, and OpenType fonts. Fonts can either be included as an asset, or searched 
+regular and variable TrueType and OpenType fonts, as well as TrueType Collection fonts. Fonts can either be included as an asset, or searched 
 at runtime among the system fonts available on a given target platform (Windows, Linux, MacOS etc). Selection of font 
 family members ([variants](https://learn.microsoft.com/en-us/typography/opentype/spec/otvaroverview)) that differ 
 in properties such as regular/italic, font weight (normal, bold, thin, etc), font width (normal, condensed, expanded etc), 
@@ -33,11 +33,11 @@ for rendering.
 
 <b>Font Resource Management</b> Prior to version 0.9.0, TextMeshDOTS used 
 for each font a static atlas textures, borrowed from the Unity `TextCore` `FontAsset`. As of version 0.9.0, TextMeshDOTS 
-generated all required glyph data and font textures dynamically using the [Harfbuzz](https://harfbuzz.github.io/) 
+generates all required glyph data and font textures dynamically using the [Harfbuzz](https://harfbuzz.github.io/) 
 library, was however limited to one 4k atlas texture per font. Handling multiple fonts remained challening, 
-which prompted Dreaming381 to vastly simplify resource management by storing all SDF and color bitmaps in ONE 
-global atlas texture array. Dreaming381 also implemented a GPU resident represetation of the glyph vertex data 
-and the global texture array. These GPU resident buffer are automaticaly and incrementally updated when changes occur. 
+which prompted Dreaming381 to vastly simplify resource management by storing all SDF and color bitmaps in two 
+global atlas texture arrays. Dreaming381 also implemented a GPU resident representation of the glyph vertex data. 
+These GPU resident buffer are automatically and incrementally updated when changes occur. 
 
 <b>Shader Support</b>
 The included HDRP and URP ShaderGraph shader are based on a number of custom function nodes to provide modularity for 
@@ -54,14 +54,14 @@ just one entity and one material.
      a given project. The generated assets are placed into `Resources` folder. The `BackendMesh` is expected     
     at that location by the runtime, while the generated materials can be placed anywhere you like.
 
-  - **Prepare fonts** Please note that pretty much any font such as "Arial" in Windows actually constists of 
+  - **Prepare fonts** Please note that pretty much any font such as "Arial" in Windows actually consists of 
    multiple font files (e.g. one for `regular`, one for `bold`, one for `italic`, one for `bold italic`. There 
-   can be many more to provide variations of font width (regular, condensed, expanded etc), font weigth 
+   can be many more to provide variations of font width (regular, condensed, expanded etc), font weight 
    (bold, sembibold, black etc), italic, different optical design sizes etc. You need all of these files 
    to enable TextMeshDOTS to automatically select the right font when you apply different `FontStyles`. 
    In TrueType Collection fonts, a number of pre-defined variants are stored within just one `ttc` file. 
    Variable fonts are simular to TrueType Collection fonts, however the files are much smaller because the 
-   variants are mathematically defined via parameters influencing the shape of the bezier curves. TextMeshDOTS 
+   variants are mathematically defined via parameters influencing the shape of the Bezier curves. TextMeshDOTS 
    can simulate bold and italic when those variants are missing, however this should be the exception and not the default.
       1. To use `System Fonts` (fonts that can be found on target device at runtime), drop the `ttf` `ttc` and `otf` files 
          into a folder of your choice under `Assets`. Click on the font asset and uncheck `Include Font Data` to ensure
@@ -94,7 +94,7 @@ just one entity and one material.
       \<i> (italic). The \<font\> rich text tag can be used to explicitly select a different font family.
       
   - **Optional use of Gradients**:
-    - Add empty `GameObject`, and `TextColorGradient` component on it
+    - Add empty `GameObject`, and `TextColorGradient` component to it
     - Add any number  gradients to the list. You need to name the gradients to be able to select them 
       via the richtext tag \<gradient=name of gradient\> For horizontal gradients, specify at least the top left & right color. 
       For vertical gradients at least top & bottom-left. Otherwise specify all corner.
@@ -142,6 +142,10 @@ Alpha values are specified via \<alpha=#FF\>.
   - \<sub\> and \<sup\>  are currently implemented using the font opentype feature. For most 
     fonts, this only works  for digits and a few characters. One could simulate this via scaling & offsetting, 
    but this comes at the cost of glyphs that are optically too thin
+  - Fonts where glyphs are defined via outlines are rendered broken due to a mathematical limitation of
+    the current SDS renderer as explained by the authors of the (industry standard) rendering library
+    [Freetype](https://github.com/freetype/freetype/blob/5d4e649f740c675426fbe4cdaffc53ee2a4cb954/include/freetype/ftdriver.h#L870C8-L875C15).
+    To fix this, we may need implement generating the SDF from a rasterized bitmap instead of doing so directly from the outlines. 
 
 
 ## Special Thanks to the original authors and contributors
