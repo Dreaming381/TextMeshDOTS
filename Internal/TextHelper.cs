@@ -8,12 +8,17 @@ namespace TextMeshDOTS
 {
     internal static class TextHelper
     {
-        internal static bool GetFontInfo(string fontAssetPath, bool useSystemFont, Language language, NativeList<FontReference> fontReferences)
-        {
+        internal static bool IsValidFont(string fontAssetPath)
+        {            
             bool isTrueType = fontAssetPath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
             bool isTrueTypeCollection = fontAssetPath.EndsWith("ttc", System.StringComparison.OrdinalIgnoreCase);
             bool isOpentype = fontAssetPath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
-            if (isOpentype || isTrueType || isTrueTypeCollection)
+            return isOpentype || isTrueType || isTrueTypeCollection;
+        }
+        internal static bool GetFontInfo(string fontAssetPath, bool useSystemFont, Language language, NativeList<FontReference> fontReferences)
+        {
+
+            if (IsValidFont(fontAssetPath))
             {
                 var blob = new Blob(fontAssetPath);
                 FontReference baseFontReference = new FontReference();

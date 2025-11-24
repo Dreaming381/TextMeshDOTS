@@ -71,7 +71,7 @@ namespace TextMeshDOTS.HarfBuzz
         }
         public override string ToString()
         {
-            return $"x {min.x} y {min.y} width {width} height {height}";
+            return $"x {min.x:F1} y {min.y:F1} width {width:F1} height {height:F1}";
             //return $"min {min} max {max}";
         }
     }

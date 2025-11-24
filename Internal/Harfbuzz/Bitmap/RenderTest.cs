@@ -6,13 +6,14 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
+using Unity.Mathematics;
 
 
 internal class RenderTest : MonoBehaviour
 {
     static readonly ProfilerMarker marker = new ProfilerMarker("Rasterize");
     public Object sourceFont;
-    [SerializeField] private string fontPath;
+    [SerializeField] private string fontAssetPath;
     public string letter;
     public uint glyphID;
     public int atlasWidth = 1024;
@@ -36,16 +37,18 @@ internal class RenderTest : MonoBehaviour
     void Start()
     {
 #if UNITY_EDITOR
-        fontPath = AssetDatabase.GetAssetPath(sourceFont);
+        fontAssetPath = AssetDatabase.GetAssetPath(sourceFont);
 #endif
-        if (fontPath == null)
+        if (fontAssetPath == null)
             return;
+
         drawFunctions = new DrawDelegates(true);
         paintFunctions = new PaintDelegates(true);
-        LoadFont(fontPath, samplingPointSize);
+        if (!LoadFont(fontAssetPath, samplingPointSize))
+            return;
 
-        //DrawTest(letter, glyphID);
-        PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
+        DrawTest(letter, glyphID);
+        //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
     }
 
     void Update()
@@ -80,8 +83,11 @@ internal class RenderTest : MonoBehaviour
 
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-        SDF.SDFGenerateSubDivision(orientation, ref drawData, textureData, atlasRect, padding, atlasWidth, atlasHeight,padding);
-        //SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, atlasRect, padding, atlasWidth, atlasHeight, padding);
+        //SDF.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, atlasRect, padding, atlasWidth, atlasHeight,padding);
+        marker.Begin();
+        for(int i = 0; i<10; i++)
+            SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
+        marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();
         meshRenderer.material.mainTexture = texture2D;
@@ -157,18 +163,15 @@ internal class RenderTest : MonoBehaviour
         face.Dispose();
         blob.Dispose();
     }
-    void LoadFont(string filePath, int samplingPointSize)
+    bool LoadFont(string fontAssetPath, int samplingPointSize)
     {
-        
-        bool isTrueType = filePath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
-        bool isOpentype = filePath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
-        if (!(isOpentype || isTrueType))
+        if (!TextHelper.IsValidFont(fontAssetPath))
         { 
             Debug.LogWarning("Ensure you only have files ending with 'ttf' or 'otf' (case insensitiv) in font list");
-            return;
+            return false;
         }
 
-        blob = new Blob(filePath);
+        blob = new Blob(fontAssetPath);
         face = new Face(blob, 0);
         font = new Font(face);
 
@@ -181,5 +184,6 @@ internal class RenderTest : MonoBehaviour
         //Debug.Log($"Has Color Bitmap? {face.HasColorBitmap()}");
 
         orientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
+        return true;
     }
 }

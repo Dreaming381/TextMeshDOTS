@@ -239,10 +239,11 @@ namespace TextMeshDOTS
                 {
                     font.DrawGlyph(glyphEntry.key.glyphIndex, drawDelegates, ref drawData);
                     var sdf8TextureSlice = GetSdf8TextureSlice(glyphEntry.z);
+                    var paddedAtlasRect = glyphEntry.PaddedAtlasRect;
                     SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
                                                              ref drawData,
-                                                             sdf8TextureSlice,
-                                                             glyphEntry.PaddedAtlasRect,
+                                                             ref sdf8TextureSlice,
+                                                             ref paddedAtlasRect,
                                                              glyphEntry.padding,
                                                              kTextureDimension,
                                                              kTextureDimension,
