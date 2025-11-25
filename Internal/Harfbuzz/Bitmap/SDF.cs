@@ -24,7 +24,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 return false;
 
             bool flip_y = true;
-            bool flip_sign = false;
+            int overloadSign = 0;
             var offset = drawData.glyphRect.min - padding;
             var atlasRectWidth = atlasRect.width;
             var atlasRectHeight = atlasRect.height;
@@ -32,9 +32,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             float sp_sq = math.select(spread, spread * spread, SDFCommon.USE_SQUARED_DISTANCES);
 
             var size = atlasRectWidth * atlasRectHeight;
-            var distances = new NativeArray<float>(size, Allocator.Temp);
-            var crosses = new NativeArray<float>(size, Allocator.Temp);
-            var signs = new NativeArray<int>(size, Allocator.Temp);
+            var targetDistances = new NativeArray<float>(size, Allocator.Temp);
+            var targetCrosses = new NativeArray<float>(size, Allocator.Temp);
+            var targetSigns = new NativeArray<int>(size, Allocator.Temp);
 
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
@@ -69,24 +69,20 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                             gridPoint.x = x + 0.5f; // use the center of any pixel to be rendered within cbox 
                             SDFEdgeGetMinDistance(edge, gridPoint, out distance, out cross, out sign);
-
                             sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                             var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                            SDFCommon.GetTarget_DistanceCrossSign(distances, crosses, signs, index, out float targetDistance, out float targetCross, out int targetSign);
+                            SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
                             SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                            SDFCommon.SetTarget_DistanceCrossSign(distances, crosses, signs, index, ref validDistance, ref validCross, ref validSign);
+                            SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                         }
                     }
                 }
             }
-            if (flip_sign)
-                SDFCommon.FinalPassFlipSign(distances, crosses, signs, spread, atlasRect, atlasWidth, atlasHeight);
-            else
-                SDFCommon.FinalPass(distances, crosses, signs, spread, atlasRect, atlasWidth, atlasHeight);
+            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
 
-            SDFCommon.GetAlphaTexture(distances, buffer, spread, atlasRect, atlasWidth, atlasHeight);
-
+            //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
+            SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
             return true;
         }
 
@@ -103,7 +99,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 return false;
 
             bool flip_y = true;
-            bool flip_sign = false;
+            int overloadSign = 0;
             var offset = drawData.glyphRect.min - padding;
             var atlasRectWidth = atlasRect.width;
             var atlasRectHeight = atlasRect.height;
@@ -111,9 +107,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             float sp_sq = math.select(spread, spread * spread, SDFCommon.USE_SQUARED_DISTANCES);
 
             var size = atlasRectWidth * atlasRectHeight;
-            var distances = new NativeArray<float>(size, Allocator.Temp);
-            var crosses = new NativeArray<float>(size, Allocator.Temp);
-            var signs = new NativeArray<int>(size, Allocator.Temp);
+            var targetDistances = new NativeArray<float>(size, Allocator.Temp);
+            var targetCrosses = new NativeArray<float>(size, Allocator.Temp);
+            var targetSigns = new NativeArray<int>(size, Allocator.Temp);
 
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
@@ -149,19 +145,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                             distance = math.select(distance, math.sqrt(distance), SDFCommon.USE_SQUARED_DISTANCES);
 
                             var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                            SDFCommon.GetTarget_DistanceCrossSign(distances, crosses, signs, index, out float targetDistance, out float targetCross, out int targetSign);
+                            SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
                             SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                            SDFCommon.SetTarget_DistanceCrossSign(distances, crosses, signs, index, ref validDistance, ref validCross, ref validSign);
+                            SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                         }
                     }
                 }
             }
-            if (flip_sign)
-                SDFCommon.FinalPassFlipSign(distances, crosses, signs, spread, atlasRect, atlasWidth, atlasHeight);
-            else
-                SDFCommon.FinalPass(distances, crosses, signs, spread, atlasRect, atlasWidth, atlasHeight);
+            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
 
-            SDFCommon.GetAlphaTexture(distances, buffer, spread, atlasRect, atlasWidth, atlasHeight);
+            //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
+            SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
             return true;
         }
 
@@ -178,7 +172,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 return false;
 
             bool flip_y = true;
-            bool flip_sign = false;
+            int overloadSign = 0;
             var offset = drawData.glyphRect.min - padding;
             var atlasRectWidth = atlasRect.width;
             var atlasRectHeight = atlasRect.height;
@@ -186,9 +180,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             float sp_sq = math.select(spread, spread * spread, SDFCommon.USE_SQUARED_DISTANCES);
 
             var size = atlasRectWidth * atlasRectHeight;
-            var distances = new NativeArray<float>(size, Allocator.Temp);
-            var crosses = new NativeArray<float>(size, Allocator.Temp);
-            var signs = new NativeArray<int>(size, Allocator.Temp);
+            var targetDistances = new NativeArray<float>(size, Allocator.Temp);
+            var targetCrosses = new NativeArray<float>(size, Allocator.Temp);
+            var targetSigns = new NativeArray<int>(size, Allocator.Temp);
 
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
@@ -260,9 +254,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                                SDFCommon.GetTarget_DistanceCrossSign(distances, crosses, signs, index, out float targetDistance, out float targetCross, out int targetSign);
+                                SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
                                 SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                                SDFCommon.SetTarget_DistanceCrossSign(distances, crosses, signs, index, ref validDistance, ref validCross, ref validSign);
+                                SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                             }
                         }
                         else
@@ -298,9 +292,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                                SDFCommon.GetTarget_DistanceCrossSign(distances, crosses, signs, index, out float targetDistance, out float targetCross, out int targetSign);
+                                SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
                                 SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                                SDFCommon.SetTarget_DistanceCrossSign(distances, crosses, signs, index, ref validDistance, ref validCross, ref validSign);
+                                SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                             }
 
                             //fill all pixel having an edge endpoint as their closest point
@@ -316,9 +310,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                                SDFCommon.GetTarget_DistanceCrossSign(distances, crosses, signs, index, out float targetDistance, out float targetCross, out int targetSign);
+                                SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
                                 SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                                SDFCommon.SetTarget_DistanceCrossSign(distances, crosses, signs, index, ref validDistance, ref validCross, ref validSign);
+                                SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                             }
 
                             //calculate distance of all points to the right of the projected right endPoint 
@@ -333,20 +327,18 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                                SDFCommon.GetTarget_DistanceCrossSign(distances, crosses, signs, index, out float targetDistance, out float targetCross, out int targetSign);
+                                SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
                                 SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                                SDFCommon.SetTarget_DistanceCrossSign(distances, crosses, signs, index, ref validDistance, ref validCross, ref validSign);
+                                SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                             }
                         }                        
                     }
                 }
             }
-            if (flip_sign)
-                SDFCommon.FinalPassFlipSign(distances, crosses, signs, spread, atlasRect, atlasWidth, atlasHeight);
-            else
-                SDFCommon.FinalPass(distances, crosses, signs, spread, atlasRect, atlasWidth, atlasHeight);
+            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
 
-            SDFCommon.GetAlphaTexture(distances, buffer, spread, atlasRect, atlasWidth, atlasHeight);
+            //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
+            SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
             return true;
         }
 

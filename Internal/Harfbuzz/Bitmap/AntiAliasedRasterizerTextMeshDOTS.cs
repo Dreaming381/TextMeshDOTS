@@ -12,7 +12,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
     {
         public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool invert = false) where T : IPattern
         {
-            PaintUtils.rasterizeMarker.Begin();
+            PaintUtils.rasterizeCOLRMarker.Begin();
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
             var width = clipRect.intWidth;
@@ -141,12 +141,12 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     }
                 }
             }
-            PaintUtils.rasterizeMarker.End();
+            PaintUtils.rasterizeCOLRMarker.End();
         }
 
         public static void RasterizeAndBlend<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, PaintCompositeMode mode, BBox clipRect, bool invert = false) where T : IPattern
         {
-            PaintUtils.rasterizeMarker.Begin();
+            PaintUtils.rasterizeCOLRMarker.Begin();
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
             var width = clipRect.intWidth;
@@ -275,7 +275,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     }
                 }
             }
-            PaintUtils.rasterizeMarker.End();
+            PaintUtils.rasterizeCOLRMarker.End();
         }
     }
 }

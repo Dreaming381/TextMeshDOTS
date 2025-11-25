@@ -35,7 +35,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
     {
         public static void Rasterize<T>(ref DrawData drawData, NativeArray<ColorARGB> textureData, T pattern, BBox clipRect, bool invert = false) where T : IPattern
         {
-            PaintUtils.rasterizeMarker.Begin();
+            PaintUtils.rasterizeCOLRMarker.Begin();
 
             var sdfEdges = drawData.edges;
             var contourIDs = drawData.contourIDs;
@@ -69,7 +69,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
             edges.Sort(default(EdgeYMaxComparer));
             RasterizeSortedEdges(textureData, pattern, clipRect.intWidth, clipRect.intHeight, edges, (int)clipRect.min.x, (int)clipRect.min.y);
-            PaintUtils.rasterizeMarker.End();
+            PaintUtils.rasterizeCOLRMarker.End();
         }
 
 

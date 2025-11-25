@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TextCore;
@@ -13,8 +14,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
     internal static class SDFCommon
     {
         public static void ClearArray<T>(this NativeArray<T> array) where T : unmanaged
-        {
-            
+        {            
             unsafe
             {
                 UnsafeUtility.MemClear(array.GetUnsafePtr(), (long)array.Length * sizeof(T));
@@ -38,33 +38,32 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         public const int MAX_NEWTON_STEPS = 4;
         public const int MAX_NEWTON_DIVISIONS = 4;
         public const int FT_TRIG_SAFE_MSB = 29;
-        public const int OUTSIDE_SIGN = -1;
 
         public static void FinalPass(
                     NativeArray<float> distances,
-                    NativeArray<float> crosses,
                     NativeArray<int> signs,
-                    int spread, GlyphRect atlastRect, int atlasWidth, int atlasHeight)
+                    int spread, int atlasRectWidth, int atlasRectHeight,  int overLoadSign)
         {
-            // final pass
-            var atlasX = atlastRect.x;
-            var atlasY = atlastRect.y;
-            var atlasRectWidth = atlastRect.width;
-            var atlasRectHeight = atlastRect.height;
             for (int row = 0; row < atlasRectHeight; row++)
             {
                 /* We assume the starting pixel of each row is outside. */
-                int current_sign = OUTSIDE_SIGN;
+                int current_sign = -1;
+                if (overLoadSign != 0)
+                    current_sign = math.select(1, -1, overLoadSign < 0);
 
                 for (int column = 0; column < atlasRectWidth; column++)
                 {
                     var sourceIndex = atlasRectWidth * row + column;
 
                     var distance = distances[sourceIndex];
-                    var cross = crosses[sourceIndex];
                     var sign = signs[sourceIndex];
+
+                    // if the pixel is not set
+                    // its shortest distance is more than `spread`
+                    // so just clamp distance to spread...
+                    // sign can be ignore as it is not needed anymore after this method)
                     if (sign == 0)
-                        distance = spread;
+                        distance = spread;                    
                     else
                         current_sign = sign;
 
@@ -74,61 +73,16 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     // determine if distance is inside(+) or outside(-)
                     distance *= current_sign;
 
-                    distances[sourceIndex] = distance;
-                    crosses[sourceIndex] = cross;
-                    signs[sourceIndex] = sign;
+                    distances[sourceIndex] = distance; //store the final distance which will be used by GetAlphaTexture
                 }
             }
         }
-        public static void FinalPassFlipSign(
-            NativeArray<float> distances,
-            NativeArray<float> crosses,
-            NativeArray<int> signs,
-            int spread, GlyphRect atlastRect, int atlasWidth, int atlasHeight)
-        {
-            // final pass
-            var atlasX = atlastRect.x;
-            var atlasY = atlastRect.y;
-            var atlasRectWidth = atlastRect.width;
-            var atlasRectHeight = atlastRect.height;
-            for (int row = 0; row < atlasRectHeight; row++)
-            {
-                /* We assume the starting pixel of each row is outside. */
-                int current_sign = OUTSIDE_SIGN;
-
-                for (int column = 0; column < atlasRectWidth; column++)
-                {
-                    var sourceIndex = atlasRectWidth * row + column;
-
-                    var distance = distances[sourceIndex];
-                    var cross = crosses[sourceIndex];
-                    var sign = signs[sourceIndex];
-                    if (sign == 0)
-                        distance = spread;
-                    else
-                        current_sign = sign;
-
-                    /* clamp the values */
-                    distance = math.select(distance, spread, distance > spread);
-
-                    // determine if distance is inside(+) or outside(-)
-                    distance *= -current_sign;
-
-                    distances[sourceIndex] = distance;
-                    crosses[sourceIndex] = cross;
-                    signs[sourceIndex] = sign;
-                }
-            }
-        }
+        
         public static void GetAlphaTexture(
             NativeArray<float> distances,
             NativeArray<byte> buffer, 
-            int spread, GlyphRect atlastRect, int atlasWidth, int atlasHeight)
+            int spread, int atlasX, int atlasY, int atlasRectWidth, int atlasRectHeight, int atlasWidth, int atlasHeight)
         {
-            var atlasX = atlastRect.x;
-            var atlasY = atlastRect.y;
-            var atlasRectWidth = atlastRect.width;
-            var atlasRectHeight = atlastRect.height;
             var scaleTo8Bit = 256 / (spread * 2);
             //var scaleTo16Bit = 65536 / (spread * 2);
             for (int row = 0; row < atlasRectHeight; row++)
@@ -155,8 +109,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         {
             //Debug.Log($"{sourceContourOrientation}");
             if (sourceContourOrientation == PolyOrientation.CW)
-            {
-                
+            {                
                 for (int i = 0, ii = sourceDistances.Length; i < ii; i++)
                 {
                     var condition = sourceDistances[i] > destinationDistances[i];
@@ -170,17 +123,13 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 for (int i = 0, ii = sourceDistances.Length; i < ii; i++)
                 {
                     var condition = sourceDistances[i] < destinationDistances[i];
-                    var dist1 = math.select(destinationDistances[i], sourceDistances[i], condition);
-                    var cross1 = math.select(destinationCrosses[i], sourceCrosses[i], condition);
-                    var sign1 = math.select(destinationSigns[i], sourceSigns[i], condition);
-
-                    var condition2 = sourceSigns[i] == 0;
-                    destinationDistances[i] = math.select(dist1, destinationDistances[i], condition2);
-                    destinationCrosses[i] = math.select(cross1, destinationCrosses[i], condition2);
-                    destinationSigns[i] = math.select(sign1, destinationSigns[i], condition2);
+                    destinationDistances[i] = math.select(destinationDistances[i], sourceDistances[i], condition);
+                    destinationCrosses[i] = math.select(destinationCrosses[i], sourceCrosses[i], condition);
+                    destinationSigns[i] = math.select(destinationSigns[i], sourceSigns[i], condition);
                 }
             }
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetTarget_DistanceCrossSign(
             NativeArray<float> distances,
             NativeArray<float> crosses,
@@ -191,6 +140,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             targetCross = new float4(crosses[index], crosses[index + 1], crosses[index + 2], crosses[index + 3]);
             targetSign = new int4(signs[index], signs[index + 1], signs[index + 2], signs[index + 3]);
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetTarget_DistanceCrossSign(
             NativeArray<float> distances,
             NativeArray<float> crosses,
@@ -201,6 +151,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             targetCross = crosses[index];
             targetSign = signs[index];
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetTarget_DistanceCrossSign(
             NativeArray<float> distances,
             NativeArray<float> crosses,
@@ -222,6 +173,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             signs[index + 2] = validSign[2];
             signs[index + 3] = validSign[3];
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetTarget_DistanceCrossSign(
             NativeArray<float> distances,
             NativeArray<float> crosses,
@@ -232,6 +184,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             crosses[index] = validCross;
             signs[index] = validSign;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetValid_DistanceCrossSign(
                     ref float4 distance,
                     ref float4 cross,
@@ -271,6 +224,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             validCross = math.select(pixelNotSetCross, targetCross, condition);
             validSign = math.select(pixelNotSetSign, targetSign, condition);
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetValid_DistanceCrossSign(
             ref float distance,
             ref float cross,
@@ -311,6 +265,62 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             validSign = math.select(pixelNotSetSign, targetSign, condition);
         }
 
+        /// <summary> legacy method provides early out to skip many ops </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetValid_DistanceCrossSign_Legacy(
+            ref float4 distance,
+            ref float4 cross,
+            ref int4 sign,
+            ref float4 targetDistance,
+            ref float4 targetCross,
+            ref int4 targetSign,
+            float sp_sq,
+            out float4 validDistance,
+            out float4 validCross,
+            out int4 validSign
+            )
+        {
+            validDistance = targetDistance;
+            validCross = targetCross;
+            validSign = targetSign;
+            for (int i = 0; i < 4; i++)
+            {
+                if (distance[i] > sp_sq)
+                {
+                    validDistance[i] = targetDistance[i];
+                    validCross[i] = targetCross[i];
+                    validSign[i] = targetSign[i];
+                    continue;
+                }
+                if (targetSign[i] == 0) // check if the pixel is already set
+                {
+                    validDistance[i] = distance[i];
+                    validCross[i] = cross[i];
+                    validSign[i] = sign[i];
+                    continue;
+                }
+                else
+                {
+                    if (BezierMath.EqualsForLargeValues(targetDistance[i], distance[i]))
+                    {
+                        var condition = math.abs(cross[i]) > math.abs(targetCross[i]);
+                        validDistance[i] = math.select(targetDistance[i], distance[i], condition);
+                        validCross[i] = math.select(targetCross[i], cross[i], condition);
+                        validSign[i] = math.select(targetSign[i], sign[i], condition);
+                        continue;
+                    }
+                    else if (targetDistance[i] > distance[i])
+                    {
+                        validDistance[i] = distance[i];
+                        validCross[i] = cross[i];
+                        validSign[i] = sign[i];
+                        continue;
+                    }
+                }
+            }
+        }
+        /// <summary> legacy method provides early out to skip many ops </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetValid_DistanceCrossSign_Legacy(
             ref float distance,
             ref float cross,
@@ -485,6 +495,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             for (int i = 0, end = minDistances.Length; i < end; i++)
             {
                 writer.WriteLine($"{minDistances[i]}");
+            }
+            writer.WriteLine();
+            writer.Close();
+        }
+        public static void WriteSignsToFile(string path, in NativeArray<int> signs)
+        {
+            if (signs.Length == 0) return;
+            StreamWriter writer = new StreamWriter(path, false);
+            for (int i = 0, end = signs.Length; i < end; i++)
+            {
+                writer.WriteLine($"{signs[i]}");
             }
             writer.WriteLine();
             writer.Close();

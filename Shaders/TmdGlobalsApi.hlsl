@@ -67,41 +67,45 @@ void GetGlyph(uint glyphIndex, uint glyphStartIndex, uint glyphCount,
         arrayIndex = 0;
         glyphEntryId = 0;
         scale = 0;
-        reserved = 0u;
-        return;
+        reserved = 0u;        
     }
+    else
+    {
+    
 
-    uint baseAddress = (glyphStartIndex + glyphIndex) * 128;
-    uint4 load0_15 = _tmdGlyphs.Load4(baseAddress);
-    blPosition = asfloat(load0_15.xy);
-    brPosition = asfloat(load0_15.zw);
-    uint4 load16_31 = _tmdGlyphs.Load4(baseAddress + 16);
-    tlPosition = asfloat(load16_31.xy);
-    trPosition = asfloat(load16_31.zw);
+        uint baseAddress = (glyphStartIndex + glyphIndex) * 128;
+        uint4 load0_15 = _tmdGlyphs.Load4(baseAddress);
+        blPosition = asfloat(load0_15.xy);
+        brPosition = asfloat(load0_15.zw);
+        uint4 load16_31 = _tmdGlyphs.Load4(baseAddress + 16);
+        tlPosition = asfloat(load16_31.xy);
+        trPosition = asfloat(load16_31.zw);
 
-    uint4 load32_47 = _tmdGlyphs.Load4(baseAddress + 32);
-    blUVB = asfloat(load32_47.xy);
-    brUVB = asfloat(load32_47.zw);
-    uint4 load48_63 = _tmdGlyphs.Load4(baseAddress + 48);
-    tlUVB = asfloat(load48_63.xy);
-    trUVB = asfloat(load48_63.zw);
+        uint4 load32_47 = _tmdGlyphs.Load4(baseAddress + 32);
+        blUVB = asfloat(load32_47.xy);
+        brUVB = asfloat(load32_47.zw);
+        uint4 load48_63 = _tmdGlyphs.Load4(baseAddress + 48);
+        tlUVB = asfloat(load48_63.xy);
+        trUVB = asfloat(load48_63.zw);
 
-    uint4 load64_79 = _tmdGlyphs.Load4(baseAddress + 64);   //load half4 blColor and half4 brColor
-    blColor = UnpackHalfColor(load64_79.xy);                //convert blColor from half4 to float4
-    brColor = UnpackHalfColor(load64_79.zw);                //convert brColor from half4 to float4
-    uint4 load80_95 = _tmdGlyphs.Load4(baseAddress + 80);
-    tlColor = UnpackHalfColor(load80_95.xy);
-    trColor = UnpackHalfColor(load80_95.zw);
+        uint4 load64_79 = _tmdGlyphs.Load4(baseAddress + 64); //load half4 blColor and half4 brColor
+        blColor = UnpackHalfColor(load64_79.xy); //convert blColor from half4 to float4
+        brColor = UnpackHalfColor(load64_79.zw); //convert brColor from half4 to float4
+        uint4 load80_95 = _tmdGlyphs.Load4(baseAddress + 80);
+        tlColor = UnpackHalfColor(load80_95.xy);
+        trColor = UnpackHalfColor(load80_95.zw);
 
-    uint4 load96_111 = _tmdGlyphs.Load4(baseAddress + 96);
-    blUVA = asfloat(load96_111.xy);
-    trUVA = asfloat(load96_111.zw);
+        uint4 load96_111 = _tmdGlyphs.Load4(baseAddress + 96);
+        blUVA = asfloat(load96_111.xy);
+        trUVA = asfloat(load96_111.zw);
 
-    uint4 load112_127 = _tmdGlyphs.Load4(baseAddress + 112);
-    arrayIndex = asfloat(load112_127.x);
-    glyphEntryId = load112_127.y;
-    scale = asfloat(load112_127.z);
-    reserved = load112_127.w;
+        uint4 load112_127 = _tmdGlyphs.Load4(baseAddress + 112);
+        arrayIndex = asfloat(load112_127.x);
+        glyphEntryId = load112_127.y;
+        scale = asfloat(load112_127.z);
+        reserved = load112_127.w;
+    }
+    return;
 }
 
 // Corner order:  bl = 0, tl = 1, tr = 2, br = 3

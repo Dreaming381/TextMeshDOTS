@@ -6,7 +6,6 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
-using Unity.Mathematics;
 
 
 internal class RenderTest : MonoBehaviour
@@ -31,8 +30,6 @@ internal class RenderTest : MonoBehaviour
     Blob blob;
     Face face;
     Font font;
-    
-    int padding = 16;
 
     void Start()
     {
@@ -58,6 +55,7 @@ internal class RenderTest : MonoBehaviour
 
     void DrawTest(string character, uint glyphID)
     {
+        var padding = samplingPointSize / 6;
         var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.Alpha8, false);
         var textureData = texture2D.GetRawTextureData<byte>();
         for (int i = 0; i < textureData.Length; i++)
@@ -82,11 +80,11 @@ internal class RenderTest : MonoBehaviour
         var atlasRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
 
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
-        //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
+        BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, atlasRect, padding, atlasWidth, atlasHeight,padding);
         marker.Begin();
-        for(int i = 0; i<10; i++)
-            SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
+        //for(int i = 0; i<10; i++)
+            SDF_SPMD.SDFGenerateSubDivisionLineEdges_Overlap(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();

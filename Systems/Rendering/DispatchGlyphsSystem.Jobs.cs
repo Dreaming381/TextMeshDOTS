@@ -240,7 +240,7 @@ namespace TextMeshDOTS
                     font.DrawGlyph(glyphEntry.key.glyphIndex, drawDelegates, ref drawData);
                     var sdf8TextureSlice = GetSdf8TextureSlice(glyphEntry.z);
                     var paddedAtlasRect = glyphEntry.PaddedAtlasRect;
-                    SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
+                    SDF_SPMD.SDFGenerateSubDivisionLineEdges_Overlap(face.sdfOrientation,
                                                              ref drawData,
                                                              ref sdf8TextureSlice,
                                                              ref paddedAtlasRect,
