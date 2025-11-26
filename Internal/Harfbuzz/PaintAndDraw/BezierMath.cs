@@ -6,14 +6,15 @@ namespace TextMeshDOTS.HarfBuzz
 {
     internal static class BezierMath
     {
-        const float absolutTolerane = 0.000000001f;
+        public const float epsilon1   = 0.000002f; //next representable float at 1 is 1 +- 1.19*10^-7, so set epsilon a bit larger than that
+        public const float epsilon100 = 0.00001f;//next representable float at 100 is 100 +- 7.6*10^-6, so set epsilon a bit larger than that
         const float relativeTolerance = 32f / (1 << 16); //The epsilon distance  used for corner
 
         /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GenericEquals(float a, float b)
+        public static bool GenericEquals(float x, float y)
         {
-            return (math.abs(a - b) <= math.max(absolutTolerane, relativeTolerance * math.max(math.abs(a), math.abs(b))));
+            return math.abs(x - y) <= math.max(epsilon1, relativeTolerance * math.max(math.abs(x), math.abs(y)));
         }
         /// <summary>Relative tolerance comparison of x and y, fails values become small </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -23,9 +24,9 @@ namespace TextMeshDOTS.HarfBuzz
         }
         /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool EqualsForSmallValues(float x, float y)
+        public static bool EqualsForSmallValues(float x, float y, float tolerance)
         {
-            return (math.abs(x - y) <= absolutTolerane);
+            return (math.abs(x - y) <= tolerance);
         }
         /// <summary>Relative tolerance comparison of x and y, fails values become small </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -35,20 +36,11 @@ namespace TextMeshDOTS.HarfBuzz
         }
         /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool4 EqualsForSmallValues(float4 x, float4 y)
+        public static bool4 EqualsForSmallValues(float4 x, float4 y, float tolerance)
         {
-            return (math.abs(x - y) <= absolutTolerane);
+            return (math.abs(x - y) <= tolerance);
         }
 
-        /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
-        /// <param name="a">First vector</param>
-        /// <param name="b">Second vector</param>
-        /// <returns>The magnitude of the cross product</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float cross2D(float2 a, float2 b)
-        {
-            return (a.x * b.y) - (a.y * b.x);
-        }
 
         /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
         /// <param name="a">First vector</param>

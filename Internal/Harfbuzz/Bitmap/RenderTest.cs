@@ -7,7 +7,6 @@ using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
 
-
 internal class RenderTest : MonoBehaviour
 {
     static readonly ProfilerMarker marker = new ProfilerMarker("Rasterize");
@@ -80,11 +79,10 @@ internal class RenderTest : MonoBehaviour
         var atlasRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
 
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
-        BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-        //SDF.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, textureData, atlasRect, padding, atlasWidth, atlasHeight,padding);
+        //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
+        //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);
         marker.Begin();
-        //for(int i = 0; i<10; i++)
-            SDF_SPMD.SDFGenerateSubDivisionLineEdges_Overlap(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
+        SDF_SPMD.SDFGenerateSubDivisionLineEdges_Overlap(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();

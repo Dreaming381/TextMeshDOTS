@@ -215,23 +215,6 @@ namespace TextMeshDOTS
                     }
                 }
             }
-
-            //if (!fontTable.fontAssetRefToFaceIndexMap.ContainsKey(fontReference.fontAssetRef))
-            //{
-            //    var id = fontTable.fontAssetRefToFaceIndexMap.Count;
-            //    fontTable.fontAssetRefs.Add(fontReference.fontAssetRef);
-            //    fontTable.fontAssetRefToFaceIndexMap.Add(fontReference.fontAssetRef, id);
-            //    var face = new Face(blob.ptr, 0);
-            //    face.MakeImmutable();
-            //    fontTable.faces.Add(face);
-            //    for (int i = 0; i < fontTable.perThreadFontCaches.Length; i++)
-            //    {
-            //        var list = fontTable.perThreadFontCaches[i];
-            //        list.Add(default);
-            //        fontTable.perThreadFontCaches[i] = list;
-            //    }
-            //}
-
             //blob can be disposed here, face and font are disposed at world shutdown via FontTable.TryDispose 
             blob.Dispose();
         }

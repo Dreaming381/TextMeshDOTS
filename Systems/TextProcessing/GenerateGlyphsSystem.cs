@@ -1,7 +1,5 @@
-using TextMeshDOTS.Rendering;
 using Unity.Burst;
 using Unity.Entities;
-using TextMeshDOTS.HarfBuzz;
 
 namespace TextMeshDOTS
 {

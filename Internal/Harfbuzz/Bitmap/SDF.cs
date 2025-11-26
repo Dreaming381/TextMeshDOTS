@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.TextCore;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
@@ -15,8 +16,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         /// Converts a glyph into a SDF bitmap. While function accepts all kinds of edges found in font files
         /// (quadratic beziers, cubic beziers, lines), consider to generates lines before using this function for performance reasons
         /// </summary>
-        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect atlasRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
+        public static bool SDFGenerateSubDivision(SDFOrientation orientation, ref DrawData drawData, ref NativeArray<byte> buffer, ref GlyphRect atlasRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
         {
+            PaintUtils.rasterizeSDFMarker.Begin();
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
                 return false;
 
@@ -83,88 +85,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
             SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
+            PaintUtils.rasterizeSDFMarker.End();
             return true;
-        }
-
-        /// <summary>
-        /// Converts a glyph into a SDF bitmap. When using this function, ensure all bezier edges have been split into line edges first. Distance to lines is much less 
-        /// math compared to distance to bezier curves, so this approach is faster overall.
-        /// </summary>
-        public static bool SDFGenerateSubDivisionLineEdges(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect atlasRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
-        {
-            if(drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
-                return false;
-
-            if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
-                return false;
-
-            bool flip_y = true;
-            int overloadSign = 0;
-            var offset = drawData.glyphRect.min - padding;
-            var atlasRectWidth = atlasRect.width;
-            var atlasRectHeight = atlasRect.height;
-
-            float sp_sq = math.select(spread, spread * spread, SDFCommon.USE_SQUARED_DISTANCES);
-
-            var size = atlasRectWidth * atlasRectHeight;
-            var targetDistances = new NativeArray<float>(size, Allocator.Temp);
-            var targetCrosses = new NativeArray<float>(size, Allocator.Temp);
-            var targetSigns = new NativeArray<int>(size, Allocator.Temp);
-
-            var edges = drawData.edges;
-            var contourIDs = drawData.contourIDs;
-            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
-            {
-                int startID = contourIDs[contourID];
-                int nextStartID = contourIDs[contourID + 1];
-                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
-                {
-                    var edge = edges[edgeID];
-                    var p0 = edge.start_pos - offset;
-                    var p1 = edge.end_pos - offset;
-                    float ax = p0.x;
-                    float ay = p0.y;
-                    float bx = p1.x;
-                    float by = p1.y;
-                    var cbox = BezierMath.GetLineBBox(p0, p1);
-                    cbox.Expand(spread);
-                    float distance = default;
-                    float cross = default;
-                    int sign = default;
-
-                    /* now loop over the pixels in the control box. */
-                    for (int y = math.max((int)cbox.min.y, 0), yEnd = math.min((int)cbox.max.y, atlasRectHeight); y < yEnd; y++)
-                    {
-                        var gridPointy = y + 0.5f;     // use the center of any pixel to be rendered within cbox
-                        for (int x = math.max((int)cbox.min.x, 0), xEnd = math.min((int)cbox.max.x, atlasRectWidth); x < xEnd; x++)
-                        {
-                            var gridPointx = x + 0.5f; // use the center of any pixel to be rendered within cbox
-                            SDFCommon.GetMinDistanceLineToPoint(ax, ay, bx, by, gridPointx, gridPointy, out distance, out cross, out sign);
-
-                            sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
-                            distance = math.select(distance, math.sqrt(distance), SDFCommon.USE_SQUARED_DISTANCES);
-
-                            var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                            SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                            SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                            SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
-                        }
-                    }
-                }
-            }
-            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
-
-            //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
-            SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
-            return true;
-        }
+        }        
 
         /// <summary>
         /// Converts a glyph into a SDF bitmap. When using this function, ensure all bezier edges have been split into line edges first. 
         /// This version tries to avoid a lot of multiplications by interpolating edge y using the edge slope. Currently glitchy as not all edge cases work.
         /// </summary>
-        static bool SDFGenerateSubDivisionLineEdgesInterpolate(SDFOrientation orientation, ref DrawData drawData, NativeArray<byte> buffer, GlyphRect atlasRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
+        public static bool SDFGenerateSubDivisionLineEdgesInterpolate(SDFOrientation orientation, ref DrawData drawData, ref NativeArray<byte> buffer, ref GlyphRect atlasRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
         {
+            PaintUtils.rasterizeSDFMarker.Begin();
             if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
                 return false;
 
@@ -204,7 +135,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     
                     float2 gridPoint = default;
                     float t, tA, tB;
-                    float2 aScanIntersect, bScanIntersect, nearestPoint, aEdgeToScan, bEdgeToScan, nEdgeToScan;
+                    float2 aScanIntersect, bScanIntersect, aEdgeToScan, bEdgeToScan, nEdgeToScan;
+                    float pnx, pny;
                     float distance=default;
                     float cross = default;
                     int sign = default;
@@ -249,8 +181,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                     continue;
 
                                 gridPoint.x = x + 0.5f;
-                                nearestPoint = new float2(p0.x, y);
-                                GetDistBetweenPoints(nearestPoint - gridPoint, ab, false, out distance, out cross, out sign);
+                                pnx = p0.x;
+                                pny = y;
+                                GetDistBetweenPoints(pnx - gridPoint.x, pny - gridPoint.y, ab.x, ab.y, false, out distance, out cross, out sign);
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
@@ -279,16 +212,18 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 t = (x - aScanIntersect.x) / interpolateLength;
                                 if (p0.y == p1.y) //horizontal
                                 {
-                                    nearestPoint.x = math.lerp(p0.x, p1.x, t);
-                                    nearestPoint.y = p0.y;
+                                    pnx = math.lerp(p0.x, p1.x, t);
+                                    pny = p0.y;
                                 }
                                 else
                                 {
                                     nEdgeToScan = -math.lerp(aEdgeToScan, bEdgeToScan, t); //negate aEdgeToScan vector to give opposite direction ScanToaEdge vector
-                                    nearestPoint = gridPoint + nEdgeToScan;
+
+                                    pnx = gridPoint.x + nEdgeToScan.x;
+                                    pny = gridPoint.y + nEdgeToScan.y;
                                 }
 
-                                GetDistBetweenPoints(nearestPoint-gridPoint, ab, false, out distance, out cross, out sign);
+                                GetDistBetweenPoints(pnx - gridPoint.x, pny - gridPoint.y,  ab.x, ab.y, false, out distance, out cross, out sign);
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
@@ -306,7 +241,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                                 gridPoint.x = x + 0.5f;
 
-                                GetDistBetweenPoints(p0 - gridPoint, ab, true, out distance, out cross, out sign);
+                                GetDistBetweenPoints(p0.x - gridPoint.x, p0.y - gridPoint.y, ab.x, ab.y, true, out distance, out cross, out sign);
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
@@ -323,7 +258,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                                 gridPoint.x = x + 0.5f;                                
 
-                                GetDistBetweenPoints(p1-gridPoint, ab, true, out distance, out cross, out sign);
+                                GetDistBetweenPoints(p1.x -gridPoint.x, p1.y - gridPoint.y, ab.x, ab.y, true, out distance, out cross, out sign);
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
@@ -339,6 +274,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
             SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
+            PaintUtils.rasterizeSDFMarker.End();
             return true;
         }
 
@@ -426,14 +362,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var p2 = edge.control2;
             var p3 = edge.end_pos;
 
-            float ax = p0.x;
-            float ay = p0.y;
-            float bx = p1.x;
-            float by = p1.y;
             switch (edge.edge_type)
             {
                 case SDFEdgeType.LINE:
-                    SDFCommon.GetMinDistanceLineToPoint(ax, ay, bx, by, gridPoint.x, gridPoint.y, out distance, out cross, out sign);
+                    SDFCommon.GetMinDistanceLineToPoint(p0.x, p0.y, p3.x, p3.y, gridPoint.x, gridPoint.y, out distance, out cross, out sign);
                     break;
                 case SDFEdgeType.QUADRATIC:
                     GetMinDistanceQuadraticNewton(p0,p1,p3, gridPoint, out distance, out cross, out sign);
@@ -450,22 +382,19 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetDistBetweenPoints(float2 pn, float2 ab, bool isEndPoint, out float distance, out float cross, out int sign)
-        {
-            var pnLengthSq = math.lengthsq(pn);
-            cross = BezierMath.cross2D(pn, ab);
+        static void GetDistBetweenPoints(float pnx, float pny, float abx, float aby, bool isEndPoint, out float distance, out float cross, out int sign)
+        {            
+            var pnLengthSq = pnx * pnx + pny * pny;
+            var pnLength = math.sqrt(pnLengthSq);
+            cross = BezierMath.cross2D(pnx, pny, abx, aby);
 
-            sign = cross < 0 ? 1 : -1;
-            distance = SDFCommon.USE_SQUARED_DISTANCES ? pnLengthSq : math.sqrt(pnLengthSq);
-
-            //dist.sign = math.select(-1,1, cross < 0);
-            //dist.distance = math.select( math.sqrt(pnLengthSq), pnLengthSq, SDFCommon.USE_SQUARED_DISTANCES);
+            sign = math.select(-1, 1, cross < 0);
+            distance = math.select(pnLength, pnLengthSq, SDFCommon.USE_SQUARED_DISTANCES);
 
             if (Hint.Unlikely(isEndPoint))
             {
-                ab = math.normalize(ab);
-                pn = math.normalize(pn);
-                cross = BezierMath.cross2D(ab, pn);
+                var abLengthSq = abx * abx + aby * aby;
+                cross = SDFCommon.GetCross(abx, aby, pnx, pny, math.sqrt(abLengthSq), pnLength);
             }
             else
                 cross = 1;
@@ -517,16 +446,16 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             // assign values, determine the sign
             var nearestVector = nearest_point - point;
-            cross = BezierMath.cross2D(nearestVector, direction);
+            cross = BezierMath.cross2D(nearestVector.x, nearestVector.y, direction.x, direction.y);
             distance = min;
             sign = cross < 0 ? 1 : -1;
 
-            bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0) || BezierMath.EqualsForSmallValues(min_factor, 1);
+            bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0, BezierMath.epsilon100) || BezierMath.EqualsForSmallValues(min_factor, 1, BezierMath.epsilon100);
             if (Hint.Unlikely(nIsEndPoint))
             {
                 direction = math.normalize(direction);
                 nearestVector = math.normalize(nearestVector);
-                cross = BezierMath.cross2D(direction, nearestVector);
+                cross = BezierMath.cross2D(direction.x, direction.y, nearestVector.x, nearestVector.y);
             }
             else
                 cross = 1; // the two are perpendicular
@@ -578,21 +507,21 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         break;
                 }
             }
-            var direction = aA * 3 * min_factor_sq + bB * 2 * min_factor + cC;  // B'(t) = 3t^2 * A + 2t * B + C
+            var direction = 3 * min_factor_sq * aA + 2 * min_factor * bB + cC;  // B'(t) = 3t^2 * A + 2t * B + C
 
             // assign values, determine the sign
             var nearestVector = nearest_point - point;
-            cross = BezierMath.cross2D(nearestVector, direction);
+            cross = BezierMath.cross2D(nearestVector.x, nearestVector.y, direction.x, direction.y);
 
             distance = min;
             sign = cross < 0 ? 1 : -1;
-            bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0) || BezierMath.EqualsForSmallValues(min_factor, 1);
+            bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0, BezierMath.epsilon100) || BezierMath.EqualsForSmallValues(min_factor, 1, BezierMath.epsilon100);
             if (Hint.Unlikely(nIsEndPoint))
             {
                 //compute `cross` if not perpendicular
                 direction = math.normalize(direction);
                 nearestVector = math.normalize(nearestVector);
-                cross = BezierMath.cross2D(direction, nearestVector);
+                cross = BezierMath.cross2D(direction.x, direction.y, nearestVector.x, nearestVector.y);
             }
             else
                 cross = 1; // the two are perpendicular
