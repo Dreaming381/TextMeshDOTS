@@ -10,7 +10,8 @@
         "Unity.Burst",
         "Unity.Entities.Graphics",
         "Unity.Transforms",
-        "Unity.Scenes"
+        "Unity.Scenes",
+        "Clipper2AoS"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

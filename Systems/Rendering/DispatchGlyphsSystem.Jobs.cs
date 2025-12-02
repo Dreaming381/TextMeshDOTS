@@ -1,3 +1,4 @@
+using TextMeshDOTS.Clipper2AoS;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Burst;
@@ -240,7 +241,21 @@ namespace TextMeshDOTS
                     font.DrawGlyph(glyphEntry.key.glyphIndex, drawDelegates, ref drawData);
                     var sdf8TextureSlice = GetSdf8TextureSlice(glyphEntry.z);
                     var paddedAtlasRect = glyphEntry.PaddedAtlasRect;
-                    SDF_SPMD.SDFGenerateSubDivisionLineEdges_Overlap(face.sdfOrientation,
+
+                    // remove overlaps using Clipper
+                    // not needed for static postscript fonts which are not permitted to have overlaps
+                    if (face.sdfOrientation == SDFOrientation.TRUETYPE || face.HasVarData) 
+                    {                        
+                        // clipper always outputs polygon oriented CCW for outer contours and CW for holes,
+                        // which is the same as postscript convention:
+                        // Truetype: CW for outer contours, CCW for holes
+                        // Postscript: CCW for outer contours, CW for holes
+                        PaintUtils.removeOverlapsMarker.Begin();
+                        PolygonOperation.RemoveSelfIntersections(ref drawData, ClipType.Union, FillRule.NonZero);
+                        face.sdfOrientation = SDFOrientation.POSTSCRIPT;
+                        PaintUtils.removeOverlapsMarker.End();
+                    }
+                    SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
                                                              ref drawData,
                                                              ref sdf8TextureSlice,
                                                              ref paddedAtlasRect,

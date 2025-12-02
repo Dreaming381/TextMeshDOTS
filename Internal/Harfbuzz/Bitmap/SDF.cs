@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TextCore;
+using UnityEngine.UIElements;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
@@ -38,6 +39,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var targetCrosses = new NativeArray<float>(size, Allocator.Temp);
             var targetSigns = new NativeArray<int>(size, Allocator.Temp);
 
+            //Truetype: CW for outer contours, CCW for holes, so we want right of p0 to P1 to be filled (=negative sign), so have to flip sign
+            //Postscript: CCW for outer contours, CW for holes, so we want right of p0 to P1 to be filled (=positive sign)
+            int flipSign = orientation == SDFOrientation.FILL_RIGHT ? -1 : 1;
+
             var edges = drawData.edges;
             var contourIDs = drawData.contourIDs;
             for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
@@ -71,11 +76,13 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                             gridPoint.x = x + 0.5f; // use the center of any pixel to be rendered within cbox 
                             SDFEdgeGetMinDistance(edge, gridPoint, out distance, out cross, out sign);
-                            sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
+                            //sign is positive when gridPointx lies to the left of the vector from p0 to p1, so left will be filled
+                            //flip it if we want the right to be filled
+                            sign *= flipSign;
 
                             var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
                             SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                            SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
+                            SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
                             SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                         }
                     }
@@ -136,7 +143,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     float2 gridPoint = default;
                     float t, tA, tB;
                     float2 aScanIntersect, bScanIntersect, aEdgeToScan, bEdgeToScan, nEdgeToScan;
-                    float pnx, pny;
+                    float nx, ny; //nearest Point
                     float distance=default;
                     float cross = default;
                     int sign = default;
@@ -181,14 +188,14 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                     continue;
 
                                 gridPoint.x = x + 0.5f;
-                                pnx = p0.x;
-                                pny = y;
-                                GetDistBetweenPoints(pnx - gridPoint.x, pny - gridPoint.y, ab.x, ab.y, false, out distance, out cross, out sign);
+                                nx = p0.x;
+                                ny = y;
+                                GetDistBetweenPoints(ab.x, ab.y, nx, ny, gridPoint.x, gridPoint.y, false, out distance, out cross, out sign);
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
                                 SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                                SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
+                                SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
                                 SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                             }
                         }
@@ -212,23 +219,23 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                                 t = (x - aScanIntersect.x) / interpolateLength;
                                 if (p0.y == p1.y) //horizontal
                                 {
-                                    pnx = math.lerp(p0.x, p1.x, t);
-                                    pny = p0.y;
+                                    nx = math.lerp(p0.x, p1.x, t);
+                                    ny = p0.y;
                                 }
                                 else
                                 {
                                     nEdgeToScan = -math.lerp(aEdgeToScan, bEdgeToScan, t); //negate aEdgeToScan vector to give opposite direction ScanToaEdge vector
 
-                                    pnx = gridPoint.x + nEdgeToScan.x;
-                                    pny = gridPoint.y + nEdgeToScan.y;
+                                    nx = gridPoint.x + nEdgeToScan.x;
+                                    ny = gridPoint.y + nEdgeToScan.y;
                                 }
 
-                                GetDistBetweenPoints(pnx - gridPoint.x, pny - gridPoint.y,  ab.x, ab.y, false, out distance, out cross, out sign);
+                                GetDistBetweenPoints(ab.x, ab.y, nx, ny, gridPoint.x, gridPoint.y, false, out distance, out cross, out sign);
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
                                 SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                                SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
+                                SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
                                 SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                             }
 
@@ -241,12 +248,12 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                                 gridPoint.x = x + 0.5f;
 
-                                GetDistBetweenPoints(p0.x - gridPoint.x, p0.y - gridPoint.y, ab.x, ab.y, true, out distance, out cross, out sign);
+                                GetDistBetweenPoints(ab.x, ab.y, p0.x, p0.y, gridPoint.x, gridPoint.y, true, out distance, out cross, out sign);
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
                                 SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                                SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
+                                SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
                                 SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                             }
 
@@ -258,12 +265,12 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
                                 gridPoint.x = x + 0.5f;                                
 
-                                GetDistBetweenPoints(p1.x -gridPoint.x, p1.y - gridPoint.y, ab.x, ab.y, true, out distance, out cross, out sign);
+                                GetDistBetweenPoints(ab.x, ab.y, p1.x, p1.y, gridPoint.x, gridPoint.y, true, out distance, out cross, out sign);
                                 sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
 
                                 var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
                                 SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                                SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
+                                SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
                                 SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                             }
                         }                        
@@ -382,22 +389,35 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetDistBetweenPoints(float pnx, float pny, float abx, float aby, bool isEndPoint, out float distance, out float cross, out int sign)
-        {            
-            var pnLengthSq = pnx * pnx + pny * pny;
-            var pnLength = math.sqrt(pnLengthSq);
-            cross = BezierMath.cross2D(pnx, pny, abx, aby);
+        static void GetDistBetweenPoints(float abx, float aby, float nx, float ny, float px, float py, bool isEndPoint, out float distance, out float cross, out int sign)
+        {
+            var npx = px - nx;                          // Vector from nearest point to P
+            var npy = py - ny;                          // Vector from nearest point to P
 
-            sign = math.select(-1, 1, cross < 0);
-            distance = math.select(pnLength, pnLengthSq, SDFCommon.USE_SQUARED_DISTANCES);
+            var abLengthSq = abx * abx + aby * aby;     // squared distance from A to B 
+            var abLength = math.sqrt(abLengthSq);       // normalized distance from A to B 
+            var npLengthSq = npx * npx + npy * npy;     // squared distance from nearest point to P
+            var npLength = math.sqrt(npLengthSq);       // normalized distance from nearest point to P
 
-            if (Hint.Unlikely(isEndPoint))
-            {
-                var abLengthSq = abx * abx + aby * aby;
-                cross = SDFCommon.GetCross(abx, aby, pnx, pny, math.sqrt(abLengthSq), pnLength);
-            }
-            else
-                cross = 1;
+            var abxNorm = abx / abLength;
+            var abyNorm = aby / abLength;
+            var pnxNorm = npx / npLength;
+            var pnyNorm = npy / npLength;
+
+            // cross of normalized vector A--B with nP->P. 
+            // positive if the points A, B, and P occur in counterclockwise order
+            // (CCW, P lies to the left of the vector from A to B).
+            // negative if they occur in clockwise order
+            // (CW, P lies to the right of the vector from A to B).
+            // this result is identical with ORIENT2D
+            // the sign of the cross is used determine the sign of the distance
+            // so this here is the heart of the SDF renderer
+            // all sign flips to determine what is filled due to
+            // different definitions of polygons in Postscript and TrueType should be done elsewhere
+            cross = BezierMath.cross2D(abxNorm, abyNorm, pnxNorm, pnyNorm);
+            sign = math.select(1, -1, cross < 0);
+            distance = math.select(npLength, npLengthSq, SDFCommon.USE_SQUARED_DISTANCES);            
+            cross = math.select(1, cross, isEndPoint);
         }
         
         static bool GetMinDistanceQuadraticNewton(float2 p0, float2 p1, float2 p2, float2 point, out float distance, out float cross, out int sign)
@@ -448,7 +468,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var nearestVector = nearest_point - point;
             cross = BezierMath.cross2D(nearestVector.x, nearestVector.y, direction.x, direction.y);
             distance = min;
-            sign = cross < 0 ? 1 : -1;
+            sign = cross < 0 ? -1 : 1;
 
             bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0, BezierMath.epsilon100) || BezierMath.EqualsForSmallValues(min_factor, 1, BezierMath.epsilon100);
             if (Hint.Unlikely(nIsEndPoint))
@@ -514,7 +534,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             cross = BezierMath.cross2D(nearestVector.x, nearestVector.y, direction.x, direction.y);
 
             distance = min;
-            sign = cross < 0 ? 1 : -1;
+            sign = cross < 0 ? -1 : 1;
             bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0, BezierMath.epsilon100) || BezierMath.EqualsForSmallValues(min_factor, 1, BezierMath.epsilon100);
             if (Hint.Unlikely(nIsEndPoint))
             {

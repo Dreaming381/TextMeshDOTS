@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -90,32 +89,45 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             //get bitmap for first contour
             int startID = contourIDs[0];
             int nextStartID = contourIDs[0 + 1];
+
             GetDistancesForContour(edges, startID, nextStartID, targetDistances, targetCrosses, targetSigns, orientation, atlasRectHeight, atlasRectWidth, spread, sp_sq, flip_y, offset);
             SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
+            //SDFCommon.WriteMinDistancesToFile("Distance contour 0.txt", targetDistances);
+            //SDFCommon.WriteMinDistancesToFile("Crosses contour 0.txt", targetCrosses);
+            //SDFCommon.WriteSignsToFile("Signs contour 0.txt", targetSigns);
 
             //get bitmaps for all remaining contours, merge them all into 1 target (distance, cross, sign)
             for (int contourID = 1, end = contourIDs.Length - 1; contourID < end; contourID++) //for each remaining contour
             {
                 startID = contourIDs[contourID];
                 nextStartID = contourIDs[contourID + 1];
-                var contourOrientation = GetPolyOrientation(SignedArea(edges, startID, nextStartID));
+                var contourOrientation = SDFCommon.GetPolyOrientation(SDFCommon.SignedArea(edges, startID, nextStartID));
 
-                if (contourOrientation == PolyOrientation.CCW && orientation == SDFOrientation.FILL_RIGHT)
+                // flip the orientation in case of post-script fonts or clipper outputs to avoid issues in mergeSDF
+                // to-do: review if the final determination what is inside (negative distance) and outside (positive distance)
+                // based on contour orientation & difference in how Truetype and Postscript define "inside" can be done better
+                // in FinalPass or MergeSDF
+                if (orientation == SDFOrientation.POSTSCRIPT)
+                    contourOrientation = contourOrientation == SDFCommon.PolyOrientation.CW ? SDFCommon.PolyOrientation.CCW : SDFCommon.PolyOrientation.CW;
+
+                if (contourOrientation == SDFCommon.PolyOrientation.CCW && orientation == SDFOrientation.FILL_RIGHT)
                     overloadSign = 1;
-                else if (contourOrientation == PolyOrientation.CW && orientation == SDFOrientation.FILL_LEFT)
-                    overloadSign = 1;
+                else if (contourOrientation == SDFCommon.PolyOrientation.CW && orientation == SDFOrientation.FILL_LEFT)
+                    overloadSign = 0;
                 else
                     overloadSign = 0;
 
                 GetDistancesForContour(edges, startID, nextStartID, tempDistances, tempCrosses, tempSigns, orientation, atlasRectHeight, atlasRectWidth, spread, sp_sq, flip_y, offset);
                 SDFCommon.FinalPass(tempDistances, tempSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
-
+                //SDFCommon.WriteMinDistancesToFile($"Distance contour {contourID}.txt", tempDistances);
+                //SDFCommon.WriteMinDistancesToFile($"Crosses contour {contourID}.txt", tempCrosses);
+                //SDFCommon.WriteSignsToFile($"Signs contour {contourID}.txt", tempSigns);
                 SDFCommon.MergeSDF(targetDistances, targetCrosses, targetSigns, tempDistances, tempCrosses, tempSigns, sp_sq, contourOrientation);
                 tempDistances.ClearArray();
                 tempCrosses.ClearArray();
                 tempSigns.ClearArray();
             }
-
+            //SDFCommon.WriteMinDistancesToFile("Final merged Distances.txt", targetDistances);
             //convert final signed distance data (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
             SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
             PaintUtils.rasterizeSDFMarker.End();
@@ -137,7 +149,11 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             bool flip_y,
             float2 offset
             )
-        {
+        {                                
+            //Truetype: CW for outer contours, CCW for holes, so we want right of p0 to P1 to be filled (=negative sign), so have to flip sign
+            //Postscript: CCW for outer contours, CW for holes, so we want right of p0 to P1 to be filled (=positive sign)
+            int flipSign = orientation == SDFOrientation.FILL_RIGHT ? -1 : 1;
+
             for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
             {
                 var edge = edges[edgeID];
@@ -153,29 +169,34 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 int xLength = xEnd - xStartx;
                 int xEndSIMD = xEnd - (xLength % 4);
                 for (int y = math.max((int)cbox.min.y, 0); y < yEnd; y++)
-                {
-                    float4 gridPointy = y + 0.5f;     // use the center of any pixel to be rendered within cbox
+                {                    
                     int x = xStartx;
-                    //float4 ax = p0.x;
-                    //float4 ay = p0.y;
-                    //float4 bx = p1.x;
-                    //float4 by = p1.y;
 
+                    //float4 gridPointy = y + 0.5f;     // use the center of any pixel to be rendered within cbox
                     ////process vectorized. profiling suggests this actually makes this function slower (28ms SIMD vs 18ms scalar in build)
                     ////disable for now until reason is clear. 
                     //for (; x < xEndSIMD; x += 4)
                     //{
                     //    float4 gridPointx = new int4(x + 0, x + 1, x + 2, x + 3);
                     //    gridPointx += 0.5f; // use the center of any pixel to be rendered within cbox
-                    //    SDFCommon.GetMinDistanceLineToPoint(ax, ay, bx, by, gridPointx, gridPointy, out float4 distance, out float4 cross, out int4 sign);
-
-                    //    sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
-                    //    distance = math.select(distance, math.sqrt(distance), SDFCommon.USE_SQUARED_DISTANCES);
+                    //    SDFCommon.GetMinDistanceLineToPoint(p0.x, p0.y, p1.x, p1.y, gridPointx, gridPointy, out float4 distance, out float4 cross, out int4 sign);
+                    //    //sign is positive when gridPointx lies to the left of the vector from p0 to p1, so left will be filled
+                    //    //flip it if we want the right to be filled
+                    //    sign *= flipSign;
 
                     //    var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                    //    SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float4 targetDistance, out float4 targetCross, out int4 targetSign);
-                    //    SDFCommon.GetValid_DistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                    //    SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
+                    //    //SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float4 targetDistance, out float4 targetCross, out int4 targetSign);
+                    //    //SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
+                    //    //SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
+                    //    for (int i = 0; i < 4; i++)
+                    //    {
+                    //        var distanceF1 = distance[i];
+                    //        var crossF1 = cross[i];
+                    //        var signF1 = sign[i];
+                    //        SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index + i, out float targetDistance, out float targetCross, out int targetSign);
+                    //        SDFCommon.ValidateDistanceCrossSign_Legacy(ref distanceF1, ref crossF1, ref signF1, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
+                    //        SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index + i, ref validDistance, ref validCross, ref validSign);
+                    //    }
                     //}
                     //x -= 3;//next index: wind back -4, add 1
 
@@ -186,46 +207,17 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         float gridPointx = x;
                         gridPointx += 0.5f; // use the center of any pixel to be rendered within cbox
                         SDFCommon.GetMinDistanceLineToPoint(p0.x, p0.y, p1.x, p1.y, gridPointx, gridPointy_float, out float distance, out float cross, out int sign);
-
-                        sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
-                        distance = math.select(distance, math.sqrt(distance), SDFCommon.USE_SQUARED_DISTANCES);
+                        //sign is positive when gridPointx lies to the left of the vector from p0 to p1, so left will be filled
+                        //flip it if we want the right to be filled
+                        sign *= flipSign;
 
                         var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
                         SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                        SDFCommon.GetValid_DistanceCrossSign_Legacy(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
+                        SDFCommon.ValidateDistanceCrossSign_Legacy(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
                         SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
                     }
                 }
             }
-        }
-
-
-        /// /// <summary>
-        /// positive area = CCW, negative area = CW (works for closed and open polygon (identical result))
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SignedArea(NativeList<SDFEdge> data, int start, int end)
-        {
-            float area = default;
-            for (int i = start, prev = end - 1; i < end; prev = i++) //from (0, prev) until (end, prev)
-                area += (data[prev].start_pos.x - data[i].start_pos.x) * (data[i].start_pos.y + data[prev].start_pos.y);
-            return area * 0.5f;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static PolyOrientation GetPolyOrientation(double signedArea)
-        {
-            if (signedArea < 0)
-                return PolyOrientation.CW;
-            else if (signedArea > 0)
-                return PolyOrientation.CCW;
-            else
-                return PolyOrientation.None;
-        }
-        public enum PolyOrientation : byte
-        {
-            CW = 0,
-            CCW = 1,
-            None = 2,
         }
     }
 }

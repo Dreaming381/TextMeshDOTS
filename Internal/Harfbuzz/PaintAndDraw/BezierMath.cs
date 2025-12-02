@@ -7,7 +7,7 @@ namespace TextMeshDOTS.HarfBuzz
     internal static class BezierMath
     {
         public const float epsilon1   = 0.000002f; //next representable float at 1 is 1 +- 1.19*10^-7, so set epsilon a bit larger than that
-        public const float epsilon100 = 0.00001f;//next representable float at 100 is 100 +- 7.6*10^-6, so set epsilon a bit larger than that
+        public const float epsilon100 = 0.0001f;//next representable float at 100 is 100 +- 7.6*10^-6, so set epsilon a bit larger than that
         const float relativeTolerance = 32f / (1 << 16); //The epsilon distance  used for corner
 
         /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
@@ -57,6 +57,26 @@ namespace TextMeshDOTS.HarfBuzz
         /// <returns>The magnitude of the cross product</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float cross2D(float ax, float ay, float bx, float by)
+        {
+            return (ax * by) - (ay * bx);
+        }
+
+        /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
+        /// <param name="a">First vector</param>
+        /// <param name="b">Second vector</param>
+        /// <returns>The magnitude of the cross product</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double cross2D(double ax, double ay, double bx, double by)
+        {
+            return (ax * by) - (ay * bx);
+        }
+
+        /// <summary>Finds the magnitude of the cross product of two vectors (if we pretend they're in three dimensions) </summary>
+        /// <param name="a">First vector</param>
+        /// <param name="b">Second vector</param>
+        /// <returns>The magnitude of the cross product</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double4 cross2D(double4 ax, double4 ay, double4 bx, double4 by)
         {
             return (ax * by) - (ay * bx);
         }

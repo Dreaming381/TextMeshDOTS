@@ -6,6 +6,7 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 using UnityEditor;
 using Unity.Profiling;
 using TextMeshDOTS;
+using TextMeshDOTS.Clipper2AoS;
 
 internal class RenderTest : MonoBehaviour
 {
@@ -79,10 +80,19 @@ internal class RenderTest : MonoBehaviour
         var atlasRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
 
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
-        //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
-        //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);
+        //SDFCommon.WriteGlyphOutlineToFile($"Outline of glyph {character}.txt", drawData);
+
+        //simplify. Both clipper and polybol outputs the outer contour CCW, and the inner CW, which is postscript definition
+        orientation = SDFOrientation.POSTSCRIPT; //clipper always outputs the outer contour CCW, and the inner CW, which is postscript definition
+
+        var fillRule = FillRule.NonZero;
+        PolygonOperation.RemoveSelfIntersections(ref drawData, ClipType.Union, fillRule);
+        //SDFCommon.WriteGlyphOutlineToFile($"Clipper2 Union ({fillRule}) outline of glyph {character}.txt", drawData);
+
         marker.Begin();
-        SDF_SPMD.SDFGenerateSubDivisionLineEdges_Overlap(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
+        //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
+        //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
+        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();

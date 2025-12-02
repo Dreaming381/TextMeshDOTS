@@ -60,7 +60,7 @@ just one entity and one material.
    (bold, sembibold, black etc), italic, different optical design sizes etc. You need all of these files 
    to enable TextMeshDOTS to automatically select the right font when you apply different `FontStyles`. 
    In TrueType Collection fonts, a number of pre-defined variants are stored within just one `ttc` file. 
-   Variable fonts are simular to TrueType Collection fonts, however the files are much smaller because the 
+   Variable fonts are similar to TrueType Collection fonts, however the files are much smaller because the 
    variants are mathematically defined via parameters influencing the shape of the Bezier curves. TextMeshDOTS 
    can simulate bold and italic when those variants are missing, however this should be the exception and not the default.
       1. To use `System Fonts` (fonts that can be found on target device at runtime), drop the `ttf` `ttc` and `otf` files 
@@ -140,13 +140,9 @@ Alpha values are specified via \<alpha=#FF\>.
 # Known issues
   - \<aling\> works only for left, center and right (not justified and flush)
   - \<sub\> and \<sup\>  are currently implemented using the font opentype feature. For most 
-    fonts, this only works  for digits and a few characters. One could simulate this via scaling & offsetting, 
-   but this comes at the cost of glyphs that are optically too thin
-  - Fonts where glyphs are defined via outlines are rendered broken due to a mathematical limitation of
-    the current SDS renderer as explained by the authors of the (industry standard) rendering library
-    [Freetype](https://github.com/freetype/freetype/blob/5d4e649f740c675426fbe4cdaffc53ee2a4cb954/include/freetype/ftdriver.h#L870C8-L875C15).
-    To fix this, we may need implement generating the SDF from a rasterized bitmap instead of doing so directly from the outlines. 
-
+    fonts, this only works  for digits and a few characters. One could simulate \<sub\> and \<sup\> 
+    for all glyphs via scaling & offsetting, but this comes at the cost of glyphs that are optically too thin. 
+    The code for switching from one to the other is present and you could localy modify the package if you desire
 
 ## Special Thanks to the original authors and contributors
 

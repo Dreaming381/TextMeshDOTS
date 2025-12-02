@@ -32,6 +32,7 @@ namespace TextMeshDOTS.HarfBuzz
         //}
         public static readonly ProfilerMarker rasterizeCOLRMarker = new ProfilerMarker("Rasterize COLR");
         public static readonly ProfilerMarker rasterizeSDFMarker = new ProfilerMarker("Rasterize SDF");
+        public static readonly ProfilerMarker removeOverlapsMarker = new ProfilerMarker("Remove Overlaps");
         public static readonly ProfilerMarker blendMarker = new ProfilerMarker("Blend");
 
         public readonly static float2x3 AffineTransformIdentity = new float2x3 {

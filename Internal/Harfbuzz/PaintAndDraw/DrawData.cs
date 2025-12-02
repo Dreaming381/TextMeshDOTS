@@ -1,5 +1,8 @@
+using UnityEngine;
+using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.Transforms;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -29,6 +32,16 @@ namespace TextMeshDOTS.HarfBuzz
         {
             if (edges.IsCreated) edges.Dispose();
             if (contourIDs.IsCreated) contourIDs.Dispose();
+        }
+        public void PrintOrientations()
+        {
+            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each remaining contour
+            {
+                var startID = contourIDs[contourID];
+                var nextStartID = contourIDs[contourID + 1];
+                var contourOrientation = SDFCommon.GetPolyOrientation(SDFCommon.SignedArea(edges, startID, nextStartID));
+                Debug.Log($"{contourOrientation}");
+            }
         }
 
     }

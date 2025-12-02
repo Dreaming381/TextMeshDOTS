@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
-using static TextMeshDOTS.HarfBuzz.Bitmap.SDF_SPMD;
+using UnityEngine;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {   
@@ -38,14 +38,15 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         public static void FinalPass(
                     NativeArray<float> distances,
                     NativeArray<int> signs,
-                    int spread, int atlasRectWidth, int atlasRectHeight,  int overLoadSign)
+                    int spread, int atlasRectWidth, int atlasRectHeight, int overLoadSign)
         {
             for (int row = 0; row < atlasRectHeight; row++)
             {
                 /* We assume the starting pixel of each row is outside. */
                 int current_sign = -1;
                 if (overLoadSign != 0)
-                    current_sign = math.select(1, -1, overLoadSign < 0);
+                    current_sign = overLoadSign;
+                    //current_sign = math.select(1, -1, overLoadSign < 0);
 
                 for (int column = 0; column < atlasRectWidth; column++)
                 {
@@ -59,7 +60,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     // so just clamp distance to spread...
                     // sign can be ignore as it is not needed anymore after this method)
                     if (sign == 0)
-                        distance = spread;                    
+                        distance = spread;
                     else
                         current_sign = sign;
 
@@ -72,7 +73,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     distances[sourceIndex] = distance; //store the final distance which will be used by GetAlphaTexture
                 }
             }
-        }       
+        }        
 
         public static void GetAlphaTexture(
             NativeArray<float> distances,
@@ -94,7 +95,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 }
             }
         }
-
         public static void MergeSDF(
             NativeArray<float> destinationDistances,
             NativeArray<float> destinationCrosses,
@@ -106,7 +106,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         {
             //Debug.Log($"{sourceContourOrientation}");
             if (sourceContourOrientation == PolyOrientation.CW)
-            {                
+            {
                 for (int i = 0, ii = sourceDistances.Length; i < ii; i++)
                 {
                     var condition = sourceDistances[i] > destinationDistances[i];
@@ -120,13 +120,16 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 for (int i = 0, ii = sourceDistances.Length; i < ii; i++)
                 {
                     var condition = sourceDistances[i] < destinationDistances[i];
-                    destinationDistances[i] = math.select(destinationDistances[i], sourceDistances[i], condition);
-                    destinationCrosses[i] = math.select(destinationCrosses[i], sourceCrosses[i], condition);
-                    destinationSigns[i] = math.select(destinationSigns[i], sourceSigns[i], condition);
+                    //if (sourceSigns[i] != 0)//this creates an island inside "O", but not doing this cut's off bottom half of half "e" for SDFOrientation.POSTSCRIPT
+                    {
+                        destinationDistances[i] = math.select(destinationDistances[i], sourceDistances[i], condition);
+                        destinationCrosses[i] = math.select(destinationCrosses[i], sourceCrosses[i], condition);
+                        destinationSigns[i] = math.select(destinationSigns[i], sourceSigns[i], condition);
+                    }
                 }
             }
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetTarget_DistanceCrossSign(
             NativeArray<float> distances,
@@ -187,7 +190,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetValid_DistanceCrossSign(
+        public static void ValidateDistanceCrossSign(
                     ref float4 distance,
                     ref float4 cross,
                     ref int4 sign,
@@ -210,7 +213,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var greaterCross = math.select(targetCross, cross, condition);
             var greaterSign = math.select(targetSign, sign, condition);
 
-            condition = BezierMath.EqualsForSmallValues(targetDistance, distance, BezierMath.epsilon100); //distance cannot be larger than sp_sq (so <100), so this absolute test should be sufficiant
+            condition = BezierMath.EqualsForLargeValues(targetDistance, distance);
             var equalDistance = math.select(greaterDistance, resolverCornerDistance, condition);
             var equalCross = math.select(greaterCross, resolverCornerCross, condition);
             var equalSign = math.select(greaterSign, resolverCornerSign, condition);
@@ -227,7 +230,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             validSign = math.select(pixelNotSetSign, targetSign, condition);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetValid_DistanceCrossSign(
+        public static void ValidateDistanceCrossSign(
             ref float distance,
             ref float cross,
             ref int sign,
@@ -250,7 +253,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var greaterCross = math.select(targetCross, cross, condition);
             var greaterSign = math.select(targetSign, sign, condition);
 
-            condition = BezierMath.EqualsForSmallValues(targetDistance, distance, BezierMath.epsilon100); //distance cannot be larger than sp_sq (so <100), so this absolute test should be sufficiant
+            condition = BezierMath.EqualsForLargeValues(targetDistance, distance);
             var equalDistance = math.select(greaterDistance, resolverCornerDistance, condition);
             var equalCross = math.select(greaterCross, resolverCornerCross, condition);
             var equalSign = math.select(greaterSign, resolverCornerSign, condition);
@@ -269,7 +272,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
         /// <summary> legacy method provides early out to skip many ops </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetValid_DistanceCrossSign_Legacy(
+        public static void ValidateDistanceCrossSign_Legacy(
             ref float4 distance,
             ref float4 cross,
             ref int4 sign,
@@ -303,7 +306,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 }
                 else
                 {
-                    if (BezierMath.EqualsForSmallValues(targetDistance[i], distance[i], BezierMath.epsilon100)) //distance cannot be larger than sp_sq (so <100), so this absolute test should be sufficiant
+                    if (BezierMath.EqualsForLargeValues(targetDistance[i], distance[i]))
                     {
                         var condition = math.abs(cross[i]) > math.abs(targetCross[i]);
                         validDistance[i] = math.select(targetDistance[i], distance[i], condition);
@@ -323,7 +326,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         }
         /// <summary> legacy method provides early out to skip many ops </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetValid_DistanceCrossSign_Legacy(
+        public static void ValidateDistanceCrossSign_Legacy(
             ref float distance,
             ref float cross,
             ref int sign,
@@ -352,7 +355,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
             else
             {
-                if (BezierMath.EqualsForSmallValues(targetDistance, distance, BezierMath.epsilon100)) //distance cannot be larger than sp_sq (so <100), so this absolute test should be sufficiant
+                if (BezierMath.EqualsForLargeValues(targetDistance, distance))
                 {
                     var condition = math.abs(cross) > math.abs(targetCross);
                     validDistance = math.select(targetDistance, distance, condition);
@@ -372,6 +375,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             validCross = targetCross;
             validSign = targetSign;
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetMinDistanceLineToPoint(float4 ax, float4 ay, float4 bx, float4 by, float4 px, float4 py, out float4 distance, out float4 cross, out int4 sign)
         {
@@ -379,35 +383,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var aby = by - ay;                          // Vector from A to B
             var apx = px - ax;                          // Vector from A to P
             var apy = py - ay;                          // Vector from A to P
-            var abLengthSq = abx * abx + aby * aby;
-            var frac = abx * apx + aby * apy;
-            frac = math.max(frac, 0.0f);                // Check if P projection is over vectorAB 
-            frac = math.min(frac, abLengthSq);          // Check if P projection is over vectorAB 
-
-            frac = frac / abLengthSq;                   // The normalized "distance" from a to your closest point
-            var nx = ax + abx * frac;                   // nearest point on egde
-            var ny = ay + aby * frac;                   // nearest point on egde
-
-            var pnx = nx - px;
-            var pny = ny - py;
-            var pnLengthSq = pnx * pnx + pny * pny;
-            var pnLength = math.sqrt(pnLengthSq);
-            cross = BezierMath.cross2D(pnx, pny, abx, aby);
-
-            sign = math.select(-1, 1, cross < 0);
-            distance = math.select(pnLength, pnLengthSq, SDFCommon.USE_SQUARED_DISTANCES);
-
-            var nIsEndPoint = BezierMath.EqualsForSmallValues(frac, 0, BezierMath.epsilon1) | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1);
-            cross = math.select(1, GetCross(abx, aby, pnx, pny, math.sqrt(abLengthSq), pnLength), nIsEndPoint);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetMinDistanceLineToPoint(float ax, float ay, float bx, float by, float px, float py, out float distance, out float cross, out int sign)
-        {
-            var abx = bx - ax;                          // Vector from A to B
-            var aby = by - ay;                          // Vector from A to B
-            var apx = px - ax;                          // Vector from A to P
-            var apy = py - ay;                          // Vector from A to P
-            var abLengthSq = abx * abx + aby * aby;            
+            var abLengthSq = abx * abx + aby * aby;     // squared distance from A to B 
+            var abLength = math.sqrt(abLengthSq);       // normalized distance from A to B 
             var frac = abx * apx + aby * apy;
             frac = math.max(frac, 0.0f);                // Check if P projection is over vectorAB 
             frac = math.min(frac, abLengthSq);          // Check if P projection is over vectorAB 
@@ -416,37 +393,106 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             var nx = ax + abx * frac;                   // nearest point on egde
             var ny = ay + aby * frac;                   // nearest point on egde
 
-            var pnx = nx - px;
-            var pny = ny - py;
-            var pnLengthSq = pnx * pnx + pny * pny;            
-            var pnLength = math.sqrt(pnLengthSq);
-            cross = BezierMath.cross2D(pnx, pny, abx, aby);
+            var npx = px - nx;                          // Vector from nearest point to P
+            var npy = py - ny;                          // Vector from nearest point to P
+            var npLengthSq = npx * npx + npy * npy;     // squared distance from nearest point to P
+            var npLength = math.sqrt(npLengthSq);       // normalized distance from nearest point to P
 
-            sign = math.select(-1, 1, cross < 0);
-            distance = math.select(pnLength, pnLengthSq, SDFCommon.USE_SQUARED_DISTANCES);
-
-            var nIsEndPoint = BezierMath.EqualsForSmallValues(frac, 0, BezierMath.epsilon1) | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1);
-            cross = math.select(1, GetCross(abx, aby, pnx, pny, math.sqrt(abLengthSq), pnLength), nIsEndPoint);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float GetCross(float abx, float aby, float pnx, float pny, float abLength, float pnLength)
-        {
             var abxNorm = abx / abLength;
             var abyNorm = aby / abLength;
-            var pnxNorm = pnx / pnLength;
-            var pnyNorm = pny / pnLength;
-            return BezierMath.cross2D(abxNorm, abyNorm, pnxNorm, pnyNorm);
+            var pnxNorm = npx / npLength;
+            var pnyNorm = npy / npLength;
+
+            // cross of normalized vector A--B with nP->P. 
+            // positive if the points A, B, and P occur in counterclockwise order
+            // (CCW, P lies to the left of the vector from A to B).
+            // negative if they occur in clockwise order
+            // (CW, P lies to the right of the vector from A to B).
+            // this result is identical with ORIENT2D
+            // the sign of the cross is used determine the sign of the distance
+            // so this here is the heart of the SDF renderer
+            // Note: Truetype and Postscript differ in how "inside" is defined
+            // so sign might need to be flipped when generating final texture
+            cross = BezierMath.cross2D(abxNorm, abyNorm, pnxNorm, pnyNorm);
+            sign = math.select(1, -1, cross < 0);
+            distance = math.select(npLength, npLengthSq, USE_SQUARED_DISTANCES);
+
+            var isEndPoint = BezierMath.EqualsForSmallValues(frac, 0, BezierMath.epsilon1) | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1);
+            cross = math.select(1, cross, isEndPoint);
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 GetCross(float4 abx, float4 aby, float4 pnx, float4 pny, float4 abLengthSq, float4 pnLengthSq)
+        public static void GetMinDistanceLineToPoint(float ax, float ay, float bx, float by, float px, float py, out float distance, out float cross, out int sign)
         {
-            var abLength = math.sqrt(abLengthSq);
-            var pnLength = math.sqrt(pnLengthSq);
+            var abx = bx - ax;                          // Vector from A to B
+            var aby = by - ay;                          // Vector from A to B
+            var apx = px - ax;                          // Vector from A to P
+            var apy = py - ay;                          // Vector from A to P
+            var abLengthSq = abx * abx + aby * aby;     // squared distance from A to B 
+            var abLength = math.sqrt(abLengthSq);       // normalized distance from A to B 
+            var frac = abx * apx + aby * apy;
+            frac = math.max(frac, 0.0f);                // Check if P projection is over vectorAB 
+            frac = math.min(frac, abLengthSq);          // Check if P projection is over vectorAB 
+
+            frac /= abLengthSq;                         // The normalized "distance" from a to your closest point
+            var nx = ax + abx * frac;                   // nearest point on egde
+            var ny = ay + aby * frac;                   // nearest point on egde
+
+            var npx = px - nx;                          // Vector from nearest point to P
+            var npy = py - ny;                          // Vector from nearest point to P
+            var npLengthSq = npx * npx + npy * npy;     // squared distance from nearest point to P
+            var npLength = math.sqrt(npLengthSq);       // normalized distance from nearest point to P
+
             var abxNorm = abx / abLength;
             var abyNorm = aby / abLength;
-            var pnxNorm = pnx / pnLength;
-            var pnyNorm = pny / pnLength;
-            return BezierMath.cross2D(abxNorm, abyNorm, pnxNorm, pnyNorm);
+            var npxNorm = npx / npLength;
+            var npyNorm = npy / npLength;
+
+            // cross of normalized vector A--B with nP->P. 
+            // positive if the points A, B, and P occur in counterclockwise order
+            // (CCW, P lies to the left of the vector from A to B).
+            // negative if they occur in clockwise order
+            // (CW, P lies to the right of the vector from A to B).
+            // this result is identical with ORIENT2D
+            // the sign of the cross is used determine the sign of the distance
+            // so this here is the heart of the SDF renderer
+            // all sign flips to determine what is filled due to
+            // different definitions of polygons in Postscript and TrueType should be done elsewhere
+            cross = BezierMath.cross2D(abxNorm, abyNorm, npxNorm, npyNorm);           
+            sign = math.select(1, -1, cross < 0);
+            distance = math.select(npLength, npLengthSq, USE_SQUARED_DISTANCES);
+
+            var isEndPoint = BezierMath.EqualsForSmallValues(frac, 0, BezierMath.epsilon1) | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1);
+            cross = math.select(1, cross, isEndPoint);
+        }
+
+
+        /// /// <summary>
+        /// positive area = CCW, negative area = CW (works for closed and open polygon (identical result))
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float SignedArea(NativeList<SDFEdge> data, int start, int end)
+        {
+            float area = default;
+            for (int i = start, prev = end - 1; i < end; prev = i++) //from (0, prev) until (end, prev)
+                area += (data[prev].start_pos.x - data[i].start_pos.x) * (data[i].start_pos.y + data[prev].start_pos.y);
+            return area * 0.5f;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static PolyOrientation GetPolyOrientation(double signedArea)
+        {
+            if (signedArea < 0)
+                return PolyOrientation.CW;
+            else if (signedArea > 0)
+                return PolyOrientation.CCW;
+            else
+                return PolyOrientation.None;
+        }
+        public enum PolyOrientation : byte
+        {
+            CW = 0,
+            CCW = 1,
+            None = 2,
         }
 
         public static void WriteGlyphOutlineToFile(string path, NativeList<SDFEdge> edges)
@@ -458,11 +504,43 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             for (int i = 0, end = edges.Length; i < end; i++)
             {
                 edge = edges[i];
-                writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");              
+                writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
             }
             writer.WriteLine();
             writer.Close();
         }
+
+        public static void WriteGlyphOutlineToFile(string path, DrawData drawData)
+        {            
+            var edges = drawData.edges;
+            if (edges.Length == 0) return;
+            var startIDs = drawData.contourIDs;
+
+            StreamWriter writer = new StreamWriter(path, false);
+            for (int i = 0, ii = startIDs.Length-1; i < ii; i++)
+            {
+                var startID= startIDs[i];
+                var nextStartID = startIDs[i+1];
+                for (int k = startID; k < nextStartID; k++)
+                {
+                    var edge = edges[k];
+                    writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
+                }
+                writer.WriteLine($"{edges[nextStartID-1].end_pos.x} {edges[nextStartID - 1].end_pos.y}");
+                writer.WriteLine();
+            }
+
+            //var edge = edges[0];
+            //writer.WriteLine($"{edge.start_pos.x} {edge.start_pos.y}");
+            //for (int i = 0, end = edges.Length; i < end; i++)
+            //{
+            //    edge = edges[i];
+            //    writer.WriteLine($"{edge.end_pos.x} {edge.end_pos.y}");
+            //}
+            
+            writer.Close();
+        }
+
         public static void WriteGlyphOutlineToFile(string path, NativeList<Edge> edges)
         {
             if (edges.Length == 0) return;
