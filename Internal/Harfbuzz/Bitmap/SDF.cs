@@ -27,7 +27,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 return false;
 
             bool flip_y = true;
-            int overloadSign = 0;
             var offset = drawData.glyphRect.min - padding;
             var atlasRectWidth = atlasRect.width;
             var atlasRectHeight = atlasRect.height;
@@ -88,7 +87,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     }
                 }
             }
-            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
+            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight);
 
             //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
             SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
@@ -110,7 +109,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 return false;
 
             bool flip_y = true;
-            int overloadSign = 0;
             var offset = drawData.glyphRect.min - padding;
             var atlasRectWidth = atlasRect.width;
             var atlasRectHeight = atlasRect.height;
@@ -277,7 +275,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     }
                 }
             }
-            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
+            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight);
 
             //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
             SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);

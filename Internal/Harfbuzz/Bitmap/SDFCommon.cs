@@ -38,16 +38,13 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         public static void FinalPass(
                     NativeArray<float> distances,
                     NativeArray<int> signs,
-                    int spread, int atlasRectWidth, int atlasRectHeight, int overLoadSign)
+                    int spread, int atlasRectWidth, int atlasRectHeight, bool isHole = false)
         {
+            var outSideSign = isHole ? 1 : -1;
             for (int row = 0; row < atlasRectHeight; row++)
             {
                 /* We assume the starting pixel of each row is outside. */
-                int current_sign = -1;
-                if (overLoadSign != 0)
-                    current_sign = overLoadSign;
-                    //current_sign = math.select(1, -1, overLoadSign < 0);
-
+                int current_sign = outSideSign;
                 for (int column = 0; column < atlasRectWidth; column++)
                 {
                     var sourceIndex = atlasRectWidth * row + column;
@@ -73,7 +70,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     distances[sourceIndex] = distance; //store the final distance which will be used by GetAlphaTexture
                 }
             }
-        }        
+        }
 
         public static void GetAlphaTexture(
             NativeArray<float> distances,
@@ -94,7 +91,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     buffer[targetIndex] = (byte)result;
                 }
             }
-        }
+        }        
         public static void MergeSDF(
             NativeArray<float> destinationDistances,
             NativeArray<float> destinationCrosses,
@@ -102,10 +99,21 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             NativeArray<float> sourceDistances,
             NativeArray<float> sourceCrosses,
             NativeArray<int> sourceSigns,
-            float sp_sq, PolyOrientation sourceContourOrientation)
+            bool isHole)
         {
-            //Debug.Log($"{sourceContourOrientation}");
-            if (sourceContourOrientation == PolyOrientation.CW)
+            if (isHole)
+            {
+                for (int i = 0, ii = sourceDistances.Length; i < ii; i++)
+                {
+                    var condition = sourceDistances[i] < destinationDistances[i];
+                    {
+                        destinationDistances[i] = math.select(destinationDistances[i], sourceDistances[i], condition);
+                        destinationCrosses[i] = math.select(destinationCrosses[i], sourceCrosses[i], condition);
+                        destinationSigns[i] = math.select(destinationSigns[i], sourceSigns[i], condition);
+                    }
+                }
+            }
+            else
             {
                 for (int i = 0, ii = sourceDistances.Length; i < ii; i++)
                 {
@@ -113,20 +121,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     destinationDistances[i] = math.select(destinationDistances[i], sourceDistances[i], condition);
                     destinationCrosses[i] = math.select(destinationCrosses[i], sourceCrosses[i], condition);
                     destinationSigns[i] = math.select(destinationSigns[i], sourceSigns[i], condition);
-                }
-            }
-            else
-            {
-                for (int i = 0, ii = sourceDistances.Length; i < ii; i++)
-                {
-                    var condition = sourceDistances[i] < destinationDistances[i];
-                    //if (sourceSigns[i] != 0)//this creates an island inside "O", but not doing this cut's off bottom half of half "e" for SDFOrientation.POSTSCRIPT
-                    {
-                        destinationDistances[i] = math.select(destinationDistances[i], sourceDistances[i], condition);
-                        destinationCrosses[i] = math.select(destinationCrosses[i], sourceCrosses[i], condition);
-                        destinationSigns[i] = math.select(destinationSigns[i], sourceSigns[i], condition);
-                    }
-                }
+                }                
             }
         }
 
@@ -572,7 +567,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         {
             if (minDistances.Length == 0) return;
             StreamWriter writer = new StreamWriter(path, false);
-            for (int i = 0, end = minDistances.Length; i < end; i++)
+            //for (int i = 0, end = minDistances.Length; i < end; i++)
+            for (int i = 1450; i < 1508; i++)
             {
                 writer.WriteLine($"{minDistances[i]}");
             }

@@ -244,8 +244,8 @@ namespace TextMeshDOTS
 
                     // remove overlaps using Clipper
                     // not needed for static postscript fonts which are not permitted to have overlaps
-                    if (face.sdfOrientation == SDFOrientation.TRUETYPE || face.HasVarData) 
-                    {                        
+                    if (face.sdfOrientation == SDFOrientation.TRUETYPE || face.HasVarData)
+                    {
                         // clipper always outputs polygon oriented CCW for outer contours and CW for holes,
                         // which is the same as postscript convention:
                         // Truetype: CW for outer contours, CCW for holes

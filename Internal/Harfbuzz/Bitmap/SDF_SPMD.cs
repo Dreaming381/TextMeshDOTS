@@ -28,7 +28,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 return false;            
 
             bool flip_y = true;
-            int overloadSign = 0;
             var offset = drawData.glyphRect.min - padding;            
             var atlasRectWidth = atlasRect.width;
             var atlasRectHeight = atlasRect.height;
@@ -48,7 +47,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 var nextStartID = contourIDs[contourID + 1];
                 GetDistancesForContour(edges, startID, nextStartID, targetDistances, targetCrosses, targetSigns, orientation, atlasRectHeight, atlasRectWidth, spread, sp_sq, flip_y, offset);                
             }
-            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
+            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight); 
 
             //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
             SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
@@ -67,7 +66,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 return false;
 
             bool flip_y = true;
-            int overloadSign = 0;
             var offset = drawData.glyphRect.min - padding;
             var atlasRectWidth = atlasRect.width;
             var atlasRectHeight = atlasRect.height;
@@ -91,43 +89,28 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             int nextStartID = contourIDs[0 + 1];
 
             GetDistancesForContour(edges, startID, nextStartID, targetDistances, targetCrosses, targetSigns, orientation, atlasRectHeight, atlasRectWidth, spread, sp_sq, flip_y, offset);
-            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
-            //SDFCommon.WriteMinDistancesToFile("Distance contour 0.txt", targetDistances);
-            //SDFCommon.WriteMinDistancesToFile("Crosses contour 0.txt", targetCrosses);
-            //SDFCommon.WriteSignsToFile("Signs contour 0.txt", targetSigns);
+            var contourOrientation = SDFCommon.GetPolyOrientation(SDFCommon.SignedArea(edges, startID, nextStartID));
+            var isHole = orientation == SDFOrientation.TRUETYPE && contourOrientation == SDFCommon.PolyOrientation.CCW ||
+                         orientation == SDFOrientation.POSTSCRIPT && contourOrientation == SDFCommon.PolyOrientation.CW;
+            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight, isHole);
 
             //get bitmaps for all remaining contours, merge them all into 1 target (distance, cross, sign)
             for (int contourID = 1, end = contourIDs.Length - 1; contourID < end; contourID++) //for each remaining contour
             {
                 startID = contourIDs[contourID];
                 nextStartID = contourIDs[contourID + 1];
-                var contourOrientation = SDFCommon.GetPolyOrientation(SDFCommon.SignedArea(edges, startID, nextStartID));
-
-                // flip the orientation in case of post-script fonts or clipper outputs to avoid issues in mergeSDF
-                // to-do: review if the final determination what is inside (negative distance) and outside (positive distance)
-                // based on contour orientation & difference in how Truetype and Postscript define "inside" can be done better
-                // in FinalPass or MergeSDF
-                if (orientation == SDFOrientation.POSTSCRIPT)
-                    contourOrientation = contourOrientation == SDFCommon.PolyOrientation.CW ? SDFCommon.PolyOrientation.CCW : SDFCommon.PolyOrientation.CW;
-
-                if (contourOrientation == SDFCommon.PolyOrientation.CCW && orientation == SDFOrientation.FILL_RIGHT)
-                    overloadSign = 1;
-                else if (contourOrientation == SDFCommon.PolyOrientation.CW && orientation == SDFOrientation.FILL_LEFT)
-                    overloadSign = 0;
-                else
-                    overloadSign = 0;
+                contourOrientation = SDFCommon.GetPolyOrientation(SDFCommon.SignedArea(edges, startID, nextStartID));
+                isHole = orientation==SDFOrientation.TRUETYPE && contourOrientation==SDFCommon.PolyOrientation.CCW ||
+                         orientation == SDFOrientation.POSTSCRIPT && contourOrientation == SDFCommon.PolyOrientation.CW;
 
                 GetDistancesForContour(edges, startID, nextStartID, tempDistances, tempCrosses, tempSigns, orientation, atlasRectHeight, atlasRectWidth, spread, sp_sq, flip_y, offset);
-                SDFCommon.FinalPass(tempDistances, tempSigns, spread, atlasRectWidth, atlasRectHeight, overloadSign);
-                //SDFCommon.WriteMinDistancesToFile($"Distance contour {contourID}.txt", tempDistances);
-                //SDFCommon.WriteMinDistancesToFile($"Crosses contour {contourID}.txt", tempCrosses);
-                //SDFCommon.WriteSignsToFile($"Signs contour {contourID}.txt", tempSigns);
-                SDFCommon.MergeSDF(targetDistances, targetCrosses, targetSigns, tempDistances, tempCrosses, tempSigns, sp_sq, contourOrientation);
+                SDFCommon.FinalPass(tempDistances, tempSigns, spread, atlasRectWidth, atlasRectHeight, isHole);
+                SDFCommon.MergeSDF(targetDistances, targetCrosses, targetSigns, tempDistances, tempCrosses, tempSigns, isHole);
                 tempDistances.ClearArray();
                 tempCrosses.ClearArray();
                 tempSigns.ClearArray();
             }
-            //SDFCommon.WriteMinDistancesToFile("Final merged Distances.txt", targetDistances);
+
             //convert final signed distance data (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
             SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
             PaintUtils.rasterizeSDFMarker.End();

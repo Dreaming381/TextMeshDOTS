@@ -84,7 +84,6 @@ internal class RenderTest : MonoBehaviour
 
         //simplify. Both clipper and polybol outputs the outer contour CCW, and the inner CW, which is postscript definition
         orientation = SDFOrientation.POSTSCRIPT; //clipper always outputs the outer contour CCW, and the inner CW, which is postscript definition
-
         var fillRule = FillRule.NonZero;
         PolygonOperation.RemoveSelfIntersections(ref drawData, ClipType.Union, fillRule);
         //SDFCommon.WriteGlyphOutlineToFile($"Clipper2 Union ({fillRule}) outline of glyph {character}.txt", drawData);
@@ -92,7 +91,7 @@ internal class RenderTest : MonoBehaviour
         marker.Begin();
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
-        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
+        SDF_SPMD.SDFGenerateSubDivisionLineEdges_Overlap(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();
