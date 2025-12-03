@@ -15,7 +15,8 @@ namespace TextMeshDOTS.Rendering.Authoring
 
         #region Mesh Building
 #if UNITY_EDITOR
-        [UnityEditor.MenuItem("TextMeshDOTS/Text BackendMesh")]
+        //is now part of samples user has to import, omitting the need for dedicated menue for TextMeshDOTS (which was a user request)
+        //[UnityEditor.MenuItem("TextMeshDOTS/Text BackendMesh")]
         static void CreateMeshAsset()
         {
             var glyphCounts = new NativeArray<int>(11, Allocator.Temp);

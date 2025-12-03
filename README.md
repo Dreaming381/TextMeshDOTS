@@ -14,7 +14,7 @@ no matching font variant for the defined properties can be found, TextMeshDOTS f
 is able to simulate bold and italic. In case a font does not contain a user provided unicode character or emoji, 
 TextMeshDOTS is (for performance reasons) currently not searching for a fall back font that does contain the 
 desired character - so be sure the selected font contains the characters or emoji you need.
-![plot](./FontSelection.png)
+![plot](./Documentation/FontSelection.png)
 
 <b>Rich Text:</b> TextMeshDOTS supports many rich text tags like [TextMeshPro](https://docs.unity3d.com/Packages/com.unity.textmeshpro@4.0/manual/RichText.html) 
 and TextCore (see section below for details). User selectable [opentype features](https://learn.microsoft.com/en-us/typography/opentype/spec/featurelist) 
@@ -49,10 +49,11 @@ text label (`TextRenderer`) that makes use of different fonts and emoji, TextMes
 just one entity and one material.
 
 # Autoring workflow
-  -	**Generate backend mesh and materials** `Menue --> TextMeshDOTS --> Text BackendMesh`, 
-    `Menue --> TextMeshDOTS --> Generate HDRP (URP) materials` This only needs to be done once in 
-     a given project. The generated assets are placed into `Resources` folder. The `BackendMesh` is expected     
-    at that location by the runtime, while the generated materials can be placed anywhere you like.
+ -	**Import essential backend mesh and shader** Open the package manager, select "Samples", and import the 
+    backend mesh. Also import either the UDR or HDRP shader. The resources will be imported to the folder 
+    `Assets/Samples/TextMeshDOTS/Version/Sample Name`. You can move them anywhere you like. 
+    Generate a material as usual (right click on desired shader --> Create --> Material)
+    ![plot](./Documentation/SampleImport.png)
 
   - **Prepare fonts** Please note that pretty much any font such as "Arial" in Windows actually consists of 
    multiple font files (e.g. one for `regular`, one for `bold`, one for `italic`, one for `bold italic`. There 
@@ -72,7 +73,7 @@ just one entity and one material.
       3. Create a `FontCollectionAsset` scriptable object: `Any folder under Assets --> Right click --> Create --> TextMeshDOTS --> FontCollectionAsset`
       4. Drag and drop the fonts prepared in the first 2 steps into the respective lists
       5. Click `Process!`
-  ![plot](./FontCollectionAsset.png)
+  ![plot](./Documentation/FontCollectionAsset.png)
  
   - Create a `SubScene`  
   -	**Baking of a `FontCollection` singleton entity from the `FontCollectionAsset`**
@@ -86,7 +87,7 @@ just one entity and one material.
       (e.g. to display damage status on a character)
     - To be able to select a default font for this `TextRenderer`, drag & drop `FontCollectionAsset` into the respective field.
       Once you have done this, you should be able to select a font family in the `Default Font` dropdown:
-     ![plot](./FontFamilySelection.png)
+     ![plot](./Documentation/FontFamilySelection.png)
     - Drop a material of your choice (generated in the first step) into the respective field
     - Type in some text or rich text
     - You should now see the text
@@ -105,7 +106,7 @@ just one entity and one material.
     in the package folder `TextMeshDOTS\RuntimeSpawner\RuntimeFontSpawner.cs`
   - You will notice, that you need to manually fill out a lot of information in the `FontRequest` struct for every font 
     you intend to use. This information can be extracted utilizing the `FontUtility` Scriptable Object.
-    ![plot](./FontUtility.png)
+    ![plot](./Documentation/FontUtility.png)
     - Right click in a folder, then `Create --> TextMeshDOTS --> Font Utility`
     - Drag and drop the fonts from `StreamingAssets` or from anywhere else in your project 
       (in case you intend to use `System Fonts`) into the font field, and copy the information 

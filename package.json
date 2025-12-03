@@ -13,5 +13,28 @@
   ],
   "author": {
     "name": "DOTS Community"
-  }
+  },
+  "samples": [
+  {
+      "displayName": "Backend mesh",
+      "description": "TextMeshDOTS backend mesh. Essential for rendering SDF text.",
+      "path": "Samples~/Backend mesh"
+    },
+	{
+      "displayName": "Fonts",
+      "description": "TextMeshDOTS sample fonts",
+      "path": "Samples~/Fonts"
+    },
+    {
+      "displayName": "URP Shader",
+      "description": "TextMeshDOTS URP Shader for rendering Bitmaps and SDF text",
+      "path": "Samples~/URP"
+    },
+    {
+      "displayName": "HDRP Shader",
+      "description": "TextMeshDOTS HDRP Shader for rendering Bitmaps and SDF text",
+      "path": "Samples~/HDRP"
+    }
+  ],
+  "documentationUrl": "https://github.com/Fribur/TextMeshDOTS/blob/AtlasArrays/README.md"
 }

@@ -11,8 +11,9 @@ namespace TextMeshDOTS.Rendering.Authoring
         //private const string kUnified_URP_Shader = "TextMeshDOTS/TMD_Simple_Unlit";
         //private const string kUnified_URP_MaterialPath = "Assets/Resources/Unified-URP.mat";
 
-#if UNITY_EDITOR
-        [UnityEditor.MenuItem("TextMeshDOTS/Generate URP Materials")]
+#if UNITY_EDITOR        
+        //is now part of samples user has to import, omitting the need for dedicated menue for TextMeshDOTS (which was a user request)
+        //[UnityEditor.MenuItem("TextMeshDOTS/Generate URP Materials")]        
         static void CreateURPMaterialAssets()
         {
             if (!UnityEditor.AssetDatabase.IsValidFolder(kResourcePath))
@@ -93,7 +94,8 @@ namespace TextMeshDOTS.Rendering.Authoring
             SetupUnifiedMaterialWithBlendMode(material);
             UnityEditor.AssetDatabase.CreateAsset(material, $"{kResourcePath}/TMD_Texture_3_Outline_Unlit URP.mat");
         }
-        [UnityEditor.MenuItem("TextMeshDOTS/Generate HDRP Materials")]
+        //is now part of samples user has to import, omitting the need for dedicated menue for TextMeshDOTS (which was a user request)
+        //[UnityEditor.MenuItem("TextMeshDOTS/Generate HDRP Materials")]
         static void CreateHDRPMaterialAssets()
         {
             if (!UnityEditor.AssetDatabase.IsValidFolder(kResourcePath))

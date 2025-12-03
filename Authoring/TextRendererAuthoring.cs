@@ -2,6 +2,7 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEditor;
 using UnityEngine;
 
 namespace TextMeshDOTS.Authoring
@@ -48,8 +49,12 @@ namespace TextMeshDOTS.Authoring
                 authoring.material ==null)
                 return;
 
-            var backEndMesh = Resources.Load<Mesh>(RenderingTools.kTextBackendMeshResource);
-            
+            string[] guids = AssetDatabase.FindAssets("TextBackendMesh t:mesh", null);
+            if (guids.Length == 0 || guids[0] == null)
+                return;
+
+            var backEndMesh = AssetDatabase.LoadAssetByGUID(new GUID(guids[0]), typeof(Mesh)) as Mesh;
+
             //add MeshFilter and MeshRender on main entity to ensure it correctly converted 
             var meshRenderer = GetComponent<MeshRenderer>();
             if (meshRenderer == null)
