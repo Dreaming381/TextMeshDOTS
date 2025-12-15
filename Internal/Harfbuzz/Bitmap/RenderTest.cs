@@ -1,12 +1,16 @@
-﻿using TextMeshDOTS.HarfBuzz.Bitmap;
+﻿using TextMeshDOTS;
 using TextMeshDOTS.HarfBuzz;
+using TextMeshDOTS.HarfBuzz.Bitmap;
+using TextMeshDOTS.Polybool;
 using Unity.Collections;
-using UnityEngine;
-using Font = TextMeshDOTS.HarfBuzz.Font;
-using UnityEditor;
+using Unity.Mathematics;
 using Unity.Profiling;
-using TextMeshDOTS;
-using TextMeshDOTS.Clipper2AoS;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.TextCore;
+using ClipType = TextMeshDOTS.Clipper2AoS.ClipType;
+using FillRule = TextMeshDOTS.Clipper2AoS.FillRule;
+using Font = TextMeshDOTS.HarfBuzz.Font;
 
 internal class RenderTest : MonoBehaviour
 {
@@ -45,9 +49,10 @@ internal class RenderTest : MonoBehaviour
             return;
 
         DrawTest(letter, glyphID);
-        //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜
+        //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜  
     }
 
+    
     void Update()
     {
         
@@ -73,9 +78,35 @@ internal class RenderTest : MonoBehaviour
             glyphID = glyphInfos[0].codepoint;
         }
 
+
         drawData = new DrawData(256, 16, maxDeviation, Allocator.Persistent);
+
+        ////shape 1
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(10, 60), end_pos = new float2(75, 60), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(75, 60), end_pos = new float2(80, 30), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(80, 30), end_pos = new float2(55, 30), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(55, 30), end_pos = new float2(50, 90), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(50, 90), end_pos = new float2(40, 90), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(40, 90), end_pos = new float2(30, 10), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(30, 10), end_pos = new float2(100, 10), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(100, 10), end_pos = new float2(90, 120), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(90, 120), end_pos = new float2(20, 120), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(20, 120), end_pos = new float2(10, 60), edge_type = SDFEdgeType.LINE });
+        //drawData.contourIDs.Add(drawData.edges.Length);
+        //drawData.glyphRect = new BBox(10, 10, 100, 120);
+        //var atlasRect = new GlyphRect(10, 10, 100 + 24, 120 + 24);
+
+        ////shape 2
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(10, 60), end_pos = new float2(75, 60), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(75, 60), end_pos = new float2(60, 120), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(60, 120), end_pos = new float2(40, 20), edge_type = SDFEdgeType.LINE });
+        //drawData.edges.Add(new SDFEdge { start_pos = new float2(40, 20), end_pos = new float2(10, 60), edge_type = SDFEdgeType.LINE });
+        //drawData.contourIDs.Add(drawData.edges.Length);
+        //drawData.glyphRect = new BBox(10, 10, 100, 120);
+        //var atlasRect = new GlyphRect(10, 10, 100 + 24, 120 + 24);
+
+
         font.DrawGlyph(glyphID, drawFunctions, ref drawData);
-                
         font.GetGlyphExtents(glyphID, out GlyphExtents glyphExtents);
         var atlasRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
 
@@ -84,14 +115,16 @@ internal class RenderTest : MonoBehaviour
 
         //simplify. Both clipper and polybol outputs the outer contour CCW, and the inner CW, which is postscript definition
         orientation = SDFOrientation.POSTSCRIPT; //clipper always outputs the outer contour CCW, and the inner CW, which is postscript definition
-        var fillRule = FillRule.NonZero;
-        PolygonOperation.RemoveSelfIntersections(ref drawData, ClipType.Union, fillRule);
-        //SDFCommon.WriteGlyphOutlineToFile($"Clipper2 Union ({fillRule}) outline of glyph {character}.txt", drawData);
+        var fillRule = FillRule.EvenOdd;
+        var clipType = ClipType.Union;
+        //PolygonOperation.RemoveSelfIntersections(ref drawData, clipType, fillRule);
+        PolygonOperation.RemoveSelfIntersectionsPolyBool(ref drawData, TextMeshDOTS.Polybool.ClipType.Union, TextMeshDOTS.Polybool.FillRule.NonZero);
+        SDFCommon.WriteGlyphOutlineToFile($"Clipper2 {clipType} ({fillRule}) outline of glyph {character}.txt", drawData);
 
         marker.Begin();
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
-        SDF_SPMD.SDFGenerateSubDivisionLineEdges_Overlap(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
+        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();
@@ -179,6 +212,12 @@ internal class RenderTest : MonoBehaviour
         blob = new Blob(fontAssetPath);
         face = new Face(blob, 0);
         font = new Font(face);
+        if (face.HasVarData)
+        {
+            font.VariationNamedInstance = 14; //13 OK, 14 buggy for "6"
+            //DisplayVariationAxis();
+        }
+
 
         //var scale = font.GetScale();        
         font.SetScale(samplingPointSize, samplingPointSize);
@@ -190,5 +229,31 @@ internal class RenderTest : MonoBehaviour
 
         orientation = face.HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
         return true;
+    }
+    void DisplayVariationAxis()
+    {
+        var axisCount = (int)face.AxisCount;
+
+        //fetch a list of all variation axis
+        System.Span<AxisInfo> axisInfos = stackalloc AxisInfo[axisCount];
+        face.GetAxisInfos(0, 0, ref axisInfos, out _);
+        AxisInfo axisInfo;
+        float coord;       
+
+        //fetch a list of named variants                        
+        //Debug.Log($"found {axisCount} variation axis for font {fontReference.fontFamily} {fontReference.fontSubFamily}, {face.NamedInstanceCount} named instances");
+        System.Span<float> coords = stackalloc float[axisCount];
+        for (int k = 0, kk = (int)face.NamedInstanceCount; k < kk; k++)
+        {
+            Debug.Log($"Named Instance: {k}");
+            face.GetNamedInstanceDesignCoords(k, ref coords, out uint coordLength);
+            for (int f = 0, ff = (int)coordLength; f < ff; f++)
+            {
+                //axisInfos and coords should be aligned in length and order
+                axisInfo = axisInfos[f];
+                coord = coords[f];
+                Debug.Log($"Variation axis: {axisInfo.axisTag} {face.GetName(axisInfo.nameID, Language.English)}, value = {coord}");
+            }
+        }
     }
 }

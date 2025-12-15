@@ -6,13 +6,20 @@ namespace TextMeshDOTS.HarfBuzz
 {
     internal static class BezierMath
     {
-        public const float epsilon1   = 0.000002f; //next representable float at 1 is 1 +- 1.19*10^-7, so set epsilon a bit larger than that
+        public const float epsilon1 = 0.000002f; //next representable float at 1 is 1 +- 1.19*10^-7, so set epsilon a bit larger than that
         public const float epsilon100 = 0.0001f;//next representable float at 100 is 100 +- 7.6*10^-6, so set epsilon a bit larger than that
+
         const float relativeTolerance = 32f / (1 << 16); //The epsilon distance  used for corner
 
         /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool GenericEquals(float x, float y)
+        {
+            return math.abs(x - y) <= math.max(epsilon1, relativeTolerance * math.max(math.abs(x), math.abs(y)));
+        }
+        /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool GenericEquals(double x, double y)
         {
             return math.abs(x - y) <= math.max(epsilon1, relativeTolerance * math.max(math.abs(x), math.abs(y)));
         }
@@ -25,6 +32,12 @@ namespace TextMeshDOTS.HarfBuzz
         /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool EqualsForSmallValues(float x, float y, float tolerance)
+        {
+            return (math.abs(x - y) <= tolerance);
+        }
+        /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool EqualsForSmallValues(double x, double y, double tolerance)
         {
             return (math.abs(x - y) <= tolerance);
         }

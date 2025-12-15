@@ -252,6 +252,7 @@ namespace TextMeshDOTS
                         // Postscript: CCW for outer contours, CW for holes
                         PaintUtils.removeOverlapsMarker.Begin();
                         PolygonOperation.RemoveSelfIntersections(ref drawData, ClipType.Union, FillRule.NonZero);
+                        //PolygonOperation.RemoveSelfIntersectionsPolyBool(ref drawData, Polybool.ClipType.Union, Polybool.FillRule.NonZero);
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
                     }
@@ -366,4 +367,3 @@ namespace TextMeshDOTS
         #endregion
     }
 }
-

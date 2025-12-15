@@ -1,6 +1,9 @@
 using TextMeshDOTS.Clipper2AoS;
+using TextMeshDOTS.Polybool;
 using Unity.Collections;
 using Unity.Mathematics;
+using ClipType = TextMeshDOTS.Clipper2AoS.ClipType;
+using FillRule = TextMeshDOTS.Clipper2AoS.FillRule;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -98,55 +101,52 @@ namespace TextMeshDOTS.HarfBuzz
         //    solutionClosed.glyphRect = subject.glyphRect;
         //}
 
-        ///// <summary> User PolyBool library to do a union on itself to remove self-intersections.  </summary>
-        //public static void RemoveSelfIntersectionsPolyBool(ref DrawData subject, Polybool.ClipType cliptype, out DrawData solutionClosed)
-        //{
-        //    var nodes = subject.edges;
-        //    var startIDs = subject.contourIDs;
-        //    PolyboolPolygon subject2 = new PolyboolPolygon();
-        //    subject2.polygon = new Polygon(subject.edges.Length, Allocator.Temp);
-        //    var subject2Nodes = subject2.polygon.nodes;
-        //    var subject2StartIDs = subject2.polygon.startIDs;
-        //    subject2StartIDs.Add(subject2Nodes.Length);
+        /// <summary> User PolyBool library to do a union on itself to remove self-intersections.  </summary>
+        public static void RemoveSelfIntersectionsPolyBool(ref DrawData subject, Polybool.ClipType cliptype, Polybool.FillRule fillRule)
+        {
+            var nodes = subject.edges;
+            var contourIDs = subject.contourIDs;
+            var polyBoolSubject = new PolyboolPolygon(subject.edges.Length, subject.contourIDs.Length, false, Allocator.Temp);
+            var polyBoolSubjectNodes = polyBoolSubject.nodes;
+            var polyBoolSubjectStartIDs = polyBoolSubject.startIDs;
+            polyBoolSubjectStartIDs.Add(polyBoolSubjectNodes.Length);
 
-        //    for (int i = 0, length = startIDs.Length - 1; i < length; i++)
-        //    {
-        //        int start = startIDs[i];
-        //        int end = startIDs[i + 1];
-        //        for (int k = start; k < end; k++)
-        //            subject2Nodes.Add(new double2(nodes[k].start_pos.x, nodes[k].start_pos.y));
-        //        subject2Nodes.Add(new double2(nodes[end-1].end_pos.x, nodes[end-1].end_pos.y));
-        //        subject2StartIDs.Add(subject2Nodes.Length);
-        //    }
+            for (int i = 0, length = contourIDs.Length - 1; i < length; i++)
+            {
+                int start = contourIDs[i];
+                int end = contourIDs[i + 1];
+                for (int k = start; k < end; k++)
+                    polyBoolSubjectNodes.Add(new double2(nodes[k].start_pos.x, nodes[k].start_pos.y));
+                polyBoolSubjectStartIDs.Add(polyBoolSubjectNodes.Length);
+            }
 
-        //    subject2.inverted = false;
+            var polyBoolClip = new PolyboolPolygon(0,0, false, Allocator.Temp);
+            //var result = PolyboolClipper.Operate(polyBoolSubject, polyBoolClip, cliptype, fillRule);
 
-        //    PolyboolPolygon clip = new PolyboolPolygon();
-        //    clip.polygon = new Polygon(0, Allocator.Temp);
-        //    clip.inverted = false;
-        //    var result = PolyboolClipper.Operate(subject2, clip, cliptype);
+            var intersecter = new Intersecter(true, polyBoolSubjectNodes.Length, fillRule);
+            var seg1 = PolyboolClipper.Segments(polyBoolSubject, ref intersecter);
+            var seg2 = SegmentSelector.Select(seg1.segments, cliptype);
+            //Utils.WriteAnnotatedSegmentsToFile("segments-selected.txt", seg2);
+            var result = PolyboolClipper.GetPolygon(new PolySegments { segments = seg2, inverted = false });
 
-        //    var resultPolygonNodes= result.polygon.nodes;
-        //    var resultPolygonStartIDs = result.polygon.startIDs;
-        //    solutionClosed = new DrawData(resultPolygonNodes.Length, resultPolygonStartIDs.Length, subject.maxDeviation, Allocator.Temp);
-        //    for (int i = 0, length = resultPolygonStartIDs.Length - 1; i < length; i++)
-        //    {
-        //        int start = resultPolygonStartIDs[i];
-        //        int end = resultPolygonStartIDs[i + 1];
-
-        //        var firstStartPos = resultPolygonNodes[start];
-        //        var lastStartPos = resultPolygonNodes[end - 1];
-        //        for (int k = start; k < end - 1; k++)                
-        //        {
-        //            var startPos = resultPolygonNodes[k];
-        //            var endPos = resultPolygonNodes[k + 1];
-        //            solutionClosed.edges.Add(new SDFEdge { start_pos = new float2((float)startPos.x, (float)startPos.y), end_pos = new float2((float)endPos.x, (float)endPos.y), edge_type = SDFEdgeType.LINE });
-        //        }
-        //        solutionClosed.edges.Add(new SDFEdge { start_pos = new float2((float)lastStartPos.x, (float)lastStartPos.y), end_pos = new float2((float)firstStartPos.x, (float)firstStartPos.y), edge_type = SDFEdgeType.LINE });
-        //        solutionClosed.contourIDs.Add(solutionClosed.edges.Length);
-        //    }
-        //    solutionClosed.maxDeviation = subject.maxDeviation;
-        //    solutionClosed.glyphRect = subject.glyphRect;
-        //}
+            var resultPolygonNodes = result.nodes;
+            var resultPolygonStartIDs = result.startIDs;
+            nodes.Clear();
+            contourIDs.Clear();
+            for (int i = 0, length = resultPolygonStartIDs.Length - 1; i < length; i++)
+            {
+                contourIDs.Add(nodes.Length);
+                int start = resultPolygonStartIDs[i];
+                int end = resultPolygonStartIDs[i + 1];
+                for (int k = start; k < end - 1; k++)
+                {
+                    var startPos = ((float2)resultPolygonNodes[k]);
+                    var endPos = ((float2)resultPolygonNodes[k + 1]);
+                    nodes.Add(new SDFEdge { start_pos = startPos, end_pos = endPos, edge_type = SDFEdgeType.LINE });
+                }
+                nodes.Add(new SDFEdge { start_pos = (float2)resultPolygonNodes[end-1], end_pos = (float2)resultPolygonNodes[start], edge_type = SDFEdgeType.LINE });
+            }
+            contourIDs.Add(nodes.Length);
+        }
     }
 }
