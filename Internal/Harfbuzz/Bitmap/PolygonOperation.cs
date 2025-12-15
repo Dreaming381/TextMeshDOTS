@@ -101,12 +101,12 @@ namespace TextMeshDOTS.HarfBuzz
         //    solutionClosed.glyphRect = subject.glyphRect;
         //}
 
-        /// <summary> User PolyBool library to do a union on itself to remove self-intersections.  </summary>
+        /// <summary> Use BURST compatible Polybool library to do a self intersection of polygon itself using Fillrule.NonZero.</summary>
         public static void RemoveSelfIntersectionsPolyBool(ref DrawData subject, Polybool.ClipType cliptype, Polybool.FillRule fillRule)
         {
             var nodes = subject.edges;
             var contourIDs = subject.contourIDs;
-            var polyBoolSubject = new PolyboolPolygon(subject.edges.Length, subject.contourIDs.Length, false, Allocator.Temp);
+            var polyBoolSubject = new Polygon(subject.edges.Length, subject.contourIDs.Length, false, Allocator.Temp);
             var polyBoolSubjectNodes = polyBoolSubject.nodes;
             var polyBoolSubjectStartIDs = polyBoolSubject.startIDs;
             polyBoolSubjectStartIDs.Add(polyBoolSubjectNodes.Length);
@@ -120,14 +120,14 @@ namespace TextMeshDOTS.HarfBuzz
                 polyBoolSubjectStartIDs.Add(polyBoolSubjectNodes.Length);
             }
 
-            var polyBoolClip = new PolyboolPolygon(0,0, false, Allocator.Temp);
+            var polyBoolClip = new Polygon(0,0, false, Allocator.Temp);
             //var result = PolyboolClipper.Operate(polyBoolSubject, polyBoolClip, cliptype, fillRule);
 
             var intersecter = new Intersecter(true, polyBoolSubjectNodes.Length, fillRule);
             var seg1 = PolyboolClipper.Segments(polyBoolSubject, ref intersecter);
             var seg2 = SegmentSelector.Select(seg1.segments, cliptype);
             //Utils.WriteAnnotatedSegmentsToFile("segments-selected.txt", seg2);
-            var result = PolyboolClipper.GetPolygon(new PolySegments { segments = seg2, inverted = false });
+            var result = new Polygon(new PolySegments { segments = seg2, inverted = false });
 
             var resultPolygonNodes = result.nodes;
             var resultPolygonStartIDs = result.startIDs;

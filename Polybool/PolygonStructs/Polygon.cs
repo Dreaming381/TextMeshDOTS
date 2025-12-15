@@ -5,23 +5,31 @@ using Unity.Mathematics;
 
 namespace TextMeshDOTS.Polybool
 {
-    public struct PolyboolPolygon
+    public struct Polygon
     {
         public NativeList<double2> nodes;
         public NativeList<int> startIDs;
         public bool inverted;
 
-        public PolyboolPolygon(int nodeCount, int startIDCount, bool inverted, Allocator allocator)
+        public Polygon(int nodeCount, int startIDCount, bool inverted, Allocator allocator)
         {
             nodes = new NativeList<double2>(nodeCount, allocator);
             startIDs = new NativeList<int>(startIDCount, allocator);
             this.inverted = inverted;
         }
-        public PolyboolPolygon(NativeList<double2> nodes, NativeList<int> startIDs, bool inverted)
+        public Polygon(NativeList<double2> nodes, NativeList<int> startIDs, bool inverted)
         {
             this.nodes = nodes;
             this.startIDs = startIDs;
             this.inverted = inverted;
+        }
+
+        public Polygon(PolySegments segments)
+        {
+            var result = PolyboolClipper.SegmentChainer(segments.segments, segments.inverted);
+            nodes = result.nodes;
+            startIDs = result.startIDs;
+            this.inverted = result.inverted;
         }
 
         public void AddComponent(UnsafeList<double2> points, int start, int end)

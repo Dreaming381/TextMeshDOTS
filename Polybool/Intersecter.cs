@@ -33,7 +33,7 @@ namespace TextMeshDOTS.Polybool
             segments.Clear();
         }
         #region initialize events
-        public void AddRegion(PolyboolPolygon region, int start, int end)
+        public void AddRegion(Polygon region, int start, int end)
         {
             double2 from;
             double2 to = region.nodes[end - 1];
@@ -52,7 +52,7 @@ namespace TextMeshDOTS.Polybool
                     segNew.windingTopToBottom = PointUtils.GetWindingTowardsBottom(from, to);
                     segNew.windingLeftToRight = PointUtils.GetWindingTowardsRight(from, to);
                 }
-               
+
                 var segmentID = segments.Length;
                 segments.Add(segNew);                
                 CreateEvents(segmentID, true, out EventBool evStart, out EventBool evEnd);
@@ -250,21 +250,10 @@ namespace TextMeshDOTS.Polybool
 
                     // calculate fill flags                    
                     if (selfIntersection)
-                    {
-                        //NonZero
-                        if (fillRule == FillRule.NonZero)
-                        {                            
-                            int windingBelow = 0, windingAbove;
-                            for (int i = eventIndexInStatus, end = statusQueue.Length; i < end; i++)
-                                windingBelow += segments[statusQueue[i].segmentID].windingTopToBottom;
-
-                            windingAbove = evSegment.windingTopToBottom == 0 ? windingBelow + evSegment.windingLeftToRight : windingBelow + evSegment.windingTopToBottom;
-
-                            evSegment.below = windingBelow != 0 ? FillStatus.Filled : FillStatus.NotFilled;
-                            evSegment.above = windingAbove != 0 ? FillStatus.Filled : FillStatus.NotFilled;
-                        }
-                        else //EvenOdd
+                    {                        
+                        if (fillRule == FillRule.EvenOdd)
                         {
+                            // FillRule.EvenOdd
                             bool toggle;
                             // (1) determine if the edge is a "toggling edge"
                             if (evSegment.below == FillStatus.Undefined)
@@ -284,15 +273,46 @@ namespace TextMeshDOTS.Polybool
                             else
                                 evSegment.above = evSegment.below;                        //above fill is same as below fill
                         }
+                        else 
+                        {
+                            // FillRule.NonZero, FillRule.Positive, FillRule.Negative: derive fill annotation from winding
+                            // NonZero: winding !=0 means "inside/filled" and winding = 0 means "outside" "not filled"
+                            // Positive: winding >0 means "inside/filled", otherwise it means "outside" "not filled"
+                            // Negative: winding <0 means "inside/filled", otherwise it means "outside" "not filled"
+
+                            // (1) determine winding below current event segment by summing all windings from eventIndexInStatus towards bottom of status
+                            int windingBelow = 0, windingAbove=0;
+                            for (int i = eventIndexInStatus, end = statusQueue.Length; i < end; i++)
+                                windingBelow += segments[statusQueue[i].segmentID].windingTopToBottom;
+
+                            // (2) determine winding above current event segment. Simply add "winding" from event segment.
+                            // For a vertical edge, the winding does NOT change along y axis,
+                            // but it does change along x-axis, so use "windingLeftToRight" value instead
+                            windingAbove = evSegment.windingTopToBottom == 0 ? windingBelow + evSegment.windingLeftToRight : windingBelow + evSegment.windingTopToBottom;
+
+                            switch(fillRule)
+                            {
+                                case FillRule.NonZero:
+                                    evSegment.below = windingBelow != 0 ? FillStatus.Filled : FillStatus.NotFilled;
+                                    evSegment.above = windingAbove != 0 ? FillStatus.Filled : FillStatus.NotFilled;
+                                    break;
+                                case FillRule.Positive:
+                                    evSegment.below = windingBelow > 0 ? FillStatus.Filled : FillStatus.NotFilled;
+                                    evSegment.above = windingAbove > 0 ? FillStatus.Filled : FillStatus.NotFilled;
+                                    break;
+                                case FillRule.Negative:
+                                    evSegment.below = windingBelow < 0 ? FillStatus.Filled : FillStatus.NotFilled;
+                                    evSegment.above = windingAbove < 0 ? FillStatus.Filled : FillStatus.NotFilled;
+                                    break;
+                            }
+                        }
                     }
                     else
                     {
-                        // now we fill in any missing transition information, since we are
-                        // all-knowing at this point                        
+                        // now we fill in any missing transition information, since we are all-knowing at this point                        
                         if (evSegment.otherAbove == FillStatus.Undefined && evSegment.otherBelow == FillStatus.Undefined)
                         {
-                            // if we don't have other information, then we need to figure out if
-                            // we're inside the other polygon
+                            // if we don't have other information, then we need to figure out if we're inside the other polygon
                             FillStatus inside;
                             if (below == EventBool.Empty)
                             {
@@ -387,7 +407,7 @@ namespace TextMeshDOTS.Polybool
                     {
                         // make sure `seg.myFill` actually points to the primary polygon though
                         if (evSegment.otherAbove == FillStatus.Undefined || evSegment.otherBelow == FillStatus.Undefined)
-                            throw new Exception("PolyBool: Unexpected state of otherFill (null)");
+                            throw new Exception("PolyBool: Unexpected state of otherFill (FillStatus.Undefined)");
                         (evSegment.above, evSegment.otherAbove) = (evSegment.otherAbove, evSegment.above);
                         (evSegment.below, evSegment.otherBelow) = (evSegment.otherBelow, evSegment.below);
                     }
@@ -398,7 +418,6 @@ namespace TextMeshDOTS.Polybool
                 // remove the event and continue
                 eventQueue.RemoveAt(eventQueue.Length -1); // RemoveAt(0) when sorted ascending (most left event is at index 0)
             }
-            //Utils.WriteAnnotatedSegmentsToFile("segments-annotated.txt", segments);
             return result;
         }
     }

@@ -13,9 +13,8 @@ namespace TextMeshDOTS.Polybool
             this.segments = segments;
         }
 
-        //assumes segments are already sorted by x coordinate(seg1 is on x-axis before seg2)
         /// <summary> Sorts events in DESCENDING order on y-axis</summary>
-        /// <returns>Returns 1 if eventA is smaller, -1 if bEvent is smaller, 0 if equal</returns>
+        /// <returns>Returns -1 if eventA is above eventB, 1 if eventB is above eventB, 0 if equal</returns>
         public int Compare(EventBool eventA, EventBool eventB)
         {
             if (eventA == eventB)
@@ -27,7 +26,7 @@ namespace TextMeshDOTS.Polybool
             var c = seg2.p0_start;
             var d = seg2.p1_end;
 
-            // orientation of p:
+            // orientation of p with resepct to a segment:
             // <0 = CW = left. Because p0 is always left of p1, this means here also "above" 
             // >0 = CCW = right. Because p0 is always left of p1, this means here also "below" 
             // =0 = colinear
@@ -43,11 +42,11 @@ namespace TextMeshDOTS.Polybool
                     orient2d = PointUtils.Orient2DFast(c, d, b);
                     if (math.abs(orient2d) < BezierMath.epsilon1)       // b collinear with seg2 (c,d)?
                         return 0;                                       // both a and b are colinear with seg2 (c,d), so segments are coincident
-                    else
-                        return orient2d < 0 ? 1 : -1;                   // orientation of seg1 (b) with respect to seg2 (c,d). <0 = CW = left of seg2 means "above"
+                    else                                                // orientation of seg1 (b) with respect to seg2 (c,d).
+                        return orient2d < 0 ? 1 : -1;                   // <0 = CW = left of seg2 means "above" (eventA is below eventB, return 1)
                 }
-                else
-                    return orient2d < 0 ? 1 : -1;                       // orientation of seg1 (a) with respect to seg2 (c,d). <0 = CW = left of seg2 means "above"
+                else                                                    // orientation of seg1 (a) with respect to seg2 (c,d).
+                    return orient2d < 0 ? 1 : -1;                       // <0 = CW = left of seg2 means "above" (eventA is below eventB, return 1)
             }
             else
             {
@@ -59,11 +58,11 @@ namespace TextMeshDOTS.Polybool
                     orient2d = PointUtils.Orient2DFast(a, b, d);
                     if (math.abs(orient2d) < BezierMath.epsilon1)       // d collinear with seg1 (a,b)?
                         return 0;                                       // both c and d are colinear with seg1 (a,b), so segments are coincident
-                    else
-                        return orient2d < 0 ? -1 : 1;                   // orientation of seg2 (d) with respect to seg1 (a,b). <0 = CW = left of seg1 means "below"
+                    else                                                // orientation of seg2 (d) with respect to seg1 (a,b).
+                        return orient2d < 0 ? -1 : 1;                   // <0 = CW = left of seg1 means "below" (eventA is above eventB, return -1)
                 }
-                else
-                    return orient2d < 0 ? -1 : 1;                       // orientation of seg2 (c) with respect to seg1 (a,b). <0 = CW = left of seg1 means "below"
+                else                                                    // orientation of seg2 (c) with respect to seg1 (a,b).
+                    return orient2d < 0 ? -1 : 1;                       // <0 = CW = left of seg1 means "below" (eventA is above eventB, return -1)
             }
         }
     }

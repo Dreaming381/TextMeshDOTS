@@ -8,10 +8,10 @@ namespace TextMeshDOTS.Polybool
 {
     public partial struct PolyboolClipper
     {
-        internal static PolyboolPolygon SegmentChainer(NativeList<Segment> segments)
+        internal static Polygon SegmentChainer(NativeList<Segment> segments, bool inverted)
         {
             var chains = new UnsafeList<UnsafeList<double2>>(16, Allocator.Temp);
-            var polygon = new PolyboolPolygon(segments.Length, 8, false, Allocator.Temp);
+            var polygon = new Polygon(segments.Length, 8, false, Allocator.Temp);
 
             for (int k = 0, length = segments.Length; k < length; k++)
             {
