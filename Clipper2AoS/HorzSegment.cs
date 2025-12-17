@@ -24,7 +24,6 @@ namespace TextMeshDOTS.Clipper2AoS
         }
         public int Compare(HorzSegment hs1, HorzSegment hs2)
         {
-            //if (hs1 == null || hs2 == null) return 0;
             if (hs1.rightOp == -1)
             {
                 return hs2.rightOp == -1 ? 0 : 1;

@@ -52,7 +52,7 @@ namespace TextMeshDOTS.Clipper2AoS
         {
             m_list = list;
         }
-        public int Compare(LocalMinima locMin1, LocalMinima locMin2)
+        public readonly int Compare(LocalMinima locMin1, LocalMinima locMin2)
         {
             return m_list[locMin2.vertex].pt.y.CompareTo(m_list[locMin1.vertex].pt.y);
         }

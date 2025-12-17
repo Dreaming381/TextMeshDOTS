@@ -87,6 +87,22 @@ namespace TextMeshDOTS.Clipper2AoS
         internal bool pathsReversed;
 
         private const double Tolerance = 1.0E-12;
+
+        // Clipper2 approximates arcs by using series of relatively short straight
+        //line segments. And logically, shorter line segments will produce better arc
+        // approximations. But very short segments can degrade performance, usually
+        // with little or no discernable improvement in curve quality. Very short
+        // segments can even detract from curve quality, due to the effects of integer
+        // rounding. Since there isn't an optimal number of line segments for any given
+        // arc radius (that perfectly balances curve approximation with performance),
+        // arc tolerance is user defined. Nevertheless, when the user doesn't define
+        // an arc tolerance (ie leaves alone the 0 default value), the calculated
+        // default arc tolerance (offset_radius / 500) generally produces good (smooth)
+        // arc approximations without producing excessively small segment lengths.
+        // See also: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+        private const double arc_const = 0.002; // <-- 1/500
+
+
         private NativeList<double2> _normals;
         private double _groupDelta; //*0.5 for open paths; *-1.0 for negative areas
         private double _delta;
@@ -398,7 +414,6 @@ namespace TextMeshDOTS.Clipper2AoS
                 area += ((double)data[prev].x - (double)data[i].x) * ((double)data[i].y + (double)data[prev].y);
             return area * 0.5;
         }
-
         private void DoGroupOffset()
         {
             if (_endType == EndType.Polygon)
@@ -424,9 +439,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 // curve imprecision that's allowed is based on the size of the
                 // offset (delta). Obviously very large offsets will almost always
                 // require much less precision. See also offset_triginometry2.svg
-                double arcTol = ArcTolerance > 0.01 ?
-                  ArcTolerance :
-                  Math.Log10(2 + absDelta) * InternalClipper.defaultArcTolerance;
+                double arcTol = ArcTolerance > 0.01 ? ArcTolerance : absDelta * arc_const;
                 double stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
                 _stepSin = Math.Sin((2 * Math.PI) / stepsPer360);
                 _stepCos = Math.Cos((2 * Math.PI) / stepsPer360);

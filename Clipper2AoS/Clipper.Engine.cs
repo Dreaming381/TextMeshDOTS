@@ -1,18 +1,18 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 July 2023                                                    *
-* Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Date      :  5 November 2025                                                 *
+* Website   :  https://www.angusj.com                                          *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * Thanks    :  Special thanks to Thong Nguyen, Guus Kuiper, Phil Stopford,     *
 *           :  and Daniel Gosnell for their invaluable assistance with C#.     *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
-using ClipperAoS.MinHeap;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using TextMeshDOTS.Clipper2AoS.MinHeap;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -25,17 +25,32 @@ namespace TextMeshDOTS.Clipper2AoS
     //minima and ascend to a local maxima, before descending again.
 
     [Flags]
-    public enum PointInPolygonResult { IsOn = 0, IsInside = 1, IsOutside = 2 };
-    public enum VertexFlags { None = 0, OpenStart = 1, OpenEnd = 2, LocalMax = 4, LocalMin = 8 };
+    public enum PointInPolygonResult
+    {
+        IsOn = 0,
+        IsInside = 1,
+        IsOutside = 2
+    }
+    [Flags]
+    public enum VertexFlags
+    {
+        None = 0,
+        OpenStart = 1,
+        OpenEnd = 2,
+        LocalMax = 4,
+        LocalMin = 8
+    }
     public struct ClipperL : IDisposable
     {
         ClipType _cliptype;
         FillRule _fillrule;
         int _activesID;
         int _selID;
+
         //input lists
         NativeList<LocalMinima> _minimaList;
         NativeList<Vertex> _vertexList;
+
         //solution lists
         NativeList<Active> _activesList;
         NativeList<IntersectNode> _intersectList;
@@ -65,10 +80,9 @@ namespace TextMeshDOTS.Clipper2AoS
         //static ProfilerMarker marker2 = new ProfilerMarker("Process");
 
 
-        //public ClipperL(Allocator allocator, int roundingDecimalPrecision = 2)
-        public ClipperL(Allocator allocator)
+        public ClipperL(Allocator allocator, int roundingDecimalPrecision = 2)
         {
-            _cliptype = ClipType.None;
+            _cliptype = ClipType.NoClip;
             _fillrule = FillRule.EvenOdd;
             _activesID = -1;
             _selID = -1;
@@ -194,16 +208,16 @@ namespace TextMeshDOTS.Clipper2AoS
             double dy = pt2.y - pt1.y;
             if (dy != 0)
                 return (pt2.x - pt1.x) / dy;
-            if (pt2.x > pt1.x)
-                return double.NegativeInfinity;
-            return double.PositiveInfinity;
+            return pt2.x > pt1.x ? double.NegativeInfinity : double.PositiveInfinity;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long TopX(ref Active ae, long currentY)
         {
             if ((currentY == ae.top.y) || (ae.top.x == ae.bot.x)) return ae.top.x;
             if (currentY == ae.bot.y) return ae.bot.x;
-            return ae.bot.x + (long)math.round(ae.dx * (currentY - ae.bot.y));
+
+            // use MidpointRounding.ToEven in order to explicitly match the nearbyint behaviour on the C++ side
+            return ae.bot.x + (long)Math.Round(ae.dx * (currentY - ae.bot.y), MidpointRounding.ToEven);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsHorizontal(ref Active ae)
@@ -252,17 +266,13 @@ namespace TextMeshDOTS.Clipper2AoS
         private int NextVertex(ref Active ae)
         {
             ref var vertexTop = ref _vertexList.ElementAt(ae.vertexTop);
-            if (ae.windDx > 0)
-                return vertexTop.next;
-            return vertexTop.prev;
+            return ae.windDx > 0 ? vertexTop.next : vertexTop.prev;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long2 PrevPrevVertex(ref Active ae)
         {
             ref var vertexTop = ref _vertexList.ElementAt(ae.vertexTop);
-            if (ae.windDx > 0)
-                return _vertexList[_vertexList.ElementAt(vertexTop.prev).prev].pt;
-            return _vertexList[_vertexList.ElementAt(vertexTop.next).next].pt;
+            return ae.windDx > 0 ? _vertexList[_vertexList.ElementAt(vertexTop.prev).prev].pt : _vertexList[_vertexList.ElementAt(vertexTop.next).next].pt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -280,8 +290,7 @@ namespace TextMeshDOTS.Clipper2AoS
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetMaximaPair(ref Active ae)
         {
-            int ae2ID;
-            ae2ID = ae.nextInAEL;
+            int ae2ID = ae.nextInAEL;
             while (ae2ID != -1)
             {
                 ref var ae2 = ref _activesList.ElementAt(ae2ID);
@@ -348,15 +357,11 @@ namespace TextMeshDOTS.Clipper2AoS
 
         public struct IntersectListSort : IComparer<IntersectNode>
         {
-            public int Compare(IntersectNode a, IntersectNode b)
+            public readonly int Compare(IntersectNode a, IntersectNode b)
             {
-                if (a.pt.y == b.pt.y)
-                {
-                    if (a.pt.x == b.pt.x)
-                        return 0;
-                    return a.pt.x < b.pt.x ? -1 : 1;
-                }
-                return a.pt.y > b.pt.y ? -1 : 1;
+                if (a.pt.y != b.pt.y) return (a.pt.y > b.pt.y) ? -1 : 1;
+                if (a.pt.x == b.pt.x) return 0;
+                return (a.pt.x < b.pt.x) ? -1 : 1;
             }
         }
 
@@ -462,6 +467,13 @@ namespace TextMeshDOTS.Clipper2AoS
                 outRecID = outRec.owner;
             return outRecID;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsValidOwner(int outRecID, int testOwnerID)
+        {
+            while ((testOwnerID != -1) && (testOwnerID != outRecID))
+                testOwnerID = _outrecList[testOwnerID].owner;
+            return testOwnerID == -1;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void UncoupleOutRec(ref Active ae)
@@ -502,17 +514,17 @@ namespace TextMeshDOTS.Clipper2AoS
         void ClearSolutionOnly()
         {
             //while (_actives != null) DeleteFromAEL(_actives);
-            if (_activesList.IsCreated) _activesList.Clear();//deviation from Clipper2
+            _activesList.Clear();//deviation from Clipper2
             _activesID = -1;
             _selID = -1;
-            if (_intersectList.IsCreated) _intersectList.Clear();
-            if (_outrecList.IsCreated) _outrecList.Clear();
-            if (_outPtList.IsCreated) _outPtList.Clear();//deviation from Clipper2
-            if (_scanlineList.IsCreated) _scanlineList.Clear();
-            if (_horzSegList.IsCreated) _horzSegList.Clear();
-            if (_horzJoinList.IsCreated) _horzJoinList.Clear();
-            if (splits.IsCreated) splits.Clear();//deviation from Clipper2
-            if (nextSplit.IsCreated) nextSplit.Clear();//deviation from Clipper2
+            _intersectList.Clear();
+            _outrecList.Clear();
+            _outPtList.Clear();//deviation from Clipper2
+            _scanlineList.Clear();
+            _horzSegList.Clear();
+            _horzJoinList.Clear();
+            splits.Clear();//deviation from Clipper2
+            nextSplit.Clear();//deviation from Clipper2
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -535,7 +547,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 _isSortedMinimaList = true;
             }
 
-            _scanlineList._stack.Capacity = _minimaList.Length;
+            _scanlineList._stack.EnsureCapacity(_minimaList.Length);
             for (int i = _minimaList.Length - 1; i >= 0; i--)
                 InsertScanline(_vertexList[_minimaList[i].vertex].pt.y);
 
@@ -595,10 +607,7 @@ namespace TextMeshDOTS.Clipper2AoS
             LocalMinima lm = new LocalMinima(vertID, polytype, isOpen);
             _minimaList.Add(lm);
         }
-        void EnsureVertexListCapacity(int additionalVertextCount)
-        {
-            _vertexList.Capacity = _vertexList.Length + additionalVertextCount;
-        }
+
 
         void AddPathsToVertexList(NativeArray<int2> nodes, NativeArray<int> startIDs, PathType polytype, bool isOpen)
         {
@@ -634,7 +643,7 @@ namespace TextMeshDOTS.Clipper2AoS
             if (!isOpen && prev_v.next == prev_vID) return;
 
             // OK, we have a valid path
-            bool going_up, going_up0;
+            bool going_up;
             ref var curr_v = ref _vertexList.ElementAt(curr_vID = v0.next);
             if (isOpen)
             {
@@ -659,7 +668,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 going_up = prev_v.pt.y > v0.pt.y;
             }
 
-            going_up0 = going_up;
+            bool going_up0 = going_up;
             prev_vID = v0ID;
             curr_vID = v0.next;
             while (curr_vID != v0ID)
@@ -695,13 +704,17 @@ namespace TextMeshDOTS.Clipper2AoS
                 else prev_v.flags |= VertexFlags.LocalMax;
             }
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSubject(NativeArray<int2> nodes, NativeArray<int> startIDs)
         {
             AddPaths(nodes, startIDs, PathType.Subject);
         }
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddOpenSubject(NativeArray<int2> nodes, NativeArray<int> startIDs)
+        {
+            AddPaths(nodes, startIDs, PathType.Subject, true);
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddClip(NativeArray<int2> nodes, NativeArray<int> startIDs)
         {
@@ -712,16 +725,15 @@ namespace TextMeshDOTS.Clipper2AoS
         {
             _hasOpenPaths = isOpen;
             _isSortedMinimaList = false;
-            EnsureVertexListCapacity(end - start);
+            _vertexList.EnsureCapacity(_vertexList.Length + (end - start));
             AddPathToVertexList(nodes, start, end, polytype, isOpen);
-        }
-        
+        }        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddPaths(NativeArray<int2> nodes, NativeArray<int> startIDs, PathType polytype, bool isOpen = false)
         {
             if (isOpen) _hasOpenPaths = true;
             _isSortedMinimaList = false;
-            EnsureVertexListCapacity(nodes.Length);
+            _vertexList.EnsureCapacity(_vertexList.Length + (nodes.Length));
             AddPathsToVertexList(nodes, startIDs, polytype, isOpen);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -747,7 +759,7 @@ namespace TextMeshDOTS.Clipper2AoS
                     {
                         FillRule.Positive => ae.windCount2 > 0,
                         FillRule.Negative => ae.windCount2 < 0,
-                        _ => ae.windCount2 != 0,
+                        _ => ae.windCount2 != 0
                     };
 
                 case ClipType.Union:
@@ -755,7 +767,7 @@ namespace TextMeshDOTS.Clipper2AoS
                     {
                         FillRule.Positive => ae.windCount2 <= 0,
                         FillRule.Negative => ae.windCount2 >= 0,
-                        _ => ae.windCount2 == 0,
+                        _ => ae.windCount2 == 0
                     };
 
                 case ClipType.Difference:
@@ -763,7 +775,7 @@ namespace TextMeshDOTS.Clipper2AoS
                     {
                         FillRule.Positive => (ae.windCount2 <= 0),
                         FillRule.Negative => (ae.windCount2 >= 0),
-                        _ => (ae.windCount2 == 0),
+                        _ => ae.windCount2 == 0
                     };
                     return (GetPolyType(ref ae) == PathType.Subject) ? result : !result;
 
@@ -945,7 +957,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 return newcomer.curX > resident.curX;
 
             // get the turning direction  a1.top, a2.bot, a2.top
-            double d = InternalClipper.CrossProduct(resident.top, newcomer.bot, newcomer.top);
+            int d = InternalClipper.CrossProductSign(resident.top, newcomer.bot, newcomer.top);
             if (d != 0) return (d < 0);
 
             // edges must be collinear to get here
@@ -954,13 +966,13 @@ namespace TextMeshDOTS.Clipper2AoS
             // the direction they're about to turn
             if (!IsMaxima(ref resident) && (resident.top.y > newcomer.top.y))
             {
-                return InternalClipper.CrossProduct(newcomer.bot,
+                return InternalClipper.CrossProductSign(newcomer.bot,
                   resident.top, _vertexList.ElementAt(NextVertex(ref resident)).pt) <= 0;
             }
 
             if (!IsMaxima(ref newcomer) && (newcomer.top.y > resident.top.y))
             {
-                return InternalClipper.CrossProduct(newcomer.bot,
+                return InternalClipper.CrossProductSign(newcomer.bot,
                   newcomer.top, _vertexList.ElementAt(NextVertex(ref newcomer)).pt) >= 0;
             }
 
@@ -972,18 +984,16 @@ namespace TextMeshDOTS.Clipper2AoS
             // resident must also have just been inserted
             if (resident.isLeftBound != newcomerIsLeft)
                 return newcomerIsLeft;
-            if (InternalClipper.CrossProduct(PrevPrevVertex(ref resident),
-                  resident.bot, resident.top) == 0) return true;
+            if (InternalClipper.IsCollinear(PrevPrevVertex(ref resident),
+                resident.bot, resident.top)) return true;
             // compare turning direction of the alternate bound
-            return (InternalClipper.CrossProduct(PrevPrevVertex(ref resident),
+            return (InternalClipper.CrossProductSign(PrevPrevVertex(ref resident),
               newcomer.bot, PrevPrevVertex(ref newcomer)) > 0) == newcomerIsLeft;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InsertLeftEdge(ref Active ae, int aeID)
         {
-            int ae2ID;
-
             if (_activesID == -1)
             {
                 ae.prevInAEL = -1;
@@ -1002,7 +1012,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 }
                 else
                 {
-                    ae2ID = _activesID;
+                    int ae2ID = _activesID;
                     ref var ae2 = ref _activesList.ElementAt(ae2ID);
                     while (ae2.nextInAEL != -1 && IsValidAelOrder(ref _activesList.ElementAt(ae2.nextInAEL), ref ae))
                         ae2 = ref _activesList.ElementAt(ae2ID = ae2.nextInAEL);
@@ -1024,17 +1034,15 @@ namespace TextMeshDOTS.Clipper2AoS
             ae.nextInAEL = ae2ID;
         }
         private void InsertLocalMinimaIntoAEL(long botY)
-        {
-            LocalMinima localMinima;
-            Vertex localMinimaVertex;
-            int leftBoundID, rightBoundID;
+        {            
             Active temp;
             // Add any local minima (if any) at BotY ...
             // NB horizontal local minima edges should contain locMin.vertex.prev
             while (HasLocMinAtY(botY))
             {
-                localMinima = PopLocalMinima();
-                localMinimaVertex = _vertexList[localMinima.vertex]; //cache to minimize cache misses
+                LocalMinima localMinima = PopLocalMinima();
+                int leftBoundID;
+                Vertex localMinimaVertex = _vertexList[localMinima.vertex]; //cache to minimize cache misses
                 if ((localMinimaVertex.flags & VertexFlags.OpenStart) != VertexFlags.None)
                 {
                     leftBoundID = -1;
@@ -1056,6 +1064,7 @@ namespace TextMeshDOTS.Clipper2AoS
                     _activesList.Add(temp); //deviation from Clipper2, only to enable disposal                                        
                 }
 
+                int rightBoundID;
                 if ((localMinimaVertex.flags & VertexFlags.OpenEnd) != VertexFlags.None)
                 {
                     rightBoundID = -1;
@@ -1328,6 +1337,7 @@ namespace TextMeshDOTS.Clipper2AoS
             ae2Outrec.frontEdge = -1;
             ae2Outrec.backEdge = -1;
             ae2Outrec.pts = -1;
+            ae1Outrec.outPtCount += ae2Outrec.outPtCount;
             SetOwner(ref ae2Outrec, ae2.outrec, ref ae1Outrec, ae1.outrec);
 
             if (IsOpenEnd(ref ae1))
@@ -1354,8 +1364,13 @@ namespace TextMeshDOTS.Clipper2AoS
             int opBackID = opFront.next;
             ref var opBack = ref _outPtList.ElementAt(opBackID);
 
-            if (toFront && (pt == opFront.pt)) return opFrontID;
-            else if (!toFront && (pt == opBack.pt)) return opBackID;
+            switch (toFront)
+            {
+                case true when (pt == opFront.pt):
+                    return opFrontID;
+                case false when (pt == opBack.pt):
+                    return opBackID;
+            }
 
             int newOpID = NewOutPt(pt, outrecID);
             opFront = ref _outPtList.ElementAt(opFrontID);//fetch again due to invalidated references
@@ -1377,6 +1392,7 @@ namespace TextMeshDOTS.Clipper2AoS
             {
                 idx = currentID,
                 splitStart = -1,
+                recursiveSplit=-1,
                 polypath = -1,
                 owner = -1,
                 frontEdge = -1,
@@ -1432,7 +1448,11 @@ namespace TextMeshDOTS.Clipper2AoS
 
             if (IsJoined(ref ae)) Split(ref ae, aeID, ae.bot);
 
-            if (IsHorizontal(ref ae)) return;
+            if (IsHorizontal(ref ae))
+            {
+                if (!IsOpen(ref ae)) TrimHorz(ref ae, PreserveCollinear);
+                return;
+            }
             InsertScanline(ae.top.y);
 
             CheckJoinLeft(ref ae, aeID, ae.bot);
@@ -1461,14 +1481,13 @@ namespace TextMeshDOTS.Clipper2AoS
             return resultID;
         }
 
-        private int IntersectEdges(ref Active ae1, int ae1ID, ref Active ae2, int ae2ID, long2 pt)
+        private void IntersectEdges(ref Active ae1, int ae1ID, ref Active ae2, int ae2ID, long2 pt)
         {
             int resultOp = -1;
-
             // MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
             if (_hasOpenPaths && (IsOpen(ref ae1) || IsOpen(ref ae2)))
             {
-                if (IsOpen(ref ae1) && IsOpen(ref ae2)) return -1;
+                if (IsOpen(ref ae1) && IsOpen(ref ae2)) return;
                 // the following line avoids duplicating quite a bit of code
                 if (IsOpen(ref ae2)) //swap ae1 and ae2 just locally within this function
                 {
@@ -1479,23 +1498,25 @@ namespace TextMeshDOTS.Clipper2AoS
 
                 if (_cliptype == ClipType.Union)
                 {
-                    if (!IsHotEdge(ref ae2)) return -1;
+                    if (!IsHotEdge(ref ae2)) return;
                 }
-                else if (ae2.localMin.polytype == PathType.Subject)
-                    return -1;
+                else if (ae2.localMin.polytype == PathType.Subject) return;
 
                 switch (_fillrule)
                 {
                     case FillRule.Positive:
-                        if (ae2.windCount != 1) return -1; break;
+                        if (ae2.windCount != 1) return;
+                        break;
                     case FillRule.Negative:
-                        if (ae2.windCount != -1) return -1; break;
+                        if (ae2.windCount != -1) return;
+                        break;
                     default:
-                        if (math.abs(ae2.windCount) != 1) return -1; break;
+                        if (math.abs(ae2.windCount) != 1) return;
+                        break;
                 }
 
-                ref var ae1LocalMinVertex = ref _vertexList.ElementAt(ae1.localMin.vertex);
                 // toggle contribution ...
+                ref var ae1LocalMinVertex = ref _vertexList.ElementAt(ae1.localMin.vertex);
                 if (IsHotEdge(ref ae1))
                 {
                     resultOp = AddOutPt(ref ae1, ae1ID, pt);
@@ -1524,7 +1545,7 @@ namespace TextMeshDOTS.Clipper2AoS
                                 SetSides(ref ae3Outrec, ae1ID, ae3ID);
                             else
                                 SetSides(ref ae3Outrec, ae3ID, ae1ID);
-                            return ae3Outrec.pts;
+                            return;
                         }
                     }
 
@@ -1533,7 +1554,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 else
                     resultOp = StartOpenPath(ref ae1, ae1ID, pt);
 
-                return resultOp;
+                return;
             }
 
             // MANAGING CLOSED PATHS FROM HERE ON
@@ -1594,7 +1615,8 @@ namespace TextMeshDOTS.Clipper2AoS
             bool e1WindCountIs0or1 = oldE1WindCount == 0 || oldE1WindCount == 1;
             bool e2WindCountIs0or1 = oldE2WindCount == 0 || oldE2WindCount == 1;
 
-            if ((!IsHotEdge(ref ae1) && !e1WindCountIs0or1) || (!IsHotEdge(ref ae2) && !e2WindCountIs0or1)) return -1;
+            if ((!IsHotEdge(ref ae1) && !e1WindCountIs0or1) || 
+                (!IsHotEdge(ref ae2) && !e2WindCountIs0or1)) return;
 
             // NOW PROCESS THE INTERSECTION ...
 
@@ -1666,7 +1688,7 @@ namespace TextMeshDOTS.Clipper2AoS
                     switch (_cliptype)
                     {
                         case ClipType.Union:
-                            if (e1Wc2 > 0 && e2Wc2 > 0) return -1;
+                            if (e1Wc2 > 0 && e2Wc2 > 0) return;
                             resultOp = AddLocalMinPoly(ref ae1, ae1ID, ref ae2, ae2ID, pt);
                             break;
 
@@ -1684,14 +1706,14 @@ namespace TextMeshDOTS.Clipper2AoS
                             break;
 
                         default: // ClipType.Intersection:
-                            if (e1Wc2 <= 0 || e2Wc2 <= 0) return -1;
+                            if (e1Wc2 <= 0 || e2Wc2 <= 0) return;
                             resultOp = AddLocalMinPoly(ref ae1, ae1ID, ref ae2, ae2ID, pt);
                             break;
                     }
                 }
             }
 
-            return resultOp;
+            return;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1708,6 +1730,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 _activesList.ElementAt(nextID).prevInAEL = prevID;
             //delete &ae;
         }
+        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AdjustCurrXAndCopyToSEL(long topY)
@@ -1720,10 +1743,9 @@ namespace TextMeshDOTS.Clipper2AoS
                 ae.prevInSEL = ae.prevInAEL;
                 ae.nextInSEL = ae.nextInAEL;
                 ae.jump = ae.nextInSEL;
-                if (ae.joinWith == JoinWith.Left)
-                    ae.curX = _activesList.ElementAt(ae.prevInAEL).curX; // this also avoids complications
-                else
-                    ae.curX = TopX(ref ae, topY);
+                // it is safe to ignore 'joined' edges here because
+                // if necessary they will be split in IntersectEdges()
+                ae.curX = TopX(ref ae, topY);
                 // NB don't update ae.curr.Y yet (see AddNewIntersectNode)
                 aeID = ae.nextInAEL;
             }
@@ -1731,7 +1753,7 @@ namespace TextMeshDOTS.Clipper2AoS
 
         void ExecuteInternal(ClipType ct, FillRule fillRule)
         {
-            if (ct == ClipType.None) return;
+            if (ct == ClipType.NoClip) return;
             _fillrule = fillRule;
             _cliptype = ct;
             Reset();
@@ -1760,17 +1782,14 @@ namespace TextMeshDOTS.Clipper2AoS
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DoIntersections(long topY)
         {
-            if (BuildIntersectList(topY))
-            {
-                ProcessIntersectList();
-                _intersectList.Clear();
-            }
+            if (!BuildIntersectList(topY)) return;
+            ProcessIntersectList();
+            _intersectList.Clear();
         }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddNewIntersectNode(ref Active ae1, int ae1ID, ref Active ae2, int ae2ID, long topY)
         {
-            if (!InternalClipper.GetIntersectPt(
+            if (!InternalClipper.GetLineIntersectPt(
               ae1.bot, ae1.top, ae2.bot, ae2.top, out long2 ip))
                 ip = new long2(ae1.curX, topY);
 
@@ -1778,28 +1797,38 @@ namespace TextMeshDOTS.Clipper2AoS
             {
                 double absDx1 = math.abs(ae1.dx);
                 double absDx2 = math.abs(ae2.dx);
-                if (absDx1 > 100 && absDx2 > 100)
+                switch (absDx1 > 100)
                 {
-                    if (absDx1 > absDx2)
+                    case true when absDx2 > 100:
+                        {
+                            if (absDx1 > absDx2)
+                                ip = InternalClipper.GetClosestPtOnSegment(ip, ae1.bot, ae1.top);
+                            else
+                                ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
+                            break;
+                        }
+                    case true:
                         ip = InternalClipper.GetClosestPtOnSegment(ip, ae1.bot, ae1.top);
-                    else
-                        ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
-                }
-                else if (absDx1 > 100)
-                    ip = InternalClipper.GetClosestPtOnSegment(ip, ae1.bot, ae1.top);
-                else if (absDx2 > 100)
-                    ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
-                else
-                {
-                    if (ip.y < topY) ip.y = topY;
-                    else ip.y = _currentBotY;
-                    if (absDx1 < absDx2) ip.x = TopX(ref ae1, ip.y);
-                    else ip.x = TopX(ref ae2, ip.y);
+                        break;
+                    default:
+                        {
+                            if (absDx2 > 100)
+                                ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
+                            else
+                            {
+                                if (ip.y < topY) ip.y = topY;
+                                else ip.y = _currentBotY;
+                                if (absDx1 < absDx2) ip.x = TopX(ref ae1, ip.y);
+                                else ip.x = TopX(ref ae2, ip.y);
+                            }
+
+                            break;
+                        }
                 }
             }
             IntersectNode node = new IntersectNode(ip, ae1ID, ae2ID);
             _intersectList.Add(node);
-        }
+        }        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int ExtractFromSEL(ref Active ae)
@@ -1835,24 +1864,24 @@ namespace TextMeshDOTS.Clipper2AoS
             // stored in FIntersectList ready to be processed in ProcessIntersectList.
             // Re merge sorts see https://stackoverflow.com/a/46319131/359538
 
-            int leftID = _selID, rightID = -1, lEndID = -1, rEndID = -1, currBaseID = -1, prevBaseID = -1, tmpID = -1;
+            int leftID = _selID;
             ref var left = ref _activesList.ElementAt(leftID);
             while (left.jump != -1)
             {
-                prevBaseID = -1;
+                int prevBaseID = -1;
                 while (leftID != -1 && (left = ref _activesList.ElementAt(leftID)).jump != -1)
                 {
-                    currBaseID = leftID;
-                    rightID = left.jump;
+                    int currBaseID = leftID;
+                    int rightID = left.jump;
                     ref var right = ref _activesList.ElementAt(rightID);
-                    lEndID = rightID;
-                    rEndID = right.jump;
+                    int lEndID = rightID;
+                    int rEndID = right.jump;
                     left.jump = rEndID;
                     while (leftID != lEndID && rightID != rEndID)
                     {
                         if (right.curX < left.curX)
                         {
-                            tmpID = right.prevInSEL;
+                            int tmpID = right.prevInSEL;
                             ref var tmp = ref _activesList.ElementAt(tmpID);
                             for (; ; )
                             {
@@ -1869,25 +1898,20 @@ namespace TextMeshDOTS.Clipper2AoS
                                 right = ref _activesList.ElementAt(rightID);
                             lEndID = rightID;
                             Insert1Before2InSEL(ref tmp, tmpID, ref left, leftID);
-                            if (leftID == currBaseID)
-                            {
-                                currBaseID = tmpID;
-                                _activesList.ElementAt(currBaseID).jump = rEndID;
-                                if (prevBaseID == -1) _selID = currBaseID;
-                                else _activesList.ElementAt(prevBaseID).jump = currBaseID;
-                            }
+                            if (leftID != currBaseID) continue;                            
+                            currBaseID = tmpID;
+                            _activesList.ElementAt(currBaseID).jump = rEndID;
+                            if (prevBaseID == -1) _selID = currBaseID;
+                            else _activesList.ElementAt(prevBaseID).jump = currBaseID;                            
                         }
                         else
-                        {
-                            leftID = left.nextInSEL;
-                            left = ref _activesList.ElementAt(leftID);
-                        }
+                            left = ref _activesList.ElementAt(leftID = left.nextInSEL);                        
                     }
+
                     prevBaseID = currBaseID;
                     leftID = rEndID;
                 }
-                leftID = _selID;
-                left = ref _activesList.ElementAt(leftID);
+                left = ref _activesList.ElementAt(leftID = _selID);
             }
             return _intersectList.Length > 0;
         }
@@ -1979,13 +2003,6 @@ namespace TextMeshDOTS.Clipper2AoS
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool HorzIsSpike(ref Active horz)
-        {
-            long2 nextPt = _vertexList.ElementAt(NextVertex(ref horz)).pt;
-            return (horz.bot.x < horz.top.x) != (horz.top.x < nextPt.x);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void TrimHorz(ref Active horzEdge, bool preserveCollinear)
         {
             bool wasTrimmed = false;
@@ -2040,19 +2057,12 @@ namespace TextMeshDOTS.Clipper2AoS
          *******************************************************************************/
         {
             ref var horz = ref _activesList.ElementAt(horzID);
-            long2 pt;
             bool horzIsOpen = IsOpen(ref horz);
             long Y = horz.bot.y;
 
             int vertex_max = horzIsOpen ?
               GetCurrYMaximaVertex_Open(ref horz) :
               GetCurrYMaximaVertex(ref horz);
-
-            // remove 180 deg.spikes and also simplify
-            // consecutive horizontals when PreserveCollinear = true
-            if (vertex_max != -1 &&
-              !horzIsOpen && vertex_max != horz.vertexTop)
-                TrimHorz(ref horz, PreserveCollinear);
 
             bool isLeftToRight =
               ResetHorzDirection(ref horz, vertex_max, out long leftX, out long rightX);
@@ -2063,7 +2073,6 @@ namespace TextMeshDOTS.Clipper2AoS
                 ref var op = ref _outPtList.ElementAt(opID);
                 AddToHorzSegList(ref op, opID);
             }
-            int currOutrec = horz.outrec;
 
             for (; ; )
             {
@@ -2096,6 +2105,7 @@ namespace TextMeshDOTS.Clipper2AoS
 
                     // if horzEdge is a maxima, keep going until we reach
                     // its maxima pair, otherwise check for break conditions
+                    long2 pt;
                     if (vertex_max != horz.vertexTop || IsOpenEnd(ref horz))
                     {
                         // otherwise stop when 'ae' is beyond the end of the horizontal line
@@ -2138,9 +2148,8 @@ namespace TextMeshDOTS.Clipper2AoS
                         aeID = horz.prevInAEL;
                     }
 
-                    if (IsHotEdge(ref horz) && (horz.outrec != currOutrec))
+                    if (IsHotEdge(ref horz))
                     {
-                        currOutrec = horz.outrec;
                         var opID = GetLastOp(ref horz, horzID);
                         AddToHorzSegList(ref _outPtList.ElementAt(opID), opID);
                     }
@@ -2163,16 +2172,14 @@ namespace TextMeshDOTS.Clipper2AoS
                     DeleteFromAEL(ref horz, horzID);
                     return;
                 }
-                else if (_vertexList.ElementAt(NextVertex(ref horz)).pt.y != horz.top.y)
+                if (_vertexList.ElementAt(NextVertex(ref horz)).pt.y != horz.top.y)
                     break;
 
                 //still more horizontals in bound to process ...
                 if (IsHotEdge(ref horz))
                     AddOutPt(ref horz, horzID, horz.top);
-                UpdateEdgeIntoAEL(ref horz, horzID);
 
-                if (PreserveCollinear && !horzIsOpen && HorzIsSpike(ref horz))
-                    TrimHorz(ref horz, true);
+                UpdateEdgeIntoAEL(ref horz, horzID);                
 
                 isLeftToRight = ResetHorzDirection(ref horz,
                   vertex_max, out leftX, out rightX);
@@ -2224,31 +2231,27 @@ namespace TextMeshDOTS.Clipper2AoS
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int DoMaxima(ref Active ae, int aeID)
         {
-            int prevEID;
-            int nextEID, maxPairID;
-            prevEID = ae.prevInAEL;
-            nextEID = ae.nextInAEL;
+            int prevEID = ae.prevInAEL; 
+            int nextEID = ae.nextInAEL;            
 
             if (IsOpenEnd(ref ae))
             {
                 if (IsHotEdge(ref ae)) AddOutPt(ref ae, aeID, ae.top);
-                if (!IsHorizontal(ref ae))
+                if (IsHorizontal(ref ae)) return nextEID;                
+                if (IsHotEdge(ref ae))
                 {
-                    if (IsHotEdge(ref ae))
-                    {
-                        ref var aeOutrec = ref _outrecList.ElementAt(ae.outrec);
-                        if (IsFront(ref ae, aeID))
-                            aeOutrec.frontEdge = -1;
-                        else
-                            aeOutrec.backEdge = -1;
-                        ae.outrec = -1;
-                    }
-                    DeleteFromAEL(ref ae, aeID);
+                    ref var aeOutrec = ref _outrecList.ElementAt(ae.outrec);
+                    if (IsFront(ref ae, aeID))
+                        aeOutrec.frontEdge = -1;
+                    else
+                        aeOutrec.backEdge = -1;
+                    ae.outrec = -1;
                 }
+                DeleteFromAEL(ref ae, aeID);                
                 return nextEID;
             }
 
-            maxPairID = GetMaximaPair(ref ae);
+            int maxPairID = GetMaximaPair(ref ae);
             if (maxPairID == -1) return nextEID; // eMaxPair is horizontal
 
             ref var maxPair = ref _activesList.ElementAt(maxPairID);
@@ -2315,8 +2318,9 @@ namespace TextMeshDOTS.Clipper2AoS
                 return;
 
             ref Active prev = ref _activesList.ElementAt(prevID);
-            if (IsOpen(ref e) || IsOpen(ref prev) ||
-              !IsHotEdge(ref e) || !IsHotEdge(ref prev)) return;
+            if (!IsHotEdge(ref e) || !IsHotEdge(ref prev) ||
+                IsHorizontal(ref e) || IsHorizontal(ref prev) ||
+                IsOpen(ref e) || IsOpen(ref prev)) return;
             if ((pt.y < e.top.y + 2 || pt.y < prev.top.y + 2) &&    //avoid trivial joins
               ((e.bot.y > pt.y) || (prev.bot.y > pt.y))) return;    // (#490)
 
@@ -2325,7 +2329,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 if (ClipperFunc.PerpendicDistFromLineSqrd(pt, prev.bot, prev.top) > 0.25) return;
             }
             else if (e.curX != prev.curX) return;
-            if (InternalClipper.CrossProduct(e.top, pt, prev.top) != 0) return;
+            if (!InternalClipper.IsCollinear(e.top, pt, prev.top)) return;
 
             ref var eOutrec = ref _outrecList.ElementAt(e.outrec);
             ref var prevOutrec = ref _outrecList.ElementAt(prev.outrec);
@@ -2347,8 +2351,9 @@ namespace TextMeshDOTS.Clipper2AoS
                 return;
 
             ref Active next = ref _activesList.ElementAt(nextID);
-            if (IsOpen(ref e) || !IsHotEdge(ref e) || IsJoined(ref e) ||
-              IsOpen(ref next) || !IsHotEdge(ref next)) return;
+            if (!IsHotEdge(ref e) || !IsHotEdge(ref next) ||
+                IsHorizontal(ref e) || IsHorizontal(ref next) ||
+                IsOpen(ref e) || IsOpen(ref next)) return;
             if ((pt.y < e.top.y + 2 || pt.y < next.top.y + 2) &&    //avoid trivial joins
               ((e.bot.y > pt.y) || (next.bot.y > pt.y))) return;    // (#490)
 
@@ -2357,8 +2362,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 if (ClipperFunc.PerpendicDistFromLineSqrd(pt, next.bot, next.top) > 0.25) return;
             }
             else if (e.curX != next.curX) return;
-            if (InternalClipper.CrossProduct(e.top, pt, next.top) != 0)
-                return;
+            if (!InternalClipper.IsCollinear(e.top, pt, next.top)) return;
 
             ref var eOutrec = ref _outrecList.ElementAt(e.outrec);
             ref var nextOutrec = ref _outrecList.ElementAt(next.outrec);
@@ -2563,19 +2567,34 @@ namespace TextMeshDOTS.Clipper2AoS
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Rect64 GetBounds(int opID)
+        private NativeList<long2> GetCleanPath(int opID)
         {
-            ref var op = ref _outPtList.ElementAt(opID);
-            Rect64 result = new Rect64(op.pt.x, op.pt.y, op.pt.x, op.pt.y);
-            int op2ID = op.next;
+            var result = new NativeList<long2>();
+            int op2ID = opID;
+            ref var op2 = ref _outPtList.ElementAt(op2ID);
+            ref var op2Next = ref _outPtList.ElementAt(op2.next);
+            ref var op2Prev = ref _outPtList.ElementAt(op2.prev);
+            while (op2.next != opID &&
+              ((op2.pt.x == op2Next.pt.x && op2.pt.x == op2Prev.pt.x) ||
+                (op2.pt.y == op2Next.pt.y && op2.pt.y == op2Prev.pt.y)))
+            {
+                op2 = ref _outPtList.ElementAt(op2ID = op2.next);
+                op2Next = ref _outPtList.ElementAt(op2.next);
+                op2Prev = ref _outPtList.ElementAt(op2.prev);
+            }
+            result.Add(op2.pt);
+            OutPt prevOp = op2;
+            op2ID = op2.next;
             while (op2ID != opID)
             {
-                ref var op2 = ref _outPtList.ElementAt(op2ID);
-                if (op2.pt.x < result.left) result.left = op2.pt.x;
-                else if (op2.pt.x > result.right) result.right = op2.pt.x;
-                if (op2.pt.y < result.top) result.top = op2.pt.y;
-                else if (op2.pt.y > result.bottom) result.bottom = op2.pt.y;
-                op2ID = op2.next;
+                if ((op2.pt.x != op2Next.pt.x || op2.pt.x != prevOp.pt.x) &&
+                    (op2.pt.y != op2Next.pt.y || op2.pt.y != prevOp.pt.y))
+                {
+                    result.Add(op2.pt);
+                    prevOp = op2;
+                }
+                op2 = ref _outPtList.ElementAt(op2ID = op2.next);
+                op2Next = ref _outPtList.ElementAt(op2.next);
             }
             return result;
         }
@@ -2597,6 +2616,7 @@ namespace TextMeshDOTS.Clipper2AoS
             // must be above or below to get here
             bool isAbove = op.pt.y < pt.y, startingAbove = isAbove;
             int val = 0;
+            int d;
 
             op2ID = op.next;
             ref var op2 = ref _outPtList.ElementAt(op2ID);
@@ -2609,7 +2629,7 @@ namespace TextMeshDOTS.Clipper2AoS
                     while (op2ID != opID && op2.pt.y > pt.y) op2 = ref _outPtList.ElementAt(op2ID = op2.next);
                 if (op2ID == opID) break;
 
-                // must have touched or crossed the pt.Y horizonal
+                // must have touched or crossed the pt.Y horizontal
                 // and this must happen an even number of times
 
                 op2Prev = ref _outPtList.ElementAt(op2.prev);
@@ -2629,7 +2649,7 @@ namespace TextMeshDOTS.Clipper2AoS
                         val = 1 - val; // toggle val
                     else
                     {
-                        double d = InternalClipper.CrossProduct(op2Prev.pt, op2.pt, pt);
+                        d = InternalClipper.CrossProductSign(op2Prev.pt, op2.pt, pt);
                         if (d == 0) return PointInPolygonResult.IsOn;
                         if ((d < 0) == isAbove) val = 1 - val;
                     }
@@ -2638,38 +2658,66 @@ namespace TextMeshDOTS.Clipper2AoS
                 op2 = ref _outPtList.ElementAt(op2ID = op2.next);
             }
 
-            if (isAbove != startingAbove)
-            {
-                op2Prev = ref _outPtList.ElementAt(op2.prev);
-                double d = InternalClipper.CrossProduct(op2Prev.pt, op2.pt, pt);
-                if (d == 0) return PointInPolygonResult.IsOn;
-                if ((d < 0) == isAbove) val = 1 - val;
-            }
+            if (isAbove == startingAbove) 
+                return val == 0 ? PointInPolygonResult.IsOutside : PointInPolygonResult.IsInside;
 
-            if (val == 0) return PointInPolygonResult.IsOutside;
-            else return PointInPolygonResult.IsInside;
+            
+            op2Prev = ref _outPtList.ElementAt(op2.prev);
+            d = InternalClipper.CrossProductSign(op2Prev.pt, op2.pt, pt);
+            if (d == 0) return PointInPolygonResult.IsOn;
+            if ((d < 0) == isAbove) val = 1 - val;
+
+            return val == 0 ? PointInPolygonResult.IsOutside : PointInPolygonResult.IsInside;
         }
-
         private bool Path1InsidePath2(int op1ID, int op2ID)
         {
             // we need to make some accommodation for rounding errors
             // so we won't jump if the first vertex is found outside
-            int outside_cnt = 0;
-            int opID = op1ID;
-            ref var op = ref _outPtList.ElementAt(opID);
+            PointInPolygonResult pip = PointInPolygonResult.IsOn;
+            int opID = op1ID;            
             do
             {
-                PointInPolygonResult result = PointInOpPolygon(op.pt, op2ID);
-                if (result == PointInPolygonResult.IsOutside) ++outside_cnt;
-                else if (result == PointInPolygonResult.IsInside) --outside_cnt;
-                op = ref _outPtList.ElementAt(opID = op.next);
-            } while (opID != op1ID && math.abs(outside_cnt) < 2);
-            if (math.abs(outside_cnt) > 1) return (outside_cnt < 0);
-            // since path1's location is still equivocal, check its midpoint            
-            long2 mp = GetBounds(opID).MidPoint();
-            return PointInOpPolygon(mp, op2ID) == PointInPolygonResult.IsInside;
+                ref var op = ref _outPtList.ElementAt(opID);
+                switch (PointInOpPolygon(op.pt, op2ID))
+                {
+                    case PointInPolygonResult.IsOutside:
+                        if (pip == PointInPolygonResult.IsOutside) return false;
+                        pip = PointInPolygonResult.IsOutside;
+                        break;
+                    case PointInPolygonResult.IsInside:
+                        if (pip == PointInPolygonResult.IsInside) return true;
+                        pip = PointInPolygonResult.IsInside;
+                        break;
+                    default: break;
+                }
+                opID = op.next;
+            } while (opID != op1ID);
+            // result is unclear, so try again using cleaned paths
+            return InternalClipper.Path2ContainsPath1(GetCleanPath(op1ID), GetCleanPath(op2ID)); // (#973)
         }
+        private void MoveSplits(ref OutRec fromOr, int _fromOrID, ref OutRec toOr, int toOrID)
+        {
+            if (fromOr.splitStart == -1) //no split, nothing to move
+                return;
 
+            toOr.splitStart = fromOr.splitStart;
+
+            int tmp = toOr.splitStart;
+            do
+            {
+                tmp = nextSplit[tmp];
+                if (tmp == toOrID)
+                {
+                    //OutRec toOr cannot be member of it's own split list
+                    //so find next split that is NOT toOr, and then set nextSplit[tmp] to that
+                    var current = tmp;
+                    while (current == toOrID)
+                        current = nextSplit[current];
+                    nextSplit[tmp] = current;
+                    tmp = current;
+                }
+            } while (tmp != -1);
+        }
         private void ProcessHorzJoins()
         {
             for (int i = 0, length = _horzJoinList.Length; i < length; i++)
@@ -2700,8 +2748,9 @@ namespace TextMeshDOTS.Clipper2AoS
                     or1 = ref _outrecList.ElementAt(or1ID);//fetch again due to invalidated references
                     or2 = ref _outrecList.ElementAt(or2ID);
                     or2.pts = op1bID;
-
                     FixOutRecPts(ref or2, or2ID);
+
+                    //if or1->pts has moved to or2 then update or1->pts!!
                     ref var or1Pts = ref _outPtList.ElementAt(or1.pts);
                     if (or1Pts.outrec == or2ID)
                     {
@@ -2709,19 +2758,24 @@ namespace TextMeshDOTS.Clipper2AoS
                         or1Pts.outrec = or1ID;
                     }
 
-                    if (_using_polytree)  //#498, #520, #584, D#576
+                    if (_using_polytree)  //#498, #520, #584, D#576, #618
                     {
                         ref var or2Pts = ref _outPtList.ElementAt(or2.pts);
                         if (Path1InsidePath2(or1.pts, or2.pts))
                         {
-                            or2.owner = or1.owner;
-                            SetOwner(ref or1, or1ID, ref or2, or2ID);
+                            //swap or1's & or2's pts
+                            (or2.pts, or1.pts) = (or1.pts, or2.pts);
+                            FixOutRecPts(ref or1, or1ID);
+                            FixOutRecPts(ref or2, or2ID);
+                            //or2 is now inside or1
+                            or2.owner = or1ID;
                         }
+                        else if (Path1InsidePath2(or2.pts, or1.pts))
+                            or2.owner = or1ID;
                         else
-                        {
-                            SetOwner(ref or2, or2ID, ref or1, or1ID);
-                            AddSplit(ref or1, or2ID);
-                        }
+                            or2.owner = or1.owner;
+
+                        AddSplit(ref or1, or2ID);
                     }
                     else
                         or2.owner = or1ID;
@@ -2730,7 +2784,10 @@ namespace TextMeshDOTS.Clipper2AoS
                 {
                     or2.pts = -1;
                     if (_using_polytree)
+                    {
                         SetOwner(ref or2, or2ID, ref or1, or1ID);
+                        MoveSplits(ref or2, or2ID, ref or1, or1ID); //#618
+                    }
                     else
                         or2.owner = or1ID;
                 }
@@ -2800,7 +2857,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 ref var op2Next = ref _outPtList.ElementAt(op2.next);
                 ref var op2Prev = ref _outPtList.ElementAt(op2.prev);
                 // NB if preserveCollinear == true, then only remove 180 deg. spikes
-                if ((InternalClipper.CrossProduct(op2Prev.pt, op2.pt, op2Next.pt) == 0) &&
+                if ((InternalClipper.IsCollinear(op2Prev.pt, op2.pt, op2Next.pt)) &&
                   ((op2.pt == op2Prev.pt) || (op2.pt == op2Next.pt) || !PreserveCollinear ||
                   (InternalClipper.DotProduct(op2Prev.pt, op2.pt, op2Next.pt) < 0)))
                 {
@@ -2835,12 +2892,9 @@ namespace TextMeshDOTS.Clipper2AoS
             ref var splitOpNext = ref _outPtList.ElementAt(splitOp.next);
             ref var nextNextOp = ref _outPtList.ElementAt(splitOpNext.next);
             outrec.pts = prevOpID;
-            int resultID = prevOpID;
 
-            InternalClipper.GetIntersectPoint(
+            InternalClipper.GetLineIntersectPt(
                 prevOp.pt, splitOp.pt, splitOpNext.pt, nextNextOp.pt, out long2 ip);
-
-            //Debug.Log($"SoA: {tmp.x:D9} {tmp.y:D9}");
 
             double area1 = Area(prevOpID);
             double absArea1 = math.abs(area1);
@@ -2873,7 +2927,6 @@ namespace TextMeshDOTS.Clipper2AoS
 
                 newOp2.prev = prevOpID;
                 newOp2.next = splitOpNext.next;
-
                 nextNextOp.prev = newOp2ID;
                 prevOp.next = newOp2ID;
             }
@@ -2883,70 +2936,94 @@ namespace TextMeshDOTS.Clipper2AoS
             // So the only way for these areas to have the same sign is if
             // the split triangle is larger than the path containing prevOp or
             // if there's more than one self=intersection.
-            if (absArea2 > 1 &&
-                (absArea2 > absArea1 ||
-                 ((area2 > 0) == (area1 > 0))))
+            if (!(absArea2 > 1) ||
+                (!(absArea2 > absArea1) &&
+                 ((area2 > 0) != (area1 > 0)))) return;
+            int newOutRecID = NewOutRec();
+            outrec = ref _outrecList.ElementAt(outrecID); //fetch again due to invalidated references
+            ref var newOutRec = ref _outrecList.ElementAt(newOutRecID);
+            newOutRec.owner = outrec.owner;
+            splitOp.outrec = newOutRecID;
+            splitOpNext.outrec = newOutRecID;
+
+            int newOpID = NewOutPt(ip, newOutRecID);
+            splitOp = ref _outPtList.ElementAt(splitOpID);//fetch again due to invalidated references
+            splitOpNext = ref _outPtList.ElementAt(splitOp.next);//fetch again due to invalidated references
+            ref var newOp = ref _outPtList.ElementAt(newOpID);
+
+            newOp.prev = splitOp.next;
+            newOp.next = splitOpID;
+            newOutRec.pts = newOpID;
+            splitOp.prev = newOpID;
+            splitOpNext.next = newOpID;
+
+            if (!_using_polytree) return;
+            if (Path1InsidePath2(prevOpID, newOpID))
             {
-                int newOutRecID = NewOutRec();
-                outrec = ref _outrecList.ElementAt(outrecID); //fetch again due to invalidated references
-                ref var newOutRec = ref _outrecList.ElementAt(newOutRecID);
-                newOutRec.owner = outrec.owner;
-                splitOp.outrec = newOutRecID;
-                splitOpNext.outrec = newOutRecID;
-
-                int newOpID = NewOutPt(ip, newOutRecID);
-                splitOp = ref _outPtList.ElementAt(splitOpID);//fetch again due to invalidated references
-                splitOpNext = ref _outPtList.ElementAt(splitOp.next);//fetch again due to invalidated references
-                ref var newOp = ref _outPtList.ElementAt(newOpID);
-
-                newOp.prev = splitOp.next;
-                newOp.next = splitOpID;
-                newOutRec.pts = newOpID;
-                splitOp.prev = newOpID;
-                splitOpNext.next = newOpID;
-
-                if (_using_polytree)
-                {
-                    if (Path1InsidePath2(prevOpID, newOpID))
-                    {
-                        AddSplit(ref newOutRec, outrecID);
-                    }
-                    else
-                    {
-                        AddSplit(ref outrec, newOutRecID);
-                    }
-                }
+                AddSplit(ref newOutRec, outrecID);
+            }
+            else
+            {
+                AddSplit(ref outrec, newOutRecID);
             }
             //else { splitOp = null; splitOp.next = null; }
         }
 
-        /// <summary> method will invalidate passed in references, so do not </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FixSelfIntersects(int outrecID)
         {
             var outrec = _outrecList[outrecID];
             int op2ID = outrec.pts;
+            ref var op2 = ref _outPtList.ElementAt(op2ID);
+            ref var op2Next = ref _outPtList.ElementAt(op2.next);
+            ref var op2NextNext = ref _outPtList.ElementAt(op2Next.next);
+            ref var op2Prev = ref _outPtList.ElementAt(op2.prev);
+
+            if (op2.prev == op2Next.next)
+                return; // because triangles can't self-intersect
+
+            
             for (; ; )
             {
-                ref var op2 = ref _outPtList.ElementAt(op2ID);
-                ref var op2Next = ref _outPtList.ElementAt(op2.next);
-                ref var op2NextNext = ref _outPtList.ElementAt(op2Next.next);
-                ref var op2Prev = ref _outPtList.ElementAt(op2.prev);
-                // triangles can't self-intersect
-                if (op2.prev == op2Next.next) break;
+                op2 = ref _outPtList.ElementAt(op2ID);
+                op2Next = ref _outPtList.ElementAt(op2.next);
+                op2NextNext = ref _outPtList.ElementAt(op2Next.next);
+                op2Prev = ref _outPtList.ElementAt(op2.prev);
+                ref var op2NextNextNext = ref _outPtList.ElementAt(op2NextNext.next);
                 if (InternalClipper.SegsIntersect(op2Prev.pt,
                         op2.pt, op2Next.pt, op2NextNext.pt))
                 {
-                    DoSplitOp(outrecID, op2ID);
-                    if ((outrec = _outrecList[outrecID]).pts == -1) return;
-                    op2ID = outrec.pts;
-                    continue;
+                    if (InternalClipper.SegsIntersect(op2Prev.pt,
+                            op2.pt, op2NextNext.pt, op2NextNextNext.pt))
+                    {
+                        // adjacent intersections (ie a micro self-intersection)
+                        op2ID = DuplicateOp(op2ID, false);
+                        op2 = ref _outPtList.ElementAt(op2ID);
+                        op2Next = ref _outPtList.ElementAt(op2.next);
+                        op2NextNext = ref _outPtList.ElementAt(op2Next.next);
+                        op2NextNextNext = ref _outPtList.ElementAt(op2NextNext.next);
+                        op2.pt = op2NextNextNext.pt;
+                        op2ID = op2.next;
+                    }
+                    else
+                    {
+                        if (op2ID == outrec.pts || op2.next == outrec.pts)
+                            outrec.pts = _outPtList.ElementAt(outrec.pts).prev;
+                        DoSplitOp(outrecID, op2ID);
+                        if ((outrec = _outrecList[outrecID]).pts == -1) return;
+                        op2ID = outrec.pts;
+                        op2 = ref _outPtList.ElementAt(op2ID);
+                        op2Next = ref _outPtList.ElementAt(op2.next);
+                        // triangles can't self-intersect
+                        if (op2.prev == op2Next.next) break;
+                        continue;
+                    }
                 }
-                else
-                    op2ID = op2.next;
+
+                op2ID = op2.next;
                 if (op2ID == outrec.pts) break;
             }
-        }
+        }        
 
         internal bool PathIsOK(int opID, bool isOpen)
         {
@@ -2956,14 +3033,14 @@ namespace TextMeshDOTS.Clipper2AoS
             if (_outPtList[op.next].next == op.prev && IsVerySmallTriangle(opID)) return false; //identical to if (path.Count == 3)
             else return true;
         }
-        internal bool BuildPath(int opID, bool reverse, bool isOpen, ref NativeList<int2> pathNodes, ref NativeList<int> pathStartIDs)
+        internal bool BuildPath(int opID, bool reverse, bool isOpen, ref NativeList<int2> nodes, ref NativeList<int> startIDs)
         {
             if (opID == -1)
                 return false;
             ref var op = ref _outPtList.ElementAt(opID);
             if (op.next == opID || (!isOpen && op.next == op.prev)) return false;
 
-            pathStartIDs.Add(pathNodes.Length);//add startID for a contour
+            startIDs.Add(nodes.Length);
             long2 lastPt;
             int op2ID;
             if (reverse)
@@ -2979,7 +3056,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 op2ID = op.next;
             }
             var firstPt = lastPt;
-            pathNodes.Add((int2)lastPt);
+            nodes.Add((int2)lastPt);
             //path.nodes.Add((int2)(_invScale * lastPt));//only needed when input Polygon was float or double
 
             int pathCount = 0;
@@ -2989,7 +3066,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 if (op2.pt != lastPt)
                 {
                     lastPt = op2.pt;
-                    pathNodes.Add((int2)lastPt);
+                    nodes.Add((int2)lastPt);
                     //path.nodes.Add((int2)(_invScale * lastPt));//only needed when input Polygon was float or double
                 }
                 if (reverse)
@@ -3001,24 +3078,23 @@ namespace TextMeshDOTS.Clipper2AoS
             if (!isOpen) //verify that polygon is closed
             {
                 if (firstPt != lastPt)
-                    pathNodes.Add((int2)firstPt);
+                    nodes.Add((int2)firstPt);
                 //path.nodes.Add((int2)(_invScale * firstPt));//only needed when input Polygon was float or double
             }
             if (pathCount == 3 && IsVerySmallTriangle(op2ID))
             {
                 //first close the contour
-                if (pathStartIDs.Length > 0 && pathStartIDs[^1] != pathNodes.Length)
-                    pathStartIDs.Add(pathNodes.Length);
+                if (startIDs.Length > 0 && startIDs[^1] != nodes.Length)
+                    startIDs.Add(nodes.Length);
 
                 //then remove last component
-                int startIDstart = pathStartIDs.Length - 2;
+                int startIDstart = startIDs.Length - 2;
                 int startIDend = startIDstart + 1;
-                int nodeStart = pathStartIDs[startIDstart];
-                int nodeEnd = pathStartIDs[startIDend];
+                int nodeStart = startIDs[startIDstart];
+                int nodeEnd = startIDs[startIDend];
                 for (int i = nodeEnd; i >= nodeStart; i++)
-                    pathNodes.RemoveAt(i);
-                pathStartIDs.RemoveAt(startIDend);
-
+                    nodes.RemoveAt(i);
+                startIDs.RemoveAt(startIDend);
                 return false;
             }
             else return true;
@@ -3029,10 +3105,11 @@ namespace TextMeshDOTS.Clipper2AoS
             solutionClosedStartIDs.Clear();
             solutionOpenNodes.Clear();
             solutionOpenStartIDs.Clear();
-            solutionClosedNodes.Capacity = _outPtList.Length;
-            solutionOpenNodes.Capacity = _outPtList.Length;
-            solutionClosedStartIDs.Capacity = _outrecList.Length;
-            solutionOpenStartIDs.Capacity = _outrecList.Length;
+
+            solutionClosedNodes.EnsureCapacity(_outPtList.Length);
+            solutionClosedStartIDs.EnsureCapacity(_outrecList.Length);
+            solutionOpenNodes.EnsureCapacity(_outPtList.Length);
+            solutionOpenStartIDs.EnsureCapacity(_outrecList.Length);
 
             // _outrecList.Count is not static here because
             // CleanCollinear can indirectly add additional OutRec
@@ -3054,11 +3131,10 @@ namespace TextMeshDOTS.Clipper2AoS
                     BuildPath(outrec.pts, ReverseSolution, false, ref solutionClosedNodes, ref solutionClosedStartIDs);
                 }
 
-            }            
-
+            }
             if (solutionOpenNodes.Length > 0)
                 solutionOpenStartIDs.Add(solutionOpenNodes.Length);
-            
+
             //ensure polygon is closed
             if (solutionClosedStartIDs.Length > 0 && solutionClosedStartIDs[^1] != solutionClosedNodes.Length)
                 solutionClosedStartIDs.Add(solutionClosedNodes.Length);
@@ -3076,28 +3152,47 @@ namespace TextMeshDOTS.Clipper2AoS
 
             if (!PathIsOK(outrec.pts, false))
                 return false;
-            outrec.bounds = GetBounds(outrec.pts);
+            outrec.bounds = InternalClipper.GetBounds(_outPtList, outrec.pts);
             return true;
         }
+
         private bool CheckSplitOwner(int outrecID, int splitStart)
         {
             ref var outrec = ref _outrecList.ElementAt(outrecID);
-            int nextSplitID = splitStart;
-            do
+            int splitID = splitStart;
+            while (splitID != -1)
             {
-                var splitID = GetRealOutRec(nextSplitID);
-                if (splitID == -1 || splitID == outrecID || splitID == outrec.owner) continue;
                 ref var split = ref _outrecList.ElementAt(splitID);
-                if (split.splitStart != -1 && CheckSplitOwner(outrecID, split.splitStart)) return true;
-                if (CheckBounds(splitID) && split.bounds.Contains(outrec.bounds) &&
-                    Path1InsidePath2(outrec.pts, split.pts))
+                if (split.pts == -1 && split.splitStart != -1 &&
+                    CheckSplitOwner(outrecID, split.splitStart)) return true; //#942
+                splitID = GetRealOutRec(splitID);
+                split = ref _outrecList.ElementAt(splitID);
+                if (splitID == -1 || splitID == outrecID || split.recursiveSplit == outrecID)
                 {
-                    outrec.owner = splitID; //found in split
-                    return true;
+                    splitID = nextSplit[splitID];
+                    continue;
                 }
-            } while ((nextSplitID = nextSplit[nextSplitID]) != -1);
+                split.recursiveSplit = outrecID; //#599
+
+                if(split.splitStart != -1 && CheckSplitOwner(outrecID, split.splitStart)) return true;
+
+                if (!CheckBounds(splitID) ||
+                    !split.bounds.Contains(outrec.bounds) ||
+                    !Path1InsidePath2(outrec.pts!, split.pts!))
+                {
+                    splitID = nextSplit[splitID];
+                    continue;
+                }
+
+                if (!IsValidOwner(outrecID, splitID)) // split is owned by outrec (#957)
+                    split.owner = outrec.owner;
+
+                outrec.owner = splitID; //found in split
+                return true;
+            };
             return false;
         }
+
         private void RecursiveCheckOwners(int outrecID, ref PolyTree polytree)
         {
             // pre-condition: outrec will have valid bounds
@@ -3111,7 +3206,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 ref var outrecOwner = ref _outrecList.ElementAt(outrec.owner);
                 if (outrecOwner.splitStart != -1 &&
                     CheckSplitOwner(outrecID, outrecOwner.splitStart)) break;
-                else if (outrecOwner.pts != -1 && CheckBounds(outrec.owner) &&
+                if (outrecOwner.pts != -1 && CheckBounds(outrec.owner) &&
                   Path1InsidePath2(outrec.pts, outrecOwner.pts)) break;
                 outrec.owner = outrecOwner.owner;
             }
@@ -3135,8 +3230,12 @@ namespace TextMeshDOTS.Clipper2AoS
             polytree.Clear();
             solutionOpenNodes.Clear();
             solutionOpenStartIDs.Clear();
-            solutionOpenNodes.Capacity = _outPtList.Length;
-            solutionOpenStartIDs.Capacity = _outrecList.Length;
+            if (_hasOpenPaths)
+            {
+                solutionOpenNodes.EnsureCapacity(_outPtList.Length);
+                solutionOpenStartIDs.EnsureCapacity(_outrecList.Length);
+            }
+
             var components = polytree.components;
             for (int i = 0, length = _outrecList.Length; i < length; i++)
                 components.Add(new TreeNode(i)); //initialize
@@ -3204,12 +3303,6 @@ namespace TextMeshDOTS.Clipper2AoS
             ClearSolutionOnly();
             return _succeeded;
         }
-        //public bool Execute(ClipType clipType, FillRule fillRule, ref NativeList<int2> solutionClosedNodes, ref NativeList<int> solutionClosedStartIDs)
-        //{
-        //    NativeList<int2> solutionOpenNodes = default;
-        //    NativeList<int> solutionOpenStartIDs = default;
-        //    return Execute(clipType, fillRule, ref solutionClosedNodes, ref solutionClosedStartIDs, ref solutionOpenNodes, ref solutionOpenStartIDs);
-        //}
         public bool Execute(ClipType clipType, FillRule fillRule, ref PolyTree polytree, ref NativeList<int2> solutionOpenNodes, ref NativeList<int> solutionOpenStartIDs)
         {
             _succeeded = true;

@@ -2,7 +2,7 @@ using System;
 using Unity.Collections;
 using Unity.Jobs;
 
-namespace ClipperAoS.MinHeap
+namespace TextMeshDOTS.Clipper2AoS.MinHeap
 {
     public enum Comparison
     {
