@@ -1,11 +1,10 @@
-using TextMeshDOTS;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 
 // Use this system for adding at runtime new fonts to the fonttable
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [RequireMatchingQueriesForUpdate]

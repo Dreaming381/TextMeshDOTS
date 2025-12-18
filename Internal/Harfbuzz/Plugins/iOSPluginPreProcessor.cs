@@ -4,7 +4,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS
 {
 
     public class IOSPluginPreProcessor : IPreprocessBuildWithReport

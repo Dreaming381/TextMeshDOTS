@@ -5,7 +5,7 @@ using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS
 {
     [DisallowMultipleComponent]
     [AddComponentMenu("TextMeshDOTS/Font Collection")]
