@@ -1,86 +1,141 @@
-﻿using Unity.Collections;
+﻿using System;
+using System.Runtime.CompilerServices;
+using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 
 namespace TextMeshDOTS.Clipper2AoS
 {
     public struct PolyTree
     {
-        public NativeList<TreeNode> components;
-        public NativeList<int> exteriorIDs;
-        public bool GetNextComponent(int parentID, out int nextID)
+        public NativeList<TreeNode> nodes;
+        public int root;
+        public PolyTree(int outerIDsize, Allocator allocator)
         {
-            nextID = components[parentID].childID;
-            if (nextID != -1) //first try to go deep (to next child)
+            nodes = new NativeList<TreeNode>(outerIDsize, allocator)
             {
-                //Debug.Log("Go to child");
-                return true;
-            }
-            nextID = components[parentID].rightID; //if that fails, try to go sideways (to next sibling)
-            if (nextID != -1)
-            {
-                //Debug.Log("Go right");
-                return true;
-            }
-            //if that fails, try to go to parent, check if right sibling exists, if not repeat until either parent is root (-1) or rightID exists
-            do
-            {
-                //Debug.Log("Going up");
-                nextID = components[parentID].rightID;
-                parentID = components[parentID].parentID;
-            } while (nextID == -1 && parentID != -1);
-            if (nextID != -1) //return the next sibling that was found
-            {
-                //Debug.Log("Go Up-->right");
-                return true;
-            }
-            if (parentID != -1) //last resort, return parent
-            {
-                //Debug.Log("Go Up-->parent");
-                return true;
-            }
-            return false;
+                new TreeNode(true)
+            };
+            root = 0;
         }
-        public void AddChildComponent(int parentID, int newChildID)
+        public void TraverseDepthFirst(
+            Action<int, bool, bool, NativeList<int2>, NativeList<int>> buildPath,
+            NativeList<int2> solutionNodes,
+            NativeList<int> solutionStartIDs)
         {
-            components.ElementAt(newChildID).parentID = parentID;
-            if (components[parentID].childID == -1)
-                components.ElementAt(parentID).childID = newChildID;
-            else
+            if(root==-1) return;
+            var stack = new NativeList<int>(16, Allocator.Temp)
             {
-                int rightID = components[parentID].childID;
-                int leftSiblingID;
-                do
-                {
-                    leftSiblingID = rightID;
-                    rightID = components[rightID].rightID;
-                } while (rightID != -1);
-                components.ElementAt(leftSiblingID).rightID = newChildID;
+                root
+            };
+            while(!stack.IsEmpty)
+            {
+                int nodeIndex = stack[~1];
+                stack.RemoveAt(nodeIndex);
+
+                //process node here
+                var node = nodes[nodeIndex];
+
+                //push children in reverse order to stack
+                //so that first child is processed first
+                var first = stack.Length;
+                for (int c = node.firstChild; c != -1; c = nodes[c].nextSibling)
+                    stack.Add(c);
+                var last = stack.Length -1;
+                stack.Reverse(first, last);
             }
         }
 
-        public bool IsCreated;
-        public PolyTree(int outerIDsize, Allocator allocator)
+        public void TraverseBreathFirst()
         {
-            components = new NativeList<TreeNode>(outerIDsize, allocator);
-            exteriorIDs = new NativeList<int>(outerIDsize, allocator);
-            IsCreated = true;
+            if (root == -1) return;
+            var queue = new NativeList<int>(16, Allocator.Temp)
+            {
+                root
+            };
+            while (!queue.IsEmpty)
+            {
+                int nodeIndex = queue[0];
+                queue.RemoveAt(0);
+
+                //process node here
+                var node = nodes[nodeIndex];
+
+                //push children into queue
+                for (int c = node.firstChild; c != -1; c = nodes[c].nextSibling)
+                    queue.Add(c);
+            }
+        }
+
+        public int AddNode(int outrecIdx, int parentIdx)
+        {
+            int newNodeIdx = nodes.Length;
+
+            nodes.Add(new TreeNode
+            {
+                outrecIdx = outrecIdx,
+                parent = parentIdx,
+                firstChild = -1,
+                nextSibling = -1
+            });
+
+            // Attach to parent's child list
+            ref var parent = ref nodes.ElementAt(parentIdx);
+            parent.childCount++;
+            if (parent.firstChild == -1)           
+                parent.firstChild = newNodeIdx;
+            else
+            {
+                int siblingIdx = parent.firstChild;
+                while (nodes[siblingIdx].nextSibling != -1)
+                    siblingIdx = nodes[siblingIdx].nextSibling;
+
+                ref var sibling = ref nodes.ElementAt(siblingIdx);
+                sibling.nextSibling = newNodeIdx;
+            }
+
+            return newNodeIdx;
+        }
+
+        public int ChildCount(int nodeIndex)
+        {
+            int count = 0;
+            for (int c = nodes[nodeIndex].firstChild; c!=-1; c = nodes[c].nextSibling)
+                count++;
+            return count;
+        }
+        public int Count => nodes[root].childCount;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsHole(int nodeIndex)
+        {
+            int level = GetLevel(nodeIndex);
+            return level != 0 && (level & 1) == 0;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetLevel(int nodeIndex)
+        {
+            int level = 0;
+            while (nodes[nodeIndex].parent != -1)
+            {
+                level++;
+                nodeIndex = nodes[nodeIndex].parent;
+            }
+            return level;
         }
         public void Clear()
         {
-            components.Clear();
-            exteriorIDs.Clear();
+            nodes.Clear();
+            nodes.Add(new TreeNode(true));
+            root = 0;
         }
         public void Dispose()
         {
-            if (components.IsCreated) components.Dispose();
-            if (exteriorIDs.IsCreated) exteriorIDs.Dispose();
-            IsCreated = false;
+            if (nodes.IsCreated) nodes.Dispose();
         }
         public void Dispose(JobHandle jobHandle)
         {
-            if (components.IsCreated) components.Dispose(jobHandle);
-            if (exteriorIDs.IsCreated) exteriorIDs.Dispose(jobHandle);
-            IsCreated = false;
+            if (nodes.IsCreated) nodes.Dispose(jobHandle);
         }
-    };
+    };    
 }

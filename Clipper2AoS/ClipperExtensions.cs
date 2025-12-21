@@ -3,7 +3,6 @@ using Unity.Collections;
 
 namespace TextMeshDOTS.Clipper2AoS
 {
-
     public static class ClipperExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -12,6 +11,7 @@ namespace TextMeshDOTS.Clipper2AoS
             if (list.Capacity < minCapacity)
                 list.Capacity = minCapacity;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int AddVertex(ref this NativeList<Vertex> vertices, long2 vertex, VertexFlags flag, bool firstVertex, int firstVertexID = 0)
         {
             int currentID = vertices.Length;
@@ -42,6 +42,18 @@ namespace TextMeshDOTS.Clipper2AoS
         public static Vertex PrevVertex(ref this NativeList<Vertex> vertices, int index)
         {
             return vertices[vertices[index].prev];
+        }
+        public static void Reverse<T>(this NativeList<T> list, int first, int last) where T : unmanaged
+        {
+            int i = first, j = last;
+            while (i < j)
+            {
+                ref var a = ref list.ElementAt(j);
+                ref var b = ref list.ElementAt(i);
+                (a, b) = (b, a);
+                i++;
+                j--;
+            }
         }
     };
 

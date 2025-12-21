@@ -16,12 +16,6 @@
             prev = -1;
             horz = -1;
         }
-        //public void AddOutPt(long2 pt, OutRec* outrec)
-        //{
-        //    OutPt temp = new OutPt(pt, outrec);
-        //    temp.next = &temp;
-        //    temp.prev = &temp;
-        //}
     };
 
 } //namespace

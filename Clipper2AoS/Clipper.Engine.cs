@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using TextMeshDOTS.Clipper2AoS.MinHeap;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -40,6 +41,7 @@ namespace TextMeshDOTS.Clipper2AoS
         LocalMax = 4,
         LocalMin = 8
     }
+    [BurstCompile]
     public struct ClipperL : IDisposable
     {
         ClipType _cliptype;
@@ -60,7 +62,7 @@ namespace TextMeshDOTS.Clipper2AoS
         NativeList<HorzSegment> _horzSegList;
         NativeList<HorzJoin> _horzJoinList;
         NativeList<int> splits;
-        NativeList<int> nextSplit;
+        NativeList<int> nextSplits;
         int _currentLocMin;
         long _currentBotY;
         bool _isSortedMinimaList;
@@ -72,6 +74,10 @@ namespace TextMeshDOTS.Clipper2AoS
         public bool PreserveCollinear { get; set; }
         public bool ReverseSolution { get; set; }
         bool _isCreated;
+        public readonly NativeList<OutRec> OutrecList
+        {
+            get => _outrecList;
+        }
         public readonly bool IsCreated
         {
             get => _isCreated;
@@ -89,21 +95,19 @@ namespace TextMeshDOTS.Clipper2AoS
             _isCreated = true;
 
             //input lists
-            //_vertexList = new NativeList<Vertex>(1024, allocator);
-            //_minimaList = new NativeList<LocalMinima>(1024, allocator);
-            _vertexList = new NativeList<Vertex>(16, allocator);
-            _minimaList = new NativeList<LocalMinima>(16, allocator);
+            _vertexList = new NativeList<Vertex>(1024, allocator);
+            _minimaList = new NativeList<LocalMinima>(1024, allocator);
 
             //solution lists
             _activesList = new NativeList<Active>(128, allocator);
             _intersectList = new NativeList<IntersectNode>(128, allocator);
-            _outrecList = new NativeList<OutRec>(256, allocator);
+            _outrecList = new NativeList<OutRec>(512, allocator);
             _outPtList = new NativeList<OutPt>(1024, allocator);
             _scanlineList = new MinHeap<long>(64, allocator, Comparison.Max);
             _horzSegList = new NativeList<HorzSegment>(64, allocator);
             _horzJoinList = new NativeList<HorzJoin>(64, allocator);
-            splits = new NativeList<int>(16, allocator);
-            nextSplit = new NativeList<int>(16, allocator);
+            splits = new NativeList<int>(32, allocator);
+            nextSplits = new NativeList<int>(32, allocator);
             _currentLocMin = 0;
             _currentBotY = long.MaxValue;
             _isSortedMinimaList = false;
@@ -129,7 +133,7 @@ namespace TextMeshDOTS.Clipper2AoS
             if (_horzSegList.IsCreated) _horzSegList.Dispose();
             if (_horzJoinList.IsCreated) _horzJoinList.Dispose();
             if (splits.IsCreated) splits.Dispose();
-            if (nextSplit.IsCreated) nextSplit.Dispose();
+            if (nextSplits.IsCreated) nextSplits.Dispose();
         }
         public void Dispose(JobHandle jobHandle)
         {
@@ -145,7 +149,7 @@ namespace TextMeshDOTS.Clipper2AoS
             if (_horzSegList.IsCreated) _horzSegList.Dispose(jobHandle);
             if (_horzJoinList.IsCreated) _horzJoinList.Dispose(jobHandle);
             if (splits.IsCreated) splits.Dispose(jobHandle);
-            if (nextSplit.IsCreated) nextSplit.Dispose(jobHandle);
+            if (nextSplits.IsCreated) nextSplits.Dispose(jobHandle);
         }
 
 
@@ -241,12 +245,6 @@ namespace TextMeshDOTS.Clipper2AoS
         {
             (ae2, ae1) = (ae1, ae2);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void SwapActives(ref Active ae1, ref Active ae2)
-        {
-            (ae2, ae1) = (ae1, ae2);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private PathType GetPolyType(ref Active ae)
         {
@@ -383,9 +381,7 @@ namespace TextMeshDOTS.Clipper2AoS
             if (or1ID == or2ID) //would also be true if both are null
             {
                 ref var or1 = ref _outrecList.ElementAt(or1ID);
-                int aeID = or1.frontEdge;
-                or1.frontEdge = or1.backEdge;
-                or1.backEdge = aeID;
+                (or1.backEdge, or1.frontEdge) = (or1.frontEdge, or1.backEdge);
                 return;
             }
 
@@ -437,7 +433,7 @@ namespace TextMeshDOTS.Clipper2AoS
             outrec.owner = newOwnerID;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private double Area(int opID)
+        internal double Area(int opID)
         {
             // https://en.wikipedia.org/wiki/Shoelace_formula
             double area = 0.0;
@@ -499,9 +495,7 @@ namespace TextMeshDOTS.Clipper2AoS
         {
             // while this proc. is needed for open paths
             // it's almost never needed for closed paths
-            int ae2ID = outrec.frontEdge;
-            outrec.frontEdge = outrec.backEdge;
-            outrec.backEdge = ae2ID;
+            (outrec.backEdge, outrec.frontEdge) = (outrec.frontEdge, outrec.backEdge);
             outrec.pts = _outPtList.ElementAt(outrec.pts).next;
         }
 
@@ -526,7 +520,7 @@ namespace TextMeshDOTS.Clipper2AoS
             _horzSegList.Clear();
             _horzJoinList.Clear();
             splits.Clear();//deviation from Clipper2
-            nextSplit.Clear();//deviation from Clipper2
+            nextSplits.Clear();//deviation from Clipper2
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1047,7 +1041,8 @@ namespace TextMeshDOTS.Clipper2AoS
             {
                 LocalMinima localMinima = PopLocalMinima();
                 int leftBoundID;
-                Vertex localMinimaVertex = _vertexList[localMinima.vertex]; //cache to minimize cache misses
+                var localMinimaVertex = _vertexList[localMinima.vertex]; //cache to minimize cache misses
+
                 if ((localMinimaVertex.flags & VertexFlags.OpenStart) != VertexFlags.None)
                 {
                     leftBoundID = -1;
@@ -1292,7 +1287,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 else
                     JoinOutrecPaths(ref ae2, ae2ID, ref ae1, ae1ID);
             }
-            else if (_outrecList.ElementAt(ae1.outrec).idx < _outrecList.ElementAt(ae2.outrec).idx) //replace with ae2.outrec < ae2.outrec (position in list is identical to idx)
+            else if (ae1.outrec < ae2.outrec)
                 JoinOutrecPaths(ref ae1, ae1ID, ref ae2, ae2ID);
             else
                 JoinOutrecPaths(ref ae2, ae2ID, ref ae1, ae1ID);
@@ -1342,7 +1337,7 @@ namespace TextMeshDOTS.Clipper2AoS
             ae2Outrec.frontEdge = -1;
             ae2Outrec.backEdge = -1;
             ae2Outrec.pts = -1;
-            ae1Outrec.outPtCount += ae2Outrec.outPtCount;
+            //ae1Outrec.outPtCount += ae2Outrec.outPtCount;
             SetOwner(ref ae2Outrec, ae2.outrec, ref ae1Outrec, ae1.outrec);
 
             if (IsOpenEnd(ref ae1))
@@ -1395,14 +1390,16 @@ namespace TextMeshDOTS.Clipper2AoS
             int currentID = _outrecList.Length;
             OutRec result = new OutRec
             {
-                idx = currentID,
-                splitStart = -1,
-                recursiveSplit=-1,
-                polypath = -1,
+                //outPtCount = 0,
                 owner = -1,
                 frontEdge = -1,
                 backEdge = -1,
                 pts = -1,
+                bounds=default,
+                polypath = -1,
+                isOpen = false,                
+                splits = -1,
+                recursiveSplit = -1,
             };
             _outrecList.Add(result);
             return currentID;
@@ -1416,6 +1413,7 @@ namespace TextMeshDOTS.Clipper2AoS
             result.prev = currentID;
             result.horz = -1;
             _outPtList.Add(result);
+            //_outrecList.ElementAt(outrecID).outPtCount++;
             return currentID;
         }
 
@@ -1437,9 +1435,9 @@ namespace TextMeshDOTS.Clipper2AoS
             }
 
             ae.outrec = outrecID;
-            int op = NewOutPt(pt, outrecID);
-            outrec.pts = op;
-            return op;
+            int opID = NewOutPt(pt, outrecID);
+            outrec.pts = opID;
+            return opID;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2142,6 +2140,7 @@ namespace TextMeshDOTS.Clipper2AoS
                     {
                         IntersectEdges(ref horz, horzID, ref ae, aeID, pt);
                         SwapPositionsInAEL(ref horz, horzID, ref ae, aeID);
+                        CheckJoinLeft(ref ae, aeID, pt);
                         horz.curX = ae.curX;
                         aeID = horz.nextInAEL;
                     }
@@ -2149,6 +2148,7 @@ namespace TextMeshDOTS.Clipper2AoS
                     {
                         IntersectEdges(ref ae, aeID, ref horz, horzID, pt);
                         SwapPositionsInAEL(ref ae, aeID, ref horz, horzID);
+                        CheckJoinRight(ref ae, aeID, pt);
                         horz.curX = ae.curX;
                         aeID = horz.prevInAEL;
                     }
@@ -2336,11 +2336,9 @@ namespace TextMeshDOTS.Clipper2AoS
             else if (e.curX != prev.curX) return;
             if (!InternalClipper.IsCollinear(e.top, pt, prev.top)) return;
 
-            ref var eOutrec = ref _outrecList.ElementAt(e.outrec);
-            ref var prevOutrec = ref _outrecList.ElementAt(prev.outrec);
-            if (eOutrec.idx == prevOutrec.idx)
+            if (e.outrec == prev.outrec)
                 AddLocalMaxPoly(ref prev, prevID, ref e, eID, pt);
-            else if (eOutrec.idx < prevOutrec.idx)
+            else if (e.outrec < prev.outrec)
                 JoinOutrecPaths(ref e, eID, ref prev, prevID);
             else
                 JoinOutrecPaths(ref prev, prevID, ref e, eID);
@@ -2369,11 +2367,9 @@ namespace TextMeshDOTS.Clipper2AoS
             else if (e.curX != next.curX) return;
             if (!InternalClipper.IsCollinear(e.top, pt, next.top)) return;
 
-            ref var eOutrec = ref _outrecList.ElementAt(e.outrec);
-            ref var nextOutrec = ref _outrecList.ElementAt(next.outrec);
-            if (eOutrec.idx == nextOutrec.idx)
+            if (e.outrec == next.outrec)
                 AddLocalMaxPoly(ref e, eID, ref next, nextID, pt);
-            else if (eOutrec.idx < nextOutrec.idx)
+            else if (e.outrec < next.outrec)
                 JoinOutrecPaths(ref e, eID, ref next, nextID);
             else
                 JoinOutrecPaths(ref next, nextID, ref e, eID);
@@ -2572,9 +2568,9 @@ namespace TextMeshDOTS.Clipper2AoS
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private NativeList<long2> GetCleanPath(int opID)
+        internal NativeList<long2> GetCleanPath(int opID)
         {
-            var result = new NativeList<long2>();
+            var result = new NativeList<long2>(Allocator.Temp);
             int op2ID = opID;
             ref var op2 = ref _outPtList.ElementAt(op2ID);
             ref var op2Next = ref _outPtList.ElementAt(op2.next);
@@ -2674,7 +2670,7 @@ namespace TextMeshDOTS.Clipper2AoS
 
             return val == 0 ? PointInPolygonResult.IsOutside : PointInPolygonResult.IsInside;
         }
-        private bool Path1InsidePath2(int op1ID, int op2ID)
+        internal bool Path1InsidePath2(int op1ID, int op2ID)
         {
             // we need to make some accommodation for rounding errors
             // so we won't jump if the first vertex is found outside
@@ -2700,28 +2696,29 @@ namespace TextMeshDOTS.Clipper2AoS
             // result is unclear, so try again using cleaned paths
             return InternalClipper.Path2ContainsPath1(GetCleanPath(op1ID), GetCleanPath(op2ID)); // (#973)
         }
-        private void MoveSplits(ref OutRec fromOr, int _fromOrID, ref OutRec toOr, int toOrID)
+        private void MoveSplits(ref OutRec fromOr, int fromOrID, ref OutRec toOr, int toOrID)
         {
-            if (fromOr.splitStart == -1) //no split, nothing to move
+            if (fromOr.splits == -1) //no split, nothing to move
                 return;
 
-            toOr.splitStart = fromOr.splitStart;
+            toOr.splits = fromOr.splits;
 
-            int tmp = toOr.splitStart;
+            int tmp = toOr.splits;
             do
             {
-                tmp = nextSplit[tmp];
+                tmp = nextSplits[tmp];
                 if (tmp == toOrID)
                 {
                     //OutRec toOr cannot be member of it's own split list
                     //so find next split that is NOT toOr, and then set nextSplit[tmp] to that
                     var current = tmp;
                     while (current == toOrID)
-                        current = nextSplit[current];
-                    nextSplit[tmp] = current;
+                        current = nextSplits[current];
+                    nextSplits[tmp] = current;
                     tmp = current;
                 }
             } while (tmp != -1);
+            fromOr.splits = -1;
         }
         private void ProcessHorzJoins()
         {
@@ -2756,16 +2753,14 @@ namespace TextMeshDOTS.Clipper2AoS
                     FixOutRecPts(ref or2, or2ID);
 
                     //if or1->pts has moved to or2 then update or1->pts!!
-                    ref var or1Pts = ref _outPtList.ElementAt(or1.pts);
-                    if (or1Pts.outrec == or2ID)
+                    if (_outPtList.ElementAt(or1.pts).outrec == or2ID)
                     {
                         or1.pts = j.op1;
-                        or1Pts.outrec = or1ID;
+                        _outPtList.ElementAt(or1.pts).outrec = or1ID;
                     }
 
                     if (_using_polytree)  //#498, #520, #584, D#576, #618
                     {
-                        ref var or2Pts = ref _outPtList.ElementAt(or2.pts);
                         if (Path1InsidePath2(or1.pts, or2.pts))
                         {
                             //swap or1's & or2's pts
@@ -2869,7 +2864,6 @@ namespace TextMeshDOTS.Clipper2AoS
                     if (op2ID == outrec.pts)
                         outrec.pts = op2.prev;
                     op2ID = DisposeOutPt(op2ID);
-                    op2 = ref _outPtList.ElementAt(op2ID);
                     if (!IsValidClosedPath(op2ID))
                     {
                         outrec.pts = -1;
@@ -3162,30 +3156,27 @@ namespace TextMeshDOTS.Clipper2AoS
         private bool CheckSplitOwner(int outrecID, int splitStart)
         {
             ref var outrec = ref _outrecList.ElementAt(outrecID);
-            int splitID = splitStart;
-            while (splitID != -1)
+            int nextSplitID = splitStart;
+            while (nextSplitID != -1)
             {
+                var splitID = splits[nextSplitID];
                 ref var split = ref _outrecList.ElementAt(splitID);
-                if (split.pts == -1 && split.splitStart != -1 &&
-                    CheckSplitOwner(outrecID, split.splitStart)) return true; //#942
+                nextSplitID = nextSplits[nextSplitID];  // nb: use indexing (not an iterator) in case 'splits' is modified inside this loop (#1029)
+                if (split.pts == -1 && split.splits != -1 &&
+                    CheckSplitOwner(outrecID, split.splits)) return true; //#942
                 splitID = GetRealOutRec(splitID);
-                split = ref _outrecList.ElementAt(splitID);
-                if (splitID == -1 || splitID == outrecID || split.recursiveSplit == outrecID)
-                {
-                    splitID = nextSplit[splitID];
+                if (splitID == -1 || splitID == outrecID || _outrecList[splitID].recursiveSplit == outrecID)
                     continue;
-                }
+
+                split = ref _outrecList.ElementAt(splitID);
                 split.recursiveSplit = outrecID; //#599
 
-                if(split.splitStart != -1 && CheckSplitOwner(outrecID, split.splitStart)) return true;
+                if(split.splits != -1 && CheckSplitOwner(outrecID, split.splits)) return true;
 
                 if (!CheckBounds(splitID) ||
                     !split.bounds.Contains(outrec.bounds) ||
                     !Path1InsidePath2(outrec.pts!, split.pts!))
-                {
-                    splitID = nextSplit[splitID];
                     continue;
-                }
 
                 if (!IsValidOwner(outrecID, splitID)) // split is owned by outrec (#957)
                     split.owner = outrec.owner;
@@ -3194,7 +3185,7 @@ namespace TextMeshDOTS.Clipper2AoS
                 return true;
             };
             return false;
-        }
+        }  
 
         private void RecursiveCheckOwners(int outrecID, ref PolyTree polytree)
         {
@@ -3207,8 +3198,8 @@ namespace TextMeshDOTS.Clipper2AoS
             while (outrec.owner != -1)
             {
                 ref var outrecOwner = ref _outrecList.ElementAt(outrec.owner);
-                if (outrecOwner.splitStart != -1 &&
-                    CheckSplitOwner(outrecID, outrecOwner.splitStart)) break;
+                if (outrecOwner.splits != -1 &&
+                    CheckSplitOwner(outrecID, outrecOwner.splits)) break;
                 if (outrecOwner.pts != -1 && CheckBounds(outrec.owner) &&
                   Path1InsidePath2(outrec.pts, outrecOwner.pts)) break;
                 outrec.owner = outrecOwner.owner;
@@ -3218,14 +3209,18 @@ namespace TextMeshDOTS.Clipper2AoS
             {
                 if (_outrecList.ElementAt(outrec.owner).polypath == -1)
                     RecursiveCheckOwners(outrec.owner, ref polytree);
-                outrec.polypath = outrec.owner;
-                polytree.AddChildComponent(outrec.owner, outrecID);
+
+                // add child to outrec.owner node
+                outrec = ref _outrecList.ElementAt(outrecID);
+                var childNode = polytree.AddNode(outrecID, _outrecList.ElementAt(outrec.owner).polypath);
+                outrec.polypath = childNode;
             }
-            else //if no owner, definitely an outer polygon
+            else
             {
-                var exteriorIDs = polytree.exteriorIDs;
-                outrec.polypath = outrec.idx;
-                exteriorIDs.Add(outrecID);
+                // add child to root node. Remember that node in polypath field,
+                // as we need it when adding additional children to outrec.owner
+                var childNode = polytree.AddNode(outrecID, 0);
+                outrec.polypath = childNode;
             }
         }
         void BuildTree(ref PolyTree polytree, ref NativeList<int2> solutionOpenNodes, ref NativeList<int> solutionOpenStartIDs)
@@ -3239,18 +3234,13 @@ namespace TextMeshDOTS.Clipper2AoS
                 solutionOpenStartIDs.EnsureCapacity(_outrecList.Length);
             }
 
-            var components = polytree.components;
-            for (int i = 0, length = _outrecList.Length; i < length; i++)
-                components.Add(new TreeNode(i)); //initialize
-
             // _outrecList.Count is not static here because
             // CheckBounds below can indirectly add additional
             // OutRec (via FixOutRecPts & CleanCollinear)
             for (int outrecID = 0; outrecID < _outrecList.Length; outrecID++)
             {
                 ref var outrec = ref _outrecList.ElementAt(outrecID);
-
-                if (outrec.pts == -1) continue;
+                if (outrec.pts == -1) continue;               
 
                 if (outrec.isOpen)
                 {
@@ -3258,44 +3248,8 @@ namespace TextMeshDOTS.Clipper2AoS
                     continue;
                 }
                 if (CheckBounds(outrecID))
-                {
-                    if (_outrecList.Length > components.Length)
-                    {
-                        Debug.Log("Adding new Tree Nodes");
-                        for (int i = components.Length - 1, length = _outrecList.Length; i < length; i++)
-                            components.Add(new TreeNode(i)); //initialize
-                    }
-                    RecursiveCheckOwners(outrecID, ref polytree);
-                }
+                    RecursiveCheckOwners(outrecID, ref polytree);                
             }
-        }
-        public void GetPolygonWithHoles(in PolyTree polyTree, int outrecID, ref NativeList<int2> solutionNodes, ref NativeList<int> solutionStartIDs)
-        {
-            ref var outrec = ref _outrecList.ElementAt(outrecID);
-            //Debug.Log($"taking Exterior {outrec} with {InternalClipperFunc.PointCount(outPtList, outrecList.pts[outrec])} nodes as is ");
-            BuildPath(outrec.pts, false, false, ref solutionNodes, ref solutionStartIDs);
-
-            int holeID;
-            int nextID = outrecID;
-            while (polyTree.GetNextComponent(nextID, out holeID))
-            {
-                ref var hole = ref _outrecList.ElementAt(holeID);
-                if (hole.owner != outrecID)
-                {
-                    nextID = holeID;
-                    //Debug.Log($"Hole {hole} is an island, tesselate those islands separately!"); //TO-DO: implement (e.g. returning a list with island ID's)
-                    continue;
-                }
-                //if (hole.pts == -1) continue;
-
-                //Debug.Log($"taking Hole {holeID} with {InternalClipperFunc.PointCount(outPtList, outrecList.pts[holeID])} nodes as is");
-                BuildPath(hole.pts, false, false, ref solutionNodes, ref solutionStartIDs);
-
-                nextID = holeID;
-            }
-            //ensure polygon is closed
-            if (solutionStartIDs.Length > 0 && solutionStartIDs[^1] != solutionNodes.Length)
-                solutionStartIDs.Add(solutionNodes.Length);
         }
         public bool Execute(ClipType clipType, FillRule fillRule, ref NativeList<int2> solutionNodes, ref NativeList<int> solutionStartIDs, ref NativeList<int2> solutionOpenNodes, ref NativeList<int> solutionOpenStartIDs)
         {
@@ -3306,7 +3260,7 @@ namespace TextMeshDOTS.Clipper2AoS
             ClearSolutionOnly();
             return _succeeded;
         }
-        public bool Execute(ClipType clipType, FillRule fillRule, ref NativeArray<int2> solutionNodes, ref PolyTree polytree, ref NativeList<int2> solutionOpenNodes, ref NativeList<int> solutionOpenStartIDs)
+        public bool Execute(ClipType clipType, FillRule fillRule, ref PolyTree polytree, ref NativeList<int2> solutionOpenNodes, ref NativeList<int> solutionOpenStartIDs)
         {
             _succeeded = true;
             _using_polytree = true;
@@ -3320,25 +3274,65 @@ namespace TextMeshDOTS.Clipper2AoS
         {
             int curID = splits.Length;
             splits.Add(_splitOutRecID); //_splitOutRec is stored at index curID
-            nextSplit.Add(-1);
-            if (_owningOutRec.splitStart != -1)
+            nextSplits.Add(-1);
+            if (_owningOutRec.splits != -1)
             {
                 //first, search the last index where splits of _owningOutRec are stored
-                int splitsEnd, tmp = _owningOutRec.splitStart;
+                int splitsEnd, tmp = _owningOutRec.splits;
                 do
                 {
                     splitsEnd = tmp;
-                    tmp = nextSplit[tmp];
+                    tmp = nextSplits[tmp];
                 } while (tmp != -1);
-                nextSplit[splitsEnd] = curID; //then point "next" of that end to the newly added _splitOutRec (stored at curID) 
+                nextSplits[splitsEnd] = curID; //then point "next" of that end to the newly added _splitOutRec (stored at curID) 
             }
             else
             {
-                _owningOutRec.splitStart = curID; //point Start of the _owningOutRec splitlist to the newly added _splitOutRec (stored at curID)
+                _owningOutRec.splits = curID; //point Start of the _owningOutRec splitlist to the newly added _splitOutRec (stored at curID)
             }
             return curID;
         }
 
+        #region Access to PolyTree
+        /// <summary>
+        /// Get a list of all exterior node IDs. Use polytree.Count to determine required capacity when allocating list.
+        /// </summary>
+        public static void PolyTree_GetTopLevelExteriorNodes(ref PolyTree polytree, ref NativeList<int> nodeIDs)
+        {
+            nodeIDs.Capacity = polytree.nodes[polytree.root].childCount;
+            // get all the top level exterior outrec. Identical to Clipper2 PolyTree64.Count:
+            // for (int i = 0; i < polytree.Count; i++)
+            var nodes = polytree.nodes;
+            for (int c = nodes[polytree.root].firstChild; c != -1; c = nodes[c].nextSibling)
+                nodeIDs.Add(c);         
+        }
+        /// <summary>
+        /// For a given top level exterior, get all children (all holes, all islands, all holes in islands etc)
+        /// </summary>
+        public void PolyTree_GetFullyNestedPolgon(ref PolyTree polytree, int exteriorNode, ref NativeList<int2> solutionNodes, ref NativeList<int> solutionStartIDs)
+        {            
+            var nodes = polytree.nodes;
+            if (exteriorNode == -1) return;
+            var queue = new NativeList<int>(16, Allocator.Temp);
+            for (int c = nodes[exteriorNode].firstChild; c != -1; c = nodes[c].nextSibling)
+                queue.Add(c);
+
+            for(int i=0, ii=queue.Length; i< ii; i++)
+            {                
+                int nodeIndex = queue[i];
+                var node = nodes[nodeIndex];
+                var outrecID = node.outrecIdx;
+                ref var outrec = ref _outrecList.ElementAt(outrecID);
+                BuildPath(outrec.pts, false, false, ref solutionNodes, ref solutionStartIDs);
+            }
+
+            //ensure polygon is closed
+            if (solutionStartIDs.Length > 0 && solutionStartIDs[^1] != solutionNodes.Length)
+                solutionStartIDs.Add(solutionNodes.Length);
+            return;            
+        }
+
+        #endregion //Access to PolyTree
         public void PrintSize()
         {
             Debug.Log($"Vertices: {_vertexList.Length}");
@@ -3351,6 +3345,7 @@ namespace TextMeshDOTS.Clipper2AoS
         }
 
     } //ClipperBase class
+
 
     public class ClipperLibException : Exception
     {

@@ -2,16 +2,19 @@
 {
     public struct TreeNode
     {
-        public int ID;
-        public int parentID;
-        public int rightID;
-        public int childID;
-        public TreeNode(int ID)
+        public int outrecIdx;
+        public int parent;
+        public int firstChild;
+        public int nextSibling;
+
+        public int childCount;
+        public TreeNode(bool dummy)
         {
-            this.ID = ID;
-            this.parentID = -1;
-            this.rightID = -1;
-            this.childID = -1;
+            this.outrecIdx = -1;
+            this.parent = -1;
+            this.nextSibling = -1;
+            this.firstChild = -1;
+            this.childCount = 0;
         }
     };
 
