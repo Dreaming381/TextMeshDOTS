@@ -1,5 +1,4 @@
 ﻿using Unity.Collections;
-using Unity.Mathematics;
 
 namespace TextMeshDOTS.Polybool
 {
@@ -147,27 +146,35 @@ namespace TextMeshDOTS.Polybool
             var seg1 = Segments(poly1, ref intersecter);
             var seg2 = Segments(poly2, ref intersecter);
             var comb = Combine(seg1, seg2, ref intersecter);
-            PolySegments seg3 = default;
+            PolySegments seg3;
+			Polygon result;
             switch(clipType)
             {
                 case ClipType.Union:
                     seg3 = SelectUnion(comb);
-                    return new Polygon(seg3);
+					result = new Polygon(seg3);
+					break;
                 case ClipType.Intersection:
                     seg3 = SelectIntersect(comb);
-                    return new Polygon(seg3);
-                case ClipType.Difference:
+					result = new Polygon(seg3);
+					break;
+				case ClipType.Difference:
                     seg3 = SelectDifference(comb);
-                    return new Polygon(seg3);
-                case ClipType.DifferenceRev:
+					result = new Polygon(seg3);
+					break;
+				case ClipType.DifferenceRev:
                     seg3 = SelectDifferenceRev(comb);
-                    return new Polygon(seg3);
-                case ClipType.Xor:
+					result = new Polygon(seg3);
+					break;
+				case ClipType.Xor:
                     seg3 = SelectXor(comb);
-                    return new Polygon(seg3);
-                default:
-                    return new Polygon(0,0, false, Allocator.Temp);
-            }            
+					result = new Polygon(seg3);
+					break;
+				default:
+					result = new Polygon(0, 0, false, Allocator.Temp);
+					break;
+            }
+			return result;
         }
 
         // helper functions for common operations

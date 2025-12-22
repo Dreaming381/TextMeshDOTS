@@ -63,7 +63,7 @@ namespace TextMeshDOTS.Polybool
                 //AddEvent(evEnd);
             }
             statusQueueComparer = new StatusQueueComparer(segments);
-            eventQueueComparer = new EventQueueComparer(statusQueueComparer, -1);
+            eventQueueComparer = new EventQueueComparer(statusQueueComparer, -1); // -1 = sort events descending for 30% speedup
             eventQueue.Sort(eventQueueComparer);
             //Utils.WriteSegmentsToFile("segments.txt", segments);
         }
@@ -238,19 +238,70 @@ namespace TextMeshDOTS.Polybool
             var result = new NativeList<Segment>(segments.Length, Allocator.Temp);
             while (eventQueue.Length > 0)
             {
-                var ev = eventQueue[^1]; //eventQueue[0] when sorted ascending (most left event is at index 0)
+                var ev = eventQueue[^1]; //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
                 var evSegment = segments[ev.segmentID];
                 if (ev.isStart)
-                {                   
+                {
                     var eventIndexInStatus = statusQueue.BinarySearch(ev, statusQueueComparer);
                     eventIndexInStatus = eventIndexInStatus < 0 ? ~eventIndexInStatus : eventIndexInStatus;
-                    EventBool above, below;
-                    above = eventIndexInStatus <= 0 ? EventBool.Empty : statusQueue[eventIndexInStatus - 1];
-                    below = eventIndexInStatus < statusQueue.Length ? statusQueue[eventIndexInStatus] : EventBool.Empty;
+                    bool hasAbove = eventIndexInStatus > 0;
+                    bool hasBelow = eventIndexInStatus < statusQueue.Length;
+                    var above = hasAbove ? statusQueue[eventIndexInStatus - 1] : EventBool.Empty;
+                    var below = hasBelow ? statusQueue[eventIndexInStatus] : EventBool.Empty;
 
+                    #region intersections
+                    //check for intersections between new event and events in status
+                    EventBool eve = EventBool.Empty;
+                    if (hasAbove)
+                        eve = CheckIntersection(ev, above);
+                    if (eve == EventBool.Empty && hasBelow)
+                        eve = CheckIntersection(ev, below);
+
+                    evSegment = segments[ev.segmentID]; //fetch evSegment again as an intersections will change the endpoint
+                    if (eve != EventBool.Empty)
+                    {
+                        // ev and eve are equal
+                        // we'll keep eve and throw away ev
+
+                        // merge ev.seg"s fill information into eve.seg
+                        var eveSegment = segments[eve.segmentID];
+                        if (selfIntersection)
+                        {
+                            bool toggle; // are we a toggling edge?
+                            if (evSegment.below == FillStatus.Undefined)
+                                toggle = evSegment.closed;
+                            else
+                                toggle = evSegment.above != evSegment.below;
+
+                            // merge two segments that belong to the same polygon
+                            // think of this as sandwiching two segments together, where `eve.seg` is
+                            // the bottom -- this will cause the above fill flag to toggle							
+                            if (toggle)
+                                eveSegment.above = eveSegment.above ^ FillStatus.ToggleMask; //XOR with itself to flip
+                        }
+                        else
+                        {
+                            // merge two segments that belong to different polygons
+                            // each segment has distinct knowledge, so no special logic is needed
+                            // note that this can only happen once per segment in this phase, because we
+                            // are guaranteed that all self-intersections are gone
+                            eveSegment.otherAbove = evSegment.above;
+                            eveSegment.otherBelow = evSegment.below;
+                        }
+                        segments[eve.segmentID] = eveSegment;
+                        eventQueue.RemoveAt(eventQueue.IndexOf(ev.other));
+                        eventQueue.RemoveAt(eventQueue.IndexOf(ev));
+                    }
+
+                    if (!eventQueue[^1].Equals(ev)) //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
+                        continue; // something was inserted before us in the event queue, so loop back around and process it before continuing					
+                    #endregion intersection
+
+
+                    #region calculate fill
                     // calculate fill flags                    
                     if (selfIntersection)
-                    {                        
+                    {
                         if (fillRule == FillRule.EvenOdd)
                         {
                             // FillRule.EvenOdd
@@ -262,7 +313,7 @@ namespace TextMeshDOTS.Polybool
                                 toggle = evSegment.above != evSegment.below;           // segment resulted from division, and is toggling when above and below fill are not the same
 
                             // (2) determine below fill
-                            if (below == EventBool.Empty)
+                            if (!hasBelow)
                                 evSegment.below = FillStatus.NotFilled;                // no segment is below us, so not filled
                             else
                                 evSegment.below = segments[below.segmentID].above;     // copy the above fill from the segment below 
@@ -273,7 +324,7 @@ namespace TextMeshDOTS.Polybool
                             else
                                 evSegment.above = evSegment.below;                        //above fill is same as below fill
                         }
-                        else 
+                        else
                         {
                             // FillRule.NonZero, FillRule.Positive, FillRule.Negative: derive fill annotation from winding
                             // NonZero: winding !=0 means "inside/filled" and winding = 0 means "outside" "not filled"
@@ -281,7 +332,7 @@ namespace TextMeshDOTS.Polybool
                             // Negative: winding <0 means "inside/filled", otherwise it means "outside" "not filled"
 
                             // (1) determine winding below current event segment by summing all windings from eventIndexInStatus towards bottom of status
-                            int windingBelow = 0, windingAbove=0;
+                            int windingBelow = 0, windingAbove;
                             for (int i = eventIndexInStatus, end = statusQueue.Length; i < end; i++)
                                 windingBelow += segments[statusQueue[i].segmentID].windingTopToBottom;
 
@@ -290,7 +341,7 @@ namespace TextMeshDOTS.Polybool
                             // but it does change along x-axis, so use "windingLeftToRight" value instead
                             windingAbove = evSegment.windingTopToBottom == 0 ? windingBelow + evSegment.windingLeftToRight : windingBelow + evSegment.windingTopToBottom;
 
-                            switch(fillRule)
+                            switch (fillRule)
                             {
                                 case FillRule.NonZero:
                                     evSegment.below = windingBelow != 0 ? FillStatus.Filled : FillStatus.NotFilled;
@@ -314,11 +365,9 @@ namespace TextMeshDOTS.Polybool
                         {
                             // if we don't have other information, then we need to figure out if we're inside the other polygon
                             FillStatus inside;
-                            if (below == EventBool.Empty)
-                            {
+                            if (!hasBelow)
                                 // if nothing is below us, then we're not filled
                                 inside = FillStatus.NotFilled;
-                            }
                             else
                             {
                                 // otherwise, something is below us
@@ -338,52 +387,8 @@ namespace TextMeshDOTS.Polybool
                         }
                     }
                     segments[ev.segmentID] = evSegment;
+                    #endregion calculate fill
 
-                    EventBool eve = EventBool.Empty;
-                    if (above != EventBool.Empty)
-                    {
-                        eve = CheckIntersection(ev, above);
-                        if (eve == EventBool.Empty && below != EventBool.Empty)
-                            eve = CheckIntersection(ev, below);
-                    }
-
-                    if (eve != EventBool.Empty)
-                    {
-                        // ev and eve are equal
-                        // we'll keep eve and throw away ev
-
-                        // merge ev.seg"s fill information into eve.seg
-
-                        if (selfIntersection)
-                        {
-                            bool toggle; // are we a toggling edge?
-                            if (evSegment.below == FillStatus.Undefined)
-                                toggle = evSegment.closed;
-                            else
-                                toggle = evSegment.above != evSegment.below;
-
-                            // merge two segments that belong to the same polygon
-                            // think of this as sandwiching two segments together, where `eve.seg` is
-                            // the bottom -- this will cause the above fill flag to toggle
-                            if (toggle)
-                                evSegment.above ^= evSegment.above; //XOR with itself to flip
-                        }
-                        else
-                        {
-                            // merge two segments that belong to different polygons
-                            // each segment has distinct knowledge, so no special logic is needed
-                            // note that this can only happen once per segment in this phase, because we
-                            // are guaranteed that all self-intersections are gone
-                            evSegment.otherAbove = evSegment.above;
-                            evSegment.otherBelow = evSegment.below;
-                        }
-                        segments[ev.segmentID] = evSegment;
-                        eventQueue.RemoveAt(eventQueue.IndexOf(ev.other));
-                        eventQueue.RemoveAt(eventQueue.IndexOf(ev));
-                    }
-
-                    if (!eventQueue[^1].Equals(ev)) //eventQueue[0] when sorted ascending (most left event is at index 0)
-                        continue; // something was inserted before us in the event queue, so loop back around and process it before continuing                    
 
                     // insert event in status. Will be removed from status once we encounter ev.other 
                     statusQueue.InsertRange(eventIndexInStatus, 1);
@@ -414,9 +419,8 @@ namespace TextMeshDOTS.Polybool
                     segments[ev.segmentID] = evSegment;
                     result.Add(evSegment);
                 }
-
                 // remove the event and continue
-                eventQueue.RemoveAt(eventQueue.Length -1); // RemoveAt(0) when sorted ascending (most left event is at index 0)
+                eventQueue.RemoveAt(eventQueue.Length - 1); // eventQueue.RemoveAt(0) when sorted ascending (most left event is at index 0), otherwise eventQueue.eventQueue[eventQueue.Length - 1]
             }
             return result;
         }

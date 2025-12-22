@@ -38,8 +38,8 @@ namespace TextMeshDOTS.Polybool
                 p1_end = p1_end,
                 above = above,
                 below = below,
-                otherAbove = otherAbove,
-                otherBelow = otherBelow,
+                //otherAbove = otherAbove, //do NOT copy otherFill to the right segment or the combine phase will fail!!!
+                //otherBelow = otherBelow, //do NOT copy otherFill to the right segment or the combine phase will fail!!!
                 closed = closed,
                 windingTopToBottom = windingTopToBottom,
                 windingLeftToRight = windingLeftToRight,
