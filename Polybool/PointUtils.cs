@@ -24,59 +24,26 @@ namespace TextMeshDOTS.Polybool
             orient2d = Orient2DFast(a, b, p);
             return math.abs(orient2d) < BezierMath.epsilon1;
         }
-        
-        /// <summary>
-        /// For a given polygon edge, calculate a point that is above this edge. 
-        /// Orient2D is used to determine crossing of a ray from this point with the edge. 
-        /// If the crossed edge is directed from right to left, we have a positive crossing; otherwise, we have a negative crossing.
-        /// https://jeffe.cs.illinois.edu/teaching/comptop/2023/notes/02-winding-number.pdf
-        /// </summary>
+
+        /// <summary> For a given segment (a -> b), determine if it points right (+1) or left (-1). A vertical segment will return 0.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetWindingTowardsBottom(double2 a, double2 b)
         {
-            var wind = 0;
-            //calculate a point 2 units "above" edge
-            //feels hacky. Is there a better way?
-            double2 p;
-            p.x = math.min(b.x, a.x) + (math.abs(b.x - a.x) / 2);
-            p.y = math.max(a.y, b.y) + 2;
-
-            var orient2D = Orient2DFast(a, b, p);
-            //do not needs this check as we generate point p and it is guarrantied to be between a.x and b.x
-            //if (a.x <= p.x && p.x < b.x && orient2D > 0) 
-            //    wind = 1;
-            //else if (b.x <= p.x && p.x < a.x && orient2D < 0)
-            //    wind = -1;
-
-            if (orient2D > 0)
-                wind = 1;
-            else if (orient2D < 0)
-                wind = -1;
-            return wind;
+            double dx = b.x - a.x;
+            if (math.abs(dx) < BezierMath.epsilon1)
+                return 0;
+            int sign = dx > 0 ? 1 : -1;
+            return sign;
         }
+        /// <summary> For a given segment (a -> b), determine if it points up (+1) or down (-1). A horizontal segment will return 0.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetWindingTowardsRight(double2 a, double2 b)
         {
-            var wind = 0;
-            //calculate a point 2 units "left" of edge
-            //feels hacky. Is there a better way?
-            double2 p;
-            p.x = math.max(a.x, b.x) - 2;
-            p.y = math.min(b.y, a.y) + (math.abs(b.y - a.y) / 2);
-
-            var orient2D = Orient2DFast(a, b, p);
-            //do not needs this check as we generate point p and it is guarrantied to be between a.x and b.x
-            //if (a.y <= p.y && p.y < b.y && orient2D > 0)
-            //    wind = 1;
-            //else if (b.y <= p.y && p.y < a.y && orient2D < 0)
-            //    wind = -1;
-
-            if (orient2D > 0)
-                wind = 1;
-            else if (orient2D < 0)
-                wind = -1;
-
-            return wind;
+            double dy = b.y - a.y;
+            if (math.abs(dy) < BezierMath.epsilon1)
+                return 0;
+            int sign = dy > 0 ? 1 : -1;
+            return sign;
         }
 
         public static bool PointsSame(double2 point1, double2 point2)
