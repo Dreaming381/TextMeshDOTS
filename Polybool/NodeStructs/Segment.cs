@@ -1,5 +1,6 @@
 ﻿using System;
 using TextMeshDOTS.HarfBuzz;
+using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
 
 namespace TextMeshDOTS.Polybool
@@ -73,7 +74,7 @@ namespace TextMeshDOTS.Polybool
             var bdy = b1.y - b0.y;
             var det = BezierMath.cross2D(adx, ady, bdx, bdy);
 
-            if (PointUtils.Snap0(det) == 0)
+            if (math.abs(det) < BezierMath.epsilon1_abs)
             {
                 // parallel or coincident
                 if (!PointUtils.IsCollinear(a0, a1, b0, out _))

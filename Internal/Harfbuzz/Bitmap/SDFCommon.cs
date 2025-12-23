@@ -412,7 +412,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             sign = math.select(1, -1, cross < 0);
             distance = math.select(npLength, npLengthSq, USE_SQUARED_DISTANCES);
 
-            var isEndPoint = BezierMath.EqualsForSmallValues(frac, 0, BezierMath.epsilon1) | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1);
+            var isEndPoint = math.abs(frac) < BezierMath.epsilon1Float_abs | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1Float_abs);
             cross = math.select(1, cross, isEndPoint);
         }
 
@@ -457,8 +457,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             sign = math.select(1, -1, cross < 0);
             distance = math.select(npLength, npLengthSq, USE_SQUARED_DISTANCES);
 
-            var isEndPoint = BezierMath.EqualsForSmallValues(frac, 0, BezierMath.epsilon1) | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1);
-            cross = math.select(1, cross, isEndPoint);
+			var isEndPoint = math.abs(frac) < BezierMath.epsilon1Float_abs | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1Float_abs);
+			cross = math.select(1, cross, isEndPoint);
         }
 
 

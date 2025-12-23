@@ -22,7 +22,7 @@ namespace TextMeshDOTS.Polybool
         public static bool IsCollinear(double2 a, double2 b, double2 p, out double orient2d)
         {
             orient2d = Orient2DFast(a, b, p);
-            return math.abs(orient2d) < BezierMath.epsilon1;
+            return math.abs(orient2d) < BezierMath.epsilon1_abs;
         }
 
         /// <summary> For a given segment (a -> b), determine if it points right (+1) or left (-1). A vertical segment will return 0.</summary>
@@ -30,7 +30,7 @@ namespace TextMeshDOTS.Polybool
         public static int GetWindingTowardsBottom(double2 a, double2 b)
         {
             double dx = b.x - a.x;
-            if (math.abs(dx) < BezierMath.epsilon1)
+            if (math.abs(dx) < BezierMath.epsilon1_abs)
                 return 0;
             int sign = dx > 0 ? 1 : -1;
             return sign;
@@ -40,7 +40,7 @@ namespace TextMeshDOTS.Polybool
         public static int GetWindingTowardsRight(double2 a, double2 b)
         {
             double dy = b.y - a.y;
-            if (math.abs(dy) < BezierMath.epsilon1)
+            if (math.abs(dy) < BezierMath.epsilon1_abs)
                 return 0;
             int sign = dy > 0 ? 1 : -1;
             return sign;
@@ -60,14 +60,10 @@ namespace TextMeshDOTS.Polybool
             return point1.x < point2.x ? -1 : 1;
         }
 
-        public static double Snap0(double v)
-        {
-            return math.abs(v) < BezierMath.epsilon1 ? 0 : v;
-        }
         public static double Snap01(double v)
         {
-            if (math.abs(v) < BezierMath.epsilon1) return 0;
-            if (math.abs(1 - v) < BezierMath.epsilon1) return 1;
+            if (math.abs(v) < BezierMath.epsilon1_abs) return 0;
+            if (math.abs(1 - v) < BezierMath.epsilon1_abs) return 1;
             return v;
         }   
     }

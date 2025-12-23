@@ -468,7 +468,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             distance = min;
             sign = cross < 0 ? -1 : 1;
 
-            bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0, BezierMath.epsilon100) || BezierMath.EqualsForSmallValues(min_factor, 1, BezierMath.epsilon100);
+            bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0, BezierMath.epsilon100_rel) || BezierMath.EqualsForSmallValues(min_factor, 1, BezierMath.epsilon100_rel);
             if (Hint.Unlikely(nIsEndPoint))
             {
                 direction = math.normalize(direction);
@@ -533,7 +533,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
 
             distance = min;
             sign = cross < 0 ? -1 : 1;
-            bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0, BezierMath.epsilon100) || BezierMath.EqualsForSmallValues(min_factor, 1, BezierMath.epsilon100);
+            bool nIsEndPoint = BezierMath.EqualsForSmallValues(min_factor, 0, BezierMath.epsilon100_rel) || BezierMath.EqualsForSmallValues(min_factor, 1, BezierMath.epsilon100_rel);
             if (Hint.Unlikely(nIsEndPoint))
             {
                 //compute `cross` if not perpendicular

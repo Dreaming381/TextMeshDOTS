@@ -6,28 +6,25 @@ namespace TextMeshDOTS.HarfBuzz
 {
     internal static class BezierMath
     {
-        public const float epsilon1 = 0.000002f; //next representable float at 1 is 1 +- 1.19*10^-7, so set epsilon a bit larger than that
-        public const float epsilon100 = 0.0001f;//next representable float at 100 is 100 +- 7.6*10^-6, so set epsilon a bit larger than that
+		public const float epsilon1Float_abs = 1e-5f;   // at 1, next representable float step (ULP) is +- 2^(0 - 23) = 1.19e-7
+		public const float epsilon1Float_rel = 1e-7f;   // at 1, next representable float step (ULP) is +- 2^(0 - 23) = 1.19e-7
+		public const double epsilon1_abs = 1e-12;       // at 1, next representable double step (ULP) is +- 2^(0 - 52) = 2.22045e-16
+		public const double epsilon1_rel = 1e-16;       // at 1, next representable double step (ULP) is +- 2^(0 - 52) = 2.22045e-16
 
-        const float relativeTolerance = 32f / (1 << 16); //The epsilon distance  used for corner
+		public const float epsilon100Float_abs = 1e-5f; // at 100, next representable float step (ULP) is +- 2^(6 - 23) = 7.62939e-06		
+		public const double epsilon100_rel = 1e-10;     // at 100, next representable double step (ULP) is +- 2^(6 - 52) = 1.42109E-14
 
-        /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GenericEquals(float x, float y)
-        {
-            return math.abs(x - y) <= math.max(epsilon1, relativeTolerance * math.max(math.abs(x), math.abs(y)));
-        }
         /// <summary>Tolerance comparison for large and small values. https://realtimecollisiondetection.net/blog/?p=89</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool GenericEquals(double x, double y)
         {
-            return math.abs(x - y) <= math.max(epsilon1, relativeTolerance * math.max(math.abs(x), math.abs(y)));
+            return math.abs(x - y) <= math.max(epsilon1_abs, epsilon1_rel * math.max(math.abs(x), math.abs(y)));
         }
         /// <summary>Relative tolerance comparison of x and y, fails values become small </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool EqualsForLargeValues(float x, float y)
         {
-            return math.abs(x - y) <= relativeTolerance * math.max(math.abs(x), math.abs(y));
+            return math.abs(x - y) <= epsilon1Float_rel * math.max(math.abs(x), math.abs(y));
         }
         /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -45,7 +42,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool4 EqualsForLargeValues(float4 x, float4 y)
         {
-            return math.abs(x - y) <= relativeTolerance * math.max(math.abs(x), math.abs(y));
+            return math.abs(x - y) <= epsilon1Float_rel * math.max(math.abs(x), math.abs(y));
         }
         /// <summary>Absolute tolerance comparison of x and y, fails when values become large  </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
