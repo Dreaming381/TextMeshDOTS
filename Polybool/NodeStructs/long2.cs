@@ -40,16 +40,16 @@ namespace TextMeshDOTS.Polybool
         public static long2 operator *(double lhs, long2 rhs) { return new long2(lhs * rhs.x, lhs * rhs.y); }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long2 operator *(long2 lhs, double rhs) { return new long2(lhs.x * rhs, lhs.y * rhs); }
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public override bool Equals(object obj)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public override bool Equals(object obj)
         {
             if (obj != null && obj is long2 p)
                 return this == p;
             else
                 return false;
         }
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public bool Equals(long2 other)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(long2 other)
         {
             return GetHashCode() == other.GetHashCode();
         }
@@ -76,8 +76,8 @@ namespace TextMeshDOTS.Polybool
                 return (point1.y == point2.y) ? 0 : point1.y < point2.y ? -1 : 1;
             return point1.x < point2.x ? -1 : 1;
         }
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public int CompareTo(long2 other)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int CompareTo(long2 other)
         {
             if (x == other.x)
                 return (y == other.y) ? 0 : y < other.y ? -1 : 1;

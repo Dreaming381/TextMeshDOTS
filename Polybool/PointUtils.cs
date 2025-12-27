@@ -16,24 +16,24 @@ namespace TextMeshDOTS.Polybool
         {
             return (ax * by) - (ay * bx);
         }
-		/// <summary>
-		/// Returns a positive value if the points a, b, and p occur in counterclockwise order (CCW, p lies to the left of the directed line defined by points a and b).
-		/// Returns a negative value if they occur in clockwise order(CW, p lies to the right of the directed line ab).
-		/// Returns zero if they are collinear.
-		/// Result also happens to be twice the signed area of the triangle
-		/// </summary>  
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal static double Orient2DFast(long2 a, long2 b, long2 p)
-		{
-			return (a.x - p.x) * (b.y - p.y) - (a.y - p.y) * (b.x - p.x);
-		}
-		/// <summary>
-		/// Returns a positive value if the points a, b, and p occur in counterclockwise order (CCW, p lies to the left of the directed line defined by points a and b).
-		/// Returns a negative value if they occur in clockwise order(CW, p lies to the right of the directed line ab).
-		/// Returns zero if they are collinear.
-		/// </summary>  
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int Orient2DAccurate(long2 pt1, long2 pt2, long2 pt3)
+        /// <summary>
+        /// Returns a positive value if the points a, b, and p occur in counterclockwise order (CCW, p lies to the left of the directed line defined by points a and b).
+        /// Returns a negative value if they occur in clockwise order(CW, p lies to the right of the directed line ab).
+        /// Returns zero if they are collinear.
+        /// Result also happens to be twice the signed area of the triangle
+        /// </summary>  
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static double Orient2DFast(long2 a, long2 b, long2 p)
+        {
+            return (a.x - p.x) * (b.y - p.y) - (a.y - p.y) * (b.x - p.x);
+        }
+        /// <summary>
+        /// Returns a positive value if the points a, b, and p occur in counterclockwise order (CCW, p lies to the left of the directed line defined by points a and b).
+        /// Returns a negative value if they occur in clockwise order(CW, p lies to the right of the directed line ab).
+        /// Returns zero if they are collinear.
+        /// </summary>  
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Orient2DAccurate(long2 pt1, long2 pt2, long2 pt3)
         {
             long a = pt2.x - pt1.x;
             long b = pt3.y - pt2.y;
@@ -57,7 +57,7 @@ namespace TextMeshDOTS.Polybool
             }
             return (signAB > signCD) ? 1 : -1;
         }
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool IsCollinear(long2 pt1, long2 sharedPt, long2 pt2)
         {
             long a = sharedPt.x - pt1.x;
@@ -90,9 +90,9 @@ namespace TextMeshDOTS.Polybool
             result.hi64 = (a >> 32) * (b >> 32) + (x2 >> 32) + (x3 >> 32);
             return result;
         }
-		// returns true if (and only if) a * b == c * d
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal static bool ProductsAreEqual(long a, long b, long c, long d)
+        // returns true if (and only if) a * b == c * d
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool ProductsAreEqual(long a, long b, long c, long d)
         {
             // nb: unsigned values will be needed for CalcOverflowCarry()
             ulong absA = (ulong) math.abs(a);
@@ -120,8 +120,8 @@ namespace TextMeshDOTS.Polybool
         {
             return Math.Sign(b.y - a.y);
         }
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static double Snap01(double v)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double Snap01(double v)
         {
             if (math.abs(v) < BezierMath.epsilon1_abs) return 0;
             if (math.abs(1 - v) < BezierMath.epsilon1_abs) return 1;

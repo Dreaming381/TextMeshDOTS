@@ -10,29 +10,31 @@ namespace TextMeshDOTS.Polybool
         public bool selfIntersection;
         NativeList<EventBool> eventQueue;
         NativeList<EventBool> statusQueue;
-		public NativeList<Segment> segments;
-		FillRule fillRule;
-		FixedList32Bytes<int> prevSegmentIDs;
-		public Intersecter(bool selfIntersection, int size, FillRule fillRule, Allocator allocator)
+        public NativeList<Segment> segments;
+        FillRule fillRule;
+        FixedList32Bytes<int> prevSegmentIDs;
+        public Intersecter(bool selfIntersection, int size, FillRule fillRule, Allocator allocator)
         {
             this.selfIntersection = selfIntersection;
             this.fillRule = fillRule;
             eventQueue = new NativeList<EventBool>(2 * size, allocator);
             statusQueue = new NativeList<EventBool>(64, allocator);
             segments = new NativeList<Segment>(size, allocator);
-			prevSegmentIDs = new FixedList32Bytes<int> {-1, -1, -1, -1};
-		}
+            prevSegmentIDs = new FixedList32Bytes<int> {-1, -1, -1, -1};
+        }
         public void Reset(bool selfIntersection)
         {
             this.selfIntersection = selfIntersection;
             eventQueue.Clear();
             statusQueue.Clear();
             segments.Clear();
-		}
+            for (int i = 0; i < 3; i++)
+                prevSegmentIDs[i] = -1;
+        }
         #region initialize events
         public void AddRegion(Polygon region, int start, int end, SegmentType segmentType)
         {
-			long2 from;
+            long2 from;
             long2 to = region.nodes[end - 1];
             for (int i = start; i < end; i++)
             {
@@ -101,10 +103,10 @@ namespace TextMeshDOTS.Polybool
             if (forward > 0)
             {
                 (seg.start, seg.end) = (seg.end, seg.start);
-				int eventIndexInEvents = eventQueue.Length - 1; //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
-				if (Hint.Unlikely(eventQueue[eventIndexInEvents] != ev))
-					eventIndexInEvents = eventQueue.IndexOf(ev);   //event is not guaranteed to be at queue head because CheckIntersection can inserted new events prior to it
-				eventQueue.RemoveAt(eventIndexInEvents);
+                int eventIndexInEvents = eventQueue.Length - 1; //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
+                if (Hint.Unlikely(eventQueue[eventIndexInEvents] != ev))
+                    eventIndexInEvents = eventQueue.IndexOf(ev);   //event is not guaranteed to be at queue head because CheckIntersection can inserted new events prior to it
+                eventQueue.RemoveAt(eventIndexInEvents);
                 AddEvent(ev);
             }
 
@@ -239,21 +241,21 @@ namespace TextMeshDOTS.Polybool
         }
         void CalculateFill(EventBool ev, int eventIndexInStatus, bool hasBelow, EventBool above, EventBool below)
         {
-			ref var evSegment = ref segments.ElementAt(ev.segmentID); //fetch evSegment again as an intersections will change the endpoint
-			if (selfIntersection)
+            ref var evSegment = ref segments.ElementAt(ev.segmentID); //fetch evSegment again as an intersections will change the endpoint
+            if (selfIntersection)
             {
                 if (fillRule == FillRule.EvenOdd)
                 {
                     // FillRule.EvenOdd
                     bool toggle;
-					// (1) determine if the edge is a "toggling edge"
-					if (!evSegment.myFillSet)
-					{
-						toggle = evSegment.closed;                             // new segment. toggle if we're part of a closed path
-						evSegment.myFillSet = true;
-					}
-					else
-						toggle = evSegment.fillAbove != evSegment.fillBelow;           // segment resulted from division, and is toggling when above and below fill are not the same
+                    // (1) determine if the edge is a "toggling edge"
+                    if (!evSegment.myFillSet)
+                    {
+                        toggle = evSegment.closed;                             // new segment. toggle if we're part of a closed path
+                        evSegment.myFillSet = true;
+                    }
+                    else
+                        toggle = evSegment.fillAbove != evSegment.fillBelow;           // segment resulted from division, and is toggling when above and below fill are not the same
 
                     // (2) determine below fill
                     if (!hasBelow)
@@ -327,9 +329,9 @@ namespace TextMeshDOTS.Polybool
                     }
                     evSegment.fillOtherAbove = inside;
                     evSegment.fillOtherBelow = inside;
-					evSegment.otherFillSet = true;
+                    evSegment.otherFillSet = true;
 
-				}
+                }
             }
         }
         void MergeColinearSegments(ref Segment eveSegment, ref Segment evSegment)
@@ -344,10 +346,10 @@ namespace TextMeshDOTS.Polybool
                 {
                     bool toggle; // are we a toggling edge?
                     if (!evSegment.myFillSet)
-					{ 
+                    { 
                         toggle = evSegment.closed;
-						evSegment.myFillSet = true;
-					}
+                        evSegment.myFillSet = true;
+                    }
                     else
                         toggle = evSegment.fillAbove != evSegment.fillBelow;
 
@@ -357,12 +359,12 @@ namespace TextMeshDOTS.Polybool
                     if (toggle)
                         eveSegment.fillAbove = !eveSegment.fillAbove;
                 }
-				//else
-				//{
-				//	//To-Do: figure out how to handle merging of colinear segments for FillRule.NonZero
-				//}
-			}
-			else
+                //else
+                //{
+                //	//To-Do: figure out how to handle merging of colinear segments for FillRule.NonZero
+                //}
+            }
+            else
             {
                 // merge two segments that belong to different polygons
                 // each segment has distinct knowledge, so no special logic is needed
@@ -374,41 +376,41 @@ namespace TextMeshDOTS.Polybool
         }
         void AddOrOverwriteSegment(int segmentID)
         {
-			ref var evSegment = ref segments.ElementAt(segmentID);
-			if (evSegment.segmentType == SegmentType.Secondary)         // make sure `seg.myFill` actually points to the primary polygon though
-			{				
-				if (!evSegment.otherFillSet) throw new Exception("PolyBool: Unexpected state of otherFill (FillStatus.Undefined)");
-				(evSegment.fillAbove, evSegment.fillOtherAbove) = (evSegment.fillOtherAbove, evSegment.fillAbove);
-				(evSegment.fillBelow, evSegment.fillOtherBelow) = (evSegment.fillOtherBelow, evSegment.fillBelow);
-			}
-			
-			//Microintersection lead to small segments that quite often are identical with the last 2 added segments. Check and update them
-			for (int i = 2; i >= 0; i--)
-			{
-				if (prevSegmentIDs[i] != -1)
-				{
-					ref var prevSegment = ref segments.ElementAt(prevSegmentIDs[i]);
-					if (prevSegment.start == evSegment.start && prevSegment.end == evSegment.end)
-					{
-						// previous identical segment found -->can we keep it and ignore the new segment?
-						if (prevSegment.fillAbove != evSegment.fillAbove || prevSegment.fillBelow != evSegment.fillBelow ||
-							prevSegment.fillOtherAbove != evSegment.fillOtherAbove || prevSegment.fillOtherBelow != evSegment.fillOtherBelow)
-							MergeColinearSegments(ref prevSegment, ref evSegment);//no, the segment differ in fill anotation. How to merge? There can only be one segment!						
-						break;
-					}
-				}
-			}
-			evSegment.inResults = true;
+            ref var evSegment = ref segments.ElementAt(segmentID);
+            if (evSegment.segmentType == SegmentType.Secondary)         // make sure `seg.myFill` actually points to the primary polygon though
+            {				
+                if (!evSegment.otherFillSet) throw new Exception("PolyBool: Unexpected state of otherFill (FillStatus.Undefined)");
+                (evSegment.fillAbove, evSegment.fillOtherAbove) = (evSegment.fillOtherAbove, evSegment.fillAbove);
+                (evSegment.fillBelow, evSegment.fillOtherBelow) = (evSegment.fillOtherBelow, evSegment.fillBelow);
+            }
+            
+            //Microintersection lead to small segments that quite often are identical with the last 2 added segments. Check and update them
+            for (int i = 2; i >= 0; i--)
+            {
+                if (prevSegmentIDs[i] != -1)
+                {
+                    ref var prevSegment = ref segments.ElementAt(prevSegmentIDs[i]);
+                    if (prevSegment.start == evSegment.start && prevSegment.end == evSegment.end)
+                    {
+                        // previous identical segment found -->can we keep it and ignore the new segment?
+                        if (prevSegment.fillAbove != evSegment.fillAbove || prevSegment.fillBelow != evSegment.fillBelow ||
+                            prevSegment.fillOtherAbove != evSegment.fillOtherAbove || prevSegment.fillOtherBelow != evSegment.fillOtherBelow)
+                            MergeColinearSegments(ref prevSegment, ref evSegment);//no, the segment differ in fill anotation. How to merge? There can only be one segment!						
+                        break;
+                    }
+                }
+            }
+            evSegment.inResults = true;
 
-			//remember last 3 added segments
-			for (int i = 0; i < 2; i++)
-				prevSegmentIDs[i] = prevSegmentIDs[i + 1];
-			prevSegmentIDs[2] = segmentID;
+            //remember last 3 added segments
+            for (int i = 0; i < 2; i++)
+                prevSegmentIDs[i] = prevSegmentIDs[i + 1];
+            prevSegmentIDs[2] = segmentID;
 
-		}
+        }
         public void Calculate(bool primaryPolyInverted, bool secondaryPolyInverted)
         {
-			EventBool above = EventBool.Empty, below = EventBool.Empty;
+            EventBool above = EventBool.Empty, below = EventBool.Empty;
             bool validateFillIndex = false;//when an DivideEvent inserts end event before the current event, then we need to revalidate all fill annotation up to this index
             while (eventQueue.Length > 0)
             {
@@ -420,11 +422,11 @@ namespace TextMeshDOTS.Polybool
                     eventIndexInStatus = eventIndexInStatus < 0 ? ~eventIndexInStatus : eventIndexInStatus;
                     bool hasAbove = eventIndexInStatus > 0;
                     bool hasBelow = eventIndexInStatus < statusQueue.Length;
-					above = hasAbove ? statusQueue[eventIndexInStatus - 1] : EventBool.Empty;
-					below = hasBelow ? statusQueue[eventIndexInStatus]: EventBool.Empty;
+                    above = hasAbove ? statusQueue[eventIndexInStatus - 1] : EventBool.Empty;
+                    below = hasBelow ? statusQueue[eventIndexInStatus]: EventBool.Empty;
 
-					//check for intersections between new event and events in status
-					bool keepAbove = false, keepBelow = false;
+                    //check for intersections between new event and events in status
+                    bool keepAbove = false, keepBelow = false;
                     if (hasAbove)
                         CheckIntersection(ev, above, out keepAbove);
                     if (!keepAbove && hasBelow)
@@ -432,21 +434,21 @@ namespace TextMeshDOTS.Polybool
 
                     if (keepAbove || keepBelow)
                     {
-						ref var evSegment = ref segments.ElementAt(ev.segmentID);
-						if (keepAbove)
-						{
-							ref var aboveSegment = ref segments.ElementAt(above.segmentID);
-							MergeColinearSegments(ref aboveSegment, ref evSegment);
-						}
-						if (keepBelow)
-						{
-							ref var belowSegment = ref segments.ElementAt(below.segmentID);
-							MergeColinearSegments(ref belowSegment, ref evSegment);
-						}
-						int eventIndexInEvents= eventQueue.Length - 1; //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
-						if (Hint.Unlikely(eventQueue[eventIndexInEvents] != ev))
-							eventIndexInEvents = eventQueue.IndexOf(ev);   //event is not guaranteed to be at queue head because CheckIntersection can inserted new events prior to it
-						eventQueue.RemoveAt(eventIndexInEvents);
+                        ref var evSegment = ref segments.ElementAt(ev.segmentID);
+                        if (keepAbove)
+                        {
+                            ref var aboveSegment = ref segments.ElementAt(above.segmentID);
+                            MergeColinearSegments(ref aboveSegment, ref evSegment);
+                        }
+                        if (keepBelow)
+                        {
+                            ref var belowSegment = ref segments.ElementAt(below.segmentID);
+                            MergeColinearSegments(ref belowSegment, ref evSegment);
+                        }
+                        int eventIndexInEvents= eventQueue.Length - 1; //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
+                        if (Hint.Unlikely(eventQueue[eventIndexInEvents] != ev))
+                            eventIndexInEvents = eventQueue.IndexOf(ev);   //event is not guaranteed to be at queue head because CheckIntersection can inserted new events prior to it
+                        eventQueue.RemoveAt(eventIndexInEvents);
                         eventQueue.RemoveAt(eventQueue.IndexOf(ev.other)); //expensive: ~30% of function execution time
                     }
 
@@ -483,12 +485,12 @@ namespace TextMeshDOTS.Polybool
                         CheckIntersection(above, below, out bool keepBelow);
                         if (keepBelow)
                         {
-							ref var evSegment = ref segments.ElementAt(ev.segmentID);
-							ref var belowSegment = ref segments.ElementAt(below.segmentID);
-							MergeColinearSegments(ref belowSegment, ref evSegment);
-							int eventIndexInEvents = eventQueue.Length -1; //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
-							if (Hint.Unlikely(eventQueue[eventIndexInEvents] != ev))
-								eventIndexInEvents = eventQueue.IndexOf(ev);   //event is not guaranteed to be at queue head because CheckIntersection can inserted new events prior to it
+                            ref var evSegment = ref segments.ElementAt(ev.segmentID);
+                            ref var belowSegment = ref segments.ElementAt(below.segmentID);
+                            MergeColinearSegments(ref belowSegment, ref evSegment);
+                            int eventIndexInEvents = eventQueue.Length -1; //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
+                            if (Hint.Unlikely(eventQueue[eventIndexInEvents] != ev))
+                                eventIndexInEvents = eventQueue.IndexOf(ev);   //event is not guaranteed to be at queue head because CheckIntersection can inserted new events prior to it
                             eventQueue.RemoveAt(eventIndexInEvents);
                             var eventIndexInStatus = statusQueue.IndexOf(ev.other);//ev was just discarded, so remove also from status
                             statusQueue.RemoveAt(eventIndexInStatus);
@@ -509,7 +511,7 @@ namespace TextMeshDOTS.Polybool
                 }
                 // remove the event and continue
                 eventQueue.RemoveAt(eventQueue.Length - 1); // eventQueue.RemoveAt(0) when sorted ascending (most left event is at index 0), otherwise eventQueue.RemoveAt(eventQueue.Length - 1)
-			}
+            }
         }
     }
 }

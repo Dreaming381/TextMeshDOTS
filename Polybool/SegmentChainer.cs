@@ -123,9 +123,9 @@ namespace TextMeshDOTS.Polybool
                     if (addToHead)
                     {
                         chain.InsertRange(0, 1);
-						chain[0] = pt;
+                        chain[0] = pt;
 
-					}
+                    }
                     else
                         chain.Add(pt);
                     continue;
@@ -190,16 +190,16 @@ namespace TextMeshDOTS.Polybool
                     }
                 }
             }
-			//for (int i = 0, ii = chains.Length; i < ii; i++)
-			//{
-			//	var chain = chains[i];
-			//	if (chain.Length > 0)
-			//	{
-			//		polygon.startIDs.Add(polygon.nodes.Length);
-			//		polygon.nodes.CopyFrom(chain);
-			//	}
-			//}
-			polygon.ClosePolygon();//abuse last startID to store end of last component
+            //for (int i = 0, ii = chains.Length; i < ii; i++)
+            //{
+            //	var chain = chains[i];
+            //	if (chain.Length > 0)
+            //	{
+            //		polygon.startIDs.Add(polygon.nodes.Length);
+            //		polygon.nodes.CopyFrom(chain);
+            //	}
+            //}
+            polygon.ClosePolygon();//abuse last startID to store end of last component
 
             if (polygon.startIDs.Length > 1)
             {
@@ -262,14 +262,14 @@ namespace TextMeshDOTS.Polybool
                 }
             }
 
-			for (int i = 0, end = chains.Length; i < end; i++)
-			{
-				var chain = chains[i];
-				if (chain.IsCreated)
-					chains[i].Dispose();
-			}
-			chains.Dispose();
-			return polygon;
+            for (int i = 0, end = chains.Length; i < end; i++)
+            {
+                var chain = chains[i];
+                if (chain.IsCreated)
+                    chains[i].Dispose();
+            }
+            chains.Dispose();
+            return polygon;
 
             void AppendChain(int index1, int index2)
             {

@@ -1,10 +1,10 @@
 
 namespace TextMeshDOTS.Polybool
 {
-	public enum SegmentType : byte
-	{
-		Primary,
-		Secondary,
-		Merged
-	}
+    public enum SegmentType : byte
+    {
+        Primary,
+        Secondary,
+        Merged
+    }
 }

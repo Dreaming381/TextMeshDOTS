@@ -116,11 +116,11 @@ internal class RenderTest : MonoBehaviour
         orientation = SDFOrientation.POSTSCRIPT; //clipper always outputs the outer contour CCW, and the inner CW, which is postscript definition
         var fillRule = FillRule.EvenOdd;
         var clipType = ClipType.Union;
-		//PolygonOperation.RemoveSelfIntersections(ref drawData, clipType, fillRule);
+        //PolygonOperation.RemoveSelfIntersections(ref drawData, clipType, fillRule);
         PolygonOperation.RemoveSelfIntersectionsPolyBool(ref drawData, TextMeshDOTS.Polybool.ClipType.Union, TextMeshDOTS.Polybool.FillRule.NonZero);
         SDFCommon.WriteGlyphOutlineToFile($"Clipper2 {clipType} ({fillRule}) outline of glyph {character}.txt", drawData);
 
-		marker.Begin();
+        marker.Begin();
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
         SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);

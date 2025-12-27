@@ -15,11 +15,11 @@ namespace TextMeshDOTS.Polybool
                 intersecter.AddRegion(poly, start, end, SegmentType.Primary);
             }            
             intersecter.Calculate(poly.inverted, false);
-			var result = new NativeList<Segment>(intersecter.segments.Length, Allocator.Temp);
-			foreach (Segment segment in intersecter.segments)
-				if(segment.inResults) result.Add(segment);
+            var result = new NativeList<Segment>(intersecter.segments.Length, Allocator.Temp);
+            foreach (Segment segment in intersecter.segments)
+                if(segment.inResults) result.Add(segment);
 
-			var polySegments = new PolySegments { segments = result, inverted = poly.inverted };
+            var polySegments = new PolySegments { segments = result, inverted = poly.inverted };
             return polySegments;
         }
 
@@ -28,15 +28,15 @@ namespace TextMeshDOTS.Polybool
             intersecter.Reset(false);
             intersecter.AddSegments(segments1.segments, segments2.segments);
             intersecter.Calculate(segments1.inverted, segments2.inverted);
-			var result = new NativeList<Segment>(intersecter.segments.Length, Allocator.Temp);
-			foreach (Segment segment in intersecter.segments)
-				if (segment.inResults) result.Add(segment);
-			var combinedSegments = new CombinedPolySegments(result, segments1.inverted, segments2.inverted);
+            var result = new NativeList<Segment>(intersecter.segments.Length, Allocator.Temp);
+            foreach (Segment segment in intersecter.segments)
+                if (segment.inResults) result.Add(segment);
+            var combinedSegments = new CombinedPolySegments(result, segments1.inverted, segments2.inverted);
             return combinedSegments;
         }
         public static PolySegments SelectUnion(CombinedPolySegments combined)
         {
-			NativeList<Segment> segments;
+            NativeList<Segment> segments;
             if (combined.inverted1)
             {
                 if (combined.inverted2)
@@ -61,7 +61,7 @@ namespace TextMeshDOTS.Polybool
         }
         public static PolySegments SelectIntersect(CombinedPolySegments combined)
         {
-			NativeList<Segment> segments;
+            NativeList<Segment> segments;
             if (combined.inverted1)
             {
                 if (combined.inverted2)
@@ -86,7 +86,7 @@ namespace TextMeshDOTS.Polybool
         }
         public static PolySegments SelectDifference(CombinedPolySegments combined)
         {
-			NativeList<Segment> segments;
+            NativeList<Segment> segments;
             if (combined.inverted1)
             {
                 if (combined.inverted2)
@@ -111,7 +111,7 @@ namespace TextMeshDOTS.Polybool
         }
         public static PolySegments SelectDifferenceRev(CombinedPolySegments combined)
         {
-			NativeList<Segment> segments;
+            NativeList<Segment> segments;
             if (combined.inverted1)
             {
                 if (combined.inverted2)
@@ -156,36 +156,36 @@ namespace TextMeshDOTS.Polybool
             //Utils.WriteAnnotatedSegmentsToFile("Annotated Clip", seg2.segments);
             var comb = Combine(seg1, seg2, ref intersecter);
             //Utils.WriteAnnotatedSegmentsToFile("Annotated Combined", comb.combined);
-			PolySegments seg3;
-			Polygon result;
-			switch (clipType)
-			{
-				case ClipType.Union:
-					seg3 = SelectUnion(comb);
-					result= new Polygon(seg3);
-					break;
-				case ClipType.Intersection:
-					seg3 = SelectIntersect(comb);
-					result = new Polygon(seg3);
-					break;
-				case ClipType.Difference:
-					seg3 = SelectDifference(comb);
-					result = new Polygon(seg3);
-					break;
-				case ClipType.DifferenceRev:
-					seg3 = SelectDifferenceRev(comb);
-					result = new Polygon(seg3);
-					break;
-				case ClipType.Xor:
-					seg3 = SelectXor(comb);
-					result = new Polygon(seg3);
-					break;
-				default:
-					result = new Polygon(0, 0, false, Allocator.Temp);
-					break;
-			}
-			return result;
-		}
+            PolySegments seg3;
+            Polygon result;
+            switch (clipType)
+            {
+                case ClipType.Union:
+                    seg3 = SelectUnion(comb);
+                    result= new Polygon(seg3);
+                    break;
+                case ClipType.Intersection:
+                    seg3 = SelectIntersect(comb);
+                    result = new Polygon(seg3);
+                    break;
+                case ClipType.Difference:
+                    seg3 = SelectDifference(comb);
+                    result = new Polygon(seg3);
+                    break;
+                case ClipType.DifferenceRev:
+                    seg3 = SelectDifferenceRev(comb);
+                    result = new Polygon(seg3);
+                    break;
+                case ClipType.Xor:
+                    seg3 = SelectXor(comb);
+                    result = new Polygon(seg3);
+                    break;
+                default:
+                    result = new Polygon(0, 0, false, Allocator.Temp);
+                    break;
+            }
+            return result;
+        }
 
         // helper functions for common operations
         public static Polygon Union(Polygon subject, Polygon clip, FillRule fillRule)
