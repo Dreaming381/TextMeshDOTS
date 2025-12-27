@@ -55,56 +55,12 @@ namespace TextMeshDOTS.HarfBuzz
             clipper.Dispose();
         }
 
-        ///// <summary> Use Clipper2 library to do a union of polygon on itself to remove self-intersections.  </summary>
-        //public static void RemoveSelfIntersections(ref DrawData subject, ClipType cliptype, FillRule fillrule, out DrawData solutionClosed)
-        //{
-        //    ClipperD clipper = new ClipperD();
-        //    var nodes = subject.edges;
-        //    var startIDs = subject.contourIDs;
-        //    //PathsD paths = new PathsD();
-        //    for (int i = 0, length = startIDs.Length - 1; i < length; i++)
-        //    {
-        //        int start = startIDs[i];
-        //        int end = startIDs[i + 1];
-        //        var path = new PathD(end - start);
-        //        for (int k = start; k < end; k++)
-        //            path.Add(new PointD(nodes[k].start_pos.x, nodes[k].start_pos.y));
-        //        clipper.AddSubject(path);
-        //        //paths.Add(path);
-        //    }
-
-        //    solutionClosed = new DrawData(subject.edges.Length, subject.contourIDs.Length, subject.maxDeviation, Allocator.Temp);
-        //    //var solutionPathClosed = Clipper.InflatePaths(paths, 0.1, JoinType.Bevel, EndType.Butt, 2, 2, 0);
-        //    var solutionPathClosed = new PathsD();
-        //    var solutionPathOpen = new PathsD();
-        //    clipper.Execute(cliptype, fillrule, solutionPathClosed, solutionPathOpen);
-
-        //    for (int i = 0, length = solutionPathClosed.Count; i < length; i++)
-        //    {
-        //        var path = solutionPathClosed[i];
-        //        var firstStartPos = path[0];
-        //        var lastStartPos = path[^1];
-        //        for (int k = 0, kk = path.Count - 1; k < kk; k++)
-        //        {
-        //            var startPos = path[k];
-        //            var endPos = path[k + 1];
-        //            solutionClosed.edges.Add(new SDFEdge { start_pos = new float2((float)startPos.x, (float)startPos.y), end_pos = new float2((float)endPos.x, (float)endPos.y), edge_type = SDFEdgeType.LINE });
-        //        }
-        //        solutionClosed.edges.Add(new SDFEdge { start_pos = new float2((float)lastStartPos.x, (float)lastStartPos.y), end_pos = new float2((float)firstStartPos.x, (float)firstStartPos.y), edge_type = SDFEdgeType.LINE });
-
-        //        ////close polygon
-        //        //if (path[^1] != firstStartPos)
-        //        //    solutionClosed.edges.Add(new SDFEdge { start_pos = new float2((float)firstStartPos.x, (float)firstStartPos.y) });
-        //        solutionClosed.contourIDs.Add(solutionClosed.edges.Length);
-        //    }
-        //    solutionClosed.maxDeviation = subject.maxDeviation;
-        //    solutionClosed.glyphRect = subject.glyphRect;
-        //}
-
         /// <summary> Use BURST compatible Polybool library to do a self intersection of polygon itself using Fillrule.NonZero.</summary>
         public static void RemoveSelfIntersectionsPolyBool(ref DrawData subject, Polybool.ClipType cliptype, Polybool.FillRule fillRule)
         {
-            var nodes = subject.edges;
+			var scale = 1000;
+			var invScale = 1f / scale;
+			var nodes = subject.edges;
             var contourIDs = subject.contourIDs;
             var polyBoolSubject = new Polygon(subject.edges.Length, subject.contourIDs.Length, false, Allocator.Temp);
             var polyBoolSubjectNodes = polyBoolSubject.nodes;
@@ -116,14 +72,14 @@ namespace TextMeshDOTS.HarfBuzz
                 int start = contourIDs[i];
                 int end = contourIDs[i + 1];
                 for (int k = start; k < end; k++)
-                    polyBoolSubjectNodes.Add(new double2(nodes[k].start_pos.x, nodes[k].start_pos.y));
+                    polyBoolSubjectNodes.Add(new Polybool.long2(nodes[k].start_pos.x * scale, nodes[k].start_pos.y * scale));
                 polyBoolSubjectStartIDs.Add(polyBoolSubjectNodes.Length);
             }
 
             var polyBoolClip = new Polygon(0,0, false, Allocator.Temp);
             //var result = PolyboolClipper.Operate(polyBoolSubject, polyBoolClip, cliptype, fillRule);
 
-            var intersecter = new Intersecter(true, polyBoolSubjectNodes.Length, fillRule);
+            var intersecter = new Intersecter(true, polyBoolSubjectNodes.Length, fillRule, Allocator.Temp);
             var seg1 = PolyboolClipper.Segments(polyBoolSubject, ref intersecter);
             var seg2 = SegmentSelector.Select(seg1.segments, cliptype);
             //Utils.WriteAnnotatedSegmentsToFile("segments-selected.txt", seg2);
@@ -138,14 +94,17 @@ namespace TextMeshDOTS.HarfBuzz
                 contourIDs.Add(nodes.Length);
                 int start = resultPolygonStartIDs[i];
                 int end = resultPolygonStartIDs[i + 1];
-                for (int k = start; k < end - 1; k++)
+				Polybool.long2 startPos, endPos;
+				for (int k = start; k < end - 1; k++)
                 {
-                    var startPos = ((float2)resultPolygonNodes[k]);
-                    var endPos = ((float2)resultPolygonNodes[k + 1]);
-                    nodes.Add(new SDFEdge { start_pos = startPos, end_pos = endPos, edge_type = SDFEdgeType.LINE });
+                    startPos = resultPolygonNodes[k];
+                    endPos = resultPolygonNodes[k + 1];
+                    nodes.Add(new SDFEdge { start_pos = new float2(startPos.x, startPos.y) * invScale, end_pos = new float2(endPos.x, endPos.y)* invScale, edge_type = SDFEdgeType.LINE });
                 }
-                nodes.Add(new SDFEdge { start_pos = (float2)resultPolygonNodes[end-1], end_pos = (float2)resultPolygonNodes[start], edge_type = SDFEdgeType.LINE });
-            }
+				startPos = resultPolygonNodes[end - 1];
+				endPos = resultPolygonNodes[start];
+				nodes.Add(new SDFEdge { start_pos = new float2(startPos.x, startPos.y) * invScale, end_pos = new float2(endPos.x, endPos.y)* invScale, edge_type = SDFEdgeType.LINE });
+			}
             contourIDs.Add(nodes.Length);
         }
     }

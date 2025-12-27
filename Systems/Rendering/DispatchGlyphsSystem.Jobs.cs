@@ -1,4 +1,3 @@
-using TextMeshDOTS.Clipper2AoS;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Burst;
@@ -13,12 +12,12 @@ using UnityEngine;
 namespace TextMeshDOTS
 {
     public unsafe partial class DispatchGlyphsSystem
-    { 
+    {
         #region Collect Jobs
         [BurstCompile]
         struct AllocateJob : IJob
         {
-            [ReadOnly] public GlyphTable       glyphTable;
+            [ReadOnly] public GlyphTable glyphTable;
             public NativeParallelHashSet<uint> glyphEntryIDsToRasterizeSet;
 
             public void Execute()
@@ -30,38 +29,38 @@ namespace TextMeshDOTS
         [BurstCompile]
         struct CaptureRenderGlyphsJob : IJobChunk
         {
-            [ReadOnly] public GlyphTable                            glyphTable;
+            [ReadOnly] public GlyphTable glyphTable;
             [ReadOnly] public BufferTypeHandle<PreviousRenderGlyph> renderGlyphHandle;
-            public ComponentTypeHandle<TextShaderIndex>             textShaderIndexHandle;
-            public ComponentTypeHandle<ResidentRange>               residentRangeHandle;
-            public ComponentTypeHandle<GpuState>                    gpuStateHandle;
+            public ComponentTypeHandle<TextShaderIndex> textShaderIndexHandle;
+            public ComponentTypeHandle<ResidentRange> residentRangeHandle;
+            public ComponentTypeHandle<GpuState> gpuStateHandle;
 
             [NativeDisableParallelForRestriction] public NativeStream.Writer renderGlyphCapturesStream;
-            public NativeParallelHashSet<uint>.ParallelWriter                glyphEntryIDsToRasterizeSet;
+            public NativeParallelHashSet<uint>.ParallelWriter glyphEntryIDsToRasterizeSet;
 
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
             {
                 renderGlyphCapturesStream.BeginForEachIndex(unfilteredChunkIndex);
 
-                var shaderPtr    = chunk.GetComponentDataPtrRW(ref textShaderIndexHandle);
-                var residentPtr  = (ResidentRange*)chunk.GetRequiredComponentDataPtrRW(ref residentRangeHandle);
-                var gpuStates    = (GpuState*)chunk.GetRequiredComponentDataPtrRW(ref gpuStateHandle);
+                var shaderPtr = chunk.GetComponentDataPtrRW(ref textShaderIndexHandle);
+                var residentPtr = (ResidentRange*)chunk.GetRequiredComponentDataPtrRW(ref residentRangeHandle);
+                var gpuStates = (GpuState*)chunk.GetRequiredComponentDataPtrRW(ref gpuStateHandle);
                 var glyphBuffers = chunk.GetBufferAccessor(ref renderGlyphHandle);
                 var gpuStateMask = chunk.GetEnabledMask(ref gpuStateHandle);
 
                 var enumerator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
                 while (enumerator.NextEntityIndex(out var entityIndex))
                 {
-                    gpuStateMask[entityIndex]    = false;
-                    bool resident                = gpuStates[entityIndex].state == GpuState.State.DynamicPromoteToResident;
+                    gpuStateMask[entityIndex] = false;
+                    bool resident = gpuStates[entityIndex].state == GpuState.State.DynamicPromoteToResident;
                     gpuStates[entityIndex].state = resident ? GpuState.State.Resident : GpuState.State.Dynamic;
-                    var glyphs                   = glyphBuffers[entityIndex];
+                    var glyphs = glyphBuffers[entityIndex];
                     renderGlyphCapturesStream.Write(new RenderGlyphCapture
                     {
-                        glyphBuffer        = glyphs.Length != 0 ? (RenderGlyph*)glyphs.GetUnsafeReadOnlyPtr() : null,
-                        glyphCount         = glyphs.Length,
-                        makeResident       = resident,
-                        residentRangePtr   = residentPtr + entityIndex,
+                        glyphBuffer = glyphs.Length != 0 ? (RenderGlyph*)glyphs.GetUnsafeReadOnlyPtr() : null,
+                        glyphCount = glyphs.Length,
+                        makeResident = resident,
+                        residentRangePtr = residentPtr + entityIndex,
                         textShaderIndexPtr = shaderPtr != null ? shaderPtr + entityIndex : null,
                     });
 
@@ -80,17 +79,17 @@ namespace TextMeshDOTS
         [BurstCompile]
         struct AssignShaderIndicesJob : IJob
         {
-            [ReadOnly] public NativeStream        renderGlyphCapturesStream;
+            [ReadOnly] public NativeStream renderGlyphCapturesStream;
             public NativeList<RenderGlyphCapture> captures;
-            public GlyphGpuTable                  glyphGpuTable;
+            public GlyphGpuTable glyphGpuTable;
 
             public void Execute()
             {
-                int captureCount  = renderGlyphCapturesStream.Count();
+                int captureCount = renderGlyphCapturesStream.Count();
                 captures.Capacity = captureCount;
 
-                int writeBufferOffset  = 0;
-                int dynamicCount       = 0;
+                int writeBufferOffset = 0;
+                int dynamicCount = 0;
                 var residentBufferSize = glyphGpuTable.bufferSize.Value;
 
                 for (int stream = 0; stream < renderGlyphCapturesStream.ForEachCount; stream++)
@@ -98,9 +97,9 @@ namespace TextMeshDOTS
                     var reader = renderGlyphCapturesStream.AsReader();
                     for (int i = reader.BeginForEachIndex(stream); i > 0; i--)
                     {
-                        var capture         = reader.Read<RenderGlyphCapture>();
-                        capture.writeStart  = writeBufferOffset;
-                        writeBufferOffset  += capture.glyphCount;
+                        var capture = reader.Read<RenderGlyphCapture>();
+                        capture.writeStart = writeBufferOffset;
+                        writeBufferOffset += capture.glyphCount;
                         if (capture.makeResident)
                         {
                             if (capture.residentRangePtr->count != capture.glyphCount)
@@ -132,12 +131,12 @@ namespace TextMeshDOTS
                     ref var capture = ref captures.ElementAt(i);
                     if (capture.makeResident)
                         continue;
-                    capture.gpuStart  = (int)dynamicStart;
-                    dynamicStart     += (uint)capture.glyphCount;
+                    capture.gpuStart = (int)dynamicStart;
+                    dynamicStart += (uint)capture.glyphCount;
                     if (capture.textShaderIndexPtr != null)
                     {
                         capture.textShaderIndexPtr->firstGlyphIndex = (uint)capture.gpuStart;
-                        capture.textShaderIndexPtr->glyphCount      = (uint)capture.glyphCount;
+                        capture.textShaderIndexPtr->glyphCount = (uint)capture.glyphCount;
                         //UnityEngine.Debug.Log($"Allocated dynamic range: {capture.textShaderIndexPtr->firstGlyphIndex}, {capture.textShaderIndexPtr->glyphCount}");
                     }
                 }
@@ -162,14 +161,14 @@ namespace TextMeshDOTS
         struct AllocateGlyphsInAtlasJob : IJob
         {
             [ReadOnly] public NativeParallelHashSet<uint> glyphEntryIDsToRasterizeSet;
-            public NativeList<uint>                       glyphEntryIDsToRasterize;
-            public NativeList<uint>                       atlasDirtyIDs;
-            public GlyphTable                             glyphTable;
-            public AtlasTable                             atlasTable;
+            public NativeList<uint> glyphEntryIDsToRasterize;
+            public NativeList<uint> atlasDirtyIDs;
+            public GlyphTable glyphTable;
+            public AtlasTable atlasTable;
 
             public void Execute()
             {
-                var count                         = glyphEntryIDsToRasterizeSet.Count();
+                var count = glyphEntryIDsToRasterizeSet.Count();
                 glyphEntryIDsToRasterize.Capacity = count;
                 foreach (var glyph in glyphEntryIDsToRasterizeSet)
                     glyphEntryIDsToRasterize.AddNoResize(glyph);
@@ -182,8 +181,8 @@ namespace TextMeshDOTS
                     ref var glyphEntry = ref glyphTable.GetEntryRW(glyph);
                     var doublePadding = 2 * glyphEntry.padding;
                     atlasTable.Allocate(glyph, (short)(glyphEntry.width + doublePadding), (short)(glyphEntry.height + doublePadding), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
-                    uint id  = (uint)glyphEntry.z;
-                    id      |= glyph & 0xc0000000;
+                    uint id = (uint)glyphEntry.z;
+                    id |= glyph & 0xc0000000;
                     dirtyAtlasIDSet.Add(id);
                 }
 
@@ -199,18 +198,18 @@ namespace TextMeshDOTS
         [BurstCompile]
         struct RasterizeJob : IJobFor
         {
-            [ReadOnly] public NativeArray<uint>                                                           glyphEntryIDsToRasterize;
-            [ReadOnly] public GlyphTable                                                                  glyphTable;
-            [ReadOnly] public FontTable                                                                   fontTable;
-            [NativeDisableParallelForRestriction] public NativeArray<TextureAtlasArray<byte>.AtlasPtr>    sdf8Ptrs;
-            [NativeDisableParallelForRestriction] public NativeArray<TextureAtlasArray<ushort>.AtlasPtr>  sdf16Ptrs;
+            [ReadOnly] public NativeArray<uint> glyphEntryIDsToRasterize;
+            [ReadOnly] public GlyphTable glyphTable;
+            [ReadOnly] public FontTable fontTable;
+            [NativeDisableParallelForRestriction] public NativeArray<TextureAtlasArray<byte>.AtlasPtr> sdf8Ptrs;
+            [NativeDisableParallelForRestriction] public NativeArray<TextureAtlasArray<ushort>.AtlasPtr> sdf16Ptrs;
             [NativeDisableParallelForRestriction] public NativeArray<TextureAtlasArray<Color32>.AtlasPtr> bitmapPtrs;
 
-            [NativeDisableUnsafePtrRestriction] public DrawDelegates  drawDelegates;
+            [NativeDisableUnsafePtrRestriction] public DrawDelegates drawDelegates;
             [NativeDisableUnsafePtrRestriction] public PaintDelegates paintDelegates;
 
             [NativeDisableContainerSafetyRestriction] DrawData drawData;
-            [NativeSetThreadIndex] int                         threadIndex;
+            [NativeSetThreadIndex] int threadIndex;
 
             public void Execute(int glyphIndex)
             {
@@ -220,11 +219,11 @@ namespace TextMeshDOTS
                 if (glyphEntry.width == 0 || glyphEntry.height == 0)
                     return;
 
-                var face         = fontTable.faces[glyphEntry.key.faceIndex];
+                var face = fontTable.faces[glyphEntry.key.faceIndex];
 
                 //Debug.Log($"Rasterize glyphIndex {glyphIndex} of font {face.GetName(NameID.FONT_FAMILY,Language.English())} {face.GetName(NameID.FONT_SUBFAMILY, Language.English())}");
-                
-                var font         = fontTable.GetOrCreateFont(glyphEntry.key.faceIndex, threadIndex);
+
+                var font = fontTable.GetOrCreateFont(glyphEntry.key.faceIndex, threadIndex);
                 if (face.HasVarData && font.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
                     font = fontTable.SetVariableProfile(glyphEntry.key.faceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
 
@@ -251,7 +250,7 @@ namespace TextMeshDOTS
                         // Truetype: CW for outer contours, CCW for holes
                         // Postscript: CCW for outer contours, CW for holes
                         PaintUtils.removeOverlapsMarker.Begin();
-                        PolygonOperation.RemoveSelfIntersections(ref drawData, ClipType.Union, FillRule.NonZero);
+                        PolygonOperation.RemoveSelfIntersections(ref drawData, Clipper2AoS.ClipType.Union, Clipper2AoS.FillRule.NonZero);
                         //PolygonOperation.RemoveSelfIntersectionsPolyBool(ref drawData, Polybool.ClipType.Union, Polybool.FillRule.NonZero);
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
@@ -267,9 +266,9 @@ namespace TextMeshDOTS
                 }
                 else if (glyphEntry.key.format == RenderFormat.Bitmap8888)
                 {
-                    PaintData paintData     = default;
+                    PaintData paintData = default;
                     paintData.drawDelegates = drawDelegates;
-                    paintData.clipGlyph     = drawData;
+                    paintData.clipGlyph = drawData;
                     paintData.Clear();
 
                     // harfbuzz is not pushing clipRects anymore for bounded glyphs as of https://github.com/harfbuzz/harfbuzz/pull/5294
@@ -288,10 +287,10 @@ namespace TextMeshDOTS
                         {
                             for (int x = 0; x < glyphEntry.width; x++)
                             {
-                                var argb                     = paintData.paintSurface[y * glyphEntry.width + x];
-                                var dstY                     = y + glyphEntry.y;
-                                var dstX                     = x + glyphEntry.x;
-                                var dstIndex                 = dstY * kTextureDimension + dstX;
+                                var argb = paintData.paintSurface[y * glyphEntry.width + x];
+                                var dstY = y + glyphEntry.y;
+                                var dstX = x + glyphEntry.x;
+                                var dstIndex = dstY * kTextureDimension + dstX;
                                 bitmapTextureSlice[dstIndex] = new Color32(argb.r, argb.g, argb.b, argb.a);
                             }
                         }
@@ -331,15 +330,15 @@ namespace TextMeshDOTS
         [BurstCompile]
         struct WriteRenderGlyphsToGpuJob : IJobFor
         {
-            [ReadOnly] public GlyphTable                                          glyphTable;
-            [ReadOnly] public NativeArray<RenderGlyphCapture>                     captures;
+            [ReadOnly] public GlyphTable glyphTable;
+            [ReadOnly] public NativeArray<RenderGlyphCapture> captures;
             [NativeDisableParallelForRestriction] public NativeArray<RenderGlyph> uploadArray;
-            public NativeArray<uint3>                                             uploadMetaArray;
+            public NativeArray<uint3> uploadMetaArray;
 
             public void Execute(int index)
             {
                 const float kTextureResolutionFloatInverse = 1f / kTextureDimension;
-                var         capture                        = captures[index];
+                var capture = captures[index];
                 for (int i = 0; i < capture.glyphCount; i++)
                 {
                     var glyph = capture.glyphBuffer[i];

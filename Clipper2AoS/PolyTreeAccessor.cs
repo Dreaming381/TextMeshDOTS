@@ -5,240 +5,7 @@ using Unity.Mathematics;
 
 
 namespace TextMeshDOTS.Clipper2AoS
-{
-    //[BurstCompile]
-    //public static class PolyTreeAccessorDelegates
-    //{
-
-    //    public unsafe delegate bool PolyTreeTopNodesDelegate(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, long2 pt, int* counter);
-
-    //    public readonly unsafe static PolyTreeTopNodesDelegate ContainsPointInvoke = BurstCompiler.CompileFunctionPointer<PolyTreeTopNodesDelegate>(ContainsPointFunction).Invoke;
-
-    //    public readonly unsafe static PolyTreeTopNodesDelegate ContainsChildrenInvoke = BurstCompiler.CompileFunctionPointer<PolyTreeTopNodesDelegate>(ContainsChildrenFunction).Invoke;
-    //    [BurstCompile]
-    //    public static unsafe bool ContainsPointFunction(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, long2 point, int* counter)
-    //    {
-    //        var nodes = (*polyTree).nodes;
-    //        var node = nodes[nodeIndex];
-
-    //        var outrecID = node.outrecIdx;
-    //        ref var outrec = ref (*clipperL).OutrecList.ElementAt(outrecID);
-    //        var parent = (*clipperL).GetCleanPath(outrec.pts);
-    //        PolyPathContainsPoint(ref (*polyTree), nodeIndex, parent, point, ref *counter);            
-    //        return true;
-
-    //        void PolyPathContainsPoint(ref PolyTree polytree, int parentNode, NativeList<long2> parentPolygon, long2 pt, ref int counter)
-    //        {
-    //            var nodes = polytree.nodes;
-    //            if (parentNode == -1) return;
-    //            var queue = new NativeList<int>(16, Allocator.Temp);
-    //            for (int c = nodes[parentNode].firstChild; c != -1; c = nodes[c].nextSibling)
-    //                queue.Add(c);
-
-    //            if (InternalClipper.PointInPolygon(pt, parentPolygon) != PointInPolygonResult.IsOutside)
-    //            {
-    //                if (polytree.IsHole(parentNode)) --counter; else ++counter;
-    //            }
-
-    //            while (!queue.IsEmpty)
-    //            {
-    //                int nodeIndex = queue[0];
-    //                queue.RemoveAt(0);
-
-    //                var node = nodes[nodeIndex];
-    //                var outrecID = node.outrecIdx;
-    //                ref var outrec = ref (*clipperL).OutrecList.ElementAt(outrecID);
-
-    //                var child = (*clipperL).GetCleanPath(outrec.pts);
-    //                PolyPathContainsPoint(ref polytree, nodeIndex, child, pt, ref counter);
-    //            }
-    //            return;
-    //        }
-    //    }
-    //    [BurstCompile]
-    //    public static unsafe bool ContainsChildrenFunction(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, long2 dummy, int* dummy2)
-    //    {
-    //        var nodes = (*polyTree).nodes;
-    //        var node = nodes[nodeIndex];
-    //        if (node.childCount > 0)
-    //        {
-    //            ref var outrec = ref (*clipperL).OutrecList.ElementAt(node.outrecIdx);
-    //            if (!ParentContainsAllChildren(nodeIndex, outrec.pts))
-    //                return false;
-    //        }
-    //        return true;
-
-    //        bool ParentContainsAllChildren(int parentNode, int parentOpID)
-    //        {
-    //            if (parentNode == -1) return false;
-    //            var queue = new NativeList<int>(16, Allocator.Temp);
-    //            for (int c = nodes[parentNode].firstChild; c != -1; c = nodes[c].nextSibling)
-    //                queue.Add(c);
-
-    //            while (!queue.IsEmpty)
-    //            {
-    //                int nodeIndex = queue[0];
-    //                queue.RemoveAt(0);
-
-    //                var node = nodes[nodeIndex];
-    //                var outrecID = node.outrecIdx;
-    //                ref var outrec = ref (*clipperL).OutrecList.ElementAt(outrecID);
-    //                if (!(*clipperL).Path1InsidePath2(outrec.pts, parentOpID))
-    //                    return false;
-    //            }
-    //            return true;
-    //        }
-    //    }
-
-
-    //    public unsafe delegate bool PolyTreeDelegate(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, NativeList<int2> solutionNodes, NativeList<int> solutionStartIDs, double* result);
-    //    public readonly unsafe static PolyTreeDelegate BuildPathInvoke = BurstCompiler.CompileFunctionPointer<PolyTreeDelegate>(BuildPathFunction).Invoke;
-    //    [BurstCompile]
-    //    public static unsafe bool BuildPathFunction(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, NativeList<int2> solutionNodes, NativeList<int> solutionStartIDs, double* dummy)
-    //    {
-    //        var nodes = (*polyTree).nodes;
-    //        var node = nodes[nodeIndex];
-    //        ref var outrec = ref (*clipperL).OutrecList.ElementAt(node.outrecIdx);
-    //        (*clipperL).BuildPath(outrec.pts, false, false, ref solutionNodes, ref solutionStartIDs);
-    //        return true;
-    //    }
-
-    //    public readonly unsafe static PolyTreeDelegate AreaInvoke = BurstCompiler.CompileFunctionPointer<PolyTreeDelegate>(AreaFunction).Invoke;
-    //    [BurstCompile]
-    //    public static unsafe bool AreaFunction(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, NativeList<int2> solutionNodes, NativeList<int> solutionStartIDs, double* result)
-    //    {
-    //        var nodes = (*polyTree).nodes;
-    //        var node = nodes[nodeIndex];
-    //        ref var outrec = ref (*clipperL).OutrecList.ElementAt(node.outrecIdx);
-    //        (*clipperL).BuildPath(outrec.pts, false, false, ref solutionNodes, ref solutionStartIDs);
-    //        var area = PolyTreeAccessorExtensions.SignedArea(solutionNodes, solutionStartIDs);
-    //        //var area = (*clipperL).Area(outrec.pts);
-    //        (*result) += area;
-    //        solutionNodes.Clear();
-    //        solutionStartIDs.Clear();
-    //        return true;
-    //    }
-
-
-        
-    //    public static bool PolyTree_GetSolution_DepthFirst(ref PolyTree polytree, ref ClipperL clipperL, ref NativeList<int2> solutionNodes, ref NativeList<int> solutionStartIDs, ref double result, PolyTreeDelegate func)
-    //    {
-    //        bool ret = false;
-    //        var root = polytree.root;
-    //        var nodes = polytree.nodes;
-    //        if (root == -1) return ret;
-    //        var stack = new NativeList<int>(16, Allocator.Temp)
-    //        {
-    //            polytree.root
-    //        };
-    //        while (!stack.IsEmpty)
-    //        {
-    //            int nodeIndex = stack[^1];
-    //            stack.RemoveAt(stack.Length - 1);
-
-    //            //process node here                
-    //            var node = nodes[nodeIndex];
-    //            if (nodeIndex != 0) //skip root node
-    //            {
-    //                unsafe
-    //                {
-    //                    fixed (double* ptrToResult = &result)
-    //                    fixed (PolyTree* ptrToPolyTree = &polytree)
-    //                    fixed (ClipperL* ptrToClipperL = &clipperL)
-    //                    {
-    //                        ret = func.Invoke(nodeIndex, ptrToPolyTree, ptrToClipperL, solutionNodes, solutionStartIDs, ptrToResult);
-    //                        if (!ret)
-    //                            return ret;
-    //                    }
-    //                }
-    //            }
-
-    //            //push children in reverse order to stack
-    //            //so that first child is processed first
-    //            var first = stack.Length;
-    //            for (int c = node.firstChild; c != -1; c = nodes[c].nextSibling)
-    //                stack.Add(c);
-    //            var last = stack.Length - 1;
-    //            stack.Reverse(first, last);
-    //        }
-    //        return true;
-    //    }
-    //    public static bool PolyTree_GetSolution_BreathFirst(ref PolyTree polytree, ref ClipperL clipperL, ref NativeList<int2> solutionNodes, ref NativeList<int> solutionStartIDs, ref double result, PolyTreeDelegate func)
-    //    {
-    //        bool ret = false;
-    //        var root = polytree.root;
-    //        var nodes = polytree.nodes;
-    //        if (root == -1) return ret;
-    //        var queue = new NativeList<int>(16, Allocator.Temp)
-    //        {
-    //            root
-    //        };
-    //        while (!queue.IsEmpty)
-    //        {
-    //            int nodeIndex = queue[0];
-    //            queue.RemoveAt(0);
-
-    //            //process node here
-    //            var node = nodes[nodeIndex];
-    //            if (nodeIndex != 0) //skip root node
-    //            {
-    //                unsafe
-    //                {
-    //                    fixed (double* ptrToResult = &result)
-    //                    fixed (PolyTree* ptrToPolyTree = &polytree)
-    //                    fixed (ClipperL* ptrToClipperL = &clipperL)
-    //                    {
-    //                        ret = func.Invoke(nodeIndex, ptrToPolyTree, ptrToClipperL, solutionNodes, solutionStartIDs, ptrToResult);
-    //                        if (!ret)
-    //                            return ret;                            
-    //                    }
-    //                }
-    //            }
-
-    //            //push children into queue
-    //            for (int c = node.firstChild; c != -1; c = nodes[c].nextSibling)
-    //                queue.Add(c);
-    //        }
-    //        return true;
-    //    }
-    //    public static bool PolyTree_ForAllExteriorNodes(ref PolyTree polytree, ref ClipperL clipperL, long2 pt, ref int counter, PolyTreeTopNodesDelegate func)
-    //    {
-    //        // first get all the top level exterior outrec. Identical to Clipper2 PolyTree64.Count:
-    //        // for (int i = 0; i < polytree.Count; i++)
-    //        bool result = false;
-    //        var root = polytree.root;
-    //        var nodes = polytree.nodes;
-    //        if (root == -1) return result;
-    //        var stack = new NativeList<int>(2048, Allocator.Temp);
-    //        var first = stack.Length;
-    //        for (int c = nodes[root].firstChild; c != -1; c = nodes[c].nextSibling)
-    //            stack.Add(c);
-    //        var last = stack.Length - 1;
-    //        stack.Reverse(first, last);
-
-    //        while (!stack.IsEmpty)
-    //        {
-    //            int nodeIndex = stack[^1];
-    //            stack.RemoveAt(stack.Length - 1);
-
-    //            if (nodeIndex != 0) //skip root node
-    //            {
-    //                unsafe
-    //                {
-    //                    fixed (int* ptrToCounter = &counter)
-    //                    fixed (PolyTree* ptrToPolyTree = &polytree)
-    //                    fixed (ClipperL* ptrToClipperL = &clipperL)
-    //                    {
-    //                        result = func.Invoke(nodeIndex, ptrToPolyTree, ptrToClipperL, pt, ptrToCounter);
-    //                        if (!result)
-    //                            return result; //interup parsing further children when this child fails
-    //                    }
-    //                }
-    //            }
-    //        }
-    //        return result;
-    //    }
-    //}
+{    
     public static class PolyTreeAccessorExtensions
     {
         /// <summary>
@@ -567,7 +334,239 @@ namespace TextMeshDOTS.Clipper2AoS
                     queue.Add(c);
             }
         }
+		#endregion
+		//[BurstCompile]
+		//public static class PolyTreeAccessorDelegates
+		//{
 
-        #endregion
-    }
+		//    public unsafe delegate bool PolyTreeTopNodesDelegate(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, long2 pt, int* counter);
+
+		//    public readonly unsafe static PolyTreeTopNodesDelegate ContainsPointInvoke = BurstCompiler.CompileFunctionPointer<PolyTreeTopNodesDelegate>(ContainsPointFunction).Invoke;
+
+		//    public readonly unsafe static PolyTreeTopNodesDelegate ContainsChildrenInvoke = BurstCompiler.CompileFunctionPointer<PolyTreeTopNodesDelegate>(ContainsChildrenFunction).Invoke;
+		//    [BurstCompile]
+		//    public static unsafe bool ContainsPointFunction(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, long2 point, int* counter)
+		//    {
+		//        var nodes = (*polyTree).nodes;
+		//        var node = nodes[nodeIndex];
+
+		//        var outrecID = node.outrecIdx;
+		//        ref var outrec = ref (*clipperL).OutrecList.ElementAt(outrecID);
+		//        var parent = (*clipperL).GetCleanPath(outrec.pts);
+		//        PolyPathContainsPoint(ref (*polyTree), nodeIndex, parent, point, ref *counter);            
+		//        return true;
+
+		//        void PolyPathContainsPoint(ref PolyTree polytree, int parentNode, NativeList<long2> parentPolygon, long2 pt, ref int counter)
+		//        {
+		//            var nodes = polytree.nodes;
+		//            if (parentNode == -1) return;
+		//            var queue = new NativeList<int>(16, Allocator.Temp);
+		//            for (int c = nodes[parentNode].firstChild; c != -1; c = nodes[c].nextSibling)
+		//                queue.Add(c);
+
+		//            if (InternalClipper.PointInPolygon(pt, parentPolygon) != PointInPolygonResult.IsOutside)
+		//            {
+		//                if (polytree.IsHole(parentNode)) --counter; else ++counter;
+		//            }
+
+		//            while (!queue.IsEmpty)
+		//            {
+		//                int nodeIndex = queue[0];
+		//                queue.RemoveAt(0);
+
+		//                var node = nodes[nodeIndex];
+		//                var outrecID = node.outrecIdx;
+		//                ref var outrec = ref (*clipperL).OutrecList.ElementAt(outrecID);
+
+		//                var child = (*clipperL).GetCleanPath(outrec.pts);
+		//                PolyPathContainsPoint(ref polytree, nodeIndex, child, pt, ref counter);
+		//            }
+		//            return;
+		//        }
+		//    }
+		//    [BurstCompile]
+		//    public static unsafe bool ContainsChildrenFunction(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, long2 dummy, int* dummy2)
+		//    {
+		//        var nodes = (*polyTree).nodes;
+		//        var node = nodes[nodeIndex];
+		//        if (node.childCount > 0)
+		//        {
+		//            ref var outrec = ref (*clipperL).OutrecList.ElementAt(node.outrecIdx);
+		//            if (!ParentContainsAllChildren(nodeIndex, outrec.pts))
+		//                return false;
+		//        }
+		//        return true;
+
+		//        bool ParentContainsAllChildren(int parentNode, int parentOpID)
+		//        {
+		//            if (parentNode == -1) return false;
+		//            var queue = new NativeList<int>(16, Allocator.Temp);
+		//            for (int c = nodes[parentNode].firstChild; c != -1; c = nodes[c].nextSibling)
+		//                queue.Add(c);
+
+		//            while (!queue.IsEmpty)
+		//            {
+		//                int nodeIndex = queue[0];
+		//                queue.RemoveAt(0);
+
+		//                var node = nodes[nodeIndex];
+		//                var outrecID = node.outrecIdx;
+		//                ref var outrec = ref (*clipperL).OutrecList.ElementAt(outrecID);
+		//                if (!(*clipperL).Path1InsidePath2(outrec.pts, parentOpID))
+		//                    return false;
+		//            }
+		//            return true;
+		//        }
+		//    }
+
+
+		//    public unsafe delegate bool PolyTreeDelegate(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, NativeList<int2> solutionNodes, NativeList<int> solutionStartIDs, double* result);
+		//    public readonly unsafe static PolyTreeDelegate BuildPathInvoke = BurstCompiler.CompileFunctionPointer<PolyTreeDelegate>(BuildPathFunction).Invoke;
+		//    [BurstCompile]
+		//    public static unsafe bool BuildPathFunction(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, NativeList<int2> solutionNodes, NativeList<int> solutionStartIDs, double* dummy)
+		//    {
+		//        var nodes = (*polyTree).nodes;
+		//        var node = nodes[nodeIndex];
+		//        ref var outrec = ref (*clipperL).OutrecList.ElementAt(node.outrecIdx);
+		//        (*clipperL).BuildPath(outrec.pts, false, false, ref solutionNodes, ref solutionStartIDs);
+		//        return true;
+		//    }
+
+		//    public readonly unsafe static PolyTreeDelegate AreaInvoke = BurstCompiler.CompileFunctionPointer<PolyTreeDelegate>(AreaFunction).Invoke;
+		//    [BurstCompile]
+		//    public static unsafe bool AreaFunction(int nodeIndex, PolyTree* polyTree, ClipperL* clipperL, NativeList<int2> solutionNodes, NativeList<int> solutionStartIDs, double* result)
+		//    {
+		//        var nodes = (*polyTree).nodes;
+		//        var node = nodes[nodeIndex];
+		//        ref var outrec = ref (*clipperL).OutrecList.ElementAt(node.outrecIdx);
+		//        (*clipperL).BuildPath(outrec.pts, false, false, ref solutionNodes, ref solutionStartIDs);
+		//        var area = PolyTreeAccessorExtensions.SignedArea(solutionNodes, solutionStartIDs);
+		//        //var area = (*clipperL).Area(outrec.pts);
+		//        (*result) += area;
+		//        solutionNodes.Clear();
+		//        solutionStartIDs.Clear();
+		//        return true;
+		//    }
+
+
+
+		//    public static bool PolyTree_GetSolution_DepthFirst(ref PolyTree polytree, ref ClipperL clipperL, ref NativeList<int2> solutionNodes, ref NativeList<int> solutionStartIDs, ref double result, PolyTreeDelegate func)
+		//    {
+		//        bool ret = false;
+		//        var root = polytree.root;
+		//        var nodes = polytree.nodes;
+		//        if (root == -1) return ret;
+		//        var stack = new NativeList<int>(16, Allocator.Temp)
+		//        {
+		//            polytree.root
+		//        };
+		//        while (!stack.IsEmpty)
+		//        {
+		//            int nodeIndex = stack[^1];
+		//            stack.RemoveAt(stack.Length - 1);
+
+		//            //process node here                
+		//            var node = nodes[nodeIndex];
+		//            if (nodeIndex != 0) //skip root node
+		//            {
+		//                unsafe
+		//                {
+		//                    fixed (double* ptrToResult = &result)
+		//                    fixed (PolyTree* ptrToPolyTree = &polytree)
+		//                    fixed (ClipperL* ptrToClipperL = &clipperL)
+		//                    {
+		//                        ret = func.Invoke(nodeIndex, ptrToPolyTree, ptrToClipperL, solutionNodes, solutionStartIDs, ptrToResult);
+		//                        if (!ret)
+		//                            return ret;
+		//                    }
+		//                }
+		//            }
+
+		//            //push children in reverse order to stack
+		//            //so that first child is processed first
+		//            var first = stack.Length;
+		//            for (int c = node.firstChild; c != -1; c = nodes[c].nextSibling)
+		//                stack.Add(c);
+		//            var last = stack.Length - 1;
+		//            stack.Reverse(first, last);
+		//        }
+		//        return true;
+		//    }
+		//    public static bool PolyTree_GetSolution_BreathFirst(ref PolyTree polytree, ref ClipperL clipperL, ref NativeList<int2> solutionNodes, ref NativeList<int> solutionStartIDs, ref double result, PolyTreeDelegate func)
+		//    {
+		//        bool ret = false;
+		//        var root = polytree.root;
+		//        var nodes = polytree.nodes;
+		//        if (root == -1) return ret;
+		//        var queue = new NativeList<int>(16, Allocator.Temp)
+		//        {
+		//            root
+		//        };
+		//        while (!queue.IsEmpty)
+		//        {
+		//            int nodeIndex = queue[0];
+		//            queue.RemoveAt(0);
+
+		//            //process node here
+		//            var node = nodes[nodeIndex];
+		//            if (nodeIndex != 0) //skip root node
+		//            {
+		//                unsafe
+		//                {
+		//                    fixed (double* ptrToResult = &result)
+		//                    fixed (PolyTree* ptrToPolyTree = &polytree)
+		//                    fixed (ClipperL* ptrToClipperL = &clipperL)
+		//                    {
+		//                        ret = func.Invoke(nodeIndex, ptrToPolyTree, ptrToClipperL, solutionNodes, solutionStartIDs, ptrToResult);
+		//                        if (!ret)
+		//                            return ret;                            
+		//                    }
+		//                }
+		//            }
+
+		//            //push children into queue
+		//            for (int c = node.firstChild; c != -1; c = nodes[c].nextSibling)
+		//                queue.Add(c);
+		//        }
+		//        return true;
+		//    }
+		//    public static bool PolyTree_ForAllExteriorNodes(ref PolyTree polytree, ref ClipperL clipperL, long2 pt, ref int counter, PolyTreeTopNodesDelegate func)
+		//    {
+		//        // first get all the top level exterior outrec. Identical to Clipper2 PolyTree64.Count:
+		//        // for (int i = 0; i < polytree.Count; i++)
+		//        bool result = false;
+		//        var root = polytree.root;
+		//        var nodes = polytree.nodes;
+		//        if (root == -1) return result;
+		//        var stack = new NativeList<int>(2048, Allocator.Temp);
+		//        var first = stack.Length;
+		//        for (int c = nodes[root].firstChild; c != -1; c = nodes[c].nextSibling)
+		//            stack.Add(c);
+		//        var last = stack.Length - 1;
+		//        stack.Reverse(first, last);
+
+		//        while (!stack.IsEmpty)
+		//        {
+		//            int nodeIndex = stack[^1];
+		//            stack.RemoveAt(stack.Length - 1);
+
+		//            if (nodeIndex != 0) //skip root node
+		//            {
+		//                unsafe
+		//                {
+		//                    fixed (int* ptrToCounter = &counter)
+		//                    fixed (PolyTree* ptrToPolyTree = &polytree)
+		//                    fixed (ClipperL* ptrToClipperL = &clipperL)
+		//                    {
+		//                        result = func.Invoke(nodeIndex, ptrToPolyTree, ptrToClipperL, pt, ptrToCounter);
+		//                        if (!result)
+		//                            return result; //interup parsing further children when this child fails
+		//                    }
+		//                }
+		//            }
+		//        }
+		//        return result;
+		//    }
+		//}
+	}
 }

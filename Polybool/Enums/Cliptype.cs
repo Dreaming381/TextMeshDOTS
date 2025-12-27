@@ -1,4 +1,4 @@
 namespace TextMeshDOTS.Polybool
 {
-    public enum ClipType { None, Intersection, Union, Difference, DifferenceRev, Xor };
+    public enum ClipType { NoClip, Intersection, Union, Difference, DifferenceRev, Xor };
 }

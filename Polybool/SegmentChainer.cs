@@ -1,8 +1,8 @@
 ﻿using System;
+using UnityEngine;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
-using UnityEngine;
 
 namespace TextMeshDOTS.Polybool
 {
@@ -10,17 +10,17 @@ namespace TextMeshDOTS.Polybool
     {
         internal static Polygon SegmentChainer(NativeList<Segment> segments, bool inverted)
         {
-            var chains = new UnsafeList<UnsafeList<double2>>(16, Allocator.Temp);
+            var chains = new UnsafeList<UnsafeList<long2>>(16, Allocator.Temp);
             var polygon = new Polygon(segments.Length, 8, false, Allocator.Temp);
 
             for (int k = 0, length = segments.Length; k < length; k++)
             {
                 var seg = segments[k];
 
-                var pt1 = seg.p0_start;
-                var pt2 = seg.p1_end;
+                var pt1 = seg.start;
+                var pt2 = seg.end;
 
-                if (PointUtils.PointsSame(pt1, pt2))
+                if (pt1 == pt2)
                 {
                     Debug.Log("PolyBool: Warning: Zero-length segment detected; your epsilon is probably too small or too large");
                     continue;
@@ -36,22 +36,22 @@ namespace TextMeshDOTS.Polybool
                     ref var chain = ref chains.ElementAt(i);
                     var head = chain[0];
                     var tail = chain[^1];
-                    if (PointUtils.PointsSame(head, pt1))
+                    if (head == pt1)
                     {
                         if (SetMatch(i, true, true, ref firstMatch, ref secondMatch, ref setFirstMatch))
                             break;
                     }
-                    else if (PointUtils.PointsSame(head, pt2))
+                    else if (head == pt2)
                     {
                         if (SetMatch(i, true, false, ref firstMatch, ref secondMatch, ref setFirstMatch))
                             break;
                     }
-                    else if (PointUtils.PointsSame(tail, pt1))
+                    else if (tail == pt1)
                     {
                         if (SetMatch(i, false, true, ref firstMatch, ref secondMatch, ref setFirstMatch))
                             break;
                     }
-                    else if (PointUtils.PointsSame(tail, pt2))
+                    else if (tail == pt2)
                     {
                         if (SetMatch(i, false, false, ref firstMatch, ref secondMatch, ref setFirstMatch))
                             break;
@@ -61,7 +61,7 @@ namespace TextMeshDOTS.Polybool
                 if (firstMatch == Matcher.Empty)
                 {
                     // we didn't match anything, so create a new chain
-                    var temp = new UnsafeList<double2>(16, Allocator.Temp)
+                    var temp = new UnsafeList<long2>(16, Allocator.Temp)
                     {
                         pt1,
                         pt2
@@ -87,7 +87,7 @@ namespace TextMeshDOTS.Polybool
                     var oppo = addToHead ? chain[^1] : chain[0];
                     var oppo2 = addToHead ? chain[^2] : chain[1];
 
-                    if (PointUtils.IsCollinear(grow2, grow, pt, out _))
+                    if (PointUtils.IsCollinear(grow2, grow, pt))
                     {
                         // grow isn't needed because it's directly between grow2 and pt:
                         // grow2 ---grow---> pt
@@ -98,11 +98,11 @@ namespace TextMeshDOTS.Polybool
                         grow = grow2; // old grow is gone... new grow is what grow2 was
                     }
 
-                    if (PointUtils.PointsSame(oppo, pt))
+                    if (oppo == pt)
                     {                        
 
                         int start = 0, end = chain.Length;
-                        if (PointUtils.IsCollinear(oppo2, oppo, grow, out _))
+                        if (PointUtils.IsCollinear(oppo2, oppo, grow))
                         {
                             // oppo isn't needed because it's directly between oppo2 and grow:
                             // oppo2 ---oppo--->grow
@@ -123,9 +123,9 @@ namespace TextMeshDOTS.Polybool
                     if (addToHead)
                     {
                         chain.InsertRange(0, 1);
-                        chain[0] = pt;
-                        //chain.Unshift(pt);
-                    }
+						chain[0] = pt;
+
+					}
                     else
                         chain.Add(pt);
                     continue;
@@ -190,7 +190,16 @@ namespace TextMeshDOTS.Polybool
                     }
                 }
             }
-            polygon.ClosePolygon();//abuse last startID to store end of last component
+			//for (int i = 0, ii = chains.Length; i < ii; i++)
+			//{
+			//	var chain = chains[i];
+			//	if (chain.Length > 0)
+			//	{
+			//		polygon.startIDs.Add(polygon.nodes.Length);
+			//		polygon.nodes.CopyFrom(chain);
+			//	}
+			//}
+			polygon.ClosePolygon();//abuse last startID to store end of last component
 
             if (polygon.startIDs.Length > 1)
             {
@@ -253,14 +262,14 @@ namespace TextMeshDOTS.Polybool
                 }
             }
 
-            for (int i = 0, end=chains.Length; i<end; i++)
-            {
-                var chain = chains[i];
-                if(chain.IsCreated)
-                    chains[i].Dispose();
-            }
-            chains.Dispose();
-            return polygon;
+			for (int i = 0, end = chains.Length; i < end; i++)
+			{
+				var chain = chains[i];
+				if (chain.IsCreated)
+					chains[i].Dispose();
+			}
+			chains.Dispose();
+			return polygon;
 
             void AppendChain(int index1, int index2)
             {
@@ -273,7 +282,7 @@ namespace TextMeshDOTS.Polybool
                 var head2 = chain2[1];
                 int chain2start = 0;
 
-                if (PointUtils.IsCollinear(tail2, tail, head, out _))
+                if (PointUtils.IsCollinear(tail2, tail, head))
                 {
                     // tail isn't needed because it's directly between tail2 and head
                     // tail2 ---tail---> head
@@ -281,7 +290,7 @@ namespace TextMeshDOTS.Polybool
                     tail = tail2; // old tail is gone... new tail is what tail2 was
                 }
 
-                if (PointUtils.IsCollinear(tail, head, head2, out _))
+                if (PointUtils.IsCollinear(tail, head, head2))
                 {
                     // head isn't needed because it's directly between tail and head2
                     // tail ---head---> head2
