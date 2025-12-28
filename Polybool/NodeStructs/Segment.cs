@@ -9,8 +9,8 @@ namespace TextMeshDOTS.Polybool
     public struct Segment : IEquatable<Segment>
     {
         public SegmentType segmentType;
-        public long2 start;
-        public long2 end;
+        public long2 p0;
+        public long2 p1;
         public int windingTopToBottom;     //store here winding of egde crossing vertial ray from top to bottom
         public int windingLeftToRight;    //store here winding of egde crossing horizontal ray from left to right
         byte _boolField;
@@ -58,8 +58,8 @@ namespace TextMeshDOTS.Polybool
 
         public Segment(long2 start, long2 end, SegmentType segmentType, bool closed)
         {
-            this.start = start;
-            this.end = end;
+            this.p0 = start;
+            this.p1 = end;
             _boolField = 0;
             this.segmentType = segmentType;
             windingTopToBottom = 0;
@@ -78,8 +78,8 @@ namespace TextMeshDOTS.Polybool
             //generate right Segment
             right = new Segment()
             {
-                start = splitPoint,
-                end = end,
+                p0 = splitPoint,
+                p1 = p1,
                 myFillSet = myFillSet,
                 fillAbove = fillAbove,
                 fillBelow = fillBelow,
@@ -91,7 +91,7 @@ namespace TextMeshDOTS.Polybool
                 windingLeftToRight = windingLeftToRight,
             };
             //update Endpoint of left segment
-            end = splitPoint;
+            p1 = splitPoint;
         }
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace TextMeshDOTS.Polybool
                 if (tAMax < 0 || tAMin > 1)
                     return IntersectionResultType.Nothing;
 
-                var bDist = adx * adx + ady * ady;
+                var bDist = bdx * bdx + bdy * bdy;
                 var a0_OnSeqB = ProjectPointOntoSegmentLine(a0, b0, bdx, bdy, bDist);
                 var a1_OnSeqB = ProjectPointOntoSegmentLine(a1, b0, bdx, bdy, bDist);
                 var tBMin = PointUtils.Snap01(math.min(a0_OnSeqB, a1_OnSeqB));
@@ -193,7 +193,7 @@ namespace TextMeshDOTS.Polybool
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(start, end, _boolField);
+            return HashCode.Combine(p0, p1, _boolField);
         }
     }
 }

@@ -54,10 +54,10 @@ namespace TextMeshDOTS.Polybool
             // compare the selected points first
             var seg1 = segments[eventA.segmentID];
             var seg2 = segments[eventB.segmentID];
-            var a1 = seg1.start;
-            var a2 = seg1.end;
-            var b1 = seg2.start;
-            var b2 = seg2.end;
+            var a1 = seg1.p0;
+            var a2 = seg1.p1;
+            var b1 = seg2.p0;
+            var b2 = seg2.p1;
             if (!eventA.isStart)
                 (a1, a2) = (a2, a1);
             if (!eventB.isStart)

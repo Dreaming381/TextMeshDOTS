@@ -65,8 +65,8 @@ namespace TextMeshDOTS.Polybool
             for (int i = 0, end = events.Count; i < end; i++)
             {
                 var seg = segments[events[i].segmentID];
-                writer.WriteLine($"{seg.start.x} {seg.start.y}");
-                writer.WriteLine($"{seg.end.x} {seg.end.y}\n");
+                writer.WriteLine($"{seg.p0.x} {seg.p0.y}");
+                writer.WriteLine($"{seg.p1.x} {seg.p1.y}\n");
             }
             writer.Close();
         }
@@ -77,8 +77,8 @@ namespace TextMeshDOTS.Polybool
             for (int i = 0, end = segments.Count; i < end; i++)
             {
                 var seg = segments[i];
-                writer.WriteLine($"{seg.start.x} {seg.start.y} {seg.windingTopToBottom}");
-                writer.WriteLine($"{seg.end.x} {seg.end.y}\n");
+                writer.WriteLine($"{seg.p0.x} {seg.p0.y} {seg.windingTopToBottom}");
+                writer.WriteLine($"{seg.p1.x} {seg.p1.y}\n");
             }
             writer.Close();
         }
@@ -90,8 +90,8 @@ namespace TextMeshDOTS.Polybool
             {
                 var seg = segments[i];
                 //writer.WriteLine($"{seg.p0_start.x} {seg.p0_start.y} above: {seg.above} {seg.windingTopToBottom} {seg.windingLeftToRight}");
-                writer.WriteLine($"{seg.start.x} {seg.start.y} {seg.fillAbove} {seg.fillOtherAbove} {seg.fillBelow} {seg.fillOtherBelow}");
-                writer.WriteLine($"{seg.end.x} {seg.end.y} \n");
+                writer.WriteLine($"{seg.p0.x} {seg.p0.y} {seg.fillAbove} {seg.fillOtherAbove} {seg.fillBelow} {seg.fillOtherBelow}");
+                writer.WriteLine($"{seg.p1.x} {seg.p1.y} \n");
             }
             writer.Close();
         }

@@ -17,8 +17,8 @@ namespace TextMeshDOTS.Polybool
             {
                 var seg = segments[k];
 
-                var pt1 = seg.start;
-                var pt2 = seg.end;
+                var pt1 = seg.p0;
+                var pt2 = seg.p1;
 
                 if (pt1 == pt2)
                 {

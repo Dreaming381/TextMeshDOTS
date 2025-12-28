@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
@@ -47,10 +48,10 @@ namespace TextMeshDOTS.Polybool
                 return 0;
             var seg1 = segments[eventA.segmentID];
             var seg2 = segments[eventB.segmentID];
-            var a = seg1.start;
-            var b = seg1.end;
-            var c = seg2.start;
-            var d = seg2.end;
+            var a = seg1.p0;
+            var b = seg1.p1;
+            var c = seg2.p0;
+            var d = seg2.p1;
 
             // orientation of p with resepct to a segment:
             // <0 = CW = left. Because p0 is always left of p1, this means here also "above" 
@@ -61,19 +62,21 @@ namespace TextMeshDOTS.Polybool
             if (c.x < a.x)
             {
                 //...then determine oriention of seg1 against seg2(c, d)
-                // seg1 is "above" seg2, when it's points are CCW of seg 2...so when orient2d is positive (CCW), we need to return negative!
-                if (d.x == c.x)// # vertical segment
-                    return -b.y.CompareTo(math.max(c.y, d.y));                //b.y < Math.Max(c.y, d.y)   //# true if seg2 below seg1
+                // seg1 is "above" seg2, when it's points are CCW of seg 2...so when orient2d is positive (CCW), we need to return negative!                
                 var orient2d = PointUtils.Orient2DAccurate(c, d, a);
                 if (math.abs(orient2d) < BezierMath.epsilon1_abs)           // a collinear with seg2 (c,d)?
                 {
                     orient2d = PointUtils.Orient2DAccurate(c, d, b);
                     if (math.abs(orient2d) < BezierMath.epsilon1_abs)       // b collinear with seg2 (c,d)?
                     {
-                        if (seg1.segmentType != seg2.segmentType)           // Segments are collinear, but belong to separate polygons
-                            return seg1.segmentType == SegmentType.Primary ? -1 : 1;
-                        else
+                        //if (seg1.segmentType != seg2.segmentType)           // Segments are collinear, but belong to separate polygons
+                        //    return seg1.segmentType == SegmentType.Primary ? -1 : 1;
+                        //else
+                        {
+                            if (d.x == c.x)// # vertical segment
+                                return -b.y.CompareTo(Math.Max(c.y, d.y));  //b.y < Math.Max(c.y, d.y)   //# true if seg2 below seg1
                             return 0;                                       // both a and b are colinear with seg2 (c,d), so segments are coincident
+                        }
                     }
                     else                                                // orientation of seg1 (b) with respect to seg2 (c,d).
                         return orient2d < 0 ? 1 : -1;                   // <0 = CW = left of seg2 means "above" (eventA is below eventB, return 1)
@@ -84,19 +87,21 @@ namespace TextMeshDOTS.Polybool
             else
             {
                 //...determine oriention of seg2 against seg1(a, b)
-                // seg1 is "above" seg2, when seg2 points are are CW of seg 1..which is directly the result of orient2D
-                if (b.x == a.x) //# vertical segment
-                    return d.y.CompareTo(math.max(a.y, b.y));                             //d.y > Math.Max(a.y, b.y);//# true if seg1 above seg2
+                // seg1 is "above" seg2, when seg2 points are are CW of seg 1..which is directly the result of orient2D                
                 var orient2d = PointUtils.Orient2DAccurate(a, b, c);
                 if (math.abs(orient2d) < BezierMath.epsilon1_abs)           // c collinear with seg1 (a,b)?
                 {
                     orient2d = PointUtils.Orient2DAccurate(a, b, d);
                     if (math.abs(orient2d) < BezierMath.epsilon1_abs)       // d collinear with seg1 (a,b)?
                     {
-                        if(seg1.segmentType != seg2.segmentType)           // Segments are collinear, but belong to separate polygons
-                            return seg1.segmentType == SegmentType.Primary ? -1 : 1;
-                        else
+                        //if (seg1.segmentType != seg2.segmentType)           // Segments are collinear, but belong to separate polygons
+                        //    return seg1.segmentType == SegmentType.Primary ? -1 : 1;
+                        //else
+                        {
+                            if (b.x == a.x) //# vertical segment
+                                return d.y.CompareTo(Math.Max(a.y, b.y));   //d.y > Math.Max(a.y, b.y);//# true if seg1 above seg2
                             return 0;                                       // both c and d are colinear with seg1 (a,b), so segments are coincident
+                        }
                     }
                     else                                                // orientation of seg2 (d) with respect to seg1 (a,b).
                         return orient2d < 0 ? -1 : 1;                   // <0 = CW = left of seg1 means "below" (eventA is above eventB, return -1)

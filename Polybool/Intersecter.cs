@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using UnityEngine;
@@ -34,18 +35,23 @@ namespace TextMeshDOTS.Polybool
         #region initialize events
         public void AddRegion(Polygon region, int start, int end, SegmentType segmentType)
         {
+            var nodes = region.nodes;
             long2 from;
-            long2 to = region.nodes[end - 1];
+            long2 to = nodes[end - 1];
+            //determine if path is closed or not. boolean opperations will fail if this is not correctly set
+            //review if there is a better was to determine or permit user to define if path is closed or open
+            var closedPath = nodes[end - 1] == nodes[start];
+
             for (int i = start; i < end; i++)
             {
                 from = to;
-                to = region.nodes[i];
+                to = nodes[i];
 
                 int forward = from.CompareTo(to);
                 if (forward == 0)
                     continue; // points are equal, so we have a zero-length segment
 
-                var segNew = forward < 0 ? new Segment(from, to, segmentType, true) : new Segment(to, from, segmentType, true);
+                var segNew = forward < 0 ? new Segment(from, to, segmentType, closedPath) : new Segment(to, from, segmentType, closedPath);
                 if (fillRule == FillRule.NonZero)
                 {
                     segNew.windingTopToBottom = PointUtils.GetWindingTowardsBottom(from, to);
@@ -67,7 +73,8 @@ namespace TextMeshDOTS.Polybool
                 var segmentID = this.segments.Length;
                 var seg = segments1[i];
                 seg.segmentType = SegmentType.Primary;
-                this.segments.Add(seg);
+                seg.inResults = false;
+                segments.Add(seg);
                 CreateEvents(segmentID, out EventBool evStart, out EventBool evEnd);
                 AddEvent(evStart);
                 AddEvent(evEnd);
@@ -77,7 +84,8 @@ namespace TextMeshDOTS.Polybool
                 var segmentID = this.segments.Length;
                 var seg = segments2[i];
                 seg.segmentType = SegmentType.Secondary;
-                this.segments.Add(seg);
+                seg.inResults = false;
+                segments.Add(seg);
                 CreateEvents(segmentID, out EventBool evStart, out EventBool evEnd);
                 AddEvent(evStart);
                 AddEvent(evEnd);
@@ -90,29 +98,32 @@ namespace TextMeshDOTS.Polybool
             evStart = new EventBool(true, segmentID);
             evEnd = new EventBool(false, segmentID);
         }
-
         void DivideEvent(EventBool ev, double t, long2 p)
         {
             var rightSegmentID = segments.Length;
             ref var seg = ref segments.ElementAt(ev.segmentID);
-            var forward = seg.start.CompareTo(p);
-            if (forward == 0 || seg.end.CompareTo(p) == 0)
+            var forward = seg.p0.CompareTo(p);
+            if (forward == 0 || seg.p1.CompareTo(p) == 0)
                 return; // points are equal, so we have a zero-length segment
 
             seg.Split(p, out Segment right);
+
             if (forward > 0)
             {
-                (seg.start, seg.end) = (seg.end, seg.start);
-                int eventIndexInEvents = eventQueue.Length - 1; //eventQueue[0] when sorted ascending (most left event is at index 0), otherwise eventQueue[^1]
-                if (Hint.Unlikely(eventQueue[eventIndexInEvents] != ev))
-                    eventIndexInEvents = eventQueue.IndexOf(ev);   //event is not guaranteed to be at queue head because CheckIntersection can inserted new events prior to it
-                eventQueue.RemoveAt(eventIndexInEvents);
-                AddEvent(ev);
+                (seg.p0, seg.p1) = (seg.p1, seg.p0);
+                var eventIndexInEvents = eventQueue.IndexOf(ev);
+                if (eventIndexInEvents != -1) //unless we split the current event queue head, the start event is not in the event queue anymore!
+                {
+                    eventQueue.RemoveAt(eventIndexInEvents);
+                    AddEvent(ev);
+                }
             }
+            segments[ev.segmentID] = seg;
 
             // slides an end backwards
             //   (start)------------(end)    to:
             //   (start)---(end)
+
             //remove and add the "other" event of the left segment, because new endpoint will cause new position in event queue
             var evOther = ev.other;
             var evOtherInEvents = eventQueue.IndexOf(ev.other);
@@ -121,9 +132,9 @@ namespace TextMeshDOTS.Polybool
 
 
             //create and add the right segment events to event queue
-            forward = right.start.CompareTo(right.end);
+            forward = right.p0.CompareTo(right.p1);
             if (forward > 0)
-                (right.start, right.end) = (right.end, right.start);
+                (right.p0, right.p1) = (right.p1, right.p0);
 
             segments.Add(right);
             CreateEvents(rightSegmentID, out EventBool evStart, out EventBool evEnd);
@@ -143,17 +154,53 @@ namespace TextMeshDOTS.Polybool
             // returns the segment equal to ev1, or false if nothing equal
             ref var seg1 = ref segments.ElementAt(ev1.segmentID);
             ref var seg2 = ref segments.ElementAt(ev2.segmentID);
-            long2 a0 = seg1.start;
-            long2 a1 = seg1.end;
-            long2 b0 = seg2.start;
-            long2 b1 = seg2.end;
+            long2 a0 = seg1.p0;
+            long2 a1 = seg1.p1;
+            long2 b0 = seg2.p0;
+            long2 b1 = seg2.p1;
             keepEv2 = false;
 
             var intersectResult = Segment.SegmentLineIntersectSegmentLine(a0, a1, b0, b1, false, out double tA1, out double tB1, out double tA2, out double tB2);
 
             if (intersectResult == IntersectionResultType.Nothing)
                 // no intersections
+                return;            
+            else if (intersectResult == IntersectionResultType.One)
+            {
+                // process a single intersection
+
+                // even though *in theory* seg1.data.point(tA) === seg2.data.point(tB), that isn't exactly
+                // correct in practice because intersections aren't exact... so we need to calculate a single
+                // intersection point that everyone can share
+                //var ip = tB1 == 0 ? b0 :
+                //        tB1 == 1 ? b1 :
+                //        tA1 == 0 ? a0 :
+                //        tA1 == 1 ? a1 :
+                //        long2.Lerp(a0, a1, tA1);
+
+                //constrain intersection point to segment1
+                long2 ip;
+                if (tB1 == 0) ip = b0;
+                else if (tB1 == 1) ip = b1;
+                else if (tA1 == 0) ip = a0;
+                else if (tA1 == 1) ip = a1;
+                else
+                {
+                    ip.x = (long)(a0.x + tA1 * (a1.x - a0.x));
+                    ip.y = (long)(a0.y + tA1 * (a1.y - a0.y));
+                }
+
+
+                // is A divided between its endpoints? (exclusive)
+                if (tA1 > 0 && tA1 < 1)
+                    DivideEvent(ev1, tA1, ip);
+
+                // is B divided between its endpoints? (exclusive)
+                if (tB1 > 0 && tB1 < 1)
+                    DivideEvent(ev2, tB1, ip);
+
                 return;
+            }
             else if (intersectResult == IntersectionResultType.Two)
             {
                 // segments are parallel or coincident
@@ -213,33 +260,11 @@ namespace TextMeshDOTS.Polybool
                     }
                 return;
             }
-            else if (intersectResult == IntersectionResultType.One)
-            {
-                // process a single intersection
-
-                // even though *in theory* seg1.data.point(tA) === seg2.data.point(tB), that isn't exactly
-                // correct in practice because intersections aren't exact... so we need to calculate a single
-                // intersection point that everyone can share
-                var p = tB1 == 0 ? seg2.start :
-                        tB1 == 1 ? seg2.end :
-                        tA1 == 0 ? seg1.start :
-                        tA1 == 1 ? seg1.end :
-                        long2.Lerp(seg1.start, seg1.end, tA1);
-
-                // is A divided between its endpoints? (exclusive)
-                if (tA1 > 0 && tA1 < 1)
-                    DivideEvent(ev1, tA1, p);
-
-                // is B divided between its endpoints? (exclusive)
-                if (tB1 > 0 && tB1 < 1)
-                    DivideEvent(ev2, tB1, p);
-
-                return;
-            }
             Debug.Log("PolyBool: Unknown intersection type");
             return;
         }
-        void CalculateFill(EventBool ev, int eventIndexInStatus, bool hasBelow, EventBool above, EventBool below)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		void CalculateFill(EventBool ev, int eventIndexInStatus, bool hasBelow, EventBool above, EventBool below)
         {
             ref var evSegment = ref segments.ElementAt(ev.segmentID); //fetch evSegment again as an intersections will change the endpoint
             if (selfIntersection)
@@ -330,11 +355,11 @@ namespace TextMeshDOTS.Polybool
                     evSegment.fillOtherAbove = inside;
                     evSegment.fillOtherBelow = inside;
                     evSegment.otherFillSet = true;
-
                 }
             }
         }
-        void MergeColinearSegments(ref Segment eveSegment, ref Segment evSegment)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		void MergeColinearSegments(ref Segment eveSegment, ref Segment evSegment)
         {
             // ev and eve are equal
             // we'll keep eve and throw away ev
@@ -374,40 +399,58 @@ namespace TextMeshDOTS.Polybool
                 eveSegment.fillOtherBelow = evSegment.fillBelow;
             }
         }
-        void AddOrOverwriteSegment(int segmentID)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		void FlipAnnotation(ref Segment segment)
         {
-            ref var evSegment = ref segments.ElementAt(segmentID);
-            if (evSegment.segmentType == SegmentType.Secondary)         // make sure `seg.myFill` actually points to the primary polygon though
-            {				
-                if (!evSegment.otherFillSet) throw new Exception("PolyBool: Unexpected state of otherFill (FillStatus.Undefined)");
-                (evSegment.fillAbove, evSegment.fillOtherAbove) = (evSegment.fillOtherAbove, evSegment.fillAbove);
-                (evSegment.fillBelow, evSegment.fillOtherBelow) = (evSegment.fillOtherBelow, evSegment.fillBelow);
-            }
-            
+            if (!segment.otherFillSet) throw new Exception("PolyBool: Unexpected state of otherFill (FillStatus.Undefined)");
+            (segment.fillAbove, segment.fillOtherAbove) = (segment.fillOtherAbove, segment.fillAbove);
+            (segment.fillBelow, segment.fillOtherBelow) = (segment.fillOtherBelow, segment.fillBelow);
+        }
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		void AddOrOverwriteSegment(int segmentID)
+        {
+            var evSegment = segments[segmentID];
             //Microintersection lead to small segments that quite often are identical with the last 2 added segments. Check and update them
+            //To-Do: how to prevent adding segments to results that end up being identical to future segments? This should not happen
+            bool updatedPreviousSegment = false;
             for (int i = 2; i >= 0; i--)
             {
                 if (prevSegmentIDs[i] != -1)
                 {
-                    ref var prevSegment = ref segments.ElementAt(prevSegmentIDs[i]);
-                    if (prevSegment.start == evSegment.start && prevSegment.end == evSegment.end)
+                    var prevSegment = segments[prevSegmentIDs[i]];
+                    if (prevSegment.p0 == evSegment.p0 && prevSegment.p1 == evSegment.p1)
                     {
-                        // previous identical segment found -->can we keep it and ignore the new segment?
-                        if (prevSegment.fillAbove != evSegment.fillAbove || prevSegment.fillBelow != evSegment.fillBelow ||
-                            prevSegment.fillOtherAbove != evSegment.fillOtherAbove || prevSegment.fillOtherBelow != evSegment.fillOtherBelow)
-                            MergeColinearSegments(ref prevSegment, ref evSegment);//no, the segment differ in fill anotation. How to merge? There can only be one segment!						
-                        break;
+                        if (prevSegment.segmentType == SegmentType.Secondary)
+                        {
+                            FlipAnnotation(ref prevSegment);	//unflip annotation prior to MergeColinearSegments to mimic normal annotation loop behaviour
+                            MergeColinearSegments(ref prevSegment, ref evSegment);
+                            FlipAnnotation(ref prevSegment);	//flip it again to  make sure `seg.myFill` actually points to the primary polygon
+                        }
+                        else
+                            MergeColinearSegments(ref prevSegment, ref evSegment);
+                        segments[prevSegmentIDs[i]] = prevSegment;
+                        updatedPreviousSegment = true;
+                        evSegment.inResults = false;
                     }
+                    break;
                 }
             }
-            evSegment.inResults = true;
+            if (!updatedPreviousSegment)
+            {
+                evSegment.inResults = true;
+                updatedPreviousSegment = false;
+            }
+
+            if (evSegment.segmentType == SegmentType.Secondary)
+                FlipAnnotation(ref evSegment);					// make sure `seg.myFill` actually points to the primary polygon though
+            segments[segmentID] = evSegment;
 
             //remember last 3 added segments
             for (int i = 0; i < 2; i++)
                 prevSegmentIDs[i] = prevSegmentIDs[i + 1];
             prevSegmentIDs[2] = segmentID;
-
         }
+        
         public void Calculate(bool primaryPolyInverted, bool secondaryPolyInverted)
         {
             EventBool above = EventBool.Empty, below = EventBool.Empty;
