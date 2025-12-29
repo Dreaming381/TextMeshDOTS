@@ -9,15 +9,15 @@ namespace TextMeshDOTS.Polybool
     internal static class Utils
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static byte SetBit(byte value, int bitIndex, bool flag)
+        internal static ushort SetBit(ushort value, int bitIndex, bool flag)
         {
             if (flag)
-                return (byte) (value | (1 << bitIndex));   // set bit
+                return (ushort) (value | (1 << bitIndex));   // set bit
             else
-                return (byte) (value & ~(1 << bitIndex));  // clear bit
+                return (ushort) (value & ~(1 << bitIndex));  // clear bit
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static bool GetBit(byte value, int bitIndex)
+        internal static bool GetBit(ushort value, int bitIndex)
         {
             return (value & (1 << bitIndex)) != 0;
         }

@@ -21,47 +21,40 @@ namespace TextMeshDOTS.Polybool
         }
         public long2(double x, double y)
         {
-            this.x = (long) Math.Round(x, MidpointRounding.AwayFromZero);
-            this.y = (long) Math.Round(y, MidpointRounding.AwayFromZero);
+            this.x = (long)Math.Round(x, MidpointRounding.AwayFromZero);
+            this.y = (long)Math.Round(y, MidpointRounding.AwayFromZero);
         }
         public long2(double x, double y, double scale)
         {
-            this.x = (long) Math.Round(x * scale, MidpointRounding.AwayFromZero);
-            this.y = (long) Math.Round(y * scale, MidpointRounding.AwayFromZero);
+            this.x = (long)Math.Round(x * scale, MidpointRounding.AwayFromZero);
+            this.y = (long)Math.Round(y * scale, MidpointRounding.AwayFromZero);
         }
 
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long2 operator +(long2 lhs, long2 rhs) { return new long2(lhs.x + rhs.x, lhs.y + rhs.y); }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long2 operator -(long2 lhs, long2 rhs) { return new long2(lhs.x - rhs.x, lhs.y - rhs.y); }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long2 operator *(double lhs, long2 rhs) { return new long2(lhs * rhs.x, lhs * rhs.y); }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long2 operator *(long2 lhs, double rhs) { return new long2(lhs.x * rhs, lhs.y * rhs); }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override bool Equals(object obj)
         {
-            if (obj != null && obj is long2 p)
-                return this == p;
-            else
-                return false;
+            return obj is long2 other && Equals(other);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(long2 other)
         {
-            return GetHashCode() == other.GetHashCode();
+            return x == other.x && y == other.y;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator ==(long2 lhs, long2 rhs) { return lhs.x == rhs.x && lhs.y == rhs.y; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(long2 lhs, long2 rhs) { return lhs.x != rhs.x || lhs.y != rhs.y; }
 
         public readonly override int GetHashCode()
         {
-            return HashCode.Combine(x, y);
+            //return HashCode.Combine(x, y);
+            unchecked // Overflow is fine
+            {
+                int hashCode = 17; // Start with a prime number
+                hashCode = hashCode * 23 + x.GetHashCode();
+                hashCode = hashCode * 23 + y.GetHashCode();
+                return hashCode;
+            }
         }
         public override string ToString()
         {
@@ -69,14 +62,6 @@ namespace TextMeshDOTS.Polybool
         }
 
         /// <summary> returns -1 if point1 is smaller then point2</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int PointsCompare(long2 point1, long2 point2)
-        {
-            if (point1.x == point2.x)
-                return (point1.y == point2.y) ? 0 : point1.y < point2.y ? -1 : 1;
-            return point1.x < point2.x ? -1 : 1;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareTo(long2 other)
         {
             if (x == other.x)
@@ -92,7 +77,7 @@ namespace TextMeshDOTS.Polybool
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long2 Lerp(long2 a, long2 b, double t)
         {
-            var res = a + (b - a) * t;
+            long2 res = a + (b - a) * t;
             return res;
         }
     }

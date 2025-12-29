@@ -12,7 +12,7 @@ namespace TextMeshDOTS.Polybool
             {
                 int start = poly.startIDs[k];
                 int end = poly.startIDs[k + 1];
-                intersecter.AddRegion(poly, start, end, SegmentType.Primary);
+                intersecter.AddRegion(poly, start, end, true);
             }            
             intersecter.Calculate(poly.inverted, false);
             var result = new NativeList<Segment>(intersecter.segments.Length, Allocator.Temp);

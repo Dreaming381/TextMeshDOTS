@@ -25,15 +25,12 @@ namespace TextMeshDOTS.Polybool
 
         public override bool Equals(object obj)
         {
-            if (obj != null && obj is Matcher p)
-                return this == p;
-            else
-                return false;
+            return obj is Matcher other && Equals(other);
         }
 
         public bool Equals(Matcher other)
         {
-            return GetHashCode() == other.GetHashCode();
+            return index == other.index && matchesHead == other.matchesHead && matchesPt1 == other.matchesPt1;
         }
 
         public static bool operator ==(Matcher e1, Matcher e2)
@@ -42,7 +39,7 @@ namespace TextMeshDOTS.Polybool
         }
         public static bool operator !=(Matcher e1, Matcher e2)
         {
-            return e1.index != e2.index && e1.matchesHead != e2.matchesHead && e1.matchesPt1 != e2.matchesPt1;
+            return !(e1 == e2);
         }
         public readonly override int GetHashCode()
         {
