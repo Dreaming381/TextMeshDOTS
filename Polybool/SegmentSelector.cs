@@ -16,7 +16,7 @@ namespace TextMeshDOTS.Polybool
                         var finalAbove = segment.fillAbove | segment.fillOtherAbove;
                         var finalBelow = segment.fillBelow | segment.fillOtherBelow;
                         if (finalAbove ^ finalBelow)
-                            result.Add(new Segment { p0 = segment.p0, p1 = segment.p1, fillAbove = finalAbove, fillBelow = finalBelow, fillOtherAbove = false, fillOtherBelow = false});						
+                            result.Add(new Segment(segment, finalAbove, finalBelow));            
                     }
                     break;
 
@@ -27,7 +27,7 @@ namespace TextMeshDOTS.Polybool
                         var finalAbove = segment.fillAbove & segment.fillOtherAbove;
                         var finalBelow = segment.fillBelow & segment.fillOtherBelow;
                         if (finalAbove ^ finalBelow)
-                            result.Add(new Segment { p0 = segment.p0, p1 = segment.p1, fillAbove = finalAbove, fillBelow = finalBelow, fillOtherAbove = false, fillOtherBelow = false });
+                            result.Add(new Segment(segment, finalAbove, finalBelow));
                     }
                     break;
                 case ClipType.Difference:
@@ -37,7 +37,7 @@ namespace TextMeshDOTS.Polybool
                         var finalAbove = segment.fillAbove & !segment.fillOtherAbove;
                         var finalBelow = segment.fillBelow & !segment.fillOtherBelow;
                         if (finalAbove ^ finalBelow)
-                            result.Add(new Segment { p0 = segment.p0, p1 = segment.p1, fillAbove = finalAbove, fillBelow = finalBelow, fillOtherAbove = false, fillOtherBelow = false });
+                            result.Add(new Segment(segment, finalAbove, finalBelow));
                     }
                     break;
                 case ClipType.DifferenceRev:
@@ -47,7 +47,7 @@ namespace TextMeshDOTS.Polybool
                         var finalAbove = !segment.fillAbove & segment.fillOtherAbove;
                         var finalBelow = !segment.fillBelow & segment.fillOtherBelow;
                         if (finalAbove ^ finalBelow)
-                            result.Add(new Segment { p0 = segment.p0, p1 = segment.p1, fillAbove = finalAbove, fillBelow = finalBelow, fillOtherAbove = false, fillOtherBelow = false });
+                            result.Add(new Segment(segment, finalAbove, finalBelow));
                     }
                     break;
                 case ClipType.Xor:
@@ -57,7 +57,7 @@ namespace TextMeshDOTS.Polybool
                         var finalAbove = segment.fillAbove ^ segment.fillOtherAbove;
                         var finalBelow = segment.fillBelow ^ segment.fillOtherBelow;
                         if (finalAbove ^ finalBelow)
-                            result.Add(new Segment { p0 = segment.p0, p1 = segment.p1, fillAbove = finalAbove, fillBelow = finalBelow, fillOtherAbove = false, fillOtherBelow = false });
+                            result.Add(new Segment(segment, finalAbove, finalBelow));
                     }
                     break;
                 default:

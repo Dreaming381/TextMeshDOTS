@@ -54,22 +54,23 @@ namespace TextMeshDOTS.Polybool
             // compare the selected points first
             var seg1 = segments[eventA.segmentID];
             var seg2 = segments[eventB.segmentID];
-            var a1 = seg1.p0;
-            var a2 = seg1.p1;
-            var b1 = seg2.p0;
-            var b2 = seg2.p1;
+            var a1 = seg1.start;
+            var a2 = seg1.end;
+            var b1 = seg2.start;
+            var b2 = seg2.end;
             if (!eventA.isStart)
                 (a1, a2) = (a2, a1);
             if (!eventB.isStart)
                 (b1, b2) = (b2, b1);
 
-            int comp = a1.CompareTo(b1);                // returns -1 if a1 (aSeq) is smaller b1 (bSeq) (=favour the smaller segment)
-            if (comp != 0)                              // the selected points are the same
-                return comp * sortDirection;
+            int compSelected = Rational.Compare(a1, b1, ref seg1, ref seg2); // returns -1 if a1 (aSeq) is smaller b1 (bSeq) (=favour the smaller segment)
+            if (compSelected != 0)                              // the selected points are the same
+                return compSelected * sortDirection;
 
-            // then compare the the other (non-selected) points
+            // then compare the  other (non-selected) points
+            int compNonSelected = Rational.Compare(a2, b2, ref seg1, ref seg2);
 
-            if (a2 == b2)                               // if the non-selected points are the same too...
+            if (compNonSelected==0)                     // if the non-selected points are the same too...
                 return 0;                               // then the segments are equal
 
             // check if one segment is a start and the other isn't...

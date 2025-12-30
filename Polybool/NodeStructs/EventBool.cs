@@ -5,22 +5,21 @@ namespace TextMeshDOTS.Polybool
 {
     [DebuggerDisplay("{segmentID} {isStart}")]
     public struct EventBool : IEquatable<EventBool>
-    {
+    {        
         public int segmentID;
         ushort _boolField;
-       
         public bool isStart
         {
             get { return Utils.GetBit(_boolField, 1); }
             set { _boolField = Utils.SetBit(_boolField, 1, value); }
         }
 
-        public EventBool other => new EventBool(!isStart, segmentID);
+        public EventBool other => new EventBool (!isStart, segmentID);
         public static EventBool Empty => new EventBool(false, -1);
 
         public EventBool(bool isStart, int segmentID)
         {
-            _boolField = 0;
+            _boolField = 0;			
             this.segmentID = segmentID;
             this.isStart = isStart;
         }

@@ -6,7 +6,7 @@ using Unity.Collections.LowLevel.Unsafe;
 
 namespace TextMeshDOTS.Polybool
 {    
-    internal static class Utils
+    public static class Utils
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static ushort SetBit(ushort value, int bitIndex, bool flag)
@@ -65,8 +65,10 @@ namespace TextMeshDOTS.Polybool
             for (int i = 0, end = events.Count; i < end; i++)
             {
                 var seg = segments[events[i].segmentID];
-                writer.WriteLine($"{seg.p0.x} {seg.p0.y}");
-                writer.WriteLine($"{seg.p1.x} {seg.p1.y}\n");
+                var p0 = seg.StartPoint;
+                var p1 = seg.EndPoint;
+                writer.WriteLine($"{p0.x} {p0.y}");
+                writer.WriteLine($"{p1.x} {p1.y}\n");
             }
             writer.Close();
         }
@@ -77,8 +79,10 @@ namespace TextMeshDOTS.Polybool
             for (int i = 0, end = segments.Count; i < end; i++)
             {
                 var seg = segments[i];
-                writer.WriteLine($"{seg.p0.x} {seg.p0.y} {seg.windingTopToBottom}");
-                writer.WriteLine($"{seg.p1.x} {seg.p1.y}\n");
+                var p0 = seg.StartPoint;
+                var p1 = seg.EndPoint;
+                writer.WriteLine($"{p0.x} {p0.y} {seg.windingTopToBottom}");
+                writer.WriteLine($"{p1.x} {p1.y}\n");
             }
             writer.Close();
         }
@@ -90,8 +94,12 @@ namespace TextMeshDOTS.Polybool
             {
                 var seg = segments[i];
                 //writer.WriteLine($"{seg.p0_start.x} {seg.p0_start.y} above: {seg.above} {seg.windingTopToBottom} {seg.windingLeftToRight}");
-                writer.WriteLine($"{seg.p0.x} {seg.p0.y} {seg.fillAbove} {seg.fillOtherAbove} {seg.fillBelow} {seg.fillOtherBelow}");
-                writer.WriteLine($"{seg.p1.x} {seg.p1.y} \n");
+                //writer.WriteLine($"{seg.p0.x} {seg.p0.y} {seg.fillAbove} {seg.fillOtherAbove} {seg.fillBelow} {seg.fillOtherBelow}");
+                //writer.WriteLine($"{seg.p1.x} {seg.p1.y} \n");
+                var p0 = seg.StartPoint;
+                var p1 = seg.EndPoint;
+                writer.WriteLine($"{p0.x} {p0.y} {seg.fillAbove} {seg.fillOtherAbove} {seg.fillBelow} {seg.fillOtherBelow}");
+                writer.WriteLine($"{p1.x} {p1.y} \n");
             }
             writer.Close();
         }

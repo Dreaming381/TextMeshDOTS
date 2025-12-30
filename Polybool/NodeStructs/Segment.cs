@@ -1,214 +1,286 @@
 ﻿using System;
 using System.Diagnostics;
-using TextMeshDOTS.HarfBuzz;
 
 namespace TextMeshDOTS.Polybool
 {
-	[DebuggerDisplay("{p0} {p1}")]
-	public struct Segment : IEquatable<Segment>
-	{
-		public long2 p0;
-		public long2 p1;
-		public int windingTopToBottom;     //store here winding of egde crossing vertial ray from top to bottom
-		public int windingLeftToRight;    //store here winding of egde crossing horizontal ray from left to right
-		ushort _boolField;
-		public bool fillAbove
-		{
-			get { return Utils.GetBit(_boolField, 0); }
-			set { _boolField = Utils.SetBit(_boolField, 0, value); }
-		}
-		public bool fillBelow
-		{
-			get { return Utils.GetBit(_boolField, 1); }
-			set { _boolField = Utils.SetBit(_boolField, 1, value); }
-		}
-		public bool fillOtherAbove
-		{
-			get { return Utils.GetBit(_boolField, 2); }
-			set { _boolField = Utils.SetBit(_boolField, 2, value); }
-		}
-		public bool fillOtherBelow
-		{
-			get { return Utils.GetBit(_boolField, 3); }
-			set { _boolField = Utils.SetBit(_boolField, 3, value); }
-		}
-		public bool myFillSet
-		{
-			get { return Utils.GetBit(_boolField, 4); }
-			set { _boolField = Utils.SetBit(_boolField, 4, value); }
-		}
-		public bool otherFillSet
-		{
-			get { return Utils.GetBit(_boolField, 5); }
-			set { _boolField = Utils.SetBit(_boolField, 5, value); }
-		}
-		public bool closed
-		{
-			get { return Utils.GetBit(_boolField, 6); }
-			set { _boolField = Utils.SetBit(_boolField, 6, value); }
-		}
-		public bool inResults
-		{
-			get { return Utils.GetBit(_boolField, 7); }
-			set { _boolField = Utils.SetBit(_boolField, 7, value); }
-		}
-		public bool isPrimary
-		{
-			get { return Utils.GetBit(_boolField, 8); }
-			set { _boolField = Utils.SetBit(_boolField, 8, value); }
-		}
+    [DebuggerDisplay("{StartPoint} {EndPoint}")]
+    public struct Segment : IEquatable<Segment>
+    {
+
+        public readonly long2 p0;			// ORIGINAL exact endpoints (do not modify after construction)
+        public readonly long2 p1;			// ORIGINAL exact endpoints (do not modify after construction)      
+        public Rational start;              // Parametric represetation of start point: p(start) = p0 + start * (p1 - p0)
+        public Rational end;                // Parametric represetation of end point: p(end) = p0 + end * (p1 - p0)
+
+        public int windingTopToBottom;      //store here winding of egde crossing vertial ray from top to bottom
+        public int windingLeftToRight;      //store here winding of egde crossing horizontal ray from left to right
+        ushort _boolField;
+        public bool fillAbove
+        {
+            get { return Utils.GetBit(_boolField, 0); }
+            set { _boolField = Utils.SetBit(_boolField, 0, value); }
+        }
+        public bool fillBelow
+        {
+            get { return Utils.GetBit(_boolField, 1); }
+            set { _boolField = Utils.SetBit(_boolField, 1, value); }
+        }
+        public bool fillOtherAbove
+        {
+            get { return Utils.GetBit(_boolField, 2); }
+            set { _boolField = Utils.SetBit(_boolField, 2, value); }
+        }
+        public bool fillOtherBelow
+        {
+            get { return Utils.GetBit(_boolField, 3); }
+            set { _boolField = Utils.SetBit(_boolField, 3, value); }
+        }
+        public bool myFillSet
+        {
+            get { return Utils.GetBit(_boolField, 4); }
+            set { _boolField = Utils.SetBit(_boolField, 4, value); }
+        }
+        public bool otherFillSet
+        {
+            get { return Utils.GetBit(_boolField, 5); }
+            set { _boolField = Utils.SetBit(_boolField, 5, value); }
+        }
+        public bool closed
+        {
+            get { return Utils.GetBit(_boolField, 6); }
+            set { _boolField = Utils.SetBit(_boolField, 6, value); }
+        }
+        public bool inResults
+        {
+            get { return Utils.GetBit(_boolField, 7); }
+            set { _boolField = Utils.SetBit(_boolField, 7, value); }
+        }
+        public bool isPrimary
+        {
+            get { return Utils.GetBit(_boolField, 8); }
+            set { _boolField = Utils.SetBit(_boolField, 8, value); }
+        }
+        // Exact evaluation (only use when coordinates are *really* needed
+        public readonly long2 StartPoint
+        {
+            get
+            {
+                long dx = p1.x - p0.x;
+                long dy = p1.y - p0.y;
+
+                return new long2(
+                    p0.x + (double) (dx * start.num) / start.den,
+                    p0.y + (double) (dy * start.num) / start.den
+                );
+            }
+        }
+        public readonly long2 EndPoint
+        {
+            get
+            {
+                long dx = p1.x - p0.x;
+                long dy = p1.y - p0.y;
+
+                return new long2(
+                    p0.x + (double) (dx * end.num) / end.den,
+                    p0.y + (double) (dy * end.num) / end.den
+                );
+            }
+        }
 
 
-		public Segment(long2 start, long2 end, bool isPrimary, bool closed)
-		{
-			this.p0 = start;
-			this.p1 = end;
-			_boolField = 0;
-			windingTopToBottom = 0;
-			windingLeftToRight = 0;
-			myFillSet = false;
-			otherFillSet = false;
-			fillAbove = false;
-			fillBelow = false;
-			fillOtherAbove = false;
-			fillOtherBelow = false;
-			this.closed = closed;
-			this.isPrimary = isPrimary;
-		}
+        public Segment(long2 segStart, long2 segEnd, Rational intervalStart, Rational intervalEnd, bool isPrimary, bool closed)
+        {
+            p0 = segStart;
+            p1 = segEnd;
+            start = intervalStart;
+            end = intervalEnd;
+            _boolField = 0;
+            windingTopToBottom = 0;
+            windingLeftToRight = 0;
+            myFillSet = false;
+            otherFillSet = false;
+            fillAbove = false;
+            fillBelow = false;
+            fillOtherAbove = false;
+            fillOtherBelow = false;
+            this.closed = closed;
+            this.isPrimary = isPrimary;
+        }
+        public Segment(Segment segment, bool fillAbove, bool fillBelow)
+        {
+            p0 = segment.p0;
+            p1 = segment.p1;
+            start = segment.start;
+            end = segment.end;
+            _boolField = segment._boolField;
+            windingTopToBottom = segment.windingTopToBottom;
+            windingLeftToRight = segment.windingLeftToRight;
+            myFillSet = true;            
+            this.fillAbove = fillAbove;
+            this.fillBelow = fillBelow;
+            otherFillSet = true;
+            fillOtherAbove = false;
+            fillOtherBelow = false;
+            closed = segment.closed;
+            isPrimary = true;
+        }
+        public Segment(Segment segment, Rational intervalStart)
+        {
+            p0 = segment.p0;
+            p1 = segment.p1;
+            start = intervalStart;
+            end = segment.end;
+            _boolField = segment._boolField;
+            windingTopToBottom = segment.windingTopToBottom;
+            windingLeftToRight = segment.windingLeftToRight;
+            myFillSet = segment.myFillSet;			
+            fillAbove = segment.fillAbove;
+            fillBelow = segment.fillBelow;
+            otherFillSet = false;	//do NOT copy otherFill to the right segment or the combine phase will fail!!!
+            fillOtherAbove = false; //do NOT copy otherFill to the right segment or the combine phase will fail!!!
+            fillOtherBelow = false; //do NOT copy otherFill to the right segment or the combine phase will fail!!!
+            closed = segment.closed;
+            isPrimary = segment.isPrimary;
+        }
 
-		public void Split(long2 splitPoint, out Segment right)
-		{
-			//generate right Segment
-			right = new Segment()
-			{
-				p0 = splitPoint,
-				p1 = p1,
-				myFillSet = myFillSet,
-				fillAbove = fillAbove,
-				fillBelow = fillBelow,
-				//otherAbove = otherAbove, //do NOT copy otherFill to the right segment or the combine phase will fail!!!
-				//otherBelow = otherBelow, //do NOT copy otherFill to the right segment or the combine phase will fail!!!
-				isPrimary = isPrimary,
-				closed = closed,
-				windingTopToBottom = windingTopToBottom,
-				windingLeftToRight = windingLeftToRight,
-			};
-			//update Endpoint of left segment
-			p1 = splitPoint;
-		}
-		public double LengthSquared()
-		{
+        public void Split(Rational ip, out Segment right)
+        {
+            //generate right Segment
+            right = new Segment(this, ip);
+            
+            //update Endpoint of left segment
+            end = ip;
+        }
 
-			double dx = (double)p1.x - (double)p0.x;
-			double dy = (double)p1.y - (double)p0.y;
-			double lengthSquared = (dx * dx) + (dy * dy);
-			return lengthSquared;
-		}
 
-		/// <summary>
-		/// ATTENTION: provide dx, dy and dist pre-calculated from segment p0_start and p1_end, along with segment p0_start.
-		/// We do this to avoid expensive redundant calculation in the algorithm hot path when repeatedly calling this function for same segment.
-		/// </summary>
-		public static double ProjectPointOntoSegmentLine(long2 p, long2 seg_p0_start, double seg_dx, double seg_dy, double seg_dist)
-		{
-			double px = p.x - seg_p0_start.x;
-			double py = p.y - seg_p0_start.y;
-			double dot = px * seg_dx + py * seg_dy;
-			return dot / seg_dist;
-		}
+        public static IntersectionResultType SegmentLineIntersectSegmentLine(ref Segment seg1, ref Segment seg2, out Rational tA1, out Rational tB1, out Rational tA2, out Rational tB2)
+        {
+            var a0 = seg1.p0;
+            var a1 = seg1.p1;
+            var aMin = seg1.start;
+            var aMax = seg1.end;
+            var b0 = seg2.p0;
+            var b1 = seg2.p1;
+            var bMin = seg2.start;
+            var bMax = seg2.end;           
 
-		public static IntersectionResultType SegmentLineIntersectSegmentLine(
-			long2 a0, long2 a1, long2 b0, long2 b1,
-			bool allowOutOfRange,
-			out double tA1, out double tB1, out double tA2, out double tB2)
-		{
-			tA1 = tB1 = tA2 = tB2 = default;
+            tA1 = tA2 = tB1 = tB2 = default;
 
-			var adx = a1.x - a0.x;
-			var ady = a1.y - a0.y;
-			var bdx = b1.x - b0.x;
-			var bdy = b1.y - b0.y;
-			var det = PointUtils.CrossProduct(adx, ady, bdx, bdy);
+            long adx = a1.x - a0.x;
+            long ady = a1.y - a0.y;
+            long bdx = b1.x - b0.x;
+            long bdy = b1.y - b0.y;
 
-			if (Math.Abs(det) < BezierMath.epsilon1_abs)
-			{
-				// parallel or coincident
-				if (!PointUtils.IsCollinear(a0, b0, a1))
-					return IntersectionResultType.Nothing; // parallel only
+            long det = PointUtils.CrossProduct(adx, ady, bdx, bdy);
 
-				// coincident
-				var aDist = adx * adx + ady * ady;
-				var b0_OnSeqA = ProjectPointOntoSegmentLine(b0, a0, adx, ady, aDist);
-				var b1_OnSeqA = ProjectPointOntoSegmentLine(b1, a0, adx, ady, aDist);
-				var tAMin = PointUtils.Snap01(Math.Min(b0_OnSeqA, b1_OnSeqA));
-				var tAMax = PointUtils.Snap01(Math.Max(b0_OnSeqA, b1_OnSeqA));
+            // =========================================================
+            // PARALLEL OR COLLINEAR
+            // =========================================================
+            if (det == 0)
+            {
+                if (!PointUtils.IsCollinear(a0, b0, a1))
+                    return IntersectionResultType.Nothing;
 
-				if (tAMax < 0 || tAMin > 1)
-					return IntersectionResultType.Nothing;
+                // --- Project B endpoints onto A ---
+                long aLen2 = adx * adx + ady * ady;
 
-				var bDist = bdx * bdx + bdy * bdy;
-				var a0_OnSeqB = ProjectPointOntoSegmentLine(a0, b0, bdx, bdy, bDist);
-				var a1_OnSeqB = ProjectPointOntoSegmentLine(a1, b0, bdx, bdy, bDist);
-				var tBMin = PointUtils.Snap01(Math.Min(a0_OnSeqB, a1_OnSeqB));
-				var tBMax = PointUtils.Snap01(Math.Max(a0_OnSeqB, a1_OnSeqB));
+                Rational b0onA = Rational.ProjectPointOntoSegmentLine(b0, a0, adx, ady, aLen2);
+                Rational b1onA = Rational.ProjectPointOntoSegmentLine(b1, a0, adx, ady, aLen2);
 
-				if (tBMax < 0 || tBMin > 1)
-					return IntersectionResultType.Nothing;
+                Rational aOverlapMin = Rational.Max(Rational.Min(b0onA, b1onA), aMin);
+                Rational aOverlapMax = Rational.Min(Rational.Max(b0onA, b1onA), aMax);
 
-				tA1 = Math.Max(0, tAMin);
-				tB1 = Math.Max(0, tBMin);
-				tA2 = Math.Min(1, tAMax);
-				tB2 = Math.Min(1, tBMax);
-				return IntersectionResultType.Two;
-			}
+                if (Rational.Compare(aOverlapMin, aOverlapMax) > 0)
+                    return IntersectionResultType.Nothing;
 
-			// intersection at one point
-			var dx = a0.x - b0.x;
-			var dy = a0.y - b0.y;
+                // --- Project A endpoints onto B ---
+                long bLen2 = bdx * bdx + bdy * bdy;
 
-			if (dx == 0 && dy == 0)
-				return IntersectionResultType.Nothing;
+                Rational a0onB = Rational.ProjectPointOntoSegmentLine(a0, b0, bdx, bdy, bLen2);
+                Rational a1onB = Rational.ProjectPointOntoSegmentLine(a1, b0, bdx, bdy, bLen2);
 
-			var t1 = PointUtils.CrossProduct(bdx, bdy, dx, dy) / det;
-			var t2 = PointUtils.CrossProduct(adx, ady, dx, dy) / det;
-			t1 = PointUtils.Snap01(t1);
-			t2 = PointUtils.Snap01(t2);
-			if (!allowOutOfRange && (t1 < 0 || t1 > 1 || t2 < 0 || t2 > 1))
-				return IntersectionResultType.Nothing;
-			tA1 = t1;
-			tB1 = t2;
-			return IntersectionResultType.One;
-		}
+                Rational bOverlapMin = Rational.Max(Rational.Min(a0onB, a1onB), bMin);
+                Rational bOverlapMax = Rational.Min(Rational.Max(a0onB, a1onB), bMax);
 
-		public override bool Equals(object obj)
-		{
-			return obj is Segment other && Equals(other);
-		}
-		public bool Equals(Segment other)
-		{
-			return p0 == other.p0 && p1 == other.p1 &&
-				isPrimary == other.isPrimary &&
-				windingTopToBottom == other.windingTopToBottom &&
-				windingLeftToRight == other.windingLeftToRight &&
-				_boolField == other._boolField;
-		}
+                if (Rational.Compare(bOverlapMin, bOverlapMax) > 0)
+                    return IntersectionResultType.Nothing;
 
-		public static bool operator ==(Segment e1, Segment e2)
-		{
-			return e1.p0 == e2.p0 && e1.p1 == e2.p1 &&
-				e1.isPrimary == e2.isPrimary &&
-				e1.windingTopToBottom == e2.windingTopToBottom &&
-				e1.windingLeftToRight == e2.windingLeftToRight &&
-				e1._boolField == e2._boolField;
-		}
-		public static bool operator !=(Segment e1, Segment e2)
-		{
-			return !(e1 == e2);
-		}
+                // --- Determine if overlap is one point or two ---
+                if (Rational.Compare(aOverlapMin, aOverlapMax) == 0)
+                {
+                    // Touching at exactly one point
+                    tA1 = aOverlapMin;
+                    tB1 = bOverlapMin;
+                    return IntersectionResultType.One;
+                }
 
-		public override int GetHashCode()
-		{
-			return HashCode.Combine(p0, p1, _boolField);
-		}
-	}
+                // Proper overlapping segment
+                tA1 = aOverlapMin;
+                tA2 = aOverlapMax;
+                tB1 = bOverlapMin;
+                tB2 = bOverlapMax;
+                return IntersectionResultType.Two;
+            }
+
+            // =========================================================
+            // SINGLE INTERSECTION POINT
+            // =========================================================
+            long dx = a0.x - b0.x;
+            long dy = a0.y - b0.y;
+
+            long numA = PointUtils.CrossProduct(bdx, bdy, dx, dy);
+            long numB = PointUtils.CrossProduct(adx, ady, dx, dy);
+
+            Rational tA = new Rational(numA, det);
+            Rational tB = new Rational(numB, det);
+
+            if (!Rational.InRange(tA, aMin, aMax) || !Rational.InRange(tB, bMin, bMax))
+                return IntersectionResultType.Nothing;
+
+            tA1 = tA;
+            tB1 = tB;
+            return IntersectionResultType.One;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Segment other && Equals(other);
+        }
+        public bool Equals(Segment other)
+        {
+            return p0 == other.p0 && p1 == other.p1 &&
+                start == other.start && end == other.end &&
+                isPrimary == other.isPrimary && 
+                windingTopToBottom == other.windingTopToBottom &&  
+                windingLeftToRight == other.windingLeftToRight && 
+                _boolField == other._boolField;
+        }
+
+        public static bool operator ==(Segment e1, Segment e2)
+        {
+            return e1.p0 == e2.p0 && e1.p1 == e2.p1 &&
+                e1.start == e2.start && e1.end == e2.end &&
+                e1.isPrimary == e2.isPrimary &&
+                e1.windingTopToBottom == e2.windingTopToBottom &&
+                e1.windingLeftToRight == e2.windingLeftToRight &&
+                e1._boolField == e2._boolField;
+        }
+        public static bool operator !=(Segment e1, Segment e2)
+        {
+            return !(e1==e2);
+        }
+
+        public override int GetHashCode()
+        {
+            //return HashCode.Combine(p0, p1, _boolField);
+            int hashCode = 2055808453;
+            hashCode = hashCode * -1521134295 + p0.GetHashCode();
+            hashCode = hashCode * -1521134295 + p1.GetHashCode();
+            hashCode = hashCode * -1521134295 + start.GetHashCode();
+            hashCode = hashCode * -1521134295 + end.GetHashCode();
+            hashCode = hashCode * -1521134295 + _boolField.GetHashCode();
+            return hashCode;
+        }
+    }
 }

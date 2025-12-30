@@ -82,7 +82,8 @@ namespace TextMeshDOTS.Polybool
         }
         public void ClosePolygon()
         {
-            startIDs.Add(nodes.Length);
+            if (startIDs[^1] != nodes.Length)
+                startIDs.Add(nodes.Length);
         }
     }
 }

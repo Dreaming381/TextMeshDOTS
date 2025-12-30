@@ -1,4 +1,5 @@
-﻿using Unity.Collections;
+﻿using System.Linq;
+using Unity.Collections;
 
 namespace TextMeshDOTS.Polybool
 {
@@ -151,18 +152,18 @@ namespace TextMeshDOTS.Polybool
             var size = subject.nodes.Length + clip.nodes.Length;
             var intersecter = new Intersecter(true, size, fillRule, Allocator.Temp);
             var seg1 = Segments(subject, ref intersecter);
-            //Utils.WriteAnnotatedSegmentsToFile("Annotated Subject", seg1.segments);
+            //Utils.WriteAnnotatedSegmentsToFile($"Annotated Subject {fillRule}.txt", intersecter.segments);
             var seg2 = Segments(clip, ref intersecter);
-            //Utils.WriteAnnotatedSegmentsToFile("Annotated Clip", seg2.segments);
+            //Utils.WriteAnnotatedSegmentsToFile($"Annotated Clip {fillRule}.txt", intersecter.segments);
             var comb = Combine(seg1, seg2, ref intersecter);
-            //Utils.WriteAnnotatedSegmentsToFile("Annotated Combined", comb.combined);
+            //Utils.WriteAnnotatedSegmentsToFile($"Annotated Combined {fillRule}.txt", intersecter.segments);
             PolySegments seg3;
             Polygon result;
             switch (clipType)
             {
                 case ClipType.Union:
                     seg3 = SelectUnion(comb);
-                    result= new Polygon(seg3);
+                    result = new Polygon(seg3);
                     break;
                 case ClipType.Intersection:
                     seg3 = SelectIntersect(comb);
@@ -185,6 +186,7 @@ namespace TextMeshDOTS.Polybool
                     break;
             }
             return result;
+            //return new Polygon(seg1);
         }
 
         // helper functions for common operations

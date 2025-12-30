@@ -1,8 +1,10 @@
 ﻿using System;
-using UnityEngine;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace TextMeshDOTS.Polybool
 {
@@ -16,15 +18,11 @@ namespace TextMeshDOTS.Polybool
             for (int k = 0, length = segments.Length; k < length; k++)
             {
                 var seg = segments[k];
-
-                var pt1 = seg.p0;
-                var pt2 = seg.p1;
-
-                if (pt1 == pt2)
-                {
-                    Debug.Log("PolyBool: Warning: Zero-length segment detected; your epsilon is probably too small or too large");
+                if (Rational.Compare(seg.start, seg.end) == 0) //this should not happen as it is checked during segment creation and during divide event
                     continue;
-                }
+
+                var pt1 = seg.StartPoint; //to-do: better still use parametric compare when building chains, and only get points after polygon is build as last step
+                var pt2 = seg.EndPoint;
 
                 // search for two chains that this segment matches
                 var firstMatch = Matcher.Empty;
@@ -112,7 +110,8 @@ namespace TextMeshDOTS.Polybool
                                 start = 1;
                         }
                         // we have a closed chain!
-                        polygon.AddComponent(chain, start, end);
+                        if (!IsVerySmallTriangle(chain, start, end))
+                            polygon.AddComponent(chain, start, end);
                         chain.Dispose();
                         // we're closing the loop, so remove chain from chains
                         chains.RemoveRange(index, 1);
@@ -199,11 +198,14 @@ namespace TextMeshDOTS.Polybool
             //		polygon.nodes.CopyFrom(chain);
             //	}
             //}
-            polygon.ClosePolygon();//abuse last startID to store end of last component
 
-            if (polygon.startIDs.Length > 1)
+            
+            
+
+            if (polygon.startIDs.Length >= 1 && polygon.nodes.Length>2)
             {
-                //fix orientation of regions to conform to postscript: outer contours CCW, holes CW
+                polygon.ClosePolygon();//abuse last startID to store end of last component
+                                       //fix orientation of regions to conform to postscript: outer contours CCW, holes CW
 
                 var startIDs = polygon.startIDs;
                 var nodes = polygon.nodes;
@@ -217,6 +219,7 @@ namespace TextMeshDOTS.Polybool
                 {
                     int start = startIDs[i];
                     int end = startIDs[i + 1];
+
                     orientations[i] = nodes.SignedArea(start, end);
                     var area = math.abs(orientations[i]);
                     if (area > maxArea)
@@ -242,7 +245,9 @@ namespace TextMeshDOTS.Polybool
                         continue;
 
                     //for the first node of this component, check if it is inside the identified outer contour
-                    var isInside = polygon.PnInPolyFranklin(nodes[startIDs[i]], largestRegionStartID, largestRegionEndID, false);
+                    var nodeID = startIDs[i];
+
+                    var isInside = polygon.PnInPolyFranklin(nodes[nodeID], largestRegionStartID, largestRegionEndID, false);
                     if (isInside)
                     {
                         if (orientations[i] > 0) //when it is CCW, then reverse
@@ -302,6 +307,17 @@ namespace TextMeshDOTS.Polybool
                 chains.RemoveRange(index2, 1);
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsVerySmallTriangle(UnsafeList<long2> points, int start, int end)
+        {
+            var isTriangle = end - start == 3;
+            return isTriangle &&
+              (PointUtils.PtsReallyClose(points[end - 1], points[start + 1]) ||
+               PointUtils.PtsReallyClose(points[start], points[start + 1]) ||
+               PointUtils.PtsReallyClose(points[start], points[end - 1]));
+        }
+
         static bool SetMatch(int index, bool matchesHead, bool matchesPt1, ref Matcher firstMatch, ref Matcher secondMatch, ref bool setFirstMatch)
         {
             if (setFirstMatch)

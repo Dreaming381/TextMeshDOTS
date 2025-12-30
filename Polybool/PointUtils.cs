@@ -12,9 +12,10 @@ namespace TextMeshDOTS.Polybool
         /// <param name="b">Second vector</param>
         /// <returns>The magnitude of the cross product</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double CrossProduct(double ax, double ay, double bx, double by)
+        public static long CrossProduct(long ax, long ay, long bx, long by)
         {
-            return (ax * by) - (ay * bx);
+            // typecast to double to avoid potential int overflow
+            return (long)((double)ax * by - (double)ay * bx); //review if we can adop here 128 bit int multiplication  (MultiplyUInt64)
         }
         /// <summary>
         /// Returns a positive value if the points a, b, and p occur in counterclockwise order (CCW, p lies to the left of the directed line defined by points a and b).
@@ -33,7 +34,7 @@ namespace TextMeshDOTS.Polybool
         /// Returns zero if they are collinear.
         /// </summary>  
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int Orient2DAccurate(long2 pt1, long2 pt2, long2 pt3)
+        internal static int Orient2DAccurate(long2 pt1, long2 pt2, long2 pt3)
         {
             long a = pt2.x - pt1.x;
             long b = pt3.y - pt2.y;
@@ -58,6 +59,32 @@ namespace TextMeshDOTS.Polybool
             return (signAB > signCD) ? 1 : -1;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int Orient2DParamPoint(long2 a, long2 b, Rational p, ref Segment pSeg)
+        {
+            // orient(a, b, p(t))
+            // = orient(a, b, p0 + t*(p1 - p0))
+            // = orient(a, b, p0) + t * orient(a, b, (p1 - p0))
+
+            long dx = pSeg.p1.x - pSeg.p0.x;
+            long dy = pSeg.p1.y - pSeg.p0.y;
+
+            // orient(a, b, p0)
+            long baseTerm =
+                (b.x - a.x) * (pSeg.p0.y - a.y) -
+                (b.y - a.y) * (pSeg.p0.x - a.x);
+
+            // orient(a, b, direction)
+            long dirTerm =
+                (b.x - a.x) * dy -
+                (b.y - a.y) * dx;
+
+            // Combine as rational value:
+            // result = baseTerm * d + dirTerm * n
+            long value = baseTerm * p.den + dirTerm * p.num;
+
+            return Math.Sign(value);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool IsCollinear(long2 pt1, long2 sharedPt, long2 pt2)
         {
             long a = sharedPt.x - pt1.x;
@@ -73,14 +100,14 @@ namespace TextMeshDOTS.Polybool
         {
             return (x < 0) ? -1 : (x > 0) ? 1 : 0;
         }
-        public struct UInt128Struct
+        internal struct UInt128Struct
         {
             public ulong lo64;
             public ulong hi64;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt128Struct MultiplyUInt64(ulong a, ulong b) // #834,#835
+        internal static UInt128Struct MultiplyUInt64(ulong a, ulong b) // #834,#835
         {
             ulong x1 = (a & 0xFFFFFFFF) * (b & 0xFFFFFFFF);
             ulong x2 = (a >> 32) * (b & 0xFFFFFFFF) + (x1 >> 32);
@@ -111,21 +138,26 @@ namespace TextMeshDOTS.Polybool
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetWindingTowardsBottom(long2 a, long2 b)
+        internal static int GetWindingTowardsBottom(long2 a, long2 b)
         {
             return Math.Sign(b.x - a.x);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetWindingTowardsRight(long2 a, long2 b)
+        internal static int GetWindingTowardsRight(long2 a, long2 b)
         {
             return Math.Sign(b.y - a.y);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double Snap01(double v)
+        internal static double Snap01(double v)
         {
             if (math.abs(v) < BezierMath.epsilon1_abs) return 0;
             if (math.abs(1 - v) < BezierMath.epsilon1_abs) return 1;
             return v;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool PtsReallyClose(long2 pt1, long2 pt2)
+        {
+            return (Math.Abs(pt1.x - pt2.x) < 2) && (Math.Abs(pt1.y - pt2.y) < 2);
         }
     }
 }

@@ -21,13 +21,13 @@ namespace TextMeshDOTS.Polybool
         }
         public long2(double x, double y)
         {
-            this.x = (long)Math.Round(x, MidpointRounding.AwayFromZero);
-            this.y = (long)Math.Round(y, MidpointRounding.AwayFromZero);
+            this.x = (long) Math.Round(x, MidpointRounding.AwayFromZero);
+            this.y = (long) Math.Round(y, MidpointRounding.AwayFromZero);
         }
         public long2(double x, double y, double scale)
         {
-            this.x = (long)Math.Round(x * scale, MidpointRounding.AwayFromZero);
-            this.y = (long)Math.Round(y * scale, MidpointRounding.AwayFromZero);
+            this.x = (long) Math.Round(x * scale, MidpointRounding.AwayFromZero);
+            this.y = (long) Math.Round(y * scale, MidpointRounding.AwayFromZero);
         }
 
         public static long2 operator +(long2 lhs, long2 rhs) { return new long2(lhs.x + rhs.x, lhs.y + rhs.y); }
@@ -59,7 +59,7 @@ namespace TextMeshDOTS.Polybool
         public override string ToString()
         {
             return $"{x} {y}";
-        }
+        } 
 
         /// <summary> returns -1 if point1 is smaller then point2</summary>
         public int CompareTo(long2 other)
