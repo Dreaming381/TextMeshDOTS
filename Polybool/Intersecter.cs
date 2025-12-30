@@ -306,7 +306,7 @@ namespace TextMeshDOTS.Polybool
         void DivideEvent(EventBool ev, ref Segment evSegment, Rational ip)
         {
             int leftForward, rightforward;
-            if ((leftForward = Rational.Compare(evSegment.start, ip)) == 0 || (rightforward=Rational.Compare(ip, evSegment.end)) == 0)
+            if ((leftForward = evSegment.start.CompareTo(ip)) == 0 || (rightforward = ip.CompareTo(evSegment.end)) == 0)
                 return;// we would create a zero length segment
 
             // slides an end backwards
@@ -520,8 +520,8 @@ namespace TextMeshDOTS.Polybool
                 if (prevSegmentIDs[i] != -1)
                 {                    
                     var prevSegment = segments[prevSegmentID];
-                    int compStart = Rational.Compare(prevSegment.start, eventSegment.start, ref prevSegment, ref eventSegment);
-                    int compEnd = Rational.Compare(prevSegment.end, eventSegment.end, ref prevSegment, ref eventSegment);
+                    int compStart = Segment.Compare(prevSegment.p0, prevSegment.dxy, prevSegment.start, eventSegment.p0, eventSegment.dxy, eventSegment.start);
+                    int compEnd = Segment.Compare(prevSegment.p0, prevSegment.dxy, prevSegment.end, eventSegment.p0, eventSegment.dxy, eventSegment.end);
                     if (compStart==0 && compEnd==0)
                     {
                         if (!prevSegment.isPrimary)

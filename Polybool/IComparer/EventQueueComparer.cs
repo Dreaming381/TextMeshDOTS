@@ -63,12 +63,13 @@ namespace TextMeshDOTS.Polybool
             if (!eventB.isStart)
                 (b1, b2) = (b2, b1);
 
-            int compSelected = Rational.Compare(a1, b1, ref seg1, ref seg2); // returns -1 if a1 (aSeq) is smaller b1 (bSeq) (=favour the smaller segment)
+            // returns -1 if a1 (aSeq) is smaller b1 (bSeq) (=favour the smaller segment)
+            int compSelected = Segment.Compare(seg1.p0, seg1.dxy, a1, seg2.p0, seg2.dxy, b1);
             if (compSelected != 0)                              // the selected points are the same
                 return compSelected * sortDirection;
 
             // then compare the  other (non-selected) points
-            int compNonSelected = Rational.Compare(a2, b2, ref seg1, ref seg2);
+            int compNonSelected = Segment.Compare(seg1.p0, seg1.dxy, a2, seg2.p0, seg2.dxy, b2);
 
             if (compNonSelected==0)                     // if the non-selected points are the same too...
                 return 0;                               // then the segments are equal

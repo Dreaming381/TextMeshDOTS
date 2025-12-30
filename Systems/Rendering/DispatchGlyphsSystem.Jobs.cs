@@ -250,8 +250,8 @@ namespace TextMeshDOTS
                         // Truetype: CW for outer contours, CCW for holes
                         // Postscript: CCW for outer contours, CW for holes
                         PaintUtils.removeOverlapsMarker.Begin();
-                        PolygonOperation.RemoveSelfIntersections(ref drawData, Clipper2AoS.ClipType.Union, Clipper2AoS.FillRule.NonZero);
-                        //PolygonOperation.RemoveSelfIntersectionsPolyBool(ref drawData, Polybool.ClipType.Union, Polybool.FillRule.NonZero);
+                        //PolygonOperation.RemoveSelfIntersections(ref drawData, Clipper2AoS.ClipType.Union, Clipper2AoS.FillRule.NonZero);
+                        PolygonOperation.RemoveSelfIntersectionsPolyBool(ref drawData, Polybool.ClipType.Union, Polybool.FillRule.NonZero);
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
                     }

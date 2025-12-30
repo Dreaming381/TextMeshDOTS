@@ -18,7 +18,7 @@ namespace TextMeshDOTS.Polybool
             for (int k = 0, length = segments.Length; k < length; k++)
             {
                 var seg = segments[k];
-                if (Rational.Compare(seg.start, seg.end) == 0) //this should not happen as it is checked during segment creation and during divide event
+                if (seg.start.CompareTo(seg.end) == 0) //this should not happen as it is checked during segment creation and during divide event
                     continue;
 
                 var pt1 = seg.StartPoint; //to-do: better still use parametric compare when building chains, and only get points after polygon is build as last step

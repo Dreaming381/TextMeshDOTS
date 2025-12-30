@@ -63,7 +63,7 @@ namespace TextMeshDOTS.Polybool
             // =0 = colinear
 
             //if seg2 is left of seg1...            
-            if (Rational.CompareX(a1, b1, ref seg1, ref seg2) > 0)
+            if (Segment.CompareCoord(seg1.p0.x, seg1.dx, a1, seg2.p0.x, seg2.dx, b1) > 0)
             {
                 //...then determine oriention of seg1 against seg2(c, d)
                 // seg1 is "above" seg2, when it's points are CCW of seg 2...so when orient2d is positive (CCW), we need to return negative!                

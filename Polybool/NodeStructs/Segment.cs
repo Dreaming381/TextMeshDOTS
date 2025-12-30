@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace TextMeshDOTS.Polybool
 {
@@ -7,8 +8,11 @@ namespace TextMeshDOTS.Polybool
     public struct Segment : IEquatable<Segment>
     {
 
-        public readonly long2 p0;			// ORIGINAL exact endpoints (do not modify after construction)
-        public readonly long2 p1;			// ORIGINAL exact endpoints (do not modify after construction)      
+        public readonly long2 p0;                  // ORIGINAL exact endpoints (do not modify after construction)
+        public readonly long2 p1;                  // ORIGINAL exact endpoints (do not modify after construction)
+        public readonly long2 dxy => p1 - p0;
+        public readonly long dx => p1.x - p0.x;
+        public readonly long dy => p1.y - p0.y;
         public Rational start;              // Parametric represetation of start point: p(start) = p0 + start * (p1 - p0)
         public Rational end;                // Parametric represetation of end point: p(end) = p0 + end * (p1 - p0)
 
@@ -60,14 +64,18 @@ namespace TextMeshDOTS.Polybool
             get { return Utils.GetBit(_boolField, 8); }
             set { _boolField = Utils.SetBit(_boolField, 8, value); }
         }
+        public long2 GetPoint(Rational rational)
+        {
+            return new long2(
+                p0.x + (double) (dx * rational.num) / rational.den,
+                p0.y + (double) (dy * rational.num) / rational.den
+            );
+        }
         // Exact evaluation (only use when coordinates are *really* needed
         public readonly long2 StartPoint
         {
             get
             {
-                long dx = p1.x - p0.x;
-                long dy = p1.y - p0.y;
-
                 return new long2(
                     p0.x + (double) (dx * start.num) / start.den,
                     p0.y + (double) (dy * start.num) / start.den
@@ -78,16 +86,12 @@ namespace TextMeshDOTS.Polybool
         {
             get
             {
-                long dx = p1.x - p0.x;
-                long dy = p1.y - p0.y;
-
                 return new long2(
                     p0.x + (double) (dx * end.num) / end.den,
                     p0.y + (double) (dy * end.num) / end.den
                 );
             }
         }
-
 
         public Segment(long2 segStart, long2 segEnd, Rational intervalStart, Rational intervalEnd, bool isPrimary, bool closed)
         {
@@ -109,7 +113,7 @@ namespace TextMeshDOTS.Polybool
         }
         public Segment(Segment segment, bool fillAbove, bool fillBelow)
         {
-            p0 = segment.p0;
+           p0 = segment.p0;
             p1 = segment.p1;
             start = segment.start;
             end = segment.end;
@@ -125,6 +129,7 @@ namespace TextMeshDOTS.Polybool
             closed = segment.closed;
             isPrimary = true;
         }
+
         public Segment(Segment segment, Rational intervalStart)
         {
             p0 = segment.p0;
@@ -134,7 +139,7 @@ namespace TextMeshDOTS.Polybool
             _boolField = segment._boolField;
             windingTopToBottom = segment.windingTopToBottom;
             windingLeftToRight = segment.windingLeftToRight;
-            myFillSet = segment.myFillSet;			
+            myFillSet = segment.myFillSet;
             fillAbove = segment.fillAbove;
             fillBelow = segment.fillBelow;
             otherFillSet = false;	//do NOT copy otherFill to the right segment or the combine phase will fail!!!
@@ -148,11 +153,10 @@ namespace TextMeshDOTS.Polybool
         {
             //generate right Segment
             right = new Segment(this, ip);
-            
+
             //update Endpoint of left segment
             end = ip;
         }
-
 
         public static IntersectionResultType SegmentLineIntersectSegmentLine(ref Segment seg1, ref Segment seg2, out Rational tA1, out Rational tB1, out Rational tA2, out Rational tB2)
         {
@@ -191,7 +195,7 @@ namespace TextMeshDOTS.Polybool
                 Rational aOverlapMin = Rational.Max(Rational.Min(b0onA, b1onA), aMin);
                 Rational aOverlapMax = Rational.Min(Rational.Max(b0onA, b1onA), aMax);
 
-                if (Rational.Compare(aOverlapMin, aOverlapMax) > 0)
+                if (aOverlapMin.CompareTo(aOverlapMax) > 0)
                     return IntersectionResultType.Nothing;
 
                 // --- Project A endpoints onto B ---
@@ -203,11 +207,11 @@ namespace TextMeshDOTS.Polybool
                 Rational bOverlapMin = Rational.Max(Rational.Min(a0onB, a1onB), bMin);
                 Rational bOverlapMax = Rational.Min(Rational.Max(a0onB, a1onB), bMax);
 
-                if (Rational.Compare(bOverlapMin, bOverlapMax) > 0)
+                if (bOverlapMin.CompareTo(bOverlapMax) > 0)
                     return IntersectionResultType.Nothing;
 
                 // --- Determine if overlap is one point or two ---
-                if (Rational.Compare(aOverlapMin, aOverlapMax) == 0)
+                if (aOverlapMin.CompareTo(aOverlapMax) == 0)
                 {
                     // Touching at exactly one point
                     tA1 = aOverlapMin;
@@ -235,7 +239,7 @@ namespace TextMeshDOTS.Polybool
             Rational tA = new Rational(numA, det);
             Rational tB = new Rational(numB, det);
 
-            if (!Rational.InRange(tA, aMin, aMax) || !Rational.InRange(tB, bMin, bMax))
+            if (!Rational.InRangeInclusive(tA, aMin, aMax) || !Rational.InRangeInclusive(tB, bMin, bMax))
                 return IntersectionResultType.Nothing;
 
             tA1 = tA;
@@ -243,6 +247,51 @@ namespace TextMeshDOTS.Polybool
             return IntersectionResultType.One;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary> Returns -1 if parametric point1 is smaller than parametric point2</summary>
+        public static int Compare(in long2 pa, in long2 dpa, in Rational tA, in long2 pb, in long2 dpb, in Rational tB)
+        {
+            var compX = CompareCoord(pa.x, dpa.x, tA, pb.x, dpb.x, tB);
+            if (compX == 0)
+                return CompareCoord(pa.y, dpa.y, tA, pb.y, dpb.y, tB);
+            return compX;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary> Returns -1 if parametric point1 is smaller than parametric point2</summary>
+        public static int CompareCoord(in long p0a, in long da, in Rational tA, in long p0b, in long db, in Rational tB)
+        {
+            // (p0 + t * dp) but expanded and cross-multiplied
+            // (p0a * a.den + a.nom * dpa) * db  vs  (p0b * b.den + b.nom * dpb) * da
+
+            //checked
+            //{
+            //    // this will overflow on large polygons like clipper polygon.txt test 114
+            //    // either typecast to double before multiplying or use exact 128bit interger math
+            //    long lhs1 = (p0a * tA.den + tA.num * da) * tB.den;
+            //    long rhs1 = (p0b * tB.den + tB.num * db) * tA.den;
+
+            //    //return lhs < rhs ? -1 : lhs > rhs ? 1 : 0;
+            //}
+
+            //var p0a_da = PointUtils128.Mul128(p0a, tA.den);
+            //var na_da = PointUtils128.Mul128(tA.num, da);
+            //var p0a_da_na_da = PointUtils128.Add128(p0a_da, na_da);
+            //var lhs = PointUtils128.Mul128x64(p0a_da_na_da, tB.den);
+
+
+            //var p0b_db = PointUtils128.Mul128(p0b, tB.den);
+            //var nb_dpb = PointUtils128.Mul128(tB.num, db);
+            //var p0b_db_nb_dpb = PointUtils128.Add128(p0b_db, nb_dpb);
+            //var rhs = PointUtils128.Mul128x64(p0b_db_nb_dpb, tA.den);
+
+
+
+            // typecast to double to avoid potential int overflow (e.g. in clipper polygons.txt test 114)
+            double lhs = (((double) p0a * tA.den + (double) tA.num * da) * tB.den);
+            double rhs = (((double) p0b * tB.den + (double) tB.num * db) * tA.den);
+
+            return lhs < rhs ? -1 : lhs > rhs ? 1 : 0;
+        }
         public override bool Equals(object obj)
         {
             return obj is Segment other && Equals(other);
@@ -270,7 +319,6 @@ namespace TextMeshDOTS.Polybool
         {
             return !(e1==e2);
         }
-
         public override int GetHashCode()
         {
             //return HashCode.Combine(p0, p1, _boolField);
