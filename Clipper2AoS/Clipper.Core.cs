@@ -142,30 +142,39 @@ namespace TextMeshDOTS.Clipper2AoS
             return ((double)(pt2.x - pt1.x) * (pt3.y - pt2.y) -
                     (double)(pt2.y - pt1.y) * (pt3.x - pt2.x));
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CrossProductSign(long2 pt1, long2 pt2, long2 pt3)
         {
             long a = pt2.x - pt1.x;
             long b = pt3.y - pt2.y;
             long c = pt2.y - pt1.y;
             long d = pt3.x - pt2.x;
-            UInt128Struct ab = MultiplyUInt64((ulong)math.abs(a), (ulong)math.abs(b));
-            UInt128Struct cd = MultiplyUInt64((ulong)math.abs(c), (ulong)math.abs(d));
-            int signAB = TriSign(a) * TriSign(b);
-            int signCD = TriSign(c) * TriSign(d);
-
-            if (signAB == signCD)
-            {
-                int result;
-                if (ab.hi64 == cd.hi64)
-                {
-                    if (ab.lo64 == cd.lo64) return 0;
-                    result = (ab.lo64 > cd.lo64) ? 1 : -1;
-                }
-                else result = (ab.hi64 > cd.hi64) ? 1 : -1;
-                return (signAB > 0) ? result : -result;
-            }
-            return (signAB > signCD) ? 1 : -1;
+            return Math128.Sign128(Math128.Sub128(Math128.Mul128(a, b), Math128.Mul128(c, d)));
         }
+        //public static int CrossProductSign(long2 pt1, long2 pt2, long2 pt3)
+        //{
+        //    long a = pt2.x - pt1.x;
+        //    long b = pt3.y - pt2.y;
+        //    long c = pt2.y - pt1.y;
+        //    long d = pt3.x - pt2.x;
+        //    UInt128Struct ab = MultiplyUInt64((ulong)math.abs(a), (ulong)math.abs(b));
+        //    UInt128Struct cd = MultiplyUInt64((ulong)math.abs(c), (ulong)math.abs(d));
+        //    int signAB = TriSign(a) * TriSign(b);
+        //    int signCD = TriSign(c) * TriSign(d);
+
+        //    if (signAB == signCD)
+        //    {
+        //        int result;
+        //        if (ab.hi64 == cd.hi64)
+        //        {
+        //            if (ab.lo64 == cd.lo64) return 0;
+        //            result = (ab.lo64 > cd.lo64) ? 1 : -1;
+        //        }
+        //        else result = (ab.hi64 > cd.hi64) ? 1 : -1;
+        //        return (signAB > 0) ? result : -result;
+        //    }
+        //    return (signAB > signCD) ? 1 : -1;
+        //}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void CheckPrecision(int precision)
         {
@@ -199,22 +208,29 @@ namespace TextMeshDOTS.Clipper2AoS
             return result;
         }
         // returns true if (and only if) a * b == c * d
+        //internal static bool ProductsAreEqual(long a, long b, long c, long d)
+        //{
+        //    // nb: unsigned values will be needed for CalcOverflowCarry()
+        //    ulong absA = (ulong)math.abs(a);
+        //    ulong absB = (ulong)math.abs(b);
+        //    ulong absC = (ulong)math.abs(c);
+        //    ulong absD = (ulong)math.abs(d);
+
+        //    UInt128Struct mul_ab = MultiplyUInt64(absA, absB);
+        //    UInt128Struct mul_cd = MultiplyUInt64(absC, absD);
+
+        //    // nb: it's important to differentiate 0 values here from other values
+        //    int sign_ab = TriSign(a) * TriSign(b);
+        //    int sign_cd = TriSign(c) * TriSign(d);
+
+        //    return mul_ab.lo64 == mul_cd.lo64 && mul_ab.hi64 == mul_cd.hi64 && sign_ab == sign_cd;
+        //}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool ProductsAreEqual(long a, long b, long c, long d)
         {
-            // nb: unsigned values will be needed for CalcOverflowCarry()
-            ulong absA = (ulong)math.abs(a);
-            ulong absB = (ulong)math.abs(b);
-            ulong absC = (ulong)math.abs(c);
-            ulong absD = (ulong)math.abs(d);
-
-            UInt128Struct mul_ab = MultiplyUInt64(absA, absB);
-            UInt128Struct mul_cd = MultiplyUInt64(absC, absD);
-
-            // nb: it's important to differentiate 0 values here from other values
-            int sign_ab = TriSign(a) * TriSign(b);
-            int sign_cd = TriSign(c) * TriSign(d);
-
-            return mul_ab.lo64 == mul_cd.lo64 && mul_ab.hi64 == mul_cd.hi64 && sign_ab == sign_cd;
+            var mul_ab = Math128.Mul128(a, b);
+            var mul_cd = Math128.Mul128(c, d);
+            return mul_ab.CompareTo(mul_cd) == 0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool IsCollinear(long2 pt1, long2 sharedPt, long2 pt2)

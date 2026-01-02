@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace TextMeshDOTS.Polybool
+namespace TextMeshDOTS.Clipper2AoS
 {
     public readonly struct Int128Like : IEquatable<Int128Like>, IComparable<Int128Like>
     {
@@ -14,6 +15,26 @@ namespace TextMeshDOTS.Polybool
             lo64 = lo;
         }
         public long ToInt64() => unchecked((long) lo64);
+        public static Int128Like FromBigInteger(BigInteger v)
+        {
+            BigInteger mask64 = (BigInteger.One << 64) - 1;
+
+            ulong lo = (ulong) (v & mask64);
+            long hi = (long) (v >> 64);
+
+            return new Int128Like(hi, lo);
+        }
+        public long ToInt64Saturating()
+        {
+            if (hi64 > 0)
+                return long.MaxValue;
+
+            if (hi64 < -1)
+                return long.MinValue;
+
+            // hi64 == 0 or hi64 == -1 → value fits exactly
+            return (long) lo64;
+        }
         public static bool operator <(Int128Like a, Int128Like b) => a.CompareTo(b) < 0;
         public static bool operator >(Int128Like a, Int128Like b) => a.CompareTo(b) > 0;
         public static bool operator <=(Int128Like a, Int128Like b) => a.CompareTo(b) <= 0;
@@ -45,6 +66,6 @@ namespace TextMeshDOTS.Polybool
                 return hiCmp;
 
             return lo64.CompareTo(other.lo64);
-        }
+        }        
     }
 }

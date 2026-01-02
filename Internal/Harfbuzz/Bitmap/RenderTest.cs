@@ -1,9 +1,7 @@
 ﻿using TextMeshDOTS;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.Bitmap;
-using TextMeshDOTS.Polybool;
 using Unity.Collections;
-using Unity.Mathematics;
 using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
@@ -34,6 +32,7 @@ internal class RenderTest : MonoBehaviour
     Face face;
     Font font;
 
+    
     void Start()
     {
 #if UNITY_EDITOR
@@ -51,7 +50,7 @@ internal class RenderTest : MonoBehaviour
         //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜  
     }
 
-    
+
     void Update()
     {
         
@@ -80,31 +79,6 @@ internal class RenderTest : MonoBehaviour
 
         drawData = new DrawData(256, 16, maxDeviation, Allocator.Persistent);
 
-        ////shape 1
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(10, 60), end_pos = new float2(75, 60), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(75, 60), end_pos = new float2(80, 30), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(80, 30), end_pos = new float2(55, 30), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(55, 30), end_pos = new float2(50, 90), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(50, 90), end_pos = new float2(40, 90), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(40, 90), end_pos = new float2(30, 10), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(30, 10), end_pos = new float2(100, 10), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(100, 10), end_pos = new float2(90, 120), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(90, 120), end_pos = new float2(20, 120), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(20, 120), end_pos = new float2(10, 60), edge_type = SDFEdgeType.LINE });
-        //drawData.contourIDs.Add(drawData.edges.Length);
-        //drawData.glyphRect = new BBox(10, 10, 100, 120);
-        //var atlasRect = new GlyphRect(10, 10, 100 + 24, 120 + 24);
-
-        ////shape 2
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(10, 60), end_pos = new float2(75, 60), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(75, 60), end_pos = new float2(60, 120), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(60, 120), end_pos = new float2(40, 20), edge_type = SDFEdgeType.LINE });
-        //drawData.edges.Add(new SDFEdge { start_pos = new float2(40, 20), end_pos = new float2(10, 60), edge_type = SDFEdgeType.LINE });
-        //drawData.contourIDs.Add(drawData.edges.Length);
-        //drawData.glyphRect = new BBox(10, 10, 100, 120);
-        //var atlasRect = new GlyphRect(10, 10, 100 + 24, 120 + 24);
-
-
         font.DrawGlyph(glyphID, drawFunctions, ref drawData);
         font.GetGlyphExtents(glyphID, out GlyphExtents glyphExtents);
         var atlasRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
@@ -116,9 +90,8 @@ internal class RenderTest : MonoBehaviour
         orientation = SDFOrientation.POSTSCRIPT; //clipper always outputs the outer contour CCW, and the inner CW, which is postscript definition
         var fillRule = FillRule.EvenOdd;
         var clipType = ClipType.Union;
-        //PolygonOperation.RemoveSelfIntersections(ref drawData, clipType, fillRule);
-        PolygonOperation.RemoveSelfIntersectionsPolyBool(ref drawData, TextMeshDOTS.Polybool.ClipType.Union, TextMeshDOTS.Polybool.FillRule.NonZero);
-        SDFCommon.WriteGlyphOutlineToFile($"Clipper2 {clipType} ({fillRule}) outline of glyph {character}.txt", drawData);
+        PolygonOperation.RemoveSelfIntersections(ref drawData, clipType, fillRule);
+        //SDFCommon.WriteGlyphOutlineToFile($"Clipper2 {clipType} ({fillRule}) outline of glyph {character}.txt", drawData);
 
         marker.Begin();
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);

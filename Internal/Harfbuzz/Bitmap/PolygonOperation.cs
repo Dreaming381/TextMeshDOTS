@@ -1,5 +1,4 @@
 using TextMeshDOTS.Clipper2AoS;
-using TextMeshDOTS.Polybool;
 using Unity.Collections;
 using Unity.Mathematics;
 using ClipType = TextMeshDOTS.Clipper2AoS.ClipType;
@@ -53,59 +52,6 @@ namespace TextMeshDOTS.HarfBuzz
             }
             contourIDs.Add(nodes.Length);
             clipper.Dispose();
-        }
-
-        /// <summary> Use BURST compatible Polybool library to do a self intersection of polygon itself using Fillrule.NonZero.</summary>
-        public static void RemoveSelfIntersectionsPolyBool(ref DrawData subject, Polybool.ClipType cliptype, Polybool.FillRule fillRule)
-        {
-			var scale = 1000;
-			var invScale = 1f / scale;
-			var nodes = subject.edges;
-            var contourIDs = subject.contourIDs;
-            var polyBoolSubject = new Polygon(subject.edges.Length, subject.contourIDs.Length, false, Allocator.Temp);
-            var polyBoolSubjectNodes = polyBoolSubject.nodes;
-            var polyBoolSubjectStartIDs = polyBoolSubject.startIDs;
-            polyBoolSubjectStartIDs.Add(polyBoolSubjectNodes.Length);
-
-            for (int i = 0, length = contourIDs.Length - 1; i < length; i++)
-            {
-                int start = contourIDs[i];
-                int end = contourIDs[i + 1];
-                for (int k = start; k < end; k++)
-                    polyBoolSubjectNodes.Add(new Polybool.long2(nodes[k].start_pos.x * scale, nodes[k].start_pos.y * scale));
-                polyBoolSubjectStartIDs.Add(polyBoolSubjectNodes.Length);
-            }
-
-            var polyBoolClip = new Polygon(0,0, false, Allocator.Temp);
-            //var result = PolyboolClipper.Operate(polyBoolSubject, polyBoolClip, cliptype, fillRule);
-
-            var intersecter = new Intersecter(true, polyBoolSubjectNodes.Length, fillRule, Allocator.Temp);
-            var seg1 = PolyboolClipper.Segments(polyBoolSubject, ref intersecter);
-            var seg2 = SegmentSelector.Select(seg1.segments, cliptype);
-            //Utils.WriteAnnotatedSegmentsToFile("segments-selected.txt", seg2);
-            var result = new Polygon(new PolySegments { segments = seg2, inverted = false });
-
-            var resultPolygonNodes = result.nodes;
-            var resultPolygonStartIDs = result.startIDs;
-            nodes.Clear();
-            contourIDs.Clear();
-            for (int i = 0, length = resultPolygonStartIDs.Length - 1; i < length; i++)
-            {
-                contourIDs.Add(nodes.Length);
-                int start = resultPolygonStartIDs[i];
-                int end = resultPolygonStartIDs[i + 1];
-				Polybool.long2 startPos, endPos;
-				for (int k = start; k < end - 1; k++)
-                {
-                    startPos = resultPolygonNodes[k];
-                    endPos = resultPolygonNodes[k + 1];
-                    nodes.Add(new SDFEdge { start_pos = new float2(startPos.x, startPos.y) * invScale, end_pos = new float2(endPos.x, endPos.y)* invScale, edge_type = SDFEdgeType.LINE });
-                }
-				startPos = resultPolygonNodes[end - 1];
-				endPos = resultPolygonNodes[start];
-				nodes.Add(new SDFEdge { start_pos = new float2(startPos.x, startPos.y) * invScale, end_pos = new float2(endPos.x, endPos.y)* invScale, edge_type = SDFEdgeType.LINE });
-			}
-            contourIDs.Add(nodes.Length);
-        }
+        }        
     }
 }
