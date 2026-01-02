@@ -4,8 +4,6 @@ namespace TextMeshDOTS
 {
     internal static class RenderingTools
     {
-        public const string kTextBackendMeshResource = "TextBackendMesh";
-
         public static void SetSubMesh(int glyphCount, ref MaterialMeshInfo mmi)
         {
             switch (glyphCount)

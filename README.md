@@ -114,12 +114,13 @@ just one entity and one material.
       to hear about your concrete use cases that would require dynamic loading of fonts at runtime.
 
 (2) Optional spawning of `TextRenderer` at runtime
-  - In case you like to generate text labels at runtime, you can use the approach found 
-    in the package folder `TextMeshDOTS\RuntimeSpawner\RuntimeTextRendererSpawner.cs` 
-    and `TextMeshDOTS\RuntimeSpawner\RuntimeMaterialSpawner.cs` Per default, auto creation of both systems 
-    included in the package is disabled. In case you like to test this workflows, enable both systems, hit play and 
-    you should see some text spawned at runtime.
-  
+  - Runtime spawed Text Render need a mataterial registered with Entity Graphics. In order to that, you need to bake a
+	`TMD Runtime Material`. To do so, add an empty `GameObject`, add `TMD Runtime Material` component to it. Drop one 
+	 of the materials you generated in  step 1 of the Authoring worflow (see above) into the material field. 	
+  - Write a runtime Text Renderer Spawner. You can follow the approach found in the package folder 
+   `TextMeshDOTS\RuntimeSpawner\RuntimeTextRendererSpawner.cs` Per default, auto creation of this system 
+    is disabled. In case you like to test this workflows, enable the system, hit play and you should see some 
+    text spawned at runtime.  
 
 # Changing text at runtime
   - Text is stored in the `CalliString` DynamicBuffer. Querry for that buffer and change it. Identify `TextRenderer`

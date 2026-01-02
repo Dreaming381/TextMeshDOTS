@@ -88,9 +88,7 @@ internal class RenderTest : MonoBehaviour
 
         //simplify. Both clipper and polybol outputs the outer contour CCW, and the inner CW, which is postscript definition
         orientation = SDFOrientation.POSTSCRIPT; //clipper always outputs the outer contour CCW, and the inner CW, which is postscript definition
-        var fillRule = FillRule.EvenOdd;
-        var clipType = ClipType.Union;
-        PolygonOperation.RemoveSelfIntersections(ref drawData, clipType, fillRule);
+        PolygonOperation.RemoveSelfIntersections(ref drawData, ClipType.Union, FillRule.NonZero);
         //SDFCommon.WriteGlyphOutlineToFile($"Clipper2 {clipType} ({fillRule}) outline of glyph {character}.txt", drawData);
 
         marker.Begin();

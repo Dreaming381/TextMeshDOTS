@@ -3,6 +3,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Rendering;
+using UnityEngine;
 using UnityEngine.Rendering;
 
 // How Rendering works:
@@ -88,6 +89,8 @@ namespace TextMeshDOTS
 
     public struct RuntimeFontMaterial : IComponentData
     {
+        public UnityObjectRef<Material> material;
+        public UnityObjectRef<Mesh> backendMesh;
         public BatchMeshID batchMeshID;
         public BatchMaterialID batchMaterialID;
     }

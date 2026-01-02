@@ -13,7 +13,7 @@ using UnityEngine.Rendering;
 namespace TextMeshDOTS
 {
     [BurstCompile]
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     partial struct RuntimeTextRendererSpawner : ISystem
     {
         int frameCount;
@@ -72,8 +72,9 @@ namespace TextMeshDOTS
             var runtimeFontMaterial = SystemAPI.GetSingleton<RuntimeFontMaterial>();
             if (runtimeFontMaterial.batchMaterialID == BatchMaterialID.Null)
                 return;
-            else if(materialMeshInfo.MaterialID ==  BatchMaterialID.Null)
+            else if (materialMeshInfo.MaterialID == BatchMaterialID.Null)
                 materialMeshInfo = new MaterialMeshInfo { MaterialID = runtimeFontMaterial.batchMaterialID, MeshID = runtimeFontMaterial.batchMeshID };
+            
 
             if (frameCount == 10)
                 SpawnText(text2, "Noto Sans Display", 30,  new float3(-10, 7, 0), Color.goldenRod, ref state);
