@@ -85,11 +85,12 @@ internal class RenderTest : MonoBehaviour
         var atlasRect = glyphExtents.GetPaddedAtlasRect(offsetX, offsetY, padding);
 
         //allocate texture
-        atlasWidth = atlasWidth < (atlasRect.width + atlasRect.x) ? (atlasRect.width + atlasRect.x) : atlasWidth;
-        atlasHeight = atlasHeight < (atlasRect.height + atlasRect.y) ? (atlasRect.height + atlasRect.y) : atlasHeight;
-        int nextPowerOfTwo = math.ceilpow2(math.max(atlasHeight, atlasHeight));
-        atlasWidth = atlasHeight = nextPowerOfTwo;
-        var texture2D = new Texture2D(nextPowerOfTwo, nextPowerOfTwo, TextureFormat.Alpha8, false);
+        //atlasWidth = atlasWidth < (atlasRect.width + atlasRect.x) ? (atlasRect.width + atlasRect.x) : atlasWidth;
+        //atlasHeight = atlasHeight < (atlasRect.height + atlasRect.y) ? (atlasRect.height + atlasRect.y) : atlasHeight;
+        //int nextPowerOfTwo = math.ceilpow2(math.max(atlasHeight, atlasHeight));
+        //atlasWidth = atlasHeight = nextPowerOfTwo;
+        //var texture2D = new Texture2D(nextPowerOfTwo, nextPowerOfTwo, TextureFormat.Alpha8, false);
+        var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.Alpha8, false);
         var textureData = texture2D.GetRawTextureData<byte>();
         for (int i = 0; i < textureData.Length; i++)
             textureData[i] = 0;                        
@@ -107,7 +108,7 @@ internal class RenderTest : MonoBehaviour
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
         SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, SPREAD);
-        SDFCommon.WriteMinDistancesToFile("Texture RenderTest", textureData);
+        //SDFCommon.WriteMinDistancesToFile("Texture correct.txt", textureData);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();

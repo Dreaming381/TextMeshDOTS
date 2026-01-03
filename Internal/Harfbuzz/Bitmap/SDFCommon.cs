@@ -72,7 +72,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             NativeArray<byte> buffer, 
             int spread, int atlasX, int atlasY, int atlasRectWidth, int atlasRectHeight, int atlasWidth, int atlasHeight)
         {
-
             float scaleTo8Bit = 255f / (spread * 2);
             //var scaleTo16Bit = 65535 / (spread * 2);
 
@@ -86,9 +85,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             }
             else
             {
-                for (int row = 0; row < atlasRectHeight; row++)
+                for (int row = 0, rowEnd=math.min(atlasRectHeight, atlasHeight); row < rowEnd; row++)
                 {
-                    for (int column = 0; column < atlasRectWidth; column++)
+                    for (int column = 0, columnEnd= math.min(atlasRectWidth, atlasWidth); column < columnEnd; column++)
                     {
                         var sourceIndex = atlasRectWidth * row + column;
                         var targetIndex = (atlasWidth * (row + atlasY)) + (column + atlasX);
