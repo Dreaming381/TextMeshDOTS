@@ -2,9 +2,11 @@
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
+using Unity.Mathematics;
 using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TextCore;
 using ClipType = TextMeshDOTS.Clipper2AoS.ClipType;
 using FillRule = TextMeshDOTS.Clipper2AoS.FillRule;
 using Font = TextMeshDOTS.HarfBuzz.Font;
@@ -16,6 +18,10 @@ internal class RenderTest : MonoBehaviour
     [SerializeField] private string fontAssetPath;
     public string letter;
     public uint glyphID;
+    public int offsetX = 0; 
+    public int offsetY = 0;
+    public int SPREAD = 8;
+    public int padding = 8;
     public int atlasWidth = 1024;
     public int atlasHeight = 1024;
     public int samplingPointSize = 256;
@@ -58,12 +64,7 @@ internal class RenderTest : MonoBehaviour
 
     void DrawTest(string character, uint glyphID)
     {
-        var padding = samplingPointSize / 6;
-        var texture2D = new Texture2D(atlasWidth, atlasHeight, TextureFormat.Alpha8, false);
-        var textureData = texture2D.GetRawTextureData<byte>();
-        for (int i = 0; i < textureData.Length; i++)
-            textureData[i] = 0;
-
+        //shape
         Buffer buffer = default;
         if (!renderGlyphID)
         {
@@ -76,13 +77,24 @@ internal class RenderTest : MonoBehaviour
             glyphID = glyphInfos[0].codepoint;
         }
 
-
+        //get glyph
         drawData = new DrawData(256, 16, maxDeviation, Allocator.Persistent);
-
         font.DrawGlyph(glyphID, drawFunctions, ref drawData);
         font.GetGlyphExtents(glyphID, out GlyphExtents glyphExtents);
-        var atlasRect = glyphExtents.GetPaddedAtlasRect(24, 24, padding);
 
+        var atlasRect = glyphExtents.GetPaddedAtlasRect(offsetX, offsetY, padding);
+
+        //allocate texture
+        atlasWidth = atlasWidth < (atlasRect.width + atlasRect.x) ? (atlasRect.width + atlasRect.x) : atlasWidth;
+        atlasHeight = atlasHeight < (atlasRect.height + atlasRect.y) ? (atlasRect.height + atlasRect.y) : atlasHeight;
+        int nextPowerOfTwo = math.ceilpow2(math.max(atlasHeight, atlasHeight));
+        atlasWidth = atlasHeight = nextPowerOfTwo;
+        var texture2D = new Texture2D(nextPowerOfTwo, nextPowerOfTwo, TextureFormat.Alpha8, false);
+        var textureData = texture2D.GetRawTextureData<byte>();
+        for (int i = 0; i < textureData.Length; i++)
+            textureData[i] = 0;                        
+        
+        //render
         //SDFCommon.WriteGlyphOutlineToFile("Outline.txt", ref drawData, true);
         //SDFCommon.WriteGlyphOutlineToFile($"Outline of glyph {character}.txt", drawData);
 
@@ -94,7 +106,8 @@ internal class RenderTest : MonoBehaviour
         marker.Begin();
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
-        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, padding);
+        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, SPREAD);
+        SDFCommon.WriteMinDistancesToFile("Texture RenderTest", textureData);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();
@@ -184,8 +197,8 @@ internal class RenderTest : MonoBehaviour
         font = new Font(face);
         if (face.HasVarData)
         {
-            font.VariationNamedInstance = 14; //13 OK, 14 buggy for "6"
-            //DisplayVariationAxis();
+            font.VariationNamedInstance = 17; //13 OK, 14 buggy for "6"
+            DisplayVariationAxis();
         }
 
 

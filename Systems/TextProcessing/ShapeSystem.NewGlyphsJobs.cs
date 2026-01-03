@@ -97,8 +97,8 @@ namespace TextMeshDOTS
 
                 var padding = missingGlyph.format switch
                 {
-                    RenderFormat.SDF8 => missingGlyph.textureSize.GetSamplingSize() / 6,
-                    RenderFormat.SDF16 => missingGlyph.textureSize.GetSamplingSize() / 6,
+                    RenderFormat.SDF8 => 8,     //determined via RenderTest Mono: padding of 8 works for both SPREAD 8 (SDF8) 
+                    RenderFormat.SDF16 => 8,    //and SPREAD 16 (SDF16), regardless if 64px or 128px
                     RenderFormat.Bitmap8888 => 8,
                     _ => 0,
                 };

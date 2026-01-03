@@ -18,15 +18,10 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         }
         public readonly static bool USE_SQUARED_DISTANCES = true;
         // SPREAD represents the permitted distance of a given pixel to an edge in bits.
-        // So 8 bit means distance can be from -127 (outside) to +128 (inside).
-        // We need 8 bit when storing distances in an 8 bit alpha channel. 
-        // When glyphs have a lot of "inside" area (often found in BLACK font weigth), and sampling them at larger sampling
-        // point sizes (e.g. 128, or 256), this will led to "holes" due to this line of code in ValidateAndSaveDistance():
-        // ignore if the distance is greater than spread;
-        // if (dist.distance > sp_sq) return false;
-        // Could possibly also clamp the distance here, but this would not look much prettier due
-        // due to clipping. Better solution is to increase SPREAD to e.g. 16. When converting to 8 bit alpha, we add SPREAD
-        // to give distances from 0..2*SPREAD, and multiply by (256/(2*SPREAD ) via this line of code in the final pass:
+        // 8 bit: distance can be from -128 (outside) to +127 (inside) --> store in 8 bit alpha channel. 
+        // 16 bit: distance can be from -32,768 (outside to +32,767 (inside) -->store in 16 bit alpha
+        // When converting to 8 bit alpha, we add SPREAD to give distances from 0..2*SPREAD, and multiply
+        // by (256/(2*SPREAD ) via this line of code in the final pass:
         // var scaleTo8Bit = 256 / (spread * 2);
         public const int DEFAULT_SPREAD = 8; // SPREAD and Atlas padding are related, but do not set SPREAD too small 
         public const int MIN_SPREAD = 2;
@@ -77,8 +72,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             NativeArray<byte> buffer, 
             int spread, int atlasX, int atlasY, int atlasRectWidth, int atlasRectHeight, int atlasWidth, int atlasHeight)
         {
-            var scaleTo8Bit = 256 / (spread * 2);
-            //var scaleTo16Bit = 65536 / (spread * 2);
+
+            float scaleTo8Bit = 255f / (spread * 2);
+            //var scaleTo16Bit = 65535 / (spread * 2);
 
             if (buffer.Length == distances.Length && buffer.Length == atlasRectWidth * atlasRectHeight)
             {
@@ -575,12 +571,12 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             writer.WriteLine();
             writer.Close();
         }
-        public static void WriteMinDistancesToFile(string path, in NativeArray<float> minDistances)
+        public static void WriteMinDistancesToFile(string path, in NativeArray<float> minDistances, int arrayWidth, int row)
         {
             if (minDistances.Length == 0) return;
             StreamWriter writer = new StreamWriter(path, false);
             //for (int i = 0, end = minDistances.Length; i < end; i++)
-            for (int i = 1450; i < 1508; i++)
+            for (int i = arrayWidth * row, ii= arrayWidth * row+ arrayWidth; i < ii; i++)
             {
                 writer.WriteLine($"{minDistances[i]}");
             }
