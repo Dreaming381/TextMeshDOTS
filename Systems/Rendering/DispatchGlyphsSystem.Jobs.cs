@@ -10,6 +10,8 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.TextCore;
+using static UnityEditor.U2D.ScriptablePacker;
 
 namespace TextMeshDOTS
 {
@@ -187,16 +189,18 @@ namespace TextMeshDOTS
                 {
                     ref var glyphEntry    = ref glyphTable.GetEntryRW(glyph);
                     var     doublePadding = 2 * glyphEntry.padding;
+                    var paddedWith = glyphEntry.width + doublePadding;
+                    var paddedHeight = glyphEntry.height + doublePadding;
                     atlasTable.Allocate(glyph,
-                                        (short)(glyphEntry.width + doublePadding),
-                                        (short)(glyphEntry.height + doublePadding),
+                                        (short)(paddedWith),
+                                        (short)(paddedHeight),
                                         out glyphEntry.x,
                                         out glyphEntry.y,
                                         out glyphEntry.z);
                     uint id  = (uint)glyphEntry.z;
                     id      |= glyph & 0xc0000000;
                     dirtyAtlasIDSet.Add(id);
-                    int pixelCount = (glyphEntry.width + doublePadding) * (glyphEntry.height + doublePadding);
+                    int pixelCount = paddedWith * paddedHeight;
                     pixelUploadOffsetsInBytes.Add(runningOffset);
                     switch (glyphEntry.key.format)
                     {
@@ -313,7 +317,7 @@ namespace TextMeshDOTS
                                                              glyphEntry.padding,
                                                              kTextureDimension,
                                                              kTextureDimension,
-                                                             8);                //suggest to hardwire spread to 8 for SDF8 and 16 for SDF16
+                                                             32);                //suggest to hardwire spread to 8 for SDF8 and 16 for SDF16
                 }
                 else if (glyphEntry.key.format == RenderFormat.Bitmap8888)
                 {

@@ -424,7 +424,7 @@ void SampleTexture2DArrayLIT_float(
     {
         // The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-        float SDR = 11.0; // SDR : Signed Distance Ratio
+		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
         if (isSdf16)
         {
             _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
@@ -489,7 +489,7 @@ void Sample5Texture2DArrayLIT_float(
     {
         // The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-        float SDR = 11.0; // SDR : Signed Distance Ratio
+		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
         bitmapColor = float4(0,0,0,0);
         
         if (isSdf16)
@@ -574,7 +574,7 @@ void Sample5Texture2DArrayUNLIT_float(
     {
         // The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-        float SDR = 11.0; // SDR : Signed Distance Ratio
+		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
         bitmapColor = float4(0, 0, 0, 0);
         
         if (isSdf16)
@@ -662,7 +662,7 @@ void Sample3Texture2DArrayLIT_float(
     {
         // The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-        float SDR = 11.0; // SDR : Signed Distance Ratio
+		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
         bitmapColor = float4(0, 0, 0, 0);
         
         if (isSdf16)
@@ -737,7 +737,7 @@ void Sample3Texture2DArrayUNLIT_float(
     {
         // The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-        float SDR = 11.0; // SDR : Signed Distance Ratio
+		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
         bitmapColor = float4(0, 0, 0, 0);
         
         if (isSdf16)
@@ -812,7 +812,7 @@ void Sample1Texture2DArrayLIT_float(
     {
         // The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-        float SDR = 11.0; // SDR : Signed Distance Ratio
+		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
         bitmapColor = float4(0, 0, 0, 0);
         
         if (isSdf16)
@@ -871,7 +871,7 @@ void Sample1Texture2DArrayUNLIT_float(
     {
         // The signed distance ratio is the padding value + 1.
 		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-        float SDR = 11.0; // SDR : Signed Distance Ratio
+		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
         bitmapColor = float4(0, 0, 0, 0);
         
         if (isSdf16)
