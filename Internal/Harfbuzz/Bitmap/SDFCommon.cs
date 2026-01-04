@@ -16,7 +16,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 UnsafeUtility.MemClear(array.GetUnsafePtr(), (long)array.Length * sizeof(T));
             }
         }
-        public readonly static bool USE_SQUARED_DISTANCES = true;
+        public readonly static bool USE_SQUARED_DISTANCES = false;
         // SPREAD represents the permitted distance of a given pixel to an edge in bits.
         // 8 bit: distance can be from -128 (outside) to +127 (inside) --> store in 8 bit alpha channel. 
         // 16 bit: distance can be from -32,768 (outside to +32,767 (inside) -->store in 16 bit alpha
@@ -106,7 +106,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             int spread, int atlasX, int atlasY, int atlasRectWidth, int atlasRectHeight, int atlasWidth, int atlasHeight)
         {
             //float scaleTo8Bit = 255f / (spread * 2);
-            var scaleTo16Bit = 65535 / (spread * 2);
+            float scaleTo16Bit = 65535f / (spread * 2);
 
             if (buffer.Length == distances.Length && buffer.Length == atlasRectWidth * atlasRectHeight)
             {
@@ -125,7 +125,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                         var sourceIndex = atlasRectWidth * row + column;
                         var targetIndex = (atlasWidth * (row + atlasY)) + (column + atlasX);
 
-                        // convert to byte range of alpha8 texture
+                        // convert to byte range of alpha16 texture
                         var result = (distances[sourceIndex] + spread) * scaleTo16Bit;
                         buffer[targetIndex] = (ushort)result;
                     }
@@ -604,41 +604,56 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             writer.WriteLine();
             writer.Close();
         }
-        public static void WriteMinDistancesToFile(string path, in NativeArray<float> minDistances, int arrayWidth, int row)
+        public static void WriteArrayToFile(string path, in NativeArray<float> array, int arrayWidth, int row)
         {
-            if (minDistances.Length == 0) return;
+            if (array.Length == 0) return;
             StreamWriter writer = new StreamWriter(path, false);
-            //for (int i = 0, end = minDistances.Length; i < end; i++)
-            for (int i = arrayWidth * row, ii= arrayWidth * row+ arrayWidth; i < ii; i++)
+            var start = arrayWidth * row;
+            var end = start + arrayWidth;
+            for (int i = start; i < end; i++)
             {
-                writer.WriteLine($"{minDistances[i]}");
+                writer.WriteLine($"{array[i]}");
             }
             writer.WriteLine();
             writer.Close();
         }
-        public static void WriteSignsToFile(string path, in NativeArray<int> signs)
+        public static void WriteArrayToFile(string path, in NativeArray<byte> array, int arrayWidth, int row)
         {
-            if (signs.Length == 0) return;
+            if (array.Length == 0) return;
             StreamWriter writer = new StreamWriter(path, false);
-            for (int i = 0, end = signs.Length; i < end; i++)
+            var start = arrayWidth * row;
+            var end = start + arrayWidth;
+            for (int i = start; i < end; i++)
             {
-                writer.WriteLine($"{signs[i]}");
+                writer.WriteLine($"{array[i]}");
             }
             writer.WriteLine();
             writer.Close();
         }
-        public static void WriteMinDistancesToFile(string path, in NativeArray<byte> minDistances)
+        public static void WriteArrayToFile(string path, in NativeArray<byte> array)
         {
-            if (minDistances.Length == 0) return;
+            if (array.Length == 0) return;
             StreamWriter writer = new StreamWriter(path, false);
-            for (int i = 0, end = minDistances.Length; i < end; i++)
+            for (int i = 0, end = array.Length; i < end; i++)
             {
-                writer.WriteLine($"{minDistances[i]}");
+                writer.WriteLine($"{array[i]}");
             }
             writer.WriteLine();
             writer.Close();
         }
-        public static void WriteMinDistancesToFile(string path, NativeArray<SDFDebug> sdfDebug)
+        public static void WriteArrayToFile(string path, in NativeArray<int> array)
+        {
+            if (array.Length == 0) return;
+            StreamWriter writer = new StreamWriter(path, false);
+            for (int i = 0, end = array.Length; i < end; i++)
+            {
+                writer.WriteLine($"{array[i]}");
+            }
+            writer.WriteLine();
+            writer.Close();
+        }
+
+        public static void WriteSDFDebugToFile(string path, NativeArray<SDFDebug> sdfDebug)
         {
             if (sdfDebug.Length == 0) return;
             StreamWriter writer = new StreamWriter(path, false);

@@ -72,7 +72,7 @@ namespace TextMeshDOTS
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
                     var language = new Language(textBaseConfiguration.languageCode.code);
-                    var script = (Script)textBaseConfiguration.scriptCode.code;
+                    var script = textBaseConfiguration.script;
                     var segmentProperties = new SegmentProperties(Direction.LTR, script, language);
 
                     fontConfig.Reset(textBaseConfiguration, ref fontTable);
@@ -211,6 +211,8 @@ namespace TextMeshDOTS
                     length--; //last byte of CalliBytes buffer appears to be always '0', which should not be shaped. 
                 buffer.AddText(text, (uint)startIndex, length);
                 buffer.SetSegmentProperties(ref segmentProperties);
+                //buffer.Language = Language.English;
+                //buffer.GuessSegmentProperties();
 
                 //a number of white spaces are regretably not replaced by "space" (needs to be handled in GenerateGlyphJob)
                 //https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767

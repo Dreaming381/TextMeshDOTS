@@ -7,6 +7,7 @@ using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TextCore;
+using UnityEngine.TextCore.Text;
 using ClipType = TextMeshDOTS.Clipper2AoS.ClipType;
 using FillRule = TextMeshDOTS.Clipper2AoS.FillRule;
 using Font = TextMeshDOTS.HarfBuzz.Font;
@@ -26,6 +27,7 @@ internal class RenderTest : MonoBehaviour
     public int atlasHeight = 1024;
     public int samplingPointSize = 256;
     public bool renderGlyphID;
+    public FontAsset fontAsset;
     
 
     float maxDeviation;
@@ -54,6 +56,10 @@ internal class RenderTest : MonoBehaviour
 
         DrawTest(letter, glyphID);
         //PaintTest(letter, glyphID); //🌁😉🥰💀✌️🌴🐢🐐🍄⚽🍻👑📸😬👀🚨🏡🕊️🏆😻🌟🧿🍀🎨🍜  
+
+        //var texture = fontAsset.atlasTexture;
+        //var texturebuffer = texture.GetPixelData<byte>(0);
+        //SDFCommon.WriteArrayToFile("Unity SDF8.txt", texturebuffer, texture.width, texture.height/2);
     }
 
 
@@ -102,13 +108,13 @@ internal class RenderTest : MonoBehaviour
         //simplify. Both clipper and polybol outputs the outer contour CCW, and the inner CW, which is postscript definition
         orientation = SDFOrientation.POSTSCRIPT; //clipper always outputs the outer contour CCW, and the inner CW, which is postscript definition
         PolygonOperation.RemoveSelfIntersections(ref drawData, ClipType.Union, FillRule.NonZero);
-        //SDFCommon.WriteGlyphOutlineToFile($"Clipper2 {clipType} ({fillRule}) outline of glyph {character}.txt", drawData);
+        //SDFCommon.WriteGlyphOutlineToFile($"Outline of glyph {character}.txt", drawData);
 
         marker.Begin();
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
         SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, SPREAD);
-        //SDFCommon.WriteMinDistancesToFile("Texture correct.txt", textureData);
+        SDFCommon.WriteArrayToFile("TMD SDF32.txt", textureData, texture2D.width, texture2D.height/2);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();

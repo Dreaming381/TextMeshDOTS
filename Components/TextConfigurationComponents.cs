@@ -1,4 +1,5 @@
 ﻿using System;
+using TextMeshDOTS.HarfBuzz;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -52,7 +53,7 @@ namespace TextMeshDOTS
         public Color32 color;
 
         public LanguageCode languageCode;
-        public ScriptCode scriptCode;
+        public Script script;
 
         /// <summary>
         /// The various font styling flags. Readout of bold style only during authoring, otherwise this library will use fontweight (changeable via xml tags)
@@ -223,17 +224,7 @@ namespace TextMeshDOTS
 
         public LanguageCode(char a, char b, char c, char d)
         {
-            code = HarfBuzz.Harfbuzz.HB_TAG(a, b, c, d);
-        }
-    }
-
-    public struct ScriptCode
-    {
-        internal uint code;
-
-        public ScriptCode(char a, char b, char c, char d)
-        {
-            code = HarfBuzz.Harfbuzz.HB_TAG(a, b, c, d);
+            code = Harfbuzz.HB_TAG(a, b, c, d);
         }
     }
 

@@ -278,6 +278,8 @@ namespace TextMeshDOTS.HarfBuzz
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool hb_buffer_allocation_successful(IntPtr buffer);
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_buffer_guess_segment_properties(IntPtr buffer);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern void hb_buffer_set_segment_properties(IntPtr buffer, ref SegmentProperties props);
@@ -316,14 +318,18 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern  GlyphPosition* hb_buffer_get_glyph_positions(IntPtr buffer, out uint length);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        public static extern IntPtr hb_language_from_string([MarshalAs(UnmanagedType.LPStr)] string str, int len);
-        /// <summary> DANGER: ensure str is NULL terminated UTF8 when using -1 as length </summary>
-        //public static extern IntPtr hb_language_from_string(byte* str, int len);
+        public static extern IntPtr hb_language_get_default();
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
-        [return: MarshalAs(UnmanagedType.LPStr)]
+        //public static extern IntPtr hb_language_from_string([MarshalAs(UnmanagedType.LPStr)] string str, int len);
+        /// <summary> DANGER: ensure str is NULL terminated UTF8 when using -1 as length </summary>
+        public static extern IntPtr hb_language_from_string(byte* str, int len);
+
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        //[return: MarshalAs(UnmanagedType.LPStr)]
         /// <summary> DANGER: convert value is null terminated UTF8 </summary>
-        public static extern IntPtr hb_language_to_string(IntPtr language);
+        public static extern byte* hb_language_to_string(IntPtr language);
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern Language hb_buffer_get_language(IntPtr buffer);
@@ -352,6 +358,7 @@ namespace TextMeshDOTS.HarfBuzz
         internal static extern void hb_buffer_set_flags(IntPtr buffer, BufferFlag flags);
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern BufferFlag hb_buffer_get_flags(IntPtr buffer);
+
         #endregion
 
         #region shapeplan
@@ -389,6 +396,33 @@ namespace TextMeshDOTS.HarfBuzz
             result.Append((char)((hb_tag >> 8) & 0xff));
             result.Append((char)(hb_tag & 0xff));
             return result;
+        }
+        public static FixedString128Bytes GetFixedString128(byte* textPtr)
+        {
+            FixedString128Bytes results = new();
+            var lenght = Strlen(textPtr);
+            for (int i = 0; i < lenght; i++)
+                results.AppendRawByte(textPtr[i]);
+            return results;
+        }
+        public static FixedString32Bytes GetFixedString32(byte* textPtr)
+        {
+            FixedString32Bytes results = new();
+            var lenght = Strlen(textPtr);
+            for (int i = 0; i < lenght; i++)
+                results.AppendRawByte(textPtr[i]);
+            return results;
+        }
+        static int Strlen(byte* bla)
+        {
+            int len = 0;
+            unsafe
+            {
+                byte* pEnd = bla;
+                while (*pEnd++ != '\0') ;
+                len = (int)((pEnd - bla) - 1);
+            }
+            return len;
         }
     }
 }

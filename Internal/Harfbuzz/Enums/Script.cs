@@ -1,7 +1,7 @@
 namespace TextMeshDOTS.HarfBuzz
 {
     // from https://github.com/behdad/harfbuzz/blob/master/src/hb-common.h
-    internal enum Script
+    public enum Script
     {
         COMMON = ('Z' << 24) | ('y' << 16) | ('y' << 8) | 'y',
         INHERITED = ('Z' << 24) | ('i' << 16) | ('n' << 8) | 'h',

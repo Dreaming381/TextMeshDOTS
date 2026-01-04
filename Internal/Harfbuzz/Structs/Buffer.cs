@@ -55,6 +55,10 @@ namespace TextMeshDOTS.HarfBuzz
         {
             Harfbuzz.hb_buffer_set_segment_properties(ptr, ref segmentProperties);
         }
+        public void GuessSegmentProperties()
+        {
+            Harfbuzz.hb_buffer_guess_segment_properties(ptr);
+        }
         public uint Length => Harfbuzz.hb_buffer_get_length(ptr);
         public void Add(uint codepoint, uint cluster)
         {

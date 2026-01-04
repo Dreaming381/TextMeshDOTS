@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -35,7 +36,7 @@ namespace TextMeshDOTS.Authoring
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
         public LanguageCode languageCode = new LanguageCode('E', 'N', 'G', ' ');
-        public ScriptCode scriptCode = new ScriptCode('L', 'a', 't', 'n');
+        public Script script = Script.LATIN;
         public Material material;
     }
 
@@ -91,7 +92,7 @@ namespace TextMeshDOTS.Authoring
                 lineSpacing = (half)authoring.lineSpacing,
                 paragraphSpacing = (half)authoring.paragraphSpacing,
                 languageCode = authoring.languageCode,
-                scriptCode = authoring.scriptCode,
+                script = authoring.script,
             };
             AddComponent(entity, textBaseConfiguraton);           
         } 
