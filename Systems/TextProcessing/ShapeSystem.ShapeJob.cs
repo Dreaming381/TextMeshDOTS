@@ -53,9 +53,6 @@ namespace TextMeshDOTS
                 var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
                 var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
 
-                var language = Language.English;
-                //var language = new Language(HB.HB_TAG('A', 'P', 'P', 'H'));
-                var segmentProperties = new SegmentProperties(Direction.LTR, Script.LATIN, language);
                 var buffer = new Buffer(true);
                 var openTypeFeatures = new OpenTypeFeatureConfig(16, Allocator.Temp);
 
@@ -73,6 +70,10 @@ namespace TextMeshDOTS
                     var glyphOTFs = glyphOTFBuffers[indexInChunk];
                     var calliBytesBuffer = calliBytesBuffers[indexInChunk].Reinterpret<byte>();
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
+
+                    var language = new Language(textBaseConfiguration.languageCode.code);
+                    var script = (Script)textBaseConfiguration.scriptCode.code;
+                    var segmentProperties = new SegmentProperties(Direction.LTR, script, language);
 
                     fontConfig.Reset(textBaseConfiguration, ref fontTable);
                     layoutConfig.Reset(textBaseConfiguration);
@@ -220,8 +221,10 @@ namespace TextMeshDOTS
                 var font = this.fontTable.GetOrCreateFont(faceIndex, threadIndex);
                 if (face.HasVarData && font.currentVariableProfileIndex != namedVariationIndex)
                     font = fontTable.SetVariableProfile(faceIndex, threadIndex, namedVariationIndex);
+                if (renderFormat == RenderFormat.SDF8 && fontConfig.m_fontTextureSize != FontTextureSize.Normal)
+                    renderFormat = RenderFormat.SDF16;
 
-                var samplingSize = FontTextureSize.Normal.GetSamplingSize();
+                var samplingSize = fontConfig.m_fontTextureSize.GetSamplingSize();
                 font.SetScale(samplingSize, samplingSize);
 
                 //Debug.Log($"shape {text} {startIndex} {length}");
@@ -261,7 +264,7 @@ namespace TextMeshDOTS
                             faceIndex = faceIndex,
                             glyphIndex = (ushort)glyphInfo.codepoint,
                             format = renderFormat,
-                            textureSize = FontTextureSize.Normal,
+                            textureSize = fontConfig.m_fontTextureSize,
                             variableProfileIndex = namedVariationIndex
                         },
                         cluster = glyphInfo.cluster,
