@@ -123,7 +123,7 @@ namespace TextMeshDOTS
                 if (currentFace.HasVarData && currentFont.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
                     currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
 
-                var currentFontSamplingPointSize = FontTextureSize.Normal.GetSamplingSize();
+                var currentFontSamplingPointSize = textBaseConfiguration.fontTextureSize.GetSamplingSize();
                 var currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
                 var currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
                 currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);
@@ -155,6 +155,7 @@ namespace TextMeshDOTS
                         if(currentFace.HasVarData && currentFont.currentVariableProfileIndex != glyphOTF.glyphKey.variableProfileIndex)
                             currentFont = fontTable.SetVariableProfile(currentFaceIndex, threadIndex, glyphOTF.glyphKey.variableProfileIndex);
 
+                        currentFontSamplingPointSize = textBaseConfiguration.fontTextureSize.GetSamplingSize();
                         currentFontWeigth = currentFont.GetStyleTag(StyleTag.WEIGHT);
                         currentFontIsItalic = (byte)currentFont.GetStyleTag(StyleTag.ITALIC) == 1;
                         currentFont.SetScale(currentFontSamplingPointSize, currentFontSamplingPointSize);

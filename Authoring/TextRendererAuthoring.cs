@@ -1,10 +1,14 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TextCore;
+using UnityEngine.TextCore.Text;
+using static UnityEditor.ObjectChangeEventStream;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -37,7 +41,6 @@ namespace TextMeshDOTS.Authoring
         public float paragraphSpacing = 0;
         [Tooltip("Laguege of text. Use BCP conform tags. https://en.wikipedia.org/wiki/IETF_language_tag#List_of_common_primary_language_subtags")]
         public string language = "en";
-        public Script script = Script.LATIN;
         public Material material;
         public FontTextureSize fontTextureSize;
     }
@@ -48,10 +51,11 @@ namespace TextMeshDOTS.Authoring
         {
             DependsOn(authoring.fontCollectionAsset);
             int fontCount = 0;
-            if (authoring.fontCollectionAsset == null || 
-                (fontCount = authoring.fontCollectionAsset.fontReferences.Count) == 0 || 
-                authoring.defaultFont == string.Empty || 
-                authoring.material ==null)
+            if (authoring.fontCollectionAsset == null ||
+                (fontCount = authoring.fontCollectionAsset.fontReferences.Count) == 0 ||
+                authoring.defaultFont == string.Empty ||
+                authoring.material == null ||
+                authoring.language.Length == 0)
                 return;
 
             string[] guids = AssetDatabase.FindAssets("TextBackendMesh t:mesh", null);
@@ -93,12 +97,34 @@ namespace TextMeshDOTS.Authoring
                 wordSpacing = (half)authoring.wordSpacing,
                 lineSpacing = (half)authoring.lineSpacing,
                 paragraphSpacing = (half)authoring.paragraphSpacing,
-                language = authoring.language, //replace with BlobAsset
-                script = authoring.script,
+                language = BakeLangugeString(authoring.language),
                 fontTextureSize = authoring.fontTextureSize
             };
             AddComponent(entity, textBaseConfiguraton);           
-        } 
-    }    
+        }
+        BlobAssetReference<LanguageBlob> BakeLangugeString(FixedString128Bytes language)
+        {
+            var customHash = new Unity.Entities.Hash128((uint)language.GetHashCode(), 0, 0, 0);
+            if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<LanguageBlob> blobReference))
+            {
+                blobReference = BakeLanguage(language);                
+                AddBlobAssetWithCustomHash(ref blobReference, customHash); // Register the Blob Asset to the Baker for de-duplication and reverting.
+            }
+            return blobReference;
+        }
+     
+        public static BlobAssetReference<LanguageBlob> BakeLanguage(FixedString128Bytes language)
+        {
+            var blobBuilder = new BlobBuilder(Allocator.Temp);
+            ref LanguageBlob languageBlobRoot = ref blobBuilder.ConstructRoot<LanguageBlob>();
+            blobBuilder.AllocateString(ref languageBlobRoot.langugage, ref language);
+            var result = blobBuilder.CreateBlobAssetReference<LanguageBlob>(Allocator.Persistent);
+            blobBuilder.Dispose();
+            languageBlobRoot = result.Value;
+            return result;
+        }            
+        
+    } 
+    
 }
 #endif

@@ -43,7 +43,6 @@ namespace TextMeshDOTS.HarfBuzz
             script_tags.Length = (int)scriptCount;
             language_tags = new NativeList<uint>((int)languageCount, Allocator.Temp);
             language_tags.Length = (int)scriptCount;
-            uint len = default;
             unsafe
             {
                 Harfbuzz.hb_ot_tags_from_script_and_language(script, language, ref scriptCount, script_tags.GetUnsafePtr(), ref languageCount, language_tags.GetUnsafePtr());

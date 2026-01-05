@@ -233,7 +233,7 @@ namespace TextMeshDOTS
                 int dirtySdf16Count;
                 for (dirtySdf16Count = dirtySdf8Count; dirtySdf16Count < collected.atlasDirtyIDs.Length; dirtySdf16Count++)
                 {
-                    var dirtyId = collected.atlasDirtyIDs[dirtySdf8Count];
+                    var dirtyId = collected.atlasDirtyIDs[dirtySdf16Count];
                     if (dirtyId >= 0x80000000u)
                         break;
                 }

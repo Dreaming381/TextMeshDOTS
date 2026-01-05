@@ -71,9 +71,7 @@ namespace TextMeshDOTS
                     var calliBytesBuffer = calliBytesBuffers[indexInChunk].Reinterpret<byte>();
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
-                    var language = new Language(textBaseConfiguration.language);
-                    var script = textBaseConfiguration.script;
-                    var segmentProperties = new SegmentProperties(Direction.LTR, script, language);
+                    var language = new Language(textBaseConfiguration.language.Value.ToFixedString());
 
                     fontConfig.Reset(textBaseConfiguration, ref fontTable);
                     layoutConfig.Reset(textBaseConfiguration);
@@ -82,9 +80,9 @@ namespace TextMeshDOTS
                     cleanedString.Capacity = calliString.Capacity;
 
                     if (xmlTagBuffer.Length == 0)
-                        ShapeNoRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref segmentProperties, ref buffer, ref glyphOTFs);
+                        ShapeNoRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref language, ref buffer, ref glyphOTFs);
                     else
-                        ShapeRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref segmentProperties, ref buffer, ref glyphOTFs, ref xmlTagBuffer);
+                        ShapeRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref language, ref buffer, ref glyphOTFs, ref xmlTagBuffer);
 
                     cleanedString.Clear();
                 }
@@ -109,7 +107,7 @@ namespace TextMeshDOTS
                 ref FontTable fontTable,
                 ref OpenTypeFeatureConfig openTypeFeatures,
                 ref TextBaseConfiguration textBaseConfiguration,
-                ref SegmentProperties segmentProperties,
+                ref Language language,
                 ref Buffer buffer,
                 ref DynamicBuffer<GlyphOTF> glyphOTFs)
             {
@@ -121,7 +119,7 @@ namespace TextMeshDOTS
                     AppendAndConvertCase(cleanedString, layoutConfig.m_fontStyles, ref currentRune);
                 }
                 openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedString.Length);
-                Shape(buffer, cleanedString, 0, cleanedString.Length, ref segmentProperties, ref fontTable, ref fontConfig, fontConfig.m_faceIndex, fontConfig.m_namedVariationIndex, openTypeFeatures.values, glyphOTFs);
+                Shape(buffer, cleanedString, 0, cleanedString.Length, ref language, ref fontTable, ref fontConfig, fontConfig.m_faceIndex, fontConfig.m_namedVariationIndex, openTypeFeatures.values, glyphOTFs);
             }
 
             void ShapeRichText(CalliString calliString,
@@ -131,7 +129,7 @@ namespace TextMeshDOTS
               ref FontTable fontTable,
               ref OpenTypeFeatureConfig openTypeFeatures,
               ref TextBaseConfiguration textBaseConfiguration,
-              ref SegmentProperties segmentProperties,
+              ref Language language,
               ref Buffer buffer,
               ref DynamicBuffer<GlyphOTF> glyphOTFs,
               ref DynamicBuffer<XMLTag> xmlTagBuffer)
@@ -186,7 +184,7 @@ namespace TextMeshDOTS
                     openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedString.Length);
                     var cleanedSegmentLength = cleanedEnd - cleanedStart;
                     if(cleanedSegmentLength > 0 ) 
-                        Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref segmentProperties, ref fontTable, ref fontConfig, currentFaceIndex, currentNamedVariationIndex, openTypeFeatures.values, glyphOTFs);
+                        Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref language, ref fontTable, ref fontConfig, currentFaceIndex, currentNamedVariationIndex, openTypeFeatures.values, glyphOTFs);
                     currentFaceIndex = fontConfig.m_faceIndex;
                     currentNamedVariationIndex = fontConfig.m_namedVariationIndex;
                     cleanedStart = cleanedEnd;
@@ -199,7 +197,7 @@ namespace TextMeshDOTS
                 NativeText text,
                 int startIndex,
                 int length,
-                ref SegmentProperties segmentProperties,
+                ref Language language,
                 ref FontTable fontTable,
                 ref FontConfig fontConfig,
                 int faceIndex,
@@ -210,9 +208,8 @@ namespace TextMeshDOTS
                 if (startIndex + length == text.Length && text[^1] == 0)
                     length--; //last byte of CalliBytes buffer appears to be always '0', which should not be shaped. 
                 buffer.AddText(text, (uint)startIndex, length);
-                buffer.SetSegmentProperties(ref segmentProperties);
-                //buffer.Language = Language.English;
-                //buffer.GuessSegmentProperties();
+                buffer.Language = language;
+                buffer.GuessSegmentProperties();
 
                 //a number of white spaces are regretably not replaced by "space" (needs to be handled in GenerateGlyphJob)
                 //https://github.com/harfbuzz/harfbuzz/commit/81ef4f407d9c7bd98cf62cef951dc538b13442eb#commitcomment-9469767

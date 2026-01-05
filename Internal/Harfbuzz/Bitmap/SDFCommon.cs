@@ -113,7 +113,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 for (int i = 0; i < buffer.Length; i++)
                 {
                     var result = (distances[i] + spread) * scaleTo16Bit;
-                    buffer[i] = (byte)result;
+                    buffer[i] = (ushort)result; 
                 }
             }
             else

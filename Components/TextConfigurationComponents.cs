@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using static TextMeshDOTS.Authoring.TextRendererBaker;
 
 namespace TextMeshDOTS
 {
@@ -53,8 +54,7 @@ namespace TextMeshDOTS
         /// </summary>
         public Color32 color;
 
-        public FixedString32Bytes language;//replace with BlobAsset
-        public Script script;
+        public BlobAssetReference<LanguageBlob> language;
 
         /// <summary>
         /// The various font styling flags. Readout of bold style only during authoring, otherwise this library will use fontweight (changeable via xml tags)
@@ -156,6 +156,17 @@ namespace TextMeshDOTS
         MiddleTopAscentToBottomDescent,
     }
 
+    public struct LanguageBlob
+    {
+        public BlobString langugage;
+        public FixedString32Bytes ToFixedString()
+        {
+            var result = new FixedString32Bytes();
+            if (langugage.Length > 0)
+                langugage.CopyTo(ref result);
+            return result;
+        }
+    }
     public enum FontWeight : byte
     {
         //https://learn.microsoft.com/en-us/typography/opentype/spec/os2#usweightclass
