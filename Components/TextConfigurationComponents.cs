@@ -1,5 +1,6 @@
 ﻿using System;
 using TextMeshDOTS.HarfBuzz;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -52,7 +53,7 @@ namespace TextMeshDOTS
         /// </summary>
         public Color32 color;
 
-        public LanguageCode languageCode;
+        public FixedString32Bytes language;//replace with BlobAsset
         public Script script;
 
         /// <summary>

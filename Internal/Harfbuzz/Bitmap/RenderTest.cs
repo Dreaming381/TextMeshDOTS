@@ -60,6 +60,16 @@ internal class RenderTest : MonoBehaviour
         //var texture = fontAsset.atlasTexture;
         //var texturebuffer = texture.GetPixelData<byte>(0);
         //SDFCommon.WriteArrayToFile("Unity SDF8.txt", texturebuffer, texture.width, texture.height/2);
+
+        //var lang = new Language("en");
+        //var script = Script.LATIN;
+        //Language.OtTagsFromScriptAndLanguage(script, lang, out NativeList<uint> script_tags, out NativeList<uint> language_tags);
+
+        //foreach (var tag in script_tags)
+        //    Debug.Log(Harfbuzz.HB_TAG(tag));
+
+        //foreach (var tag in language_tags)
+        //    Debug.Log(Harfbuzz.HB_TAG(tag));
     }
 
 
@@ -114,7 +124,7 @@ internal class RenderTest : MonoBehaviour
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
         SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, SPREAD);
-        SDFCommon.WriteArrayToFile("TMD SDF32.txt", textureData, texture2D.width, texture2D.height/2);
+        //SDFCommon.WriteArrayToFile("TMD SDF32.txt", textureData, texture2D.width, texture2D.height/2);
         marker.End();
 
         var meshRenderer = GetComponent<MeshRenderer>();

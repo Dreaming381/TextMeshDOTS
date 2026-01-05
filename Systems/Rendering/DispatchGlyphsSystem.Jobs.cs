@@ -320,7 +320,7 @@ namespace TextMeshDOTS
                                                              glyphEntry.padding,
                                                              kTextureDimension,
                                                              kTextureDimension,
-                                                             32);  //suggest to hardwire spread to 8 for SDF8 and 16 for SDF16
+                                                             8);  //suggest to hardwire spread to 8 for SDF8 and 16 for SDF16
                 }
                 else if (glyphEntry.key.format == RenderFormat.SDF16)
                 {
@@ -359,7 +359,7 @@ namespace TextMeshDOTS
                                                              glyphEntry.padding,
                                                              kTextureDimension,
                                                              kTextureDimension,
-                                                             8);  //suggest to hardwire spread to 8 for SDF8 and 16 for SDF16
+                                                             16);  //suggest to hardwire spread to 8 for SDF8 and 16 for SDF16
                 }
                 else if (glyphEntry.key.format == RenderFormat.Bitmap8888)
                 {

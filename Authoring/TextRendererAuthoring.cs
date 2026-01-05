@@ -35,9 +35,11 @@ namespace TextMeshDOTS.Authoring
         public float lineSpacing = 0;
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
-        public LanguageCode languageCode = new LanguageCode('E', 'N', 'G', ' ');
+        [Tooltip("Laguege of text. Use BCP conform tags. https://en.wikipedia.org/wiki/IETF_language_tag#List_of_common_primary_language_subtags")]
+        public string language = "en";
         public Script script = Script.LATIN;
         public Material material;
+        public FontTextureSize fontTextureSize;
     }
 
     class TextRendererBaker : Baker<TextRendererAuthoring>
@@ -91,8 +93,9 @@ namespace TextMeshDOTS.Authoring
                 wordSpacing = (half)authoring.wordSpacing,
                 lineSpacing = (half)authoring.lineSpacing,
                 paragraphSpacing = (half)authoring.paragraphSpacing,
-                languageCode = authoring.languageCode,
+                language = authoring.language, //replace with BlobAsset
                 script = authoring.script,
+                fontTextureSize = authoring.fontTextureSize
             };
             AddComponent(entity, textBaseConfiguraton);           
         } 

@@ -384,6 +384,13 @@ namespace TextMeshDOTS.HarfBuzz
 
         [DllImport(HarfBuzz, CallingConvention = CallConvention)]
         internal static extern IntPtr hb_ot_tag_to_language(uint tag);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_ot_tags_from_script_and_language(Script script, Language language, ref uint script_count, uint* script_tags, ref uint language_count, uint* language_tags);
+
+        [DllImport(HarfBuzz, CallingConvention = CallConvention)]
+        internal static extern void hb_ot_tags_to_script_and_language(Script script_tag, uint language_tag, ref Script script, IntPtr language);
+
         public static uint HB_TAG(char c1, char c2, char c3, char c4)
         {
             return (((uint)c1 & 0xFF) << 24) | (((uint)c2 & 0xFF) << 16) | (((uint)c3 & 0xFF) << 8) | ((uint)c4 & 0xFF);
@@ -413,14 +420,14 @@ namespace TextMeshDOTS.HarfBuzz
                 results.AppendRawByte(textPtr[i]);
             return results;
         }
-        static int Strlen(byte* bla)
+        static int Strlen(byte* str)
         {
             int len = 0;
             unsafe
             {
-                byte* pEnd = bla;
+                byte* pEnd = str;
                 while (*pEnd++ != '\0') ;
-                len = (int)((pEnd - bla) - 1);
+                len = (int)((pEnd - str) - 1);
             }
             return len;
         }

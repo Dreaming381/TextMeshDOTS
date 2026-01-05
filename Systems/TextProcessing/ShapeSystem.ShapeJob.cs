@@ -71,7 +71,7 @@ namespace TextMeshDOTS
                     var calliBytesBuffer = calliBytesBuffers[indexInChunk].Reinterpret<byte>();
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
-                    var language = new Language(textBaseConfiguration.languageCode.code);
+                    var language = new Language(textBaseConfiguration.language);
                     var script = textBaseConfiguration.script;
                     var segmentProperties = new SegmentProperties(Direction.LTR, script, language);
 
