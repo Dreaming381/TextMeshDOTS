@@ -1,9 +1,7 @@
-using TextMeshDOTS.HarfBuzz;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
-using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS

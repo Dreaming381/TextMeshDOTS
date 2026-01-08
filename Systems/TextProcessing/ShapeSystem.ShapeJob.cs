@@ -216,13 +216,11 @@ namespace TextMeshDOTS
                 buffer.BufferFlag = BufferFlag.REMOVE_DEFAULT_IGNORABLES | BufferFlag.BOT | BufferFlag.EOT;
 
                 var face = this.fontTable.faces[faceIndex];
-                var renderFormat = face.renderFormat;
                 var font = this.fontTable.GetOrCreateFont(faceIndex, threadIndex);
                 if (face.HasVarData && font.currentVariableProfileIndex != namedVariationIndex)
                     font = fontTable.SetVariableProfile(faceIndex, threadIndex, namedVariationIndex);
-                if (renderFormat == RenderFormat.SDF8 && fontConfig.m_fontTextureSize != FontTextureSize.Normal)
-                    renderFormat = RenderFormat.SDF16;
 
+                var renderFormat = face.hasColor ? RenderFormat.Bitmap8888 : fontConfig.m_fontTextureSize != FontTextureSize.Normal ? RenderFormat.SDF16 : RenderFormat.SDF8;
                 var samplingSize = FontEnumerationExtensions.GetSamplingSize(renderFormat, fontConfig.m_fontTextureSize);
                 font.SetScale(samplingSize, samplingSize);
 

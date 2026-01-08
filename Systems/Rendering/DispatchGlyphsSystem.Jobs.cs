@@ -10,7 +10,6 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using static UnityEditor.U2D.ScriptablePacker;
 
 namespace TextMeshDOTS
 {

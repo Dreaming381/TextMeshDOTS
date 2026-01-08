@@ -10,7 +10,7 @@ namespace TextMeshDOTS.HarfBuzz
 
         //cache a couple of face meta data to avoid fetching them upon every face access
         public SDFOrientation sdfOrientation;
-        internal RenderFormat renderFormat;
+        internal bool hasColor;
         public uint GlyphCount => Harfbuzz.hb_face_get_glyph_count(ptr);
         public bool HasVarData => Harfbuzz.hb_ot_var_has_data(ptr);
         public uint AxisCount => Harfbuzz.hb_ot_var_get_axis_count(ptr);
@@ -19,9 +19,9 @@ namespace TextMeshDOTS.HarfBuzz
         public Face(Blob blob, int index)
         {
             sdfOrientation= default;
-            renderFormat = default;
+            hasColor = default;
             ptr = Harfbuzz.hb_face_create(blob.ptr, (uint)index);
-            renderFormat = HasCOLR() || HasColorBitmap() ? RenderFormat.Bitmap8888 : RenderFormat.SDF8;
+            hasColor = HasCOLR() || HasColorBitmap();
             sdfOrientation = HasTrueTypeOutlines() ? SDFOrientation.TRUETYPE : SDFOrientation.POSTSCRIPT;
         }
         public uint UnitsPerEM
