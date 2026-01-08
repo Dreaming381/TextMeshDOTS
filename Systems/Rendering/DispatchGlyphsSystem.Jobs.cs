@@ -10,6 +10,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using static UnityEditor.U2D.ScriptablePacker;
 
 namespace TextMeshDOTS
 {
@@ -285,7 +286,7 @@ namespace TextMeshDOTS
                 if (face.HasVarData && font.currentVariableProfileIndex != glyphEntry.key.variableProfileIndex)
                     font = fontTable.SetVariableProfile(glyphEntry.key.faceIndex, threadIndex, glyphEntry.key.variableProfileIndex);
 
-                var samplingSize = glyphEntry.key.textureSize.GetSamplingSize();
+                var samplingSize = glyphEntry.key.GetSamplingSize();
                 font.SetScale(samplingSize, samplingSize);
                 var maxDeviation = BezierMath.GetMaxDeviation(font.GetScale().x);
                 if (!drawData.edges.IsCreated)

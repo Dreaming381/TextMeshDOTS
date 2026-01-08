@@ -223,7 +223,7 @@ namespace TextMeshDOTS
                 if (renderFormat == RenderFormat.SDF8 && fontConfig.m_fontTextureSize != FontTextureSize.Normal)
                     renderFormat = RenderFormat.SDF16;
 
-                var samplingSize = fontConfig.m_fontTextureSize.GetSamplingSize();
+                var samplingSize = FontEnumerationExtensions.GetSamplingSize(renderFormat, fontConfig.m_fontTextureSize);
                 font.SetScale(samplingSize, samplingSize);
 
                 //Debug.Log($"shape {text} {startIndex} {length}");

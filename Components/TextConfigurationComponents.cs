@@ -258,17 +258,30 @@ namespace TextMeshDOTS
 
         public static int Value(this FontWeight fontWeight) => 100 * (int)fontWeight;
 
-        internal static int GetSamplingSize(this FontTextureSize fontTextureSize)
+        internal static int GetSamplingSize(this GlyphTable.Key key)
         {
-            // Todo: It would be nice if we could split this based on glyph type, but currently glyph generation
-            // is dependent on the base configuration font
-            return fontTextureSize switch
+            return GetSamplingSize(key.format, key.textureSize);
+        }
+        internal static int GetSamplingSize(RenderFormat format, FontTextureSize textureSize)
+        {
+            switch ((format, textureSize))
             {
-                FontTextureSize.Normal => 64,  // Todo: 64 SDF8, 128 color
-                FontTextureSize.Big => 256,  // Todo: 256 SDF16, 512 color
-                FontTextureSize.Massive => 4096,  // Todo: 1024 SDF16, 4096 color
-                _ => 64
-            };
+                case (RenderFormat.SDF8, FontTextureSize.Normal):
+                    return 64;
+                case (RenderFormat.SDF8, FontTextureSize.Big):
+                case (RenderFormat.SDF16, FontTextureSize.Big):
+                case (RenderFormat.Bitmap8888, FontTextureSize.Normal):
+                    return 128;
+                case (RenderFormat.SDF16, FontTextureSize.Massive):
+                case (RenderFormat.SDF8, FontTextureSize.Massive):
+                    return 256;
+                case (RenderFormat.Bitmap8888, FontTextureSize.Big):
+                    return 512;
+                case (RenderFormat.Bitmap8888, FontTextureSize.Massive):
+                    return 4096;
+                default:
+                    return 64;
+            }
         }
     }
 }

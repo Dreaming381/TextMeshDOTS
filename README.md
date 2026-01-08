@@ -34,7 +34,7 @@ for rendering.
 <b>Font Resource Management</b> Prior to version 0.9.0, TextMeshDOTS used 
 for each font a static atlas textures, borrowed from the Unity `TextCore` `FontAsset`. As of version 0.9.0, TextMeshDOTS 
 generates all required glyph data and font textures dynamically using the [Harfbuzz](https://harfbuzz.github.io/) 
-library, was however limited to one 4k atlas texture per font. Handling multiple fonts remained challening, 
+library, was however limited to one 4k atlas texture per font. Handling multiple fonts remained challenging, 
 which prompted Dreaming381 to vastly simplify resource management by storing all SDF and color bitmaps in two 
 global atlas texture arrays. Dreaming381 also implemented a GPU resident representation of the glyph vertex data. 
 These GPU resident buffer are automatically and incrementally updated when changes occur. 
@@ -58,7 +58,7 @@ just one entity and one material.
   - **Prepare fonts** Please note that pretty much any font such as "Arial" in Windows actually consists of 
    multiple font files (e.g. one for `regular`, one for `bold`, one for `italic`, one for `bold italic`. There 
    can be many more to provide variations of font width (regular, condensed, expanded etc), font weight 
-   (bold, sembibold, black etc), italic, different optical design sizes etc. You need all of these files 
+   (bold, semibold, black etc), italic, different optical design sizes etc. You need all of these files 
    to enable TextMeshDOTS to automatically select the right font when you apply different `FontStyles`. 
    In TrueType Collection fonts, a number of pre-defined variants are stored within just one `ttc` file. 
    Variable fonts are similar to TrueType Collection fonts, however the files are much smaller because the 
@@ -101,7 +101,15 @@ just one entity and one material.
       For vertical gradients at least top & bottom-left. Otherwise specify all corner.
 
 # Runtime workflows
-(1) Optional Runtime font instantiation workflow
+(1) Optional spawning of `TextRenderer` at runtime
+  - Runtime spawned `TextRenderer` need a material registered with Entity Graphics. In order to that, you need to bake a
+	`TMD Runtime Material`. To do so, add an empty `GameObject`, add `TMD Runtime Material` component to it. Drop one 
+	 of the materials you generated in  step 1 of the authoring workflow (see above) into the material field. 	
+  - Write a runtime `TextRenderer` Spawner. You can follow the approach found in the package folder 
+   `TextMeshDOTS\RuntimeSpawner\RuntimeTextRendererSpawner.cs` Per default, auto creation of this system 
+    is disabled. In case you like to test this workflows, enable the system, hit play and you should see some 
+    text spawned at runtime.  
+(2) Optional Runtime font instantiation workflow
   -	In case you like to load fonts while your app is running, you can use the approach found 
     in the package folder `TextMeshDOTS\RuntimeSpawner\RuntimeFontSpawner.cs`
   - You will notice, that you need to manually fill out a lot of information in the `FontRequest` struct for every font 
@@ -112,15 +120,6 @@ just one entity and one material.
       (in case you intend to use `System Fonts`) into the font field, and copy the information 
       over into your runtime spawner. I know this is cumbersome, and in order to improve the workflow I would love 
       to hear about your concrete use cases that would require dynamic loading of fonts at runtime.
-
-(2) Optional spawning of `TextRenderer` at runtime
-  - Runtime spawed Text Render need a mataterial registered with Entity Graphics. In order to that, you need to bake a
-	`TMD Runtime Material`. To do so, add an empty `GameObject`, add `TMD Runtime Material` component to it. Drop one 
-	 of the materials you generated in  step 1 of the Authoring worflow (see above) into the material field. 	
-  - Write a runtime Text Renderer Spawner. You can follow the approach found in the package folder 
-   `TextMeshDOTS\RuntimeSpawner\RuntimeTextRendererSpawner.cs` Per default, auto creation of this system 
-    is disabled. In case you like to test this workflows, enable the system, hit play and you should see some 
-    text spawned at runtime.  
 
 # Changing text at runtime
   - Text is stored in the `CalliString` DynamicBuffer. Querry for that buffer and change it. Identify `TextRenderer`
@@ -144,7 +143,7 @@ Alpha values are specified via \<alpha=#FF\>.
   - \<sub\> and \<sup\>  are currently implemented using the font opentype feature. For most 
     fonts, this only works  for digits and a few characters. One could simulate \<sub\> and \<sup\> 
     for all glyphs via scaling & offsetting, but this comes at the cost of glyphs that are optically too thin. 
-    The code for switching from one to the other is present and you could localy modify the package if you desire
+    The code for switching from one to the other is present and you could locally modify the package if you desire
 
 ## Special Thanks to the original authors and contributors
 

@@ -2,11 +2,9 @@
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
-using Unity.Mathematics;
 using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
 using ClipType = TextMeshDOTS.Clipper2AoS.ClipType;
 using FillRule = TextMeshDOTS.Clipper2AoS.FillRule;

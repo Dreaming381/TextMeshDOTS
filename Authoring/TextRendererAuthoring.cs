@@ -39,7 +39,7 @@ namespace TextMeshDOTS.Authoring
         public float lineSpacing = 0;
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
-        [Tooltip("Laguege of text. Use BCP conform tags. https://en.wikipedia.org/wiki/IETF_language_tag#List_of_common_primary_language_subtags")]
+        [Tooltip("Use BCP 47 conform tags to set the language of this text https://en.wikipedia.org/wiki/IETF_language_tag#List_of_common_primary_language_subtags)")]
         public string language = "en";
         public Material material;
         public FontTextureSize fontTextureSize;

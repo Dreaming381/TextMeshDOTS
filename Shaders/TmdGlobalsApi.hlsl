@@ -198,7 +198,7 @@ void GetGlyphFromBuffer_float(float2 textShaderIndex, float vertexID, out float3
     tangent = float3(1.0, 0.0, 0.0);
     vertexColor = color;
     uvAandB = float4(uvA.xy, uvB);
-    atlasIndexScaleIsSdf16IsBitmap = float4(uvA.z, scale, isSdf16, isBitmap);
+	atlasIndexScaleIsSdf16IsBitmap = float4(uvA.z, scale, isSdf16, isBitmap);
 }
 
 
@@ -220,7 +220,8 @@ void GetGlyphFromBuffer_float(float2 textShaderIndex, float vertexID, out float3
 void GetSurfaceNormal(
     UnityTexture2DArray sdf,
     float2 texelSize, 
-    float3 uvA,
+    float2 uvA,
+	float arrayIndex,
     float SDR,
     bool isFront,     
     bool innerBevel,
@@ -234,10 +235,10 @@ void GetSurfaceNormal(
 
 	// Read "height field"
     float4 h = float4(
-		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - delta.xz, uvA.z).r,
-		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy + delta.xz, uvA.z).r,
-		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - delta.zy, uvA.z).r,
-		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy + delta.zy, uvA.z).r);
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - delta.xz, arrayIndex).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy + delta.xz, arrayIndex).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - delta.zy, arrayIndex).r,
+		SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy + delta.zy, arrayIndex).r);
     
 
     //h += _BevelOffset;
@@ -263,65 +264,6 @@ void GetSurfaceNormal(
     normal = cross(va, vb) * f;
 }
 
-void SampleTexture2DArrayLIT_float(
-    float4 uvAandB, 
-    float4 atlasIndexScaleIsSdf16IsBitmap,
-    bool isFront,
-    bool innerBevel,
-    float bevelAmount,
-    float bevelWidth,
-    float bevelRoundness,
-    float bevelClamp,
-    out bool isBitmap,   
-    out float4 rgba, 
-    out float3 normal,
-    out float3 uvA, 
-    out float2 uvB, 
-    out float scale, 
-    out float2 texelSize)
-{
-    uint width, height, elements, numberOfLevels;
-    uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
-    uvB = uvAandB.zw;
-    scale = atlasIndexScaleIsSdf16IsBitmap.y;
-    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
-    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
-    
-    if (isBitmap)
-    {
-        _tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-        texelSize = 1.0f / float2(width, height);
-        
-        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
-        rgba = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
-        normal = float3(0, 0, -1);
-        return;
-    }
-    else
-    {
-        // The signed distance ratio is the padding value + 1.
-		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
-        if (isSdf16)
-        {
-            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-            texelSize = 1.0f / float2(width, height);
-            
-            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
-            rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
-            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
-        }
-        else
-        {
-            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-            texelSize = 1.0f / float2(width, height);
-            
-            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
-            rgba = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z);
-            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
-        }
-    }
-}
 //sample SDF 5+4 times: face, outline1, outline2, outline3, underlay, and 4x for light normal
 void Sample5Texture2DArrayLIT_float(
     float4 uvAandB,
@@ -339,40 +281,40 @@ void Sample5Texture2DArrayLIT_float(
     out bool isBitmap,
     out float4 bitmapColor,
     out float2 texelSize,
+	out float SDR,
     out float4 SD,      //x: face, y: outline1, z: outline2, w: outline3
     out float underlaySD,    
     out float3 normal,    
+	out float2 uvA,
     out float2 uvB,
     out float scale)
 {
-    uint width, height, elements, numberOfLevels;
-    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
-    uvB = uvAandB.zw;
-    scale = atlasIndexScaleIsSdf16IsBitmap.y;
-    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
-    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
-    SD = float4(0, 0, 0, 0);
-    
+	uint width, height, elements, numberOfLevels;
+	uvA = uvAandB.xy;
+	uvB = uvAandB.zw;
+	float arrayIndex = atlasIndexScaleIsSdf16IsBitmap.x;
+	scale = atlasIndexScaleIsSdf16IsBitmap.y;
+	bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+	isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+	SD = 0;
+	SDR = 0;
     if (isBitmap)
 	{
 		_tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
 		texelSize = 1.0f / float2(width, height);
                  
         UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
-        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, arrayIndex);
         normal = float3(0, 0, -1);
         underlaySD = 0;    
         return;
     }
     else
     {
-        // The signed distance ratio is the padding value + 1.
-		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
-        bitmapColor = float4(0,0,0,0);
-        
+        bitmapColor = float4(0,0,0,0);        
         if (isSdf16)
         {
+			SDR = 32; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             float offSetScale = SDR * texelSize.x;            
@@ -383,16 +325,17 @@ void Sample5Texture2DArrayLIT_float(
             underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;             
-            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, uvA.z).r;            
-            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, uvA.z).r;
-            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, arrayIndex).r;             
+            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, arrayIndex).r;            
+            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, arrayIndex).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, arrayIndex).r;
             
-            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
-        }
+			GetSurfaceNormal(sdf, texelSize, uvA, arrayIndex, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+		}
         else
         {
+			SDR = 16; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             float offSetScale = SDR * texelSize.x;
@@ -403,14 +346,14 @@ void Sample5Texture2DArrayLIT_float(
             underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
-            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, uvA.z).r;
-            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, uvA.z).r;
-            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, arrayIndex).r;
+            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, arrayIndex).r;
+            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, arrayIndex).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, arrayIndex).r;
             
-            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
-        }
+			GetSurfaceNormal(sdf, texelSize, uvA, arrayIndex, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+		}
     }
 }
 //sample SDF 5 times: face, outline1, outline2, outline3, underlay
@@ -424,38 +367,38 @@ void Sample5Texture2DArrayUNLIT_float(
     out bool isBitmap,
     out float4 bitmapColor,
     out float2 texelSize,
+	out float SDR,
     out float4 SD, //x: face, y: outline1, z: outline2, w: outline3
     out float underlaySD,
+	out float2 uvA,
     out float2 uvB,
     out float scale)
 {
-    uint width, height, elements, numberOfLevels;
-    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
-    uvB = uvAandB.zw;
-    scale = atlasIndexScaleIsSdf16IsBitmap.y;
-    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
-    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
-    SD = float4(0, 0, 0, 0);
-    
+	uint width, height, elements, numberOfLevels;
+	uvA = uvAandB.xy;
+	uvB = uvAandB.zw;
+	float arrayIndex = atlasIndexScaleIsSdf16IsBitmap.x;
+	scale = atlasIndexScaleIsSdf16IsBitmap.y;
+	bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+	isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+	SD = 0;
+	SDR = 0;
     if (isBitmap)
 	{
 		_tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
 		texelSize = 1.0f / float2(width, height);
         
         UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
-        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, arrayIndex);
         underlaySD = 0;
         return;
     }
     else
     {
-        // The signed distance ratio is the padding value + 1.
-		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
-        bitmapColor = float4(0, 0, 0, 0);
-        
+        bitmapColor = float4(0, 0, 0, 0);        
         if (isSdf16)
         {
+			SDR = 32; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             float offSetScale = SDR * texelSize.x;
@@ -466,14 +409,15 @@ void Sample5Texture2DArrayUNLIT_float(
             underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
-            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, uvA.z).r;
-            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, uvA.z).r;
-            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, arrayIndex).r;
+            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, arrayIndex).r;
+            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, arrayIndex).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, arrayIndex).r;
         }
         else
         {
+			SDR = 16; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             float offSetScale = SDR * texelSize.x;
@@ -484,11 +428,11 @@ void Sample5Texture2DArrayUNLIT_float(
             underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
-            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, uvA.z).r;
-            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, uvA.z).r;
-            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, arrayIndex).r;
+            SD.z = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor2Offset, arrayIndex).r;
+            SD.w = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor3Offset, arrayIndex).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, arrayIndex).r;
         }
     }
 }
@@ -508,40 +452,40 @@ void Sample3Texture2DArrayLIT_float(
     out bool isBitmap,
     out float4 bitmapColor,
     out float2 texelSize,
+	out float SDR,
     out float2 SD, //x: face, y: outline1
     out float underlaySD,
     out float3 normal,
+	out float2 uvA,
     out float2 uvB,
     out float scale)
 {
-    uint width, height, elements, numberOfLevels;
-    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
-    uvB = uvAandB.zw;
-    scale = atlasIndexScaleIsSdf16IsBitmap.y;
-    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
-    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
-    SD = float2(0, 0);
-    
+	uint width, height, elements, numberOfLevels;
+	uvA = uvAandB.xy;
+	uvB = uvAandB.zw;
+	float arrayIndex = atlasIndexScaleIsSdf16IsBitmap.x;
+	scale = atlasIndexScaleIsSdf16IsBitmap.y;
+	bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+	isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+	SD = 0;
+	SDR = 0;
     if (isBitmap)
 	{
 		_tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
 		texelSize = 1.0f / float2(width, height);
         
         UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
-        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, arrayIndex);
         normal = float3(0, 0, -1);
         underlaySD = 0;
         return;
     }
     else
     {
-        // The signed distance ratio is the padding value + 1.
-		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
-        bitmapColor = float4(0, 0, 0, 0);
-        
+        bitmapColor = float4(0, 0, 0, 0);        
         if (isSdf16)
         {
+			SDR = 32; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             float offSetScale = SDR * texelSize.x;
@@ -550,14 +494,15 @@ void Sample3Texture2DArrayLIT_float(
             underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
-            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, arrayIndex).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, arrayIndex).r;
             
-            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
-        }
+			GetSurfaceNormal(sdf, texelSize, uvA, arrayIndex, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+		}
         else
         {
+			SDR = 16; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             float offSetScale = SDR * texelSize.x;
@@ -566,12 +511,12 @@ void Sample3Texture2DArrayLIT_float(
             underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
-            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, arrayIndex).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, arrayIndex).r;
             
-            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
-        }
+			GetSurfaceNormal(sdf, texelSize, uvA, arrayIndex, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+		}
     }
 }
 //sample SDF 3 times: face, outline1, underlay
@@ -583,38 +528,38 @@ void Sample3Texture2DArrayUNLIT_float(
     out bool isBitmap,
     out float4 bitmapColor,
     out float2 texelSize,
+	out float SDR,
     out float2 SD, //x: face, y: outline1
     out float underlaySD,
+	out float2 uvA,
     out float2 uvB,
     out float scale)
 {
-    uint width, height, elements, numberOfLevels;
-    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
-    uvB = uvAandB.zw;
-    scale = atlasIndexScaleIsSdf16IsBitmap.y;
-    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
-    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
-    SD = float2(0, 0);
-    
+	uint width, height, elements, numberOfLevels;
+	uvA = uvAandB.xy;
+	uvB = uvAandB.zw;
+	float arrayIndex = atlasIndexScaleIsSdf16IsBitmap.x;
+	scale = atlasIndexScaleIsSdf16IsBitmap.y;
+	bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+	isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+	SD = 0;
+	SDR = 0;
     if (isBitmap)
 	{
 		_tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
 		texelSize = 1.0f / float2(width, height);
         
         UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
-        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, arrayIndex);
         underlaySD = 0;
         return;
     }
     else
     {
-        // The signed distance ratio is the padding value + 1.
-		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
-        bitmapColor = float4(0, 0, 0, 0);
-        
+        bitmapColor = float4(0, 0, 0, 0);        
         if (isSdf16)
         {
+			SDR = 32; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             float offSetScale = SDR * texelSize.x;
@@ -623,12 +568,13 @@ void Sample3Texture2DArrayUNLIT_float(
             underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
-            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, arrayIndex).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, arrayIndex).r;
         }
         else
         {
+			SDR = 16; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             float offSetScale = SDR * texelSize.x;
@@ -637,9 +583,9 @@ void Sample3Texture2DArrayUNLIT_float(
             underlayColorOffset *= offSetScale;
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, uvA.z).r;
-            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, uvA.z).r;
+            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+            SD.y = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - outlineColor1Offset, arrayIndex).r;
+            underlaySD = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy - underlayColorOffset, arrayIndex).r;
         }
     }
 }
@@ -656,110 +602,113 @@ void Sample1Texture2DArrayLIT_float(
     out bool isBitmap,
     out float4 bitmapColor,
     out float2 texelSize,
+	out float SDR,
     out float SD, //x: face
     out float3 normal,
+	out float2 uvA,
     out float2 uvB,
     out float scale)
 {
-    uint width, height, elements, numberOfLevels;
-    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
-    uvB = uvAandB.zw;
-    scale = atlasIndexScaleIsSdf16IsBitmap.y;
-    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
-    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+	uint width, height, elements, numberOfLevels;
+	uvA = uvAandB.xy;
+	uvB = uvAandB.zw;
+	float arrayIndex = atlasIndexScaleIsSdf16IsBitmap.x;
+	scale = atlasIndexScaleIsSdf16IsBitmap.y;
+	bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+	isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
     SD = 0;
-    
+	SDR = 0;
     if (isBitmap)
 	{
 		_tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
 		texelSize = 1.0f / float2(width, height);
         
         UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
-        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
+		bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, arrayIndex);
         normal = float3(0, 0, -1);
         return;
     }
     else
     {
-        // The signed distance ratio is the padding value + 1.
-		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
-        bitmapColor = float4(0, 0, 0, 0);
-        
+        bitmapColor = float4(0, 0, 0, 0);        
         if (isSdf16)
         {
+			SDR = 32; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+			SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
             
-            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
-        }
+			GetSurfaceNormal(sdf, texelSize, uvA, arrayIndex, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+		}
         else
         {
+			SDR = 16; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
             _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
             texelSize = 1.0f / float2(width, height);
             
             UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
+			SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
             
-            GetSurfaceNormal(sdf, texelSize, uvA, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
-        }
+			GetSurfaceNormal(sdf, texelSize, uvA, arrayIndex, SDR, isFront, innerBevel, bevelAmount, bevelWidth, bevelRoundness, bevelClamp, normal);
+		}
     }
 }
+
 //sample SDF 1 time: face
 void Sample1Texture2DArrayUNLIT_float(
     float4 uvAandB,
-    float4 atlasIndexScaleIsSdf16IsBitmap,    
+    float4 atlasIndexScaleIsSdf16IsBitmap,
     out bool isBitmap,
     out float4 bitmapColor,
     out float2 texelSize,
+	out float SDR,
     out float SD, //x: face
+	out float2 uvA,
     out float2 uvB,
     out float scale)
 {
-    uint width, height, elements, numberOfLevels;
-    float3 uvA = float3(uvAandB.xy, atlasIndexScaleIsSdf16IsBitmap.x);
-    uvB = uvAandB.zw;
-    scale = atlasIndexScaleIsSdf16IsBitmap.y;
-    bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
-    isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
-    SD = 0;
-    
-    if (isBitmap)
+	uint width, height, elements, numberOfLevels;
+	uvA = uvAandB.xy;	
+	uvB = uvAandB.zw;
+	float arrayIndex = atlasIndexScaleIsSdf16IsBitmap.x;
+	scale = atlasIndexScaleIsSdf16IsBitmap.y;
+	bool isSdf16 = atlasIndexScaleIsSdf16IsBitmap.z;
+	isBitmap = atlasIndexScaleIsSdf16IsBitmap.w;
+	SD = 0;
+	SDR = 0;
+	if (isBitmap)
 	{
 		_tmdBitmap.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
 		texelSize = 1.0f / float2(width, height);
         
-        UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
-        bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, uvA.z);
-        return;
-    }
-    else
-    {
-        // The signed distance ratio is the padding value + 1.
-		// Todo: Need to pack the sampling point size enumeration into glyphEntryID.
-		float SDR = 9.0; // SDR : Signed Distance Ratio, = padding + 1 (usage in ComputeSDF suggests this is actually SPREAD)
-        bitmapColor = float4(0, 0, 0, 0);
-        
-        if (isSdf16)
-        {
-            _tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-            texelSize = 1.0f / float2(width, height);
+		UnityTexture2DArray bitmap = UnityBuildTexture2DArrayStruct(_tmdBitmap);
+		bitmapColor = SAMPLE_TEXTURE2D_ARRAY(bitmap, sampler_LinearClamp, uvA.xy, arrayIndex);
+		return;
+	}
+	else
+	{
+		bitmapColor = float4(0, 0, 0, 0);        
+		if (isSdf16)
+		{
+			SDR = 32; // = spread * 2 Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
+			_tmdSdf16.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+			texelSize = 1.0f / float2(width, height);
             
-            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-        }
-        else
-        {
-            _tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
-            texelSize = 1.0f / float2(width, height);
+			UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf16);
+			SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+		}
+		else
+		{
+			SDR = 16.0; // spread * 2. Note: choice of spread is tied to sampling size...pure coincidental that we can derive it from bit depth
+			_tmdSdf8.GetDimensions(0, width, height, elements, numberOfLevels); // Get dimensions of mip level 0
+			texelSize = 1.0f / float2(width, height);
             
-            UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
-            SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, uvA.z).r;
-        }
-    }
+			UnityTexture2DArray sdf = UnityBuildTexture2DArrayStruct(_tmdSdf8);
+			SD.x = SAMPLE_TEXTURE2D_ARRAY(sdf, sampler_LinearClamp, uvA.xy, arrayIndex).r;
+		}
+	}
 }
 void GenerateUV(float2 inUV, float2 tiling, float2 offset, float2 animSpeed, out float2 outUV)
 {

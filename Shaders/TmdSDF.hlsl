@@ -26,50 +26,41 @@ void GetFontWeight4_float(float4 dilationIN, float scale, float weightNormal, fl
 }
 // UV			: Texture coordinate of the source distance field texture
 // texelSize	: texelSize of the source distance field texture
-void ScreenSpaceRatio(float2 uvA, float2 texelSize, out float SSR)
-{
-    SSR = rsqrt(abs(ddx(uvA.x) * ddy(uvA.y) - ddy(uvA.x) * ddx(uvA.y))) * texelSize.x;
+// return: pixels per texel
+void ScreenSpaceRatio_float(float2 texelSize, float SDR, float2 uvA, out float SSR)
+{	
+	float2x2 pixelFootprint = float2x2(ddx(uvA), ddy(uvA));
+	float pixelFootprintDiameterSqr = abs(determinant(pixelFootprint)); // Calculate the area under the pixel =  "Jacobian determinant" 
+	SSR = rsqrt(pixelFootprintDiameterSqr) * texelSize.x;				//pixels per texel
+	
+	// Prevent collapse at extreme minification
+	float minSSR = 1.0 / SDR; // one SDF range per pixel
+	SSR = max(SSR, minSSR);
 }
 
-//compute alpha from SDF
-// SDF  : Signed Distance (encoded : Distance / SDR + .5)
-// SDR : max distance in SDF texels
+// SSR : Screen Space Ratio
+// SDD  : Signed Distance (encoded : Distance / SDR + .5)
+// SDR : 2x SPREAD (see last parameter in SDFGenerateSubDivisionLineEdges)
 // dilation: dilate / contract the shape, normalized [-1,+1]
-// softness, // 1 = default
-void ComputeSDF_float(float SDF, float SDR, float dilation, float softness, out float outAlpha)
-{    
-	float sdf = (SDF - 0.5) * SDR;					// Decode signed distance in distance units    
-	sdf += dilation * SDR;							// Distance-domain dilation    
-	float w = length(float2(ddx(sdf), ddy(sdf)));	// Screen-space filter width
-	w *= softness;									// Artistic control    
-	w = max(w, 1e-5);								// Numerical safety
-	outAlpha = smoothstep(-w, w, sdf);
+void ComputeSDF_float(float SSR, float SDR, float SDF, float dilation, float softness, out float outAlpha)
+{
+	softness *= SSR * SDR;
+	float d = (SDF - 0.5) * SDR; // Signed distance to edge, in Texture space
+	outAlpha = saturate((d * 2.0 * SSR + 0.5 + dilation * SDR * SSR + softness * 0.5) / (1.0 + softness)); // Screen pixel coverage (alpha)
 }
 
-void ComputeSDF2_float(float2 SDF, float SDR, float2 dilation, float2 softness, out float2 outAlpha)
+void ComputeSDF2_float(float SSR, float SDR, float2 SDF, float2 dilation, float2 softness, out float2 outAlpha)
 {
-	float2 sdf = (SDF - 0.5) * SDR;					// Decode signed distance in distance units    
-	sdf += dilation * SDR;							// Distance-domain dilation	
-	//float w = length(float2(ddx(sdf), ddy(sdf))); // Screen-space filter width
-	float2 ddpx = ddx(sdf);
-	float2 ddpy = ddy(sdf);
-	float2 w = sqrt(dot(ddpx, ddpy));				// Screen-space filter width
-	w *= softness;									// Artistic control    
-	w = max(w, 1e-5);								// Numerical safety
-	outAlpha = smoothstep(-w, w, sdf);
+	softness *= SSR * SDR;
+	float2 d = (SDF - 0.5) * SDR; // Signed distance to edge, in Texture space
+	outAlpha = saturate((d * 2.0 * SSR + 0.5 + dilation * SDR * SSR + softness * 0.5) / (1.0 + softness)); // Screen pixel coverage (alpha)
 }
 
-void ComputeSDF4_float(float4 SDF, float SDR, float4 dilation, float4 softness, out float4 outAlpha)
+void ComputeSDF4_float(float SSR, float SDR, float4 SDF, float4 dilation, float4 softness, out float4 outAlpha)
 {
-	float4 sdf = (SDF - 0.5) * SDR;					// Decode signed distance in distance units    
-	sdf += dilation * SDR;							// Distance-domain dilation	
-	//float w = length(float2(ddx(sdf), ddy(sdf))); // Screen-space filter width
-	float4 ddpx = ddx(sdf);
-	float4 ddpy = ddy(sdf);
-	float4 w = sqrt(dot(ddpx, ddpy));				// Screen-space filter width
-	w *= softness;									// Artistic control    
-	w = max(w, 1e-5);								// Numerical safety
-	outAlpha = smoothstep(-w, w, sdf);
+	softness *= SSR * SDR;
+	float4 d = (SDF - 0.5) * SDR; // Signed distance to edge, in Texture space
+	outAlpha = saturate((d * 2.0 * SSR + 0.5 + dilation * SDR * SSR + softness * 0.5) / (1.0 + softness)); // Screen pixel coverage (alpha)
 }
 
 // Face only
