@@ -323,14 +323,14 @@ namespace TextMeshDOTS
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
                     }
-                    SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
+                    SDF_line.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
                                                              ref drawData,
                                                              ref sdf8TextureSlice,
                                                              ref paddedAtlasRect,
                                                              glyphEntry.padding,
                                                              kTextureDimension,
                                                              kTextureDimension,
-                                                             8);  //suggest to hardwire spread to 8 for SDF8 and 16 for SDF16
+                                                             8);  // use SPREAD = 8 for SDF with 64px sampling size (and 8 bit alpha)
                 }
                 else if (glyphEntry.key.format == RenderFormat.SDF16)
                 {
@@ -362,14 +362,15 @@ namespace TextMeshDOTS
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
                     }
-                    SDF_SPMD.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
+                    SDF_line.SDFGenerateSubDivisionLineEdges(face.sdfOrientation,
                                                              ref drawData,
                                                              ref sdf16TextureSlice,
                                                              ref paddedAtlasRect,
                                                              glyphEntry.padding,
                                                              kTextureDimension,
                                                              kTextureDimension,
-                                                             16);  //suggest to hardwire spread to 8 for SDF8 and 16 for SDF16
+                                                             16);  // use SPREAD = 16 for SDF with 128px sampling size (and 8 bit alpha).
+                                                                   // To-Do: use SPREAD = 32 for SDF with 256px sampling size
                 }
                 else if (glyphEntry.key.format == RenderFormat.Bitmap8888)
                 {

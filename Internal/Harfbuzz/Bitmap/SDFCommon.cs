@@ -223,88 +223,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             distances[index] = validDistance;
             crosses[index] = validCross;
             signs[index] = validSign;
-        }
+        }        
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ValidateDistanceCrossSign(
-                    ref float4 distance,
-                    ref float4 cross,
-                    ref int4 sign,
-                    ref float4 targetDistance,
-                    ref float4 targetCross,
-                    ref int4 targetSign,
-                    float sp_sq,
-                    out float4 validDistance,
-                    out float4 validCross,
-                    out int4 validSign
-                    )
-        {
-            var condition = math.abs(cross) > math.abs(targetCross);
-            var resolverCornerDistance = math.select(targetDistance, distance, condition);
-            var resolverCornerCross = math.select(targetCross, cross, condition);
-            var resolverCornerSign = math.select(targetSign, sign, condition);
-
-            condition = targetDistance > distance;
-            var greaterDistance = math.select(targetDistance, distance, condition);
-            var greaterCross = math.select(targetCross, cross, condition);
-            var greaterSign = math.select(targetSign, sign, condition);
-
-            condition = BezierMath.EqualsForLargeValues(targetDistance, distance);
-            var equalDistance = math.select(greaterDistance, resolverCornerDistance, condition);
-            var equalCross = math.select(greaterCross, resolverCornerCross, condition);
-            var equalSign = math.select(greaterSign, resolverCornerSign, condition);
-
-            condition = targetSign == 0;
-            var pixelNotSetDistance = math.select(equalDistance, distance, condition);
-            var pixelNotSetCross = math.select(equalCross, cross, condition);
-            var pixelNotSetSign = math.select(equalSign, sign, condition);
-
-            // ignore if the distance is greater than spread to avoid artifacts caused by wrong sign
-            condition = distance > sp_sq;
-            validDistance = math.select(pixelNotSetDistance, targetDistance, condition);
-            validCross = math.select(pixelNotSetCross, targetCross, condition);
-            validSign = math.select(pixelNotSetSign, targetSign, condition);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ValidateDistanceCrossSign(
-            ref float distance,
-            ref float cross,
-            ref int sign,
-            ref float targetDistance,
-            ref float targetCross,
-            ref int targetSign,
-            float sp_sq,
-            out float validDistance,
-            out float validCross,
-            out int validSign
-            )
-        {
-            var condition = math.abs(cross) > math.abs(targetCross);
-            var resolverCornerDistance = math.select(targetDistance, distance, condition);
-            var resolverCornerCross = math.select(targetCross, cross, condition);
-            var resolverCornerSign = math.select(targetSign, sign, condition);
-
-            condition = targetDistance > distance;
-            var greaterDistance = math.select(targetDistance, distance, condition);
-            var greaterCross = math.select(targetCross, cross, condition);
-            var greaterSign = math.select(targetSign, sign, condition);
-
-            condition = BezierMath.EqualsForLargeValues(targetDistance, distance);
-            var equalDistance = math.select(greaterDistance, resolverCornerDistance, condition);
-            var equalCross = math.select(greaterCross, resolverCornerCross, condition);
-            var equalSign = math.select(greaterSign, resolverCornerSign, condition);
-
-            condition = targetSign == 0;
-            var pixelNotSetDistance = math.select(equalDistance, distance, condition);
-            var pixelNotSetCross = math.select(equalCross, cross, condition);
-            var pixelNotSetSign = math.select(equalSign, sign, condition);
-
-            // ignore if the distance is greater than spread to avoid artifacts caused by wrong sign
-            condition = distance > sp_sq;
-            validDistance = math.select(pixelNotSetDistance, targetDistance, condition);
-            validCross = math.select(pixelNotSetCross, targetCross, condition);
-            validSign = math.select(pixelNotSetSign, targetSign, condition);
-        }
+        
 
         /// <summary> legacy method provides early out to skip many ops </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -362,7 +283,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         }
         /// <summary> legacy method provides early out to skip many ops </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ValidateDistanceCrossSign_Legacy(
+        public static void ValidateDistanceCrossSign(
             ref float distance,
             ref float cross,
             ref int sign,
@@ -410,52 +331,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             validDistance = targetDistance;
             validCross = targetCross;
             validSign = targetSign;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetMinDistanceLineToPoint(float4 ax, float4 ay, float4 bx, float4 by, float4 px, float4 py, out float4 distance, out float4 cross, out int4 sign)
-        {
-            var abx = bx - ax;                          // Vector from A to B
-            var aby = by - ay;                          // Vector from A to B
-            var apx = px - ax;                          // Vector from A to P
-            var apy = py - ay;                          // Vector from A to P
-            var abLengthSq = abx * abx + aby * aby;     // squared distance from A to B 
-            var abLength = math.sqrt(abLengthSq);       // normalized distance from A to B 
-            var frac = abx * apx + aby * apy;
-            frac = math.max(frac, 0.0f);                // Check if P projection is over vectorAB 
-            frac = math.min(frac, abLengthSq);          // Check if P projection is over vectorAB 
-
-            frac /= abLengthSq;                         // The normalized "distance" from a to your closest point
-            var nx = ax + abx * frac;                   // nearest point on egde
-            var ny = ay + aby * frac;                   // nearest point on egde
-
-            var npx = px - nx;                          // Vector from nearest point to P
-            var npy = py - ny;                          // Vector from nearest point to P
-            var npLengthSq = npx * npx + npy * npy;     // squared distance from nearest point to P
-            var npLength = math.sqrt(npLengthSq);       // normalized distance from nearest point to P
-
-            var abxNorm = abx / abLength;
-            var abyNorm = aby / abLength;
-            var pnxNorm = npx / npLength;
-            var pnyNorm = npy / npLength;
-
-            // cross of normalized vector A--B with nP->P. 
-            // positive if the points A, B, and P occur in counterclockwise order
-            // (CCW, P lies to the left of the vector from A to B).
-            // negative if they occur in clockwise order
-            // (CW, P lies to the right of the vector from A to B).
-            // this result is identical with ORIENT2D
-            // the sign of the cross is used determine the sign of the distance
-            // so this here is the heart of the SDF renderer
-            // Note: Truetype and Postscript differ in how "inside" is defined
-            // so sign might need to be flipped when generating final texture
-            cross = BezierMath.cross2D(abxNorm, abyNorm, pnxNorm, pnyNorm);
-            sign = math.select(1, -1, cross < 0);
-            distance = math.select(npLength, npLengthSq, USE_SQUARED_DISTANCES);
-
-            var isEndPoint = math.abs(frac) < BezierMath.epsilon1Float_abs | BezierMath.EqualsForSmallValues(frac, 1, BezierMath.epsilon1Float_abs);
-            cross = math.select(1, cross, isEndPoint);
-        }
+        }        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetMinDistanceLineToPoint(float ax, float ay, float bx, float by, float px, float py, out float distance, out float cross, out int sign)

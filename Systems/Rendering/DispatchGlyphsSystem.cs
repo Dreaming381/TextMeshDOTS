@@ -83,6 +83,8 @@ namespace TextMeshDOTS
             _tmdSdf16  = Shader.PropertyToID("_tmdSdf16");
             _tmdBitmap = Shader.PropertyToID("_tmdBitmap");
             _tmdGlyphs = Shader.PropertyToID("_tmdGlyphs");
+            var dummyBuffer = m_glyphsBuffer.GetBuffer(0);
+            Shader.SetGlobalBuffer(_tmdGlyphs, dummyBuffer); // fix unbound _tmdGlyphs buffer issue
 
             var initialAtlasArraySize = kEnableComputePixelUpload ? 1 : 2; // RenderTexture supports array size 1
             m_sdf8Array   = new TextureAtlasArray<byte>(_tmdSdf8, kTextureDimension, initialAtlasArraySize, TextureFormat.R8, false, true, kEnableComputePixelUpload);

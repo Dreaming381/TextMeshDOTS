@@ -121,7 +121,7 @@ internal class RenderTest : MonoBehaviour
         marker.Begin();
         //BezierMath.SplitCuvesToLines(ref drawData, maxDeviation, out DrawData flatenedDrawData);
         //SDF.SDFGenerateSubDivision(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight,padding);        
-        SDF_SPMD.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, SPREAD);
+        SDF_line.SDFGenerateSubDivisionLineEdges(orientation, ref drawData, ref textureData, ref atlasRect, padding, atlasWidth, atlasHeight, SPREAD);
         //SDFCommon.WriteArrayToFile("TMD SDF32.txt", textureData, texture2D.width, texture2D.height/2);
         marker.End();
 

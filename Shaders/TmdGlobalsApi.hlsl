@@ -258,9 +258,7 @@ void GetSurfaceNormal(
     float3 va = normalize(float3(-1.0, 0.0, h.y - h.x));
     float3 vb = normalize(float3(0.0, 1.0, h.w - h.z));
 
-    float3 f = float3(1, 1, 1);
-    if (isFront)
-        f = float3(1, 1, -1);
+	float3 f = isFront ? float3(1, 1, -1) : float3(1, 1, 1);
     normal = cross(va, vb) * f;
 }
 

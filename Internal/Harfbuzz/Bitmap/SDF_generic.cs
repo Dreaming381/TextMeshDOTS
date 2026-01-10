@@ -1,14 +1,11 @@
-using System.Runtime.CompilerServices;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
-using UnityEngine;
 using UnityEngine.TextCore;
-using UnityEngine.UIElements;
 
 namespace TextMeshDOTS.HarfBuzz.Bitmap
 {
-    internal static class SDF
+    internal static class SDF_generic
     {
         //generates SDF directly from bezier curves provided by Harfbuzz.
         //approach is inspired by FreeType 
@@ -94,194 +91,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             PaintUtils.rasterizeSDFMarker.End();
             return true;
         }        
-
-        /// <summary>
-        /// Converts a glyph into a SDF bitmap. When using this function, ensure all bezier edges have been split into line edges first. 
-        /// This version tries to avoid a lot of multiplications by interpolating edge y using the edge slope. Currently glitchy as not all edge cases work.
-        /// </summary>
-        public static bool SDFGenerateSubDivisionLineEdgesInterpolate(SDFOrientation orientation, ref DrawData drawData, ref NativeArray<byte> buffer, ref GlyphRect atlasRect, int padding, int atlasWidth, int atlasHeight, int spread = SDFCommon.DEFAULT_SPREAD)
-        {
-            PaintUtils.rasterizeSDFMarker.Begin();
-            if (drawData.contourIDs.Length < 2 || drawData.edges.Length == 0)
-                return false;
-
-            if (spread < SDFCommon.MIN_SPREAD || spread > SDFCommon.MAX_SPREAD)
-                return false;
-
-            bool flip_y = true;
-            var offset = drawData.glyphRect.min - padding;
-            var atlasRectWidth = atlasRect.width;
-            var atlasRectHeight = atlasRect.height;
-
-            float sp_sq = math.select(spread, spread * spread, SDFCommon.USE_SQUARED_DISTANCES);
-
-            var size = atlasRectWidth * atlasRectHeight;
-            var targetDistances = new NativeArray<float>(size, Allocator.Temp);
-            var targetCrosses = new NativeArray<float>(size, Allocator.Temp);
-            var targetSigns = new NativeArray<int>(size, Allocator.Temp);
-
-            var edges = drawData.edges;
-            var contourIDs = drawData.contourIDs;
-            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++) //for each contour
-            {
-                int startID = contourIDs[contourID];
-                int nextStartID = contourIDs[contourID + 1];
-                for (int edgeID = startID; edgeID < nextStartID; edgeID++) //for each edge
-                {                    
-                    var edge = edges[edgeID];
-                    var p0 = edge.start_pos - offset;
-                    var p1 = edge.end_pos - offset;
-                    var cbox = BezierMath.GetLineBBox(p0, p1);
-                    cbox.Expand(spread);
-                    var ab = p1 - p0;
-                    var abLength = math.length(ab);
-                    var normal1 = new float2(-ab.y, ab.x)/ abLength;
-                    var normal2 = new float2(ab.y, -ab.x)/ abLength;
-                    
-                    float2 gridPoint = default;
-                    float t, tA, tB;
-                    float2 aScanIntersect, bScanIntersect, aEdgeToScan, bEdgeToScan, nEdgeToScan;
-                    float nx, ny; //nearest Point
-                    float distance=default;
-                    float cross = default;
-                    int sign = default;
-
-                    /* now loop over the pixels in the control box. */
-                    for (int y = (int)cbox.min.y, yEnd = (int)cbox.max.y; y < yEnd; y++)
-                    {
-                        if (y < 0 || y >= atlasRectHeight)
-                            continue;
-
-                        gridPoint.y = y + 0.5f;
-                        var dy_as = gridPoint.y - p0.y;
-                        var dy_bs = gridPoint.y - p1.y;
-
-                        if (ab.x > 0) //edge and scanline have opposite direction
-                            (normal1, normal2) = (normal2, normal1);                        
-
-                        tA = dy_as / normal1.y;
-                        tB = dy_bs / normal1.y;
-                        aEdgeToScan = tA * normal1;
-                        bEdgeToScan = tB * normal1;
-                        if (ab.x == 0)//vertical
-                        {
-                            aScanIntersect =  bScanIntersect = new float2(p0.x,0);
-                        }
-                        else
-                        {
-                            aScanIntersect = p0 + aEdgeToScan; //works also for horizontal case (ab.y == 0) where normal1 will be 0 (ab.y is nominator of normal)
-                            bScanIntersect = p1 + bEdgeToScan;
-                        }
-
-                        if (ab.x == 0) //vertical
-                        {
-                            var maxY = math.max(p0.y, p1.y);
-                            var minY = math.min(p0.y, p1.y);
-                            for (int x = (int)cbox.min.x, xEnd = (int)cbox.max.x; x < xEnd; x++)
-                            {
-                                if (x < 0 || x >= atlasRectWidth)
-                                    continue;
-
-                                if (y < minY || y > maxY)
-                                    continue;
-
-                                gridPoint.x = x + 0.5f;
-                                nx = p0.x;
-                                ny = y;
-                                GetDistBetweenPoints(ab.x, ab.y, nx, ny, gridPoint.x, gridPoint.y, false, out distance, out cross, out sign);
-                                sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
-
-                                var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                                SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                                SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                                SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
-                            }
-                        }
-                        else
-                        {
-                            if (p0.x > p1.x)
-                            {
-                                (aScanIntersect, bScanIntersect) = (bScanIntersect, aScanIntersect);
-                                (aEdgeToScan, bEdgeToScan) = (bEdgeToScan, aEdgeToScan);
-                                (p0, p1) = (p1, p0);
-                            }
-
-                            //interpolate distance between edge endpoints projected onto scanLine
-                            var interpolateLength = bScanIntersect.x - aScanIntersect.x;
-                            for (int x = math.max((int)cbox.min.x, (int)aScanIntersect.x), xEnd = math.min((int)bScanIntersect.x, (int)cbox.max.x); x < xEnd; x++)
-                            {
-                                if (x < 0 || x >= atlasRectWidth)
-                                    continue;
-
-                                gridPoint.x = x + 0.5f;
-                                t = (x - aScanIntersect.x) / interpolateLength;
-                                if (p0.y == p1.y) //horizontal
-                                {
-                                    nx = math.lerp(p0.x, p1.x, t);
-                                    ny = p0.y;
-                                }
-                                else
-                                {
-                                    nEdgeToScan = -math.lerp(aEdgeToScan, bEdgeToScan, t); //negate aEdgeToScan vector to give opposite direction ScanToaEdge vector
-
-                                    nx = gridPoint.x + nEdgeToScan.x;
-                                    ny = gridPoint.y + nEdgeToScan.y;
-                                }
-
-                                GetDistBetweenPoints(ab.x, ab.y, nx, ny, gridPoint.x, gridPoint.y, false, out distance, out cross, out sign);
-                                sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
-
-                                var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                                SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                                SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                                SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
-                            }
-
-                            //fill all pixel having an edge endpoint as their closest point
-                            //calculate distance of all points to the left of the projected left endPoint 
-                            for (int x = (int)cbox.min.x, xEnd = (int)aScanIntersect.x; x < xEnd; x++)
-                            {
-                                if (x < 0 || x >= atlasRectWidth)
-                                    continue;
-
-                                gridPoint.x = x + 0.5f;
-
-                                GetDistBetweenPoints(ab.x, ab.y, p0.x, p0.y, gridPoint.x, gridPoint.y, true, out distance, out cross, out sign);
-                                sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
-
-                                var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                                SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                                SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                                SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
-                            }
-
-                            //calculate distance of all points to the right of the projected right endPoint 
-                            for (int x = math.min((int)bScanIntersect.x, (int)cbox.max.x), xEnd = (int)cbox.max.x; x < xEnd; x++)
-                            {
-                                if (x < 0 || x >= atlasRectWidth)
-                                    continue;
-
-                                gridPoint.x = x + 0.5f;                                
-
-                                GetDistBetweenPoints(ab.x, ab.y, p1.x, p1.y, gridPoint.x, gridPoint.y, true, out distance, out cross, out sign);
-                                sign = math.select(sign, -sign, orientation == SDFOrientation.FILL_LEFT);
-
-                                var index = math.select(((atlasRectHeight - y - 1) * atlasRectWidth) + x, (y * atlasRectWidth) + x, flip_y);
-                                SDFCommon.GetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, out float targetDistance, out float targetCross, out int targetSign);
-                                SDFCommon.ValidateDistanceCrossSign(ref distance, ref cross, ref sign, ref targetDistance, ref targetCross, ref targetSign, sp_sq, out var validDistance, out var validCross, out var validSign);
-                                SDFCommon.SetTarget_DistanceCrossSign(targetDistances, targetCrosses, targetSigns, index, ref validDistance, ref validCross, ref validSign);
-                            }
-                        }                        
-                    }
-                }
-            }
-            SDFCommon.FinalPass(targetDistances, targetSigns, spread, atlasRectWidth, atlasRectHeight);
-
-            //convert signed distance (range: negative = inside, positive=outside) to alpha bitmap (range: 0 (inside) to 255 (outside))
-            SDFCommon.GetAlphaTexture(targetDistances, buffer, spread, atlasRect.x, atlasRect.y, atlasRectWidth, atlasRectHeight, atlasWidth, atlasHeight);
-            PaintUtils.rasterizeSDFMarker.End();
-            return true;
-        }
 
         static BBox GetControlBox(SDFEdge edge)
         {
@@ -384,39 +193,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                     sign = default;
                     break;
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetDistBetweenPoints(float abx, float aby, float nx, float ny, float px, float py, bool isEndPoint, out float distance, out float cross, out int sign)
-        {
-            var npx = px - nx;                          // Vector from nearest point to P
-            var npy = py - ny;                          // Vector from nearest point to P
-
-            var abLengthSq = abx * abx + aby * aby;     // squared distance from A to B 
-            var abLength = math.sqrt(abLengthSq);       // normalized distance from A to B 
-            var npLengthSq = npx * npx + npy * npy;     // squared distance from nearest point to P
-            var npLength = math.sqrt(npLengthSq);       // normalized distance from nearest point to P
-
-            var abxNorm = abx / abLength;
-            var abyNorm = aby / abLength;
-            var pnxNorm = npx / npLength;
-            var pnyNorm = npy / npLength;
-
-            // cross of normalized vector A--B with nP->P. 
-            // positive if the points A, B, and P occur in counterclockwise order
-            // (CCW, P lies to the left of the vector from A to B).
-            // negative if they occur in clockwise order
-            // (CW, P lies to the right of the vector from A to B).
-            // this result is identical with ORIENT2D
-            // the sign of the cross is used determine the sign of the distance
-            // so this here is the heart of the SDF renderer
-            // all sign flips to determine what is filled due to
-            // different definitions of polygons in Postscript and TrueType should be done elsewhere
-            cross = BezierMath.cross2D(abxNorm, abyNorm, pnxNorm, pnyNorm);
-            sign = math.select(1, -1, cross < 0);
-            distance = math.select(npLength, npLengthSq, SDFCommon.USE_SQUARED_DISTANCES);            
-            cross = math.select(1, cross, isEndPoint);
-        }
+        }        
         
         static bool GetMinDistanceQuadraticNewton(float2 p0, float2 p1, float2 p2, float2 point, out float distance, out float cross, out int sign)
         {
