@@ -21,7 +21,7 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
         // 8 bit: distance can be from -128 (outside) to +127 (inside) --> store in 8 bit alpha channel. 
         // 16 bit: distance can be from -32,768 (outside to +32,767 (inside) -->store in 16 bit alpha
         // When converting to 8 bit alpha, we add SPREAD to give distances from 0..2*SPREAD, and multiply
-        // by (256/(2*SPREAD ) via this line of code in the final pass:
+        // by (256/(2*SPREAD ) via this line of code in GetAlphaTexture():
         // var scaleTo8Bit = 256 / (spread * 2);
         public const int DEFAULT_SPREAD = 8; // SPREAD and Atlas padding are related, but do not set SPREAD too small 
         public const int MIN_SPREAD = 2;
@@ -73,7 +73,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             int spread, int atlasX, int atlasY, int atlasRectWidth, int atlasRectHeight, int atlasWidth, int atlasHeight)
         {
             float scaleTo8Bit = 255f / (spread * 2);
-            //var scaleTo16Bit = 65535 / (spread * 2);
 
             if (buffer.Length == distances.Length && buffer.Length == atlasRectWidth * atlasRectHeight)
             {
@@ -105,7 +104,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             NativeArray<ushort> buffer,
             int spread, int atlasX, int atlasY, int atlasRectWidth, int atlasRectHeight, int atlasWidth, int atlasHeight)
         {
-            //float scaleTo8Bit = 255f / (spread * 2);
             float scaleTo16Bit = 65535f / (spread * 2);
 
             if (buffer.Length == distances.Length && buffer.Length == atlasRectWidth * atlasRectHeight)
@@ -165,18 +163,6 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
                 }                
             }
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetTarget_DistanceCrossSign(
-            NativeArray<float> distances,
-            NativeArray<float> crosses,
-            NativeArray<int> signs,
-            int index, out float4 targetDistance, out float4 targetCross, out int4 targetSign)
-        {
-            targetDistance = new float4(distances[index], distances[index + 1], distances[index + 2], distances[index + 3]);
-            targetCross = new float4(crosses[index], crosses[index + 1], crosses[index + 2], crosses[index + 3]);
-            targetSign = new int4(signs[index], signs[index + 1], signs[index + 2], signs[index + 3]);
-        }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetTarget_DistanceCrossSign(
@@ -188,30 +174,8 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             targetDistance = distances[index];
             targetCross = crosses[index];
             targetSign = signs[index];
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SetTarget_DistanceCrossSign(
-            NativeArray<float> distances,
-            NativeArray<float> crosses,
-            NativeArray<int> signs,
-            int index, ref float4 validDistance, ref float4 validCross, ref int4 validSign)
-        {
-            distances[index] = validDistance[0];
-            distances[index + 1] = validDistance[1];
-            distances[index + 2] = validDistance[2];
-            distances[index + 3] = validDistance[3];
-
-            crosses[index] = validCross[0];
-            crosses[index + 1] = validCross[1];
-            crosses[index + 2] = validCross[2];
-            crosses[index + 3] = validCross[3];
-
-            signs[index] = validSign[0];
-            signs[index + 1] = validSign[1];
-            signs[index + 2] = validSign[2];
-            signs[index + 3] = validSign[3];
-        }
+        }        
+       
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetTarget_DistanceCrossSign(
@@ -223,64 +187,9 @@ namespace TextMeshDOTS.HarfBuzz.Bitmap
             distances[index] = validDistance;
             crosses[index] = validCross;
             signs[index] = validSign;
-        }        
-        
-        
+        }       
 
-        /// <summary> legacy method provides early out to skip many ops </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ValidateDistanceCrossSign_Legacy(
-            ref float4 distance,
-            ref float4 cross,
-            ref int4 sign,
-            ref float4 targetDistance,
-            ref float4 targetCross,
-            ref int4 targetSign,
-            float sp_sq,
-            out float4 validDistance,
-            out float4 validCross,
-            out int4 validSign
-            )
-        {
-            validDistance = targetDistance;
-            validCross = targetCross;
-            validSign = targetSign;
-            for (int i = 0; i < 4; i++)
-            {
-                if (distance[i] > sp_sq)
-                {
-                    validDistance[i] = targetDistance[i];
-                    validCross[i] = targetCross[i];
-                    validSign[i] = targetSign[i];
-                    continue;
-                }
-                if (targetSign[i] == 0) // check if the pixel is already set
-                {
-                    validDistance[i] = distance[i];
-                    validCross[i] = cross[i];
-                    validSign[i] = sign[i];
-                    continue;
-                }
-                else
-                {
-                    if (BezierMath.EqualsForLargeValues(targetDistance[i], distance[i]))
-                    {
-                        var condition = math.abs(cross[i]) > math.abs(targetCross[i]);
-                        validDistance[i] = math.select(targetDistance[i], distance[i], condition);
-                        validCross[i] = math.select(targetCross[i], cross[i], condition);
-                        validSign[i] = math.select(targetSign[i], sign[i], condition);
-                        continue;
-                    }
-                    else if (targetDistance[i] > distance[i])
-                    {
-                        validDistance[i] = distance[i];
-                        validCross[i] = cross[i];
-                        validSign[i] = sign[i];
-                        continue;
-                    }
-                }
-            }
-        }
+        
         /// <summary> legacy method provides early out to skip many ops </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ValidateDistanceCrossSign(
