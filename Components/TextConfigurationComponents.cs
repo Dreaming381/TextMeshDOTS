@@ -123,6 +123,10 @@ namespace TextMeshDOTS
             get => Bits.GetBit(packed, 31);
             set => Bits.SetBit(ref packed, 31, value);
         }
+        public void SetFamily(FixedString128Bytes fontFamily)
+        {
+            defaultFontFamilyHash = TextHelper.GetHashCodeCaseInsensitive(fontFamily);
+        }
     }
     /// <summary>
     /// Horizontal text alignment options.

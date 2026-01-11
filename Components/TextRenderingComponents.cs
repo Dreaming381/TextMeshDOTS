@@ -91,8 +91,11 @@ namespace TextMeshDOTS
     {
         public UnityObjectRef<Material> material;
         public UnityObjectRef<Mesh> backendMesh;
-        public BatchMeshID batchMeshID;
-        public BatchMaterialID batchMaterialID;
+        public MaterialMeshInfo materialMeshInfo;
+    }
+    public struct RuntimeLanguage : IComponentData
+    {
+        public BlobAssetReference<LanguageBlob> value;
     }
 
     internal struct GpuState : IComponentData, IEnableableComponent  // Enabled to request dispatch

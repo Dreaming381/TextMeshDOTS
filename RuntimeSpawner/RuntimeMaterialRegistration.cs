@@ -23,8 +23,10 @@ namespace TextMeshDOTS
         protected override void OnUpdate()
         {
             var runtimeFontMaterial = SystemAPI.GetSingletonRW<RuntimeFontMaterial>();
-            runtimeFontMaterial.ValueRW.batchMaterialID = hybridRenderer.RegisterMaterial(runtimeFontMaterial.ValueRO.material);
-            runtimeFontMaterial.ValueRW.batchMeshID = hybridRenderer.RegisterMesh(runtimeFontMaterial.ValueRO.backendMesh);
+
+            var batchMaterialID = hybridRenderer.RegisterMaterial(runtimeFontMaterial.ValueRO.material);
+            var batchMeshID = hybridRenderer.RegisterMesh(runtimeFontMaterial.ValueRO.backendMesh);
+            runtimeFontMaterial.ValueRW.materialMeshInfo = new MaterialMeshInfo(batchMaterialID, batchMeshID);
             this.Enabled = false;            
         }
     }

@@ -24,7 +24,8 @@ namespace TextMeshDOTS
 
             public void Execute()
             {
-                glyphEntryIDsToRasterizeSet.Capacity = math.max(glyphTable.entries.Length, glyphEntryIDsToRasterizeSet.Capacity);
+                // set 3x larger than needed because of https://discussions.unity.com/t/hashmap-is-full-error-before-hashmap-is-full/809238
+                glyphEntryIDsToRasterizeSet.Capacity = 3 * math.max(glyphTable.entries.Length, glyphEntryIDsToRasterizeSet.Capacity);
             }
         }
 
@@ -66,7 +67,6 @@ namespace TextMeshDOTS
                         residentRangePtr   = residentPtr + entityIndex,
                         textShaderIndexPtr = shaderPtr != null ? shaderPtr + entityIndex : null,
                     });
-
                     foreach (var glyph in glyphs)
                     {
                         var entry = glyphTable.GetEntry(glyph.glyph.glyphEntryId);

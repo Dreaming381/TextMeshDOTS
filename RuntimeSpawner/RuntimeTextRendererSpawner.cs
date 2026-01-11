@@ -3,7 +3,6 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Graphics;
 using Unity.Mathematics;
-using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -16,43 +15,18 @@ namespace TextMeshDOTS
     [DisableAutoCreation]
     partial struct RuntimeTextRendererSpawner : ISystem
     {
+        bool initialized;
         int frameCount;
         EntityArchetype textRenderArchetype;
         TextBaseConfiguration textBaseConfiguration;
         RenderFilterSettings renderFilterSettings;
-        MaterialMeshInfo materialMeshInfo;
         FixedString512Bytes text1, text2, text3, text4, kerningTest;
 
         public void OnCreate(ref SystemState state)
         {
-            textRenderArchetype = TextMeshDOTSArchetypes.GetSingleFontTextArchetype(ref state);
-            textBaseConfiguration = new TextBaseConfiguration
-            {
-                defaultFontFamilyHash = TextHelper.GetHashCodeCaseInsensitive("Noto Sans Display"),
-                fontSize = (half)12,
-                color = Color.white,                
-                maxLineWidth = 30,
-                lineJustification = HorizontalAlignmentOptions.Left,
-                verticalAlignment = VerticalAlignmentOptions.TopBase,
-                isOrthographic = false,
-                fontStyles = FontStyles.Normal,
-                fontWeight = FontWeight.Normal,
-                fontWidth = FontWidth.Normal, 
-                wordSpacing = (half)0,
-                lineSpacing = (half)0,
-                paragraphSpacing = (half)0,
-            };
-            var layer = 1;
-            renderFilterSettings = new RenderFilterSettings
-            {
-                Layer = layer,
-                RenderingLayerMask = (uint)(1 << layer),
-                ShadowCastingMode = ShadowCastingMode.Off,
-                ReceiveShadows = false,
-                MotionMode = MotionVectorGenerationMode.ForceNoMotion,
-                StaticShadowCaster = false,
-            };
-            materialMeshInfo = new MaterialMeshInfo { MaterialID = BatchMaterialID.Null, MeshID = BatchMeshID.Null};
+            initialized = false;
+            textRenderArchetype = TextRendererUtility.GetTextRendererArchetype(ref state); //renders faster than depth sorted but rendering order can be incorrect
+            //textRenderArchetype = TextRendererUtility.GetDepthSortedTextRendererArchetype(ref state); //ensures correct rendering but significant performance impact
             text1 = "äáà aâa aâ̈a bb̂b bb̂̈b bb̧b bb͜b bb︠︡b Tota persona té dret a l'educació. L'educació serà gratuïta, si més no, en la instrucció elemental i fonamental. La instrucció elemental serà obligatòria.";
             text2 = "The quick brown fox jumps over the lazy dog\n ¶";
             text3 = "Test 123";
@@ -64,35 +38,88 @@ namespace TextMeshDOTS
             state.RequireForUpdate<FontTable>();
         }
         public void OnDestroy(ref SystemState state)
-        {           
+        {
+            if (initialized)
+            {
+                textBaseConfiguration.language.Dispose();
+            }
         }
 
         public void OnUpdate(ref SystemState state)
         {
             var runtimeFontMaterial = SystemAPI.GetSingleton<RuntimeFontMaterial>();
-            if (runtimeFontMaterial.batchMaterialID == BatchMaterialID.Null)
-                return;
-            else if (materialMeshInfo.MaterialID == BatchMaterialID.Null)
-                materialMeshInfo = new MaterialMeshInfo { MaterialID = runtimeFontMaterial.batchMaterialID, MeshID = runtimeFontMaterial.batchMeshID };
-            
+            if (!initialized)
+            {
+                if (runtimeFontMaterial.materialMeshInfo.MaterialID == BatchMaterialID.Null)
+                    return; // material and mesh is not yet registered with EntityGraphics
+                Initialize();
+            }
 
             if (frameCount == 10)
-                SpawnText(text2, "Noto Sans Display", 30,  new float3(-10, 7, 0), Color.goldenRod, ref state);
+            {
+                textBaseConfiguration.SetFamily("Noto Sans Display");
+                textBaseConfiguration.color = Color.goldenRod;
+                textBaseConfiguration.maxLineWidth = 30;
+                SpawnText(text3, new float3(-10, 7, 0), ref textBaseConfiguration, ref renderFilterSettings, textRenderArchetype, ref runtimeFontMaterial, ref state);
+            }
 
             if (frameCount == 50)
-                SpawnTextArray(text3, "Arial", 50, 3, Color.blue, 3.0f, ref state);            
+            {
+                textBaseConfiguration.SetFamily("Arial");
+                textBaseConfiguration.color = Color.blue;
+                textBaseConfiguration.maxLineWidth = 3;
+                SpawnTextArray(text3, 50, 3, ref textBaseConfiguration, ref renderFilterSettings, textRenderArchetype, ref runtimeFontMaterial, ref state);
+            }
 
             if (frameCount == 100)
-                SpawnTextArray(text4, "Arial", 15, 10, Color.red, 2.0f, ref state);
+            {
+                textBaseConfiguration.SetFamily("Arial");
+                textBaseConfiguration.color = Color.red;
+                textBaseConfiguration.maxLineWidth = 3;
+                SpawnTextArray(text4, 15, 2, ref textBaseConfiguration, ref renderFilterSettings, textRenderArchetype, ref runtimeFontMaterial, ref state);
+            }
 
             frameCount++;
-        }        
-        void SpawnTextArray(FixedString512Bytes text, FixedString128Bytes fontFamily, int count, float maxLineWidth, Color textcolor, float spreadFactor, ref SystemState state)
+        }
+
+        void Initialize()
         {
-            int half = count / 2;
-            textBaseConfiguration.defaultFontFamilyHash = TextHelper.GetHashCodeCaseInsensitive(fontFamily);
-            textBaseConfiguration.color = textcolor;
-            textBaseConfiguration.maxLineWidth = maxLineWidth;
+            var language = TextRendererUtility.BakeLanguage("en");
+            textBaseConfiguration = TextRendererUtility.GetTextBaseConfiguration(
+                language,
+                "Noto Sans Display",
+                12,
+                Color.white,
+                30,
+                HorizontalAlignmentOptions.Left,
+                VerticalAlignmentOptions.TopBase,
+                FontStyles.Normal,
+                FontWeight.Normal,
+                FontWidth.Normal,
+                0, 0, 0, false);
+            var layer = 1;
+            renderFilterSettings = new RenderFilterSettings
+            {
+                Layer = layer,
+                RenderingLayerMask = (uint)(1 << layer),
+                ShadowCastingMode = ShadowCastingMode.Off,
+                ReceiveShadows = false,
+                MotionMode = MotionVectorGenerationMode.ForceNoMotion,
+                StaticShadowCaster = false,
+            };
+            initialized = true;
+        }
+        static void SpawnTextArray(
+            FixedString512Bytes text, 
+            int count, 
+            float spreadFactor,
+            ref TextBaseConfiguration textBaseConfiguration,
+            ref RenderFilterSettings renderFilterSettings,
+            EntityArchetype textRenderArchetype,
+            ref RuntimeFontMaterial runtimeFontMaterial,
+            ref SystemState state)
+        {
+            int half = count / 2;            
             var entities = state.EntityManager.CreateEntity(textRenderArchetype, count * count, state.WorldUpdateAllocator);
             for (int x = 0; x < count; x++)
             {
@@ -107,16 +134,19 @@ namespace TextMeshDOTS
 
                     state.EntityManager.SetComponentData(entity, textBaseConfiguration);
                     state.EntityManager.SetComponentData(entity, LocalTransform.FromPosition(new float3((x - half) * spreadFactor - 1, (y - half) * spreadFactor - 1, 0)));
-                    state.EntityManager.SetComponentData(entity, materialMeshInfo);
+                    state.EntityManager.SetComponentData(entity, runtimeFontMaterial.materialMeshInfo);
                 }
             }
             Debug.Log($"spawned {count * count} instances of {text}");
         }
-        void SpawnText(FixedString512Bytes text, FixedString128Bytes fontFamily, float maxLineWidth, float3 position, Color textcolor,  ref SystemState state)
+        void SpawnText(FixedString512Bytes text,
+            float3 position,
+            ref TextBaseConfiguration textBaseConfiguration,
+            ref RenderFilterSettings renderFilterSettings,
+            EntityArchetype textRenderArchetype,
+            ref RuntimeFontMaterial runtimeFontMaterial,
+            ref SystemState state)
         {
-            textBaseConfiguration.defaultFontFamilyHash = TextHelper.GetHashCodeCaseInsensitive(fontFamily);
-            textBaseConfiguration.color = textcolor;
-            textBaseConfiguration.maxLineWidth = maxLineWidth;
             var entity = state.EntityManager.CreateEntity(textRenderArchetype);
            
                     state.EntityManager.SetSharedComponent(entity, renderFilterSettings);
@@ -127,7 +157,7 @@ namespace TextMeshDOTS
 
                     state.EntityManager.SetComponentData(entity, textBaseConfiguration);
                     state.EntityManager.SetComponentData(entity, LocalTransform.FromPosition(position));
-                    state.EntityManager.SetComponentData(entity, materialMeshInfo);
+                    state.EntityManager.SetComponentData(entity, runtimeFontMaterial.materialMeshInfo);
 
             Debug.Log($"spawned {text}");
         }

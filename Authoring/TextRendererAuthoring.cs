@@ -1,14 +1,9 @@
 #if UNITY_EDITOR
-using System.Collections.Generic;
-using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.TextCore;
-using UnityEngine.TextCore.Text;
-using static UnityEditor.ObjectChangeEventStream;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -107,24 +102,13 @@ namespace TextMeshDOTS.Authoring
             var customHash = new Unity.Entities.Hash128((uint)language.GetHashCode(), 0, 0, 0);
             if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<LanguageBlob> blobReference))
             {
-                blobReference = BakeLanguage(language);                
+                blobReference = TextRendererUtility.BakeLanguage(language);                
                 AddBlobAssetWithCustomHash(ref blobReference, customHash); // Register the Blob Asset to the Baker for de-duplication and reverting.
             }
             return blobReference;
         }
      
-        public static BlobAssetReference<LanguageBlob> BakeLanguage(FixedString128Bytes language)
-        {
-            var blobBuilder = new BlobBuilder(Allocator.Temp);
-            ref LanguageBlob languageBlobRoot = ref blobBuilder.ConstructRoot<LanguageBlob>();
-            blobBuilder.AllocateString(ref languageBlobRoot.langugage, ref language);
-            var result = blobBuilder.CreateBlobAssetReference<LanguageBlob>(Allocator.Persistent);
-            blobBuilder.Dispose();
-            languageBlobRoot = result.Value;
-            return result;
-        }            
         
-    } 
-    
+    }     
 }
 #endif

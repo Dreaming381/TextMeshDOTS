@@ -106,9 +106,16 @@ just one entity and one material.
 	`TMD Runtime Material`. To do so, add an empty `GameObject`, add `TMD Runtime Material` component to it. Drop one 
 	 of the materials you generated in  step 1 of the authoring workflow (see above) into the material field. 	
   - Write a runtime `TextRenderer` Spawner. You can follow the approach found in the package folder 
-   `TextMeshDOTS\RuntimeSpawner\RuntimeTextRendererSpawner.cs` Per default, auto creation of this system 
-    is disabled. In case you like to test this workflows, enable the system, hit play and you should see some 
-    text spawned at runtime.  
+   `TextMeshDOTS\RuntimeSpawner\RuntimeTextRendererSpawner.cs` (enable auto creation to see a demo of runtime
+	 spawning). The general workflow for runtime spawning is as follows:
+	- Create the `TextRenderer` archetype via `TextRendererUtility.GetTextRendererArchetype()` (not depth sorted) or 
+	 `TextRendererUtility.GetTextRendererArchetype()`(depth sorted)
+	- query for Singleton having `RuntimeFontMaterial` and `RuntimeLanguage` `IComponent` in order to retrieve 
+	  `MaterialMeshInfo` and runtime language `BlobAssetReference<LanguageBlob>`
+	- create `TextBaseConfiguration` via `TextRendererUtility.GetTextBaseConfiguration()`
+	- use `EntityManager` or `EntityCommandBuffer` to create entity of the `TextRenderer` archetype 
+	- use `AddComponent(Entity e, in ComponentTypeSet componentTypeSet)` overload to add any number of additional `IComponent`
+	- set all component data
 (2) Optional Runtime font instantiation workflow
   -	In case you like to load fonts while your app is running, you can use the approach found 
     in the package folder `TextMeshDOTS\RuntimeSpawner\RuntimeFontSpawner.cs`
