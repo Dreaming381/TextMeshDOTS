@@ -102,21 +102,22 @@ just one entity and one material.
 
 # Runtime workflows
 (1) Optional spawning of `TextRenderer` at runtime
-  - Runtime spawned `TextRenderer` need a material registered with Entity Graphics. In order to that, you need to bake a
-	`TMD Runtime Material`. To do so, add an empty `GameObject`, add `TMD Runtime Material` component to it. Drop one 
+  - Runtime spawned `TextRenderer` need a material registered with Entity Graphics. In order to do that, you need to bake a
+	`TMD Runtime Material`: add an empty `GameObject`, add `TMD Runtime Material` component to it. Drop one 
 	 of the materials you generated in  step 1 of the authoring workflow (see above) into the material field. 	
-  - Write a runtime `TextRenderer` Spawner. You can follow the approach found in the package folder 
-   `TextMeshDOTS\RuntimeSpawner\RuntimeTextRendererSpawner.cs` (enable auto creation to see a demo of runtime
-	 spawning). The general workflow for runtime spawning is as follows:
-	- Create the `TextRenderer` archetype via `TextRendererUtility.GetTextRendererArchetype()` (not depth sorted) or 
-	 `TextRendererUtility.GetTextRendererArchetype()`(depth sorted)
-	- query for Singleton having `RuntimeFontMaterial` and `RuntimeLanguage` `IComponent` in order to retrieve 
+  - Write a runtime `TextRenderer` spawner. You can follow the approach found in the package folder 
+   `TextMeshDOTS\RuntimeSpawner\RuntimeTextRendererSpawner.cs` (enable auto creation of this sytem to see a demo of runtime
+	 spawning once you enter play mode). The general workflow for runtime spawning is as follows:
+	- Create the `TextRenderer` archetype via `TextRendererUtility.GetTextRendererArchetype()` or 
+	 `TextRendererUtility.GetDepthSortedTextRendererArchetype()`
+	- query for singleton with the `IComponents` `RuntimeFontMaterial` and `RuntimeLanguage` in order to retrieve 
 	  `MaterialMeshInfo` and runtime language `BlobAssetReference<LanguageBlob>`
 	- create `TextBaseConfiguration` via `TextRendererUtility.GetTextBaseConfiguration()`
 	- use `EntityManager` or `EntityCommandBuffer` to create entity of the `TextRenderer` archetype 
 	- use `AddComponent(Entity e, in ComponentTypeSet componentTypeSet)` overload to add any number of additional `IComponent`
 	- set all component data
-(2) Optional Runtime font instantiation workflow
+
+(2) Optional runtime font instantiation workflow
   -	In case you like to load fonts while your app is running, you can use the approach found 
     in the package folder `TextMeshDOTS\RuntimeSpawner\RuntimeFontSpawner.cs`
   - You will notice, that you need to manually fill out a lot of information in the `FontRequest` struct for every font 

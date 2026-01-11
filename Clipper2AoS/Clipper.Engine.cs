@@ -3313,7 +3313,10 @@ namespace TextMeshDOTS.Clipper2AoS
         {            
             var nodes = polytree.nodes;
             if (exteriorNode == -1) return;
-            var queue = new NativeList<int>(16, Allocator.Temp);
+            var queue = new NativeList<int>(16, Allocator.Temp) 
+            { 
+                exteriorNode 
+            };
             for (int c = nodes[exteriorNode].firstChild; c != -1; c = nodes[c].nextSibling)
                 queue.Add(c);
 
