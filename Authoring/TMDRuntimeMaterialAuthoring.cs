@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEditor;
@@ -42,10 +43,20 @@ namespace TextMeshDOTS.Authoring
             AddComponent(entity, runtimeFontMaterial);
             var runtimeLanguage = new RuntimeLanguage
             {
-                value = TextRendererUtility.BakeLanguage(authoring.language)
+                value = BakeLangugeString(authoring.language)
             };
             AddComponent(entity, runtimeLanguage);
-        } 
+        }
+        BlobAssetReference<LanguageBlob> BakeLangugeString(FixedString128Bytes language)
+        {
+            var customHash = new Unity.Entities.Hash128((uint)language.GetHashCode(), 0, 0, 0);
+            if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<LanguageBlob> blobReference))
+            {
+                blobReference = TextRendererUtility.BakeLanguage(language);
+                AddBlobAssetWithCustomHash(ref blobReference, customHash); // Register the Blob Asset to the Baker for de-duplication and reverting.
+            }
+            return blobReference;
+        }
     }    
 }
 #endif
