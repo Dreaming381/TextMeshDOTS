@@ -10,6 +10,11 @@ namespace TextMeshDOTS
 {
     public static class TextRendererUtility
     {
+        /// <summary>
+        /// Convert a BCP 47 compliant langugage string into a blob asset. Risk of creating leaks when creating 
+        /// such a blobasset at runtime is high: ensure to dispose it when there are no more BlobAssetReferences to this blob asset. 
+        /// This is a non issue for the baking workflow as this is handled automatically. 
+        /// </summary>     
         public static BlobAssetReference<LanguageBlob> BakeLanguage(FixedString128Bytes language)
         {
             var blobBuilder = new BlobBuilder(Allocator.Temp);
@@ -21,6 +26,12 @@ namespace TextMeshDOTS
             return result;
         }
 
+        /// <summary>
+        /// Get TextBaseConfiguration IComponent by providing all required data. Note: for achitectural 
+        /// reasons we cannot avoid providing the language as blob asset. Risk of creating leaks when creating 
+        /// such a blob asset at runtime is high: ensure to dispose it when there are no more BlobAssetReferences
+        /// to this blob asset. This is a non issue for the baking workflow as this is handled automatically. 
+        /// </summary>
         public static TextBaseConfiguration GetTextBaseConfiguration(
             BlobAssetReference<LanguageBlob> language,
             FixedString128Bytes fontName,
@@ -44,8 +55,8 @@ namespace TextMeshDOTS
                 fontSize = (half)fontSize,
                 color = color,
                 maxLineWidth = maxLineWidth,
-                lineJustification = HorizontalAlignmentOptions.Center,
-                verticalAlignment = VerticalAlignmentOptions.MiddleTopAscentToBottomDescent,
+                lineJustification = lineJustification,
+                verticalAlignment = verticalAlignment,
                 isOrthographic = isOrthographic,
                 fontStyles = fontStyles,
                 fontWeight = fontWeight,
@@ -54,8 +65,13 @@ namespace TextMeshDOTS
                 lineSpacing = (half)lineSpacing,
                 paragraphSpacing = (half)paragraphSpacing,
                 language = language
-            };
+            };            
         }
+        /// <summary>
+        /// Get Get TextRendererArchetype to create TextRenderer entites at runtime via APIs such as 
+        /// state.EntityManager.CreateEntity(textRenderArchetype). Note: this archetype does not contain the DepthSorted_Tag, 
+        /// which significanlty increases performance, but can result in unexpected overdraw.
+        /// </summary>
         public static EntityArchetype GetTextRendererArchetype(ref SystemState state)
         {
             var componentTypeStaging = new NativeArray<ComponentType>(14, Allocator.Temp);
@@ -76,6 +92,11 @@ namespace TextMeshDOTS
 
             return state.EntityManager.CreateArchetype(componentTypeStaging);
         }
+        /// <summary>
+        /// Get Get TextRendererArchetype to create TextRenderer entites at runtime via APIs such as 
+        /// state.EntityManager.CreateEntity(textRenderArchetype). Note: this archetype contains the DepthSorted_Tag, 
+        /// which ensures correct rendering but breaks instancing and batching, incuring a significant performance penalty.
+        /// </summary>
         public static EntityArchetype GetDepthSortedTextRendererArchetype(ref SystemState state)
         {
             var componentTypeStaging = new NativeArray<ComponentType>(15, Allocator.Temp);

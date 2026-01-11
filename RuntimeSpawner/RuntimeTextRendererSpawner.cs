@@ -46,7 +46,7 @@ namespace TextMeshDOTS
         }
 
         public void OnUpdate(ref SystemState state)
-        {
+        {            
             var runtimeFontMaterial = SystemAPI.GetSingleton<RuntimeFontMaterial>();
             if (!initialized)
             {
