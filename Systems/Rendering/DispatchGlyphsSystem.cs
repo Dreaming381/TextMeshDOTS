@@ -309,7 +309,7 @@ namespace TextMeshDOTS
             }
             if (!collected.glyphsToUpload.IsEmpty)
             {
-                var lastCapture      = collected.glyphsToUpload[collected.glyphsToUpload.Length - 1];
+                var lastCapture      = collected.glyphsToUpload[^1];
                 var glyphCount       = lastCapture.writeStart + lastCapture.glyphCount;
                 var uploadBuffer     = m_glyphUploadBuffers.Allocate(glyphCount * UnsafeUtility.SizeOf<RenderGlyph>() / 4);
                 var uploadArray      = uploadBuffer.LockBufferForWrite<RenderGlyph>(0, glyphCount);

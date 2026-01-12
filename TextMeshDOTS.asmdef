@@ -11,7 +11,8 @@
         "Unity.Entities.Graphics",
         "Unity.Transforms",
         "Unity.Scenes",
-        "Clipper2AoS"
+        "Clipper2AoS",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -7,7 +7,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Rendering;
-
+using UnityEngine;
 using static Unity.Entities.SystemAPI;
 
 namespace TextMeshDOTS
@@ -91,20 +91,20 @@ namespace TextMeshDOTS
 
             var jhA = new ApplyRefCountDeltasToGlyphTableJob
             {
-                atlasTable               = atlasTable,
-                glyphTable               = glyphTable,
+                atlasTable = atlasTable,
+                glyphTable = glyphTable,
                 refCountChangeBlocklistA = refCountChangeBlocklistA.AsReader(),
                 refCountChangeBlocklistB = refCountChangeBlocklistB.AsReader(),
             }.Schedule(state.Dependency);
 
             var jhB = new DeallocateResidentsJob
             {
-                gpuTable                       = gpuTable,
+                gpuTable = gpuTable,
                 residentDeallocationBlocklistA = residentDeallocationBlocklistA.AsReader(),
                 residentDeallocationBlocklistB = residentDeallocationBlocklistB.AsReader()
             }.Schedule(state.Dependency);
 
-            state.Dependency      = JobHandle.CombineDependencies(jhA, jhB);
+            state.Dependency = JobHandle.CombineDependencies(jhA, jhB);
             m_twoAgoSystemVersion = state.LastSystemVersion;
         }
 
@@ -177,6 +177,7 @@ namespace TextMeshDOTS
                         if (threadRefCountChangeMap.TryGetValue(id, out var ptr))
                         {
                             ptr.ptr->refCountDelta--;
+                            //Debug.Log($"dead glyph delta {id}: {ptr.ptr->refCountDelta}");
                         }
                         else
                         {
@@ -184,6 +185,7 @@ namespace TextMeshDOTS
                             newPtr.ptr->glyphEntryId                 = id;
                             newPtr.ptr->refCountDelta                = -1;
                             threadRefCountChangeMap.Add(id, newPtr);
+                            //Debug.Log($"dead glyph delta {id}: {newPtr.ptr->refCountDelta}");
                         }
                     }
                 }
@@ -313,6 +315,7 @@ namespace TextMeshDOTS
                     if (threadRefCountChangeMap.TryGetValue(id, out var ptr))
                     {
                         ptr.ptr->refCountDelta += delta;
+                        //Debug.Log($"update glyph delta {id}: {ptr.ptr->refCountDelta}");
                     }
                     else
                     {
@@ -320,6 +323,7 @@ namespace TextMeshDOTS
                         newPtr.ptr->glyphEntryId                 = id;
                         newPtr.ptr->refCountDelta                = delta;
                         threadRefCountChangeMap.Add(id, newPtr);
+                        //Debug.Log($"update glyph delta {id}: {newPtr.ptr->refCountDelta}");
                     }
                 }
             }
@@ -364,7 +368,8 @@ namespace TextMeshDOTS
                 var count                  = refCountChangeBlocklistA.Count() + refCountChangeBlocklistB.Count();
                 var atlasRemovalCandidates = new UnsafeHashSet<uint>(count, Allocator.Temp);
 
-                for (int streamSource = 0; streamSource < 3; streamSource++)
+                //for (int streamSource = 0; streamSource < 3; streamSource++)  // bug?
+                for (int streamSource = 0; streamSource < 2; streamSource++)    // fix for bug?
                 {
                     ref var stream = ref refCountChangeBlocklistA;
                     if (streamSource == 1)
@@ -377,8 +382,10 @@ namespace TextMeshDOTS
                         {
                             var     delta     = stream.Read<RefCountChange>();
                             ref var entry     = ref glyphTable.GetEntryRW(delta.glyphEntryId);
-                            var     oldCount  = delta.refCountDelta;
-                            entry.refCount   += delta.refCountDelta;
+                            //Debug.Log($"streamsource {streamSource}: Set ref count for glyph {delta.glyphEntryId}: {entry.refCount} + {delta.refCountDelta} = {entry.refCount + delta.refCountDelta} ");
+                            //var     oldCount  = delta.refCountDelta;  // bug?
+                            var oldCount = entry.refCount;              // fix for bug?
+                            entry.refCount   += delta.refCountDelta;                            
                             if (entry.isInAtlas)
                             {
                                 // There can be duplicate entry IDs. So it is possible we decrease the ref count to 0, only to increase it again.
@@ -405,7 +412,7 @@ namespace TextMeshDOTS
                     var doublePadding = 2 * entry.padding;
                     atlasTable.Free(id, (short)(entry.width + doublePadding), (short)(entry.height + doublePadding), entry.x, entry.y, entry.z);
                     //if (entry.key.format == RenderFormat.SDF8)
-                    //    UnityEngine.Debug.Log($"Freeing {new int2(entry.x, entry.y)}");
+                    //    UnityEngine.Debug.Log($"Freeing {entry.x} {entry.y}, width {entry.width}");
                     entry.x = -1;
                     entry.y = -1;
                     entry.z = -1;

@@ -206,7 +206,7 @@ namespace TextMeshDOTS
                                         out glyphEntry.y,
                                         out glyphEntry.z);
                     //if (glyphEntry.key.format == RenderFormat.SDF8)
-                    //    UnityEngine.Debug.Log($"Allocating {new int2(glyphEntry.x, glyphEntry.y)}");
+                    //    UnityEngine.Debug.Log($"Allocating {glyphEntry.x} {glyphEntry.y}, width {glyphEntry.width}");
                     uint id  = (uint)glyphEntry.z;
                     id      |= glyph & 0xc0000000;
                     dirtyAtlasIDSet.Add(id);

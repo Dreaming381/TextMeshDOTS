@@ -46,7 +46,7 @@ namespace TextMeshDOTS
 
             if (!gaps.IsEmpty)
             {
-                var backItem = gaps[gaps.Length - 1];
+                var backItem = gaps[^1];
                 if (backItem.x + backItem.y == oldSize)
                 {
                     gaps.Length--;
@@ -87,7 +87,7 @@ namespace TextMeshDOTS
 
             if (!gaps.IsEmpty)
             {
-                var backItem = gaps[gaps.Length - 1];
+                var backItem = gaps[^1];
                 if (backItem.x + backItem.y == oldSize)
                 {
                     gaps.Length--;

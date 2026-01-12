@@ -555,7 +555,7 @@ namespace TextMeshDOTS
             }
         }
 
-        struct Shelf
+        internal struct Shelf
         {
             public short y;
             public short z;
@@ -570,7 +570,7 @@ namespace TextMeshDOTS
         AllocatorManager.AllocatorHandle allocator;
         uint                             dimension;
         int                              shelfAlignment;
-        NativeList<Shelf>                sdf8Shelves;
+        internal NativeList<Shelf>                sdf8Shelves;
         NativeList<Shelf>                sdf16Shelves;
         NativeList<Shelf>                bitmapShelves;
 
