@@ -376,7 +376,7 @@ namespace TextMeshDOTS
                 {
                     if (shelf.requiresCoellescing)
                     {
-                        shelf.reservedX = GapAllocator.CoellesceGaps(ref shelf.gaps, shelf.reservedX);
+                        shelf.reservedX = GapAllocator.CoalesceGaps(ref shelf.gaps, shelf.reservedX);
                     }
                     var found = GapAllocator.TryAllocate(ref shelf.gaps, (uint)width, ref shelf.reservedX, out var foundX, dimension);
                     if (found)

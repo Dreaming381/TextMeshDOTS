@@ -450,7 +450,7 @@ namespace TextMeshDOTS
                 }
 
                 var totals                = gpuTable.bufferSize.Value;
-                totals                    = GapAllocator.CoellesceGaps(gpuTable.residentGaps, totals);
+                totals                    = GapAllocator.CoalesceGaps(gpuTable.residentGaps, totals);
                 gpuTable.bufferSize.Value = totals;
             }
         }
