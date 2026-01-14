@@ -196,6 +196,7 @@ namespace TextMeshDOTS
                 glyphTable                  = glyphTable,
                 pixelUploadOffsetsInBytes   = pixelUploadOffsetsInBytes,
                 pixelBytesCount             = pixelBytesCount,
+                enableAtlasGC               = true
             }.Schedule(captureJh);
 
             state.Dependency = JobHandle.CombineDependencies(assignJh, atlasJh);

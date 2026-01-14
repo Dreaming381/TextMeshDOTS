@@ -316,12 +316,16 @@ namespace TextMeshDOTS
 
         public ref Entry GetEntryRW(uint glyphEntryID)
         {
-            return ref entries.ElementAt((int)(glyphEntryID & 0x3fffffff));
+            return ref entries.ElementAt((int)(glyphEntryID & 0x3fffffff));// Lower 30 bits contain the entry index; upper bits are flags.
         }
 
         public Entry GetEntry(uint glyphEntryID)
         {
-            return entries[(int)(glyphEntryID & 0x3fffffff)];
+            return entries[(int)(glyphEntryID & 0x3fffffff)]; // Lower 30 bits contain the entry index; upper bits are flags.
+        }
+        public readonly ref Entry GetEntryRef(uint glyphEntryID)
+        {
+            return ref entries.ElementAt((int)(glyphEntryID & 0x3fffffff)); // Lower 30 bits contain the entry index; upper bits are flags. zero allocation access for IComparer
         }
     }
 
@@ -348,6 +352,7 @@ namespace TextMeshDOTS
             sdf8Shelves         = new NativeList<Shelf>(8, allocator);
             sdf16Shelves        = new NativeList<Shelf>(8, allocator);
             bitmapShelves       = new NativeList<Shelf>(8, allocator);
+            atlasRemovalCandidates = new NativeHashSet<uint>(256, allocator);
             this.allocator      = allocator;
             dimension           = (uint)textureDimension;
             this.shelfAlignment = shelfAlignment;
@@ -356,7 +361,178 @@ namespace TextMeshDOTS
         public JobHandle TryDispose(JobHandle inputDeps)
         {
             var jh = new DisposeJob { atlasTable = this }.Schedule(inputDeps);
-            return JobHandle.CombineDependencies(sdf8Shelves.Dispose(jh), sdf16Shelves.Dispose(jh), bitmapShelves.Dispose(jh));
+            var jh2 = JobHandle.CombineDependencies(sdf8Shelves.Dispose(jh), sdf16Shelves.Dispose(jh));
+            jh2 = JobHandle.CombineDependencies(jh2, atlasRemovalCandidates.Dispose(jh), bitmapShelves.Dispose(jh));
+            return jh2;
+        }
+
+        public bool TryAllocateNoNewSlice(uint glyphEntryId, short width, short height, out short x, out short y, out short z)
+        {
+            var format = (RenderFormat)Bits.GetBits(glyphEntryId, 30, 2);
+            var shelves = sdf8Shelves;
+            if (format == RenderFormat.SDF16)
+                shelves = sdf16Shelves;
+            else if (format == RenderFormat.Bitmap8888)
+                shelves = bitmapShelves;
+
+            var alignedHeight = CollectionHelper.Align(height, shelfAlignment);
+            for (int i = 0; i < shelves.Length; i++)
+            {
+                var shelf = shelves[i];
+                if (shelf.height == alignedHeight)
+                {
+                    if (shelf.requiresCoellescing)
+                    {
+                        shelf.reservedX = GapAllocator.CoalesceGaps(ref shelf.gaps, shelf.reservedX);
+                    }
+                    var found = GapAllocator.TryAllocate(ref shelf.gaps, (uint)width, ref shelf.reservedX, out var foundX, dimension);
+                    if (found)
+                        shelf.usedX += width;
+                    shelves[i] = shelf;
+                    if (found)
+                    {
+                        x = (short)foundX;
+                        y = shelf.y;
+                        z = shelf.z;
+                        return found;
+                    }
+                }
+            }
+
+            // We did not found a suitable shelf. Create a new one without creating a new Texture slice
+            var previousMaxYPlus = (int)dimension + 1;
+            var previousZ = -1;
+
+            for (int i = 0; i < shelves.Length; i++)
+            {
+                var nextShelf = shelves[i];
+                if (nextShelf.z != previousZ)
+                {
+                    if (previousMaxYPlus + alignedHeight <= dimension)
+                    {
+                        var newShelf = new Shelf
+                        {
+                            y = (short)previousMaxYPlus,
+                            z = (short)previousZ,
+                            height = (short)alignedHeight,
+                            requiresCoellescing = false,
+                            reservedX = (uint)width,
+                            usedX = width,
+                            gaps = new UnsafeList<uint2>(8, allocator)
+                        };
+                        shelves.InsertRange(i, 1);
+                        shelves[i] = newShelf;
+                        x = 0;
+                        y = newShelf.y;
+                        z = newShelf.z;
+                        return true;
+                    }
+                    //else if (nextShelf.z > previousZ + 1)
+                    //{
+                    //    // Totally free texture array index
+                    //    var newShelf = new Shelf
+                    //    {
+                    //        y = 0,
+                    //        z = (short)(previousZ + 1),
+                    //        height = (short)alignedHeight,
+                    //        requiresCoellescing = false,
+                    //        reservedX = (uint)width,
+                    //        usedX = width,
+                    //        gaps = new UnsafeList<uint2>(8, allocator)
+                    //    };
+                    //    shelves.InsertRange(i, 1);
+                    //    shelves[i] = newShelf;
+                    //    x = 0;
+                    //    y = newShelf.y;
+                    //    z = newShelf.z;
+                    //    return;
+                    //}
+                    else if (nextShelf.y >= alignedHeight)
+                    {
+                        // Free shelf space on the same array index as the next
+                        var newShelf = new Shelf
+                        {
+                            y = 0,
+                            z = nextShelf.z,
+                            height = (short)alignedHeight,
+                            requiresCoellescing = false,
+                            reservedX = (uint)width,
+                            usedX = width,
+                            gaps = new UnsafeList<uint2>(8, allocator)
+                        };
+                        shelves.InsertRange(i, 1);
+                        shelves[i] = newShelf;
+                        x = 0;
+                        y = newShelf.y;
+                        z = newShelf.z;
+                        return true;
+                    }
+                }
+                else if (nextShelf.y >= previousMaxYPlus + alignedHeight)
+                {
+                    var newShelf = new Shelf
+                    {
+                        y = (short)previousMaxYPlus,
+                        z = (short)previousZ,
+                        height = (short)alignedHeight,
+                        requiresCoellescing = false,
+                        reservedX = (uint)width,
+                        usedX = width,
+                        gaps = new UnsafeList<uint2>(8, allocator)
+                    };
+                    shelves.InsertRange(i, 1);
+                    shelves[i] = newShelf;
+                    x = 0;
+                    y = newShelf.y;
+                    z = newShelf.z;
+                    return true;
+                }
+                previousMaxYPlus = nextShelf.y + nextShelf.height;
+                previousZ = nextShelf.z;
+            }
+
+            // We couldn't insert a shelf, so we have to append a new one.
+            if (previousMaxYPlus + alignedHeight <= dimension)
+            {
+                // There's still some space in the last array index
+                var newShelf = new Shelf
+                {
+                    y = (short)previousMaxYPlus,
+                    z = (short)previousZ,
+                    height = (short)alignedHeight,
+                    requiresCoellescing = false,
+                    reservedX = (uint)width,
+                    usedX = width,
+                    gaps = new UnsafeList<uint2>(8, allocator)
+                };
+                shelves.Add(newShelf);
+                x = 0;
+                y = newShelf.y;
+                z = newShelf.z;
+                return true;
+            }
+            else
+            {
+                //// We need a new array index
+                //var newShelf = new Shelf
+                //{
+                //    y = 0,
+                //    z = (short)(previousZ + 1),
+                //    height = (short)alignedHeight,
+                //    requiresCoellescing = false,
+                //    reservedX = (uint)width,
+                //    usedX = width,
+                //    gaps = new UnsafeList<uint2>(8, allocator)
+                //};
+                //shelves.Add(newShelf);
+                //x = 0;
+                //y = newShelf.y;
+                //z = newShelf.z;
+                x = -1;
+                y = -1;
+                z = -1;
+                return false;
+            }
         }
 
         public void Allocate(uint glyphEntryId, short width, short height, out short x, out short y, out short z)
@@ -525,6 +701,23 @@ namespace TextMeshDOTS
             }
         }
 
+        public void Free(ref GlyphTable glyphTable)
+        {
+            // We know for sure that these entry IDs are no longer referenced. Therefore, we can actually remove them.
+            var entriesToRemove = atlasRemovalCandidates.ToNativeArray(Allocator.Temp);
+            entriesToRemove.Sort();  // Determinism for debugging
+            foreach (var id in entriesToRemove)
+            {
+                ref var entry = ref glyphTable.GetEntryRW(id);
+                var doublePadding = 2 * entry.padding;
+                Free(id, (short)(entry.width + doublePadding), (short)(entry.height + doublePadding), entry.x, entry.y, entry.z);
+                //if (entry.key.format == RenderFormat.SDF8)
+                //    UnityEngine.Debug.Log($"Freeing {entry.x} {entry.y}, width {entry.width}");
+                entry.x = -1;
+                entry.y = -1;
+                entry.z = -1;
+            }
+        }
         public void Free(uint glyphEntryId, short width, short height, short x, short y, short z)
         {
             var format  = (RenderFormat)Bits.GetBits(glyphEntryId, 30, 2);
@@ -555,7 +748,7 @@ namespace TextMeshDOTS
             }
         }
 
-        internal struct Shelf
+        struct Shelf
         {
             public short y;
             public short z;
@@ -570,9 +763,10 @@ namespace TextMeshDOTS
         AllocatorManager.AllocatorHandle allocator;
         uint                             dimension;
         int                              shelfAlignment;
-        internal NativeList<Shelf>                sdf8Shelves;
+        NativeList<Shelf>                sdf8Shelves;
         NativeList<Shelf>                sdf16Shelves;
         NativeList<Shelf>                bitmapShelves;
+        public NativeHashSet<uint>       atlasRemovalCandidates;
 
         [BurstCompile]
         struct DisposeJob : IJob

@@ -56,18 +56,18 @@ namespace TextMeshDOTS
                 writer.WriteLine(debugString);
                 Debug.Log(debugString);
             }
-            for (int i = 0, ii = atlasTable.sdf8Shelves.Length; i < ii; i++)
-            {
-                var shelf = atlasTable.sdf8Shelves[i];
-                var debugString = $"usedX: {shelf.usedX} (reservedX: {shelf.reservedX}) shelf: y: {shelf.y} z: {shelf.z} height: {shelf.height}";
-                writer.WriteLine(debugString);
-                Debug.Log(debugString);
-                for (int k = 0, kk = shelf.gaps.Length; k < kk; k++)
-                {
-                    var gap = shelf.gaps[k];
-                    Debug.Log($"{gap.x} {gap.y}");
-                }
-            }
+            //for (int i = 0, ii = atlasTable.sdf8Shelves.Length; i < ii; i++)
+            //{
+            //    var shelf = atlasTable.sdf8Shelves[i];
+            //    var debugString = $"usedX: {shelf.usedX} (reservedX: {shelf.reservedX}) shelf: y: {shelf.y} z: {shelf.z} height: {shelf.height}";
+            //    writer.WriteLine(debugString);
+            //    Debug.Log(debugString);
+            //    for (int k = 0, kk = shelf.gaps.Length; k < kk; k++)
+            //    {
+            //        var gap = shelf.gaps[k];
+            //        Debug.Log($"{gap.x} {gap.y}");
+            //    }
+            //}
             writer.WriteLine();
             writer.Close();
         }

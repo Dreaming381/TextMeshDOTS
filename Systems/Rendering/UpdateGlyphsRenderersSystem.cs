@@ -22,6 +22,7 @@ namespace TextMeshDOTS
         EntityQuery m_deadQuery;
 
         uint m_twoAgoSystemVersion;
+        
 
         public void OnCreate(ref SystemState state)
         {
@@ -89,12 +90,14 @@ namespace TextMeshDOTS
             var glyphTable = GetSingletonRW<GlyphTable>().ValueRW;
             var gpuTable   = GetSingletonRW<GlyphGpuTable>().ValueRW;
 
+            
             var jhA = new ApplyRefCountDeltasToGlyphTableJob
             {
                 atlasTable = atlasTable,
                 glyphTable = glyphTable,
                 refCountChangeBlocklistA = refCountChangeBlocklistA.AsReader(),
                 refCountChangeBlocklistB = refCountChangeBlocklistB.AsReader(),
+                enableAtlasGC = true
             }.Schedule(state.Dependency);
 
             var jhB = new DeallocateResidentsJob
@@ -362,11 +365,12 @@ namespace TextMeshDOTS
             [ReadOnly] public NativeStream.Reader refCountChangeBlocklistB;
             public GlyphTable                     glyphTable;
             public AtlasTable                     atlasTable;
+            public bool enableAtlasGC;
 
             public void Execute()
             {
                 var count                  = refCountChangeBlocklistA.Count() + refCountChangeBlocklistB.Count();
-                var atlasRemovalCandidates = new UnsafeHashSet<uint>(count, Allocator.Temp);
+                var atlasRemovalCandidates = enableAtlasGC ? atlasTable.atlasRemovalCandidates : new NativeHashSet<uint>(count, Allocator.Temp);
 
                 //for (int streamSource = 0; streamSource < 3; streamSource++)  // bug?
                 for (int streamSource = 0; streamSource < 2; streamSource++)    // fix for bug?
@@ -402,6 +406,8 @@ namespace TextMeshDOTS
                         stream.EndForEachIndex();
                     }
                 }
+                if (enableAtlasGC)
+                    return;
 
                 // We know for sure that these entry IDs are no longer referenced. Therefore, we can actually remove them.
                 var entriesToRemove = atlasRemovalCandidates.ToNativeArray(Allocator.Temp);

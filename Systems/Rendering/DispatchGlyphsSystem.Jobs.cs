@@ -179,6 +179,7 @@ namespace TextMeshDOTS
             public NativeReference<int>                   pixelBytesCount;
             public GlyphTable                             glyphTable;
             public AtlasTable                             atlasTable;
+            public bool                                   enableAtlasGC;
 
             public void Execute()
             {
@@ -188,7 +189,10 @@ namespace TextMeshDOTS
                     glyphEntryIDsToRasterize.AddNoResize(glyph);
                 // We sort in reverse order, because higher values of the top two bits tend to be the most expensive,
                 // so we want to have those earlier in the list when we rasterize them.
-                glyphEntryIDsToRasterize.Sort(new ReverseComparer());
+                if(enableAtlasGC)
+                    glyphEntryIDsToRasterize.Sort(new GlyphEntryComparer(in glyphTable));
+                else
+                    glyphEntryIDsToRasterize.Sort(new ReverseComparer());
 
                 UnsafeHashSet<uint> dirtyAtlasIDSet = new UnsafeHashSet<uint>(32, Allocator.Temp);
                 int                 runningOffset   = 0;
@@ -199,15 +203,21 @@ namespace TextMeshDOTS
                     var     doublePadding = 2 * glyphEntry.padding;
                     var     paddedWith    = glyphEntry.width + doublePadding;
                     var     paddedHeight  = glyphEntry.height + doublePadding;
-                    atlasTable.Allocate(glyph,
-                                        (short)(paddedWith),
-                                        (short)(paddedHeight),
-                                        out glyphEntry.x,
-                                        out glyphEntry.y,
-                                        out glyphEntry.z);
+                    if (enableAtlasGC)
+                    {
+                        if (!atlasTable.TryAllocateNoNewSlice(glyph, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z))
+                        {
+                            atlasTable.Free(ref glyphTable); //dispose all glyphs with refCount 0
+                            atlasTable.atlasRemovalCandidates.Clear();
+                            atlasTable.Allocate(glyph, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
+                        }
+                    }
+                    else
+                        atlasTable.Allocate(glyph, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
+
                     //if (glyphEntry.key.format == RenderFormat.SDF8)
                     //    UnityEngine.Debug.Log($"Allocating {glyphEntry.x} {glyphEntry.y}, width {glyphEntry.width}");
-                    uint id  = (uint)glyphEntry.z;
+                    uint id = (uint)glyphEntry.z;
                     id      |= glyph & 0xc0000000;
                     dirtyAtlasIDSet.Add(id);
                     int pixelCount = paddedWith * paddedHeight;
@@ -237,6 +247,27 @@ namespace TextMeshDOTS
         struct ReverseComparer : IComparer<uint>
         {
             public int Compare(uint x, uint y) => - x.CompareTo(y);
+        }
+        struct GlyphEntryComparer : IComparer<uint>
+        {
+            private readonly GlyphTable _glyphTable;
+
+            public GlyphEntryComparer(in GlyphTable glyphTable)
+                => _glyphTable = glyphTable;
+
+            public int Compare(uint x, uint y)
+            {
+                ref readonly var ex = ref _glyphTable.GetEntryRef(x);
+                ref readonly var ey = ref _glyphTable.GetEntryRef(y);
+
+                var c = ((byte)ex.key.format).CompareTo((byte)ey.key.format);
+                if (c != 0) return c;
+
+                c = ey.height.CompareTo(ex.height); //reverse comparison (largest height goes first)
+                if (c != 0) return c;
+
+                return y.CompareTo(x); //reverse entry index comparison
+            }
         }
         #endregion
 
