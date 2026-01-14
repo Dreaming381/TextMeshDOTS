@@ -260,7 +260,7 @@ namespace TextMeshDOTS
                 ref readonly var ex = ref _glyphTable.GetEntryRef(x);
                 ref readonly var ey = ref _glyphTable.GetEntryRef(y);
 
-                var c = ((byte)ex.key.format).CompareTo((byte)ey.key.format);
+                var c = ((byte)ey.key.format).CompareTo((byte)ex.key.format); // reverse order to prioritize bitmaps first, then SDF16, then SDF8.
                 if (c != 0) return c;
 
                 c = ey.height.CompareTo(ex.height); //reverse comparison (largest height goes first)
