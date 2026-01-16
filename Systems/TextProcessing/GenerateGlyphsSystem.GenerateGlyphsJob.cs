@@ -19,14 +19,16 @@ namespace TextMeshDOTS
 
             [ReadOnly] internal FontTable fontTable;
             [ReadOnly] internal GlyphTable glyphTable;
-            [ReadOnly] public EntityTypeHandle entitesHandle;
-            public Entity textColorGradientEntity;
-            [ReadOnly] public BufferLookup<TextColorGradient> textColorGradientLookup;
+            
+            [ReadOnly] public NativeStream.Reader glyphOTFStream;
+            [ReadOnly] public NativeStream.Reader xmlTagStream;
+            [ReadOnly] public NativeArray<int> firstEntityIndexInChunk;
 
             [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
-            [ReadOnly] public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
-            [ReadOnly] public BufferTypeHandle<XMLTag> xmlTagHandle;
             [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
+
+            public Entity textColorGradientEntity;
+            [ReadOnly] public BufferLookup<TextColorGradient> textColorGradientLookup;
 
             public uint lastSystemVersion;
 
@@ -36,15 +38,12 @@ namespace TextMeshDOTS
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
             {
                 if (!(chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
-                      chunk.DidChange(ref xmlTagHandle, lastSystemVersion) ||
                       chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion)))
                     return;
 
+                var firstEntityIndex = firstEntityIndexInChunk[unfilteredChunkIndex];
                 //Debug.Log("Generate glyphs job");
-                var entities = chunk.GetNativeArray(entitesHandle);
                 var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
-                var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
-                var xmlTagBuffers = chunk.GetBufferAccessor(ref xmlTagHandle);
                 var renderGlyphBuffers = chunk.GetBufferAccessor(ref renderGlyphHandle);
                 var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
 
@@ -54,37 +53,41 @@ namespace TextMeshDOTS
 
                 for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
                 {
-                    var rootFontMaterialEntity = entities[indexInChunk];
+                    int entityIndex = firstEntityIndex + indexInChunk;                    
+                    var xmlTagCount = xmlTagStream.BeginForEachIndex(entityIndex);
+                    var xmlTags = new NativeArray<XMLTag>(xmlTagCount, Allocator.Temp);
+                    for (int i = 0; i < xmlTagCount; i++)
+                        xmlTags[i] = xmlTagStream.Read<XMLTag>();
+                    xmlTagStream.EndForEachIndex();
+
                     var calliBytes = calliBytesBuffers[indexInChunk];
-                    var glyphOTFs = glyphOTFBuffers[indexInChunk];
-                    var xmlTags = xmlTagBuffers[indexInChunk];
                     var renderGlyphs = renderGlyphBuffers[indexInChunk];
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
-
+                    renderGlyphs.Clear();
+                    var glyphCount = glyphOTFStream.BeginForEachIndex(entityIndex);
+                    if (glyphCount == 0)
+                        continue;
+                   
+                    //renderGlyphs.Capacity = glyphCount;
                     CreateRenderGlyphs(ref renderGlyphs,
                                        in calliBytes,
-                                       in glyphOTFs,
-                                       in xmlTags,
+                                       ref glyphOTFStream,
+                                       ref xmlTags,
                                        in textBaseConfiguration,
                                        ref textColorGradientArray);
+                    glyphOTFStream.EndForEachIndex();
                 }
             }
 
             unsafe void CreateRenderGlyphs(ref DynamicBuffer<RenderGlyph> renderGlyphs,
                                            in DynamicBuffer<CalliByte> calliBytesBuffer,
-                                           in DynamicBuffer<GlyphOTF> glyphOTFBuffer,
-                                           in DynamicBuffer<XMLTag> xmlTagBuffer,
+                                           ref NativeStream.Reader glyphOTFStream,
+                                           ref NativeArray<XMLTag> xmlTags,
                                            in TextBaseConfiguration textBaseConfiguration,
                                            ref TextColorGradientArray textColorGradientArray)
             {
                 //Debug.Log("CreateRenderGlyphs");
-                renderGlyphs.Clear();
-                if (glyphOTFBuffer.IsEmpty)
-                    return;
-
-                renderGlyphs.Capacity = glyphOTFBuffer.Length;      //2x speedup compared to allocation of individual items
-
                 var calliString = new CalliString(calliBytesBuffer);
                 var characters = calliString.GetEnumerator();
 
@@ -93,7 +96,7 @@ namespace TextMeshDOTS
 
                 XMLTag currentTag = default;
                 int tagsCounter = 0;
-                int nextSegmentEndID = xmlTagBuffer.Length > 0 ? xmlTagBuffer[tagsCounter].startID : calliString.Length;
+                int nextSegmentEndID = xmlTags.Length > 0 ? xmlTags[tagsCounter].startID : calliString.Length;
                 int cleanedSegmentLength = nextSegmentEndID - currentTag.endID;
                 int richTextOffset = 0;
                 int nextTagPositionInCleanedText = cleanedSegmentLength;
@@ -113,7 +116,8 @@ namespace TextMeshDOTS
                 float maxLineDescender = float.MaxValue;
 
 
-                var glyphOTF = glyphOTFBuffer[0];
+                //var glyphOTF = glyphOTFBuffer[0];
+                var glyphOTF = glyphOTFStream.Peek<GlyphOTF>();
                 var glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
                 var glyphEntry = glyphTable.GetEntry(glyphID);
 
@@ -139,9 +143,12 @@ namespace TextMeshDOTS
                 float bottomAnchor = GetBottomAnchorForConfig(ref currentFont, textBaseConfiguration.verticalAlignment, baseScale);
 
                 Unicode.Rune currentRune, previousRune = Unicode.BadRune;//input text unicode
-                for (int k = 0, length = glyphOTFBuffer.Length; k < length; k++)
+                //for (int k = 0, length = glyphOTFBuffer.Length; k < length; k++)
+                int k = 0;
+                while (glyphOTFStream.RemainingItemCount > 0)
                 {
-                    glyphOTF = glyphOTFBuffer[k];
+                    glyphOTF = glyphOTFStream.Read<GlyphOTF>();
+                    //glyphOTF = glyphOTFBuffer[k];
                     glyphID = glyphTable.glyphHashToIdMap[glyphOTF.glyphKey];
                     glyphEntry = glyphTable.GetEntry(glyphID);
 
@@ -166,12 +173,12 @@ namespace TextMeshDOTS
                     
                     while (cluster >= nextTagPositionInCleanedText)
                     {
-                        if (tagsCounter < xmlTagBuffer.Length)
+                        if (tagsCounter < xmlTags.Length)
                         {
-                            currentTag = xmlTagBuffer[tagsCounter++];
+                            currentTag = xmlTags[tagsCounter++];
                             richTextOffset += currentTag.Length;
                             layoutConfig.Update(ref currentTag, textBaseConfiguration, ref textColorGradientArray);
-                            nextSegmentEndID = tagsCounter < xmlTagBuffer.Length ? xmlTagBuffer[tagsCounter].startID - 1 : calliString.Length;
+                            nextSegmentEndID = tagsCounter < xmlTags.Length ? xmlTags[tagsCounter].startID - 1 : calliString.Length;
                             cleanedSegmentLength = nextSegmentEndID - currentTag.endID;
                             nextTagPositionInCleanedText = cluster + cleanedSegmentLength;
 
@@ -546,6 +553,7 @@ namespace TextMeshDOTS
                     }
                     #endregion
                     previousRune = currentRune;
+                    k++;
                 }
 
                 var finalRenderGlyphsLine = renderGlyphs.AsNativeArray().GetSubArray(startOfLineGlyphIndex, renderGlyphs.Length - startOfLineGlyphIndex);

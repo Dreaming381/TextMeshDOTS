@@ -16,7 +16,7 @@ namespace TextMeshDOTS.RichText
             in CalliString calliStringRaw,            
             ref CalliString.Enumerator enumerator,
             int position,
-            ref DynamicBuffer<XMLTag> xmlTags, 
+            ref NativeStream.Writer xmlTagStream, 
             ref FixedString128Bytes m_htmlTag) 
         {
             int tagCharCount = 0;
@@ -211,7 +211,7 @@ namespace TextMeshDOTS.RichText
                 return false;
             }
             if (tag.tagType != TagType.Unknown)
-                xmlTags.Add(tag);
+                xmlTagStream.Write(tag);
 
             return true;            
         }

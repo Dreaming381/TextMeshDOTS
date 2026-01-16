@@ -64,19 +64,19 @@ Phase 3 is currently in progress.
 
 ### Improve Rendering Capabilities (Optional)
 
-- [ ] Properly support hi-res text and images
+- [x] Properly support hi-res text and images
 - [ ] Support inlined sprites
 - [ ] Support highlighting
 - [ ] Support underlines and strikethroughs
 - [ ] Support user tagged regions
-- [ ] Add more shaders and shader graph foundation subgraphs
+- [x] Add more shaders and shader graph foundation subgraphs
 - [ ] Support raymarched text
 - [ ] Support in-panel BVH text
 
 ### Optimize (Optional-ish)
 
 - [ ] Figure out Harfbuzz threading hazards (and maybe updatin harfbuzz fixes these?)
-- [ ] Optimize texture uploads after first frame (do we need to do sparse uploads with compute?)
+- [x] Optimize texture uploads after first frame (do we need to do sparse uploads with compute?)
 - [ ] Optimize job scheduling bubbles
 - [ ] Optimize SDF generation
 - [ ] Optimize rasterization

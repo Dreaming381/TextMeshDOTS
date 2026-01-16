@@ -71,8 +71,6 @@ namespace TextMeshDOTS.Authoring
 
             var entity = GetEntity(TransformUsageFlags.Renderable);
             AddComponent<TextShaderIndex>(entity);
-            AddBuffer<XMLTag>(entity);
-            AddBuffer<GlyphOTF>(entity);
             AddBuffer<RenderGlyph>(entity);
             var calliByte = AddBuffer<CalliByte>(entity);
             var calliString = new CalliString(calliByte);

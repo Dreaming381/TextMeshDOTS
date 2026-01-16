@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace TextMeshDOTS
 {
-    public partial struct ShapeSystem
+    public partial struct GenerateGlyphsSystem
     {
         partial struct ShapeJob
         {

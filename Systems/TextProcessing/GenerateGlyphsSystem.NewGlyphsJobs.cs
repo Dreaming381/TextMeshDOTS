@@ -6,7 +6,7 @@ using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
 {
-    public partial struct ShapeSystem
+    public partial struct GenerateGlyphsSystem
     {
         [BurstCompile]
         struct AllocateNewGlyphsJob : IJob

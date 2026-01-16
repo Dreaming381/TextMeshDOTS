@@ -6,7 +6,7 @@ using static Unity.Entities.SystemAPI;
 namespace TextMeshDOTS
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateBefore(typeof(ShapeSystem))]
+    [UpdateBefore(typeof(GenerateGlyphsSystem))]
     [RequireMatchingQueriesForUpdate]
     [BurstCompile]
     public partial struct TextRendererInitializeSystem : ISystem

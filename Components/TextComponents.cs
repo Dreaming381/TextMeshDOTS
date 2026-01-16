@@ -3,8 +3,7 @@ using TextMeshDOTS.RichText;
 using Unity.Entities;
 
 namespace TextMeshDOTS
-{    
-
+{
     /// <summary>
     /// The raw byte element as part of the text string.
     /// Cast to CalliString to read  /write.
@@ -15,9 +14,7 @@ namespace TextMeshDOTS
         public byte element;
     }
     
-    // Todo: Replace these with temporary allocations, as Allocator.Persistent mallocs are showing up a lot in the profiler.
-    [InternalBufferCapacity(0)]
-    internal struct XMLTag : IBufferElementData
+    internal struct XMLTag
     {
         public TagType tagType;
         public bool isClosing;
@@ -38,8 +35,7 @@ namespace TextMeshDOTS
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    [InternalBufferCapacity(0)]
-    internal struct GlyphOTF : IBufferElementData
+    internal struct GlyphOTF
     {
         internal GlyphTable.Key glyphKey;
         public uint cluster;

@@ -4,29 +4,32 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 using Unity.Profiling;
 using UnityEngine;
 using Buffer = TextMeshDOTS.HarfBuzz.Buffer;
 
 namespace TextMeshDOTS
 {
-    public partial struct ShapeSystem
+    public partial struct GenerateGlyphsSystem
     {
         [BurstCompile]
         partial struct ShapeJob : IJobChunk
         {
             [ReadOnly] public ProfilerMarker marker;
             [ReadOnly] public ProfilerMarker marker2;
-
-            public BufferTypeHandle<GlyphOTF> glyphOTFHandle;
+            
+            public NativeStream.Writer missingGlyphsStream;
+            [NativeDisableParallelForRestriction] public NativeStream.Writer glyphOTFStream;
+            [ReadOnly] public NativeStream.Reader xmlTagStream;
+            [ReadOnly] public NativeArray<int> firstEntityIndexInChunk;
 
             [ReadOnly] internal FontTable fontTable;
             //internal FontTable fontTable;
             [ReadOnly] internal GlyphTable glyphTable;
             [ReadOnly] public ComponentTypeHandle<TextBaseConfiguration> textBaseConfigurationHandle;
             [ReadOnly] public BufferTypeHandle<CalliByte> calliByteHandle;
-            [ReadOnly] public BufferTypeHandle<XMLTag> xmlTagHandle;
-            public NativeStream.Writer missingGlyphsStream;
+         
 
             public uint lastSystemVersion;
 
@@ -38,19 +41,18 @@ namespace TextMeshDOTS
             [BurstCompile]
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
             {
-                if (!(chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion) ||
-                      chunk.DidChange(ref xmlTagHandle, lastSystemVersion)))
+                if (!(chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion)))
                     return;
 
                 if (!chunkMissingGlyphsSet.IsCreated)
                     chunkMissingGlyphsSet = new UnsafeHashSet<GlyphTable.Key>(128, Allocator.Temp);
                 chunkMissingGlyphsSet.Clear();
 
-                missingGlyphsStream.BeginForEachIndex(unfilteredChunkIndex);
+                var firstEntityIndex = firstEntityIndexInChunk[unfilteredChunkIndex];
+                missingGlyphsStream.BeginForEachIndex(unfilteredChunkIndex);                
+
                 //Debug.Log("Shape job");
                 var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
-                var xmlTagBuffers = chunk.GetBufferAccessor(ref xmlTagHandle);
-                var glyphOTFBuffers = chunk.GetBufferAccessor(ref glyphOTFHandle);
                 var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
 
                 var buffer = new Buffer(true);
@@ -66,8 +68,15 @@ namespace TextMeshDOTS
 
                 for (int indexInChunk = 0; indexInChunk < chunk.Count; indexInChunk++)
                 {
-                    var xmlTagBuffer = xmlTagBuffers[indexInChunk];
-                    var glyphOTFs = glyphOTFBuffers[indexInChunk];
+                    int entityIndex = firstEntityIndex + indexInChunk;
+                    glyphOTFStream.BeginForEachIndex(entityIndex);
+
+                    var xmlTagCount = xmlTagStream.BeginForEachIndex(entityIndex);
+                    var xmlTags = new NativeArray<XMLTag>(xmlTagCount, Allocator.Temp);                    
+                    for (int i = 0; i < xmlTagCount; i++)
+                        xmlTags[i] = xmlTagStream.Read<XMLTag>();
+                    xmlTagStream.EndForEachIndex();
+
                     var calliBytesBuffer = calliBytesBuffers[indexInChunk].Reinterpret<byte>();
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
@@ -75,16 +84,18 @@ namespace TextMeshDOTS
 
                     fontConfig.Reset(textBaseConfiguration, ref fontTable);
                     layoutConfig.Reset(textBaseConfiguration);
-                    glyphOTFs.Clear();
+                    //glyphOTFs.Clear();
                     var calliString = new CalliString(calliBytesBuffer);
                     cleanedString.Capacity = calliString.Capacity;
 
-                    if (xmlTagBuffer.Length == 0)
-                        ShapeNoRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref language, ref buffer, ref glyphOTFs);
+                    if (xmlTagStream.Count() == 0)
+                        ShapeNoRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref language, ref buffer, ref glyphOTFStream);
                     else
-                        ShapeRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref language, ref buffer, ref glyphOTFs, ref xmlTagBuffer);
+                        ShapeRichText(calliString, ref layoutConfig, cleanedString, ref fontConfig, ref fontTable, ref openTypeFeatures, ref textBaseConfiguration, ref language, ref buffer, ref glyphOTFStream, ref xmlTags);
 
                     cleanedString.Clear();
+                    glyphOTFStream.EndForEachIndex();
+                    
                 }
                 //add missing glyphs identifed in chunks processed by this thread to missingGlyphs
                 missingGlyphsStream.EndForEachIndex();
@@ -109,7 +120,7 @@ namespace TextMeshDOTS
                 ref TextBaseConfiguration textBaseConfiguration,
                 ref Language language,
                 ref Buffer buffer,
-                ref DynamicBuffer<GlyphOTF> glyphOTFs)
+                ref NativeStream.Writer glyphOTFStream)
             {
                 var rawCharacters = calliString.GetEnumerator();
                 //copy text into buffer used for shaping, convert case while doing so
@@ -119,7 +130,7 @@ namespace TextMeshDOTS
                     AppendAndConvertCase(cleanedString, layoutConfig.m_fontStyles, ref currentRune);
                 }
                 openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedString.Length);
-                Shape(buffer, cleanedString, 0, cleanedString.Length, ref language, ref fontTable, ref fontConfig, fontConfig.m_faceIndex, fontConfig.m_namedVariationIndex, openTypeFeatures.values, glyphOTFs);
+                Shape(buffer, cleanedString, 0, cleanedString.Length, ref language, ref fontTable, ref fontConfig, fontConfig.m_faceIndex, fontConfig.m_namedVariationIndex, openTypeFeatures.values, ref glyphOTFStream);
             }
 
             void ShapeRichText(CalliString calliString,
@@ -131,8 +142,8 @@ namespace TextMeshDOTS
               ref TextBaseConfiguration textBaseConfiguration,
               ref Language language,
               ref Buffer buffer,
-              ref DynamicBuffer<GlyphOTF> glyphOTFs,
-              ref DynamicBuffer<XMLTag> xmlTagBuffer)
+              ref NativeStream.Writer glyphOTFStream,
+              ref NativeArray<XMLTag> xmlTags)
             {
                 //text has richtext tags. Search segments where font, language, script and direction does does not change (To-Do: use ICU for that),
                 //apply opentype features requested via richtext tags, and shape
@@ -140,7 +151,7 @@ namespace TextMeshDOTS
                 var currentFaceIndex = fontConfig.m_faceIndex;
                 var currentNamedVariationIndex = fontConfig.m_namedVariationIndex;
                 int tagsCounter = 0;
-                var nextTagPosition = tagsCounter < xmlTagBuffer.Length ? xmlTagBuffer[tagsCounter].startID : calliString.Length;
+                var nextTagPosition = tagsCounter < xmlTags.Length ? xmlTags[tagsCounter].startID : calliString.Length;
 
                 //copy text into buffer used for shaping, convert case while doing so
                 bool keepGoing;
@@ -148,15 +159,15 @@ namespace TextMeshDOTS
                 while (keepGoing = rawCharacters.MoveNext())
                 {
                     var currentRune = rawCharacters.Current;
-                    while (tagsCounter < xmlTagBuffer.Length && rawCharacters.NextRuneByteIndex > nextTagPosition)
+                    while (tagsCounter < xmlTags.Length && rawCharacters.NextRuneByteIndex > nextTagPosition)
                     {
-                        currentTag = xmlTagBuffer[tagsCounter];
+                        currentTag = xmlTags[tagsCounter];
                         rawCharacters.GotoByteIndex(currentTag.endID);              // go to ">'
                         keepGoing = rawCharacters.MoveNext();                       // go to char after '>'                        
                         layoutConfig.Update(ref currentTag);
                         currentRune = rawCharacters.Current;
                         tagsCounter++;
-                        nextTagPosition = tagsCounter < xmlTagBuffer.Length ? xmlTagBuffer[tagsCounter].startID : calliString.Length;
+                        nextTagPosition = tagsCounter < xmlTags.Length ? xmlTags[tagsCounter].startID : calliString.Length;
                         //continue;
                     }
                     if (!keepGoing)
@@ -170,9 +181,9 @@ namespace TextMeshDOTS
                 tagsCounter = 0;
                 while (cleanedStart < cleanedString.Length)
                 {
-                    while (tagsCounter < xmlTagBuffer.Length && fontConfig.m_faceIndex == currentFaceIndex && fontConfig.m_namedVariationIndex == currentNamedVariationIndex)
+                    while (tagsCounter < xmlTags.Length && fontConfig.m_faceIndex == currentFaceIndex && fontConfig.m_namedVariationIndex == currentNamedVariationIndex)
                     {
-                        currentTag = xmlTagBuffer[tagsCounter];
+                        currentTag = xmlTags[tagsCounter];
                         var cleanedInterTagLength = (currentTag.startID - richTextStartID);
                         cleanedEnd += cleanedInterTagLength;
                         fontConfig.Update(ref currentTag, ref fontTable, ref calliString);
@@ -184,11 +195,11 @@ namespace TextMeshDOTS
                     openTypeFeatures.SetGlobalFeatures(textBaseConfiguration, (uint)cleanedString.Length);
                     var cleanedSegmentLength = cleanedEnd - cleanedStart;
                     if(cleanedSegmentLength > 0 ) 
-                        Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref language, ref fontTable, ref fontConfig, currentFaceIndex, currentNamedVariationIndex, openTypeFeatures.values, glyphOTFs);
+                        Shape(buffer, cleanedString, cleanedStart, cleanedSegmentLength, ref language, ref fontTable, ref fontConfig, currentFaceIndex, currentNamedVariationIndex, openTypeFeatures.values, ref glyphOTFStream);
                     currentFaceIndex = fontConfig.m_faceIndex;
                     currentNamedVariationIndex = fontConfig.m_namedVariationIndex;
                     cleanedStart = cleanedEnd;
-                    if (tagsCounter == xmlTagBuffer.Length) //last loop in order to shape text between last tag and end of rich text buffer
+                    if (tagsCounter == xmlTags.Length) //last loop in order to shape text between last tag and end of rich text buffer
                         cleanedEnd = cleanedString.Length;
                 }
             }
@@ -203,7 +214,7 @@ namespace TextMeshDOTS
                 int faceIndex,
                 int namedVariationIndex,
                 NativeList<Feature> features,
-                DynamicBuffer<GlyphOTF> glyphOTFs)
+                ref NativeStream.Writer glyphOTFStream)
             {
                 if (startIndex + length == text.Length && text[^1] == 0)
                     length--; //last byte of CalliBytes buffer appears to be always '0', which should not be shaped. 
@@ -245,8 +256,8 @@ namespace TextMeshDOTS
 
                 var glyphInfos = buffer.GetGlyphInfosSpan();
                 var glyphPositions = buffer.GetGlyphPositionsSpan();
-                var capacity = glyphOTFs.Length + glyphInfos.Length;
-                glyphOTFs.Capacity = capacity; //2x speedup compared to allocating for each element
+                //var capacity = glyphOTFs.Length + glyphInfos.Length;
+                //glyphOTFs.Capacity = capacity; //2x speedup compared to allocating for each element
 
                 for (int i = 0, ii = glyphInfos.Length; i < ii; i++)
                 {
@@ -278,7 +289,8 @@ namespace TextMeshDOTS
                         if (chunkMissingGlyphsSet.Add(glyphOTF.glyphKey))
                             missingGlyphsStream.Write(glyphOTF.glyphKey);
                     }
-                    glyphOTFs.Add(glyphOTF);
+                    glyphOTFStream.Write(glyphOTF);
+                    //glyphOTFs.Add(glyphOTF);
                 }
                 buffer.ClearContent();
                 features.Clear();
