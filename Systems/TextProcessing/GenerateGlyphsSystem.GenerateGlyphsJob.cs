@@ -16,6 +16,7 @@ namespace TextMeshDOTS
         partial struct GenerateRenderGlyphsJob : IJobChunk
         {
             public BufferTypeHandle<RenderGlyph> renderGlyphHandle;
+            public BufferTypeHandle<PreviousRenderGlyph> previousRenderGlyphHandle;
 
             [ReadOnly] internal FontTable fontTable;
             [ReadOnly] internal GlyphTable glyphTable;
@@ -45,6 +46,7 @@ namespace TextMeshDOTS
                 //Debug.Log("Generate glyphs job");
                 var calliBytesBuffers = chunk.GetBufferAccessor(ref calliByteHandle);
                 var renderGlyphBuffers = chunk.GetBufferAccessor(ref renderGlyphHandle);
+                var previousRenderGlyphBuffers = chunk.GetBufferAccessor(ref previousRenderGlyphHandle);
                 var textBaseConfigurations = chunk.GetNativeArray(ref textBaseConfigurationHandle);
 
                 TextColorGradientArray textColorGradientArray = default;
@@ -62,14 +64,16 @@ namespace TextMeshDOTS
 
                     var calliBytes = calliBytesBuffers[indexInChunk];
                     var renderGlyphs = renderGlyphBuffers[indexInChunk];
+                    var previousRenderGlyphBuffer = previousRenderGlyphBuffers[indexInChunk];
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
                     renderGlyphs.Clear();
                     var glyphCount = glyphOTFStream.BeginForEachIndex(entityIndex);
                     if (glyphCount == 0)
                         continue;
-                   
-                    //renderGlyphs.Capacity = glyphCount;
+
+                    previousRenderGlyphBuffer.Capacity = glyphCount; //allocating here make this job 2x slower but UpdateChangedGlyphsJob 10x faster
+                    //renderGlyphs.Capacity = glyphCount; //not needed when done via single threaded pre-allocationjob
                     CreateRenderGlyphs(ref renderGlyphs,
                                        in calliBytes,
                                        ref glyphOTFStream,

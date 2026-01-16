@@ -56,16 +56,16 @@ namespace TextMeshDOTS
             var glyphOTFStream = new NativeStream(entityCount, state.WorldUpdateAllocator);
             var xmlTagStream = new NativeStream(entityCount, state.WorldUpdateAllocator);
 
-            var firstEntityIndexInChunk = textRendererQ.CalculateBaseEntityIndexArrayAsync(state.WorldUpdateAllocator, state.Dependency, out JobHandle jh);
+            var firstEntityIndexInChunk = textRendererQ.CalculateBaseEntityIndexArrayAsync(state.WorldUpdateAllocator, state.Dependency, out JobHandle firstEntityJH);
 
             //optional single threaded job to pre-allcoate RenderGlyphbuffer...pays off when spawning a lot of new TextRenderer
-            state.Dependency = new AllocateRenderGlyphsJob
+            var allocateJH = new AllocateRenderGlyphsJob
             {
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
                 renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
-            }.Schedule(textRendererQ, jh);
+            }.Schedule(textRendererQ, state.Dependency);
 
             state.Dependency = new ExtractTagsJob
             {
@@ -74,7 +74,7 @@ namespace TextMeshDOTS
                 calliByteHandle = SystemAPI.GetBufferTypeHandle<CalliByte>(true),
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
-            }.ScheduleParallel(textRendererQ, state.Dependency);
+            }.ScheduleParallel(textRendererQ, firstEntityJH);
             
             state.Dependency = new ShapeJob
             {
@@ -124,9 +124,11 @@ namespace TextMeshDOTS
             //}.Schedule(missingGlyphsToAdd, 4, state.Dependency);
             }.Schedule(state.Dependency);
 
+            state.Dependency = JobHandle.CombineDependencies(state.Dependency, allocateJH);
             state.Dependency = new GenerateRenderGlyphsJob
             {
                 renderGlyphHandle = SystemAPI.GetBufferTypeHandle<RenderGlyph>(false),
+                previousRenderGlyphHandle = SystemAPI.GetBufferTypeHandle<PreviousRenderGlyph>(false),
 
                 fontTable = fontTable,
                 glyphTable = SystemAPI.GetSingleton<GlyphTable>(),
@@ -143,7 +145,6 @@ namespace TextMeshDOTS
 
                 lastSystemVersion = m_skipChangeFilter ? 0 : state.LastSystemVersion,
             }.ScheduleParallel(textRendererQ, state.Dependency);
-
         }
         [BurstCompile]
         public void OnDestroy(ref SystemState state)

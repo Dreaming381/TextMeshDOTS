@@ -1,9 +1,7 @@
-using TextMeshDOTS.RichText;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Burst.Intrinsics;
-using System.IO;
 
 namespace TextMeshDOTS
 {
