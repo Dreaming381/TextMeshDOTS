@@ -2,7 +2,7 @@
 
 TextMeshDOTS renders world space text similar to TextMeshPro. It is a standalone text package for DOTS, 
 forked from Dreaming381's [Latios Framework/Calligraphics](https://github.com/Dreaming381/Latios-Framework/tree/master/Calligraphics). 
-![plot](./TextMeshDOTS.png)
+![plot](./Documentation/TextMeshDOTS.png)
 
 <b>Font Support</b> Powered by [Harfbuzz](https://harfbuzz.github.io/), TextMeshDOTS is currently able to load 
 regular and variable TrueType and OpenType fonts, as well as TrueType Collection fonts. Fonts can either be included as an asset, or searched 
@@ -41,11 +41,11 @@ These GPU resident buffer are automatically and incrementally updated when chang
 
 <b>Shader Support</b>
 The included HDRP and URP ShaderGraph shader are based on a number of custom function nodes to provide modularity for 
-decoding the GPU resident vertex data, sampling of the SDF or bitmap texture array, adding up three outlines to SDF 
+decoding the GPU resident vertex data, sampling of the SDF or bitmap texture array, adding up to three outlines to SDF 
 glyphs, as well as colorizing/texturing SDF glyphs and outlines. Different shader variants are provided, 
 with the most complex shader providing feature parity to the TextMeshPro 4.0 SRP shader. The modularity of the 
 shader design enables users to expand on the provided examples and define their own custom shader. For a given 
-text label (`TextRenderer`) that makes use of different fonts and emoji, TextMeshDOTS needs as of version 0.9.6
+text label (`TextRenderer`) that makes use of different fonts and emoji, TextMeshDOTS needs as of version 0.9.5
 just one entity and one material.
 
 # Autoring workflow
