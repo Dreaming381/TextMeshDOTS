@@ -213,7 +213,7 @@ internal class RenderTest : MonoBehaviour
         if (face.HasVarData)
         {
             font.VariationNamedInstance = 17; //13 OK, 14 buggy for "6"
-            DisplayVariationAxis();
+            //DisplayVariationAxis();
         }
 
 
