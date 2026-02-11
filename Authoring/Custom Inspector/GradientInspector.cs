@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using TextMeshDOTS.Authoring;
 using UnityEditor;
@@ -5,7 +6,7 @@ using UnityEditor.UIElements;
 using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
-namespace TextmeshDOTS
+namespace TextMeshDOTS
 {
     [CustomEditor(typeof(TextGradientAuthoring))]
     public class GradientInspector : Editor
@@ -93,3 +94,4 @@ namespace TextmeshDOTS
         }
     }
 }
+#endif

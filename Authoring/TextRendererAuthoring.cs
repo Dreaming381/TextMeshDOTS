@@ -1,13 +1,9 @@
-using TextMeshDOTS.HarfBuzz;
-using TextMeshDOTS.Rendering;
+#if UNITY_EDITOR
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 using Unity.Mathematics;
-using Unity.Entities.Graphics;
-using Unity.Rendering;
-using UnityEngine.Rendering;
-using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine;
 
 namespace TextMeshDOTS.Authoring
 {
@@ -15,19 +11,18 @@ namespace TextMeshDOTS.Authoring
     [AddComponentMenu("TextMeshDOTS/Text Renderer")]
     public class TextRendererAuthoring : MonoBehaviour
     {
+        public FontCollectionAsset fontCollectionAsset;
+        [Tooltip("Select the default font family for this TextRenderer. Ensure to assign the font collection asset first")]
+        public string defaultFont;
+
         [TextArea(5, 10)]
         public string text;
+
         [EnumButtons]
         public FontStyles fontStyles = FontStyles.Normal;
+
         public float fontSize = 12f;
-
-        [Tooltip("Sampling point size is used to set the font scale. See https://harfbuzz.github.io/harfbuzz-hb-font.html#hb-font-set-scale")]
-        [Range(64, 96)]
-        public int samplingPointSizeSDF = 64;
-        [Range(64, 256)]
-        public int samplingPointSizeBitmap = 64;
         public Color32 color = Color.white;
-
         public HorizontalAlignmentOptions horizontalAlignment = HorizontalAlignmentOptions.Left;
         public VerticalAlignmentOptions verticalAlignment = VerticalAlignmentOptions.TopAscent;
         public bool wordWrap = true;
@@ -39,138 +34,79 @@ namespace TextMeshDOTS.Authoring
         public float lineSpacing = 0;
         [Tooltip("Paragraph spacing in font units where a value of 1 equals 1/100em.")]
         public float paragraphSpacing = 0;
-
-        [Tooltip("When selected, fonts will be searched within device OS embedded fonts at runtime. Otherwise fonts need to be located in StreamingAssets folder")]
-        public bool useSystemFonts = false;
-        [Tooltip("Drop here all fonts and their family members you like to use. Family members are selected based on choosen FontStyle.)")]
-        public Object[] fonts;
-        //public FontCollectionAsset fontCollectionAsset;
-        //public string selectedFont;
+        [Tooltip("Use BCP 47 conform tags to set the language of this text https://en.wikipedia.org/wiki/IETF_language_tag#List_of_common_primary_language_subtags)")]
+        public string language = "en";
+        public Material material;
+        public FontTextureSize fontTextureSize;
     }
 
     class TextRendererBaker : Baker<TextRendererAuthoring>
     {
         public override void Bake(TextRendererAuthoring authoring)
         {
+            DependsOn(authoring.fontCollectionAsset);
             int fontCount = 0;
-            if (authoring.fonts == null || (fontCount = authoring.fonts.Length) == 0)
+            if (authoring.fontCollectionAsset == null ||
+                (fontCount = authoring.fontCollectionAsset.fontReferences.Count) == 0 ||
+                authoring.defaultFont == string.Empty ||
+                authoring.material == null ||
+                authoring.language.Length == 0)
                 return;
 
-            HashSet<int> redundancyCheck = new HashSet<int>(fontCount);
-            for (int i = 0; i < fontCount; i++)
-            {
-                var font = authoring.fonts[i];
-                if(font == null) 
-                    return;
-                var hashCode = font.name.GetHashCode();
-                if (redundancyCheck.Contains(hashCode))
-                {
-                    //Debug.Log($"List of fonts contains redundancies");
-                    return;
-                }
-                redundancyCheck.Add(hashCode);
-            }
+            string[] guids = AssetDatabase.FindAssets("TextBackendMesh t:mesh", null);
+            if (guids.Length == 0 || guids[0] == null)
+                return;
 
-            var layer = GetLayer();
+            var backEndMesh = AssetDatabase.LoadAssetByGUID(new GUID(guids[0]), typeof(Mesh)) as Mesh;
 
-            var renderFilterSettings = new RenderFilterSettings
-            {
-                Layer = layer,
-                RenderingLayerMask = (uint)(1 << layer),
-                ShadowCastingMode = ShadowCastingMode.Off,
-                ReceiveShadows = false,
-                MotionMode = MotionVectorGenerationMode.Object,
-                StaticShadowCaster = false,
-            };
+            //add MeshFilter and MeshRender on main entity to ensure it correctly converted 
+            var meshRenderer = GetComponent<MeshRenderer>();
+            if (meshRenderer == null)
+                meshRenderer = authoring.gameObject.AddComponent<MeshRenderer>();
+            var meshFilter = GetComponent<MeshFilter>();
+            if (meshFilter == null)
+                meshFilter = authoring.gameObject.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = backEndMesh;
+            meshRenderer.material = authoring.material;
 
             var entity = GetEntity(TransformUsageFlags.Renderable);
-            AddEntityGraphicsComponents(entity, renderFilterSettings);
-            AddComponent(entity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
             AddComponent<TextShaderIndex>(entity);
-
-            var additionalEntities = new NativeList<Entity>(16, Allocator.Temp);
-
-            for (int i = 0; i < fontCount; i++)
-            {
-                var fontItem = authoring.fonts[i];
-                if (i > 0)
-                    AddAdditionalFontEntity(fontItem, authoring.useSystemFonts, authoring.samplingPointSizeSDF, authoring.samplingPointSizeBitmap, additionalEntities, renderFilterSettings);
-                else
-                {
-                    var fontBlobRef = BakeFontAsset(fontItem,authoring.useSystemFonts, authoring.samplingPointSizeSDF, authoring.samplingPointSizeBitmap);
-                    AddComponent(entity, new FontBlobReference { value = fontBlobRef });
-                }
-            }
-
-            if (additionalEntities.Length > 0)
-            {
-                var additionalEntitiesBuffer = AddBuffer<AdditionalFontMaterialEntity>(entity);
-                additionalEntitiesBuffer.Reinterpret<Entity>().AddRange(additionalEntities.AsArray());
-                AddComponent<TextMaterialMaskShaderIndex>(entity);
-                AddBuffer<FontMaterialSelectorForGlyph>(entity);
-                AddBuffer<RenderGlyphMask>(entity);
-            }
-
-            //Text Content
-            AddBuffer<XMLTag>(entity);
-            AddBuffer<GlyphOTF>(entity);
+            AddBuffer<RenderGlyph>(entity);
             var calliByte = AddBuffer<CalliByte>(entity);
             var calliString = new CalliString(calliByte);
             calliString.Append(authoring.text);
             var textBaseConfiguraton = new TextBaseConfiguration
             {
-                fontSize = authoring.fontSize,
-                color = authoring.color,                
+                defaultFontFamilyHash = TextHelper.GetHashCodeCaseInsensitive(authoring.defaultFont),
+                fontSize = (half)authoring.fontSize,
+                color = authoring.color,
                 maxLineWidth = math.select(float.MaxValue, authoring.maxLineWidth, authoring.wordWrap),
                 lineJustification = authoring.horizontalAlignment,
                 verticalAlignment = authoring.verticalAlignment,
                 isOrthographic = authoring.isOrthographic,
                 fontStyles = authoring.fontStyles,
-                fontWeight = (authoring.fontStyles & FontStyles.Bold)== FontStyles.Bold ? FontWeight.Bold : FontWeight.Normal,
-                fontWidth = (int)FontWidth.Normal, //cannot be set from UI, 
-                wordSpacing = authoring.wordSpacing,
-                lineSpacing = authoring.lineSpacing,
-                paragraphSpacing = authoring.paragraphSpacing,
+                fontWeight = (authoring.fontStyles & FontStyles.Bold) == FontStyles.Bold ? FontWeight.Bold : FontWeight.Normal,
+                fontWidth = FontWidth.Normal, //cannot be set from UI, 
+                wordSpacing = (half)authoring.wordSpacing,
+                lineSpacing = (half)authoring.lineSpacing,
+                paragraphSpacing = (half)authoring.paragraphSpacing,
+                language = BakeLangugeString(authoring.language),
+                fontTextureSize = authoring.fontTextureSize
             };
-            AddComponent(entity, textBaseConfiguraton);
-            AddBuffer<RenderGlyph>(entity);
+            AddComponent(entity, textBaseConfiguraton);           
         }
-        BlobAssetReference<FontBlob> BakeFontAsset(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap)
-        {            
-            var customHash = new Unity.Entities.Hash128((uint)fontItem.GetHashCode(), (uint)useSystemFont.GetHashCode(), 0, 0);
-            if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<FontBlob> blobReference))
+        BlobAssetReference<LanguageBlob> BakeLangugeString(FixedString128Bytes language)
+        {
+            var customHash = new Unity.Entities.Hash128((uint)language.GetHashCode(), 0, 0, 0);
+            if (!TryGetBlobAssetReference(customHash, out BlobAssetReference<LanguageBlob> blobReference))
             {
-                blobReference = FontBlobber.BakeFontBlob(fontItem, useSystemFont, samplingPointSizeSDF, samplingPointSizeBitmap);
-
-                // Register the Blob Asset to the Baker for de-duplication and reverting.
-                AddBlobAssetWithCustomHash<FontBlob>(ref blobReference, customHash);
+                blobReference = TextRendererUtility.BakeLanguage(language);                
+                AddBlobAssetWithCustomHash(ref blobReference, customHash); // Register the Blob Asset to the Baker for de-duplication and reverting.
             }
             return blobReference;
         }
-        void AddAdditionalFontEntity(Object fontItem, bool useSystemFont, int samplingPointSizeSDF, int samplingPointSizeBitmap, NativeList<Entity> additionalEntities, RenderFilterSettings renderFilterSettings)
-        {
-            var newEntity = CreateAdditionalEntity(TransformUsageFlags.Renderable);
-            AddEntityGraphicsComponents(newEntity, renderFilterSettings);
-            AddComponent<TextMaterialMaskShaderIndex>(newEntity);
-            AddBuffer<RenderGlyphMask>(newEntity);
-            AddComponent(newEntity, new TextRenderControl { flags = TextRenderControl.Flags.Dirty });
-            AddComponent<TextShaderIndex>(newEntity);
-
-            var fontBlobRef = BakeFontAsset(fontItem, useSystemFont, samplingPointSizeSDF, samplingPointSizeBitmap);
-            AddComponent(newEntity, new FontBlobReference { value = fontBlobRef});
-            additionalEntities.Add(newEntity);
-        }
-
-        //keep in sync with RenderMeshUtility.GenerateComponentTypes
-        void AddEntityGraphicsComponents(Entity entity, RenderFilterSettings renderFilterSettings)
-        {
-            AddComponent<WorldRenderBounds>(entity);
-            AddSharedComponent(entity, renderFilterSettings);
-            AddComponent<MaterialMeshInfo>(entity); 
-            SetComponentEnabled<MaterialMeshInfo>(entity, false); //enable once font texture was generated and registered with BRG
-            AddComponent<WorldToLocal_Tag>(entity);
-            AddComponent<RenderBounds>(entity);
-            AddComponent<PerInstanceCullingTag>(entity);
-        }
-    }    
+     
+        
+    }     
 }
+#endif

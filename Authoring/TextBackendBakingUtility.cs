@@ -2,7 +2,6 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
-using Unity.Rendering;
 using UnityEngine;
 
 namespace TextMeshDOTS.Rendering.Authoring
@@ -13,14 +12,14 @@ namespace TextMeshDOTS.Rendering.Authoring
         public const string kResourcePath = "Assets/Resources";
         //public const string kTextBackendMeshPath     = "Packages/com.textmeshdots/Resources/TextBackendMesh.mesh";
         public const string kTextBackendMeshPath = "Assets/Resources/TextBackendMesh.mesh";
-        public const string kTextBackendMeshResource = "TextBackendMesh";
 
         #region Mesh Building
 #if UNITY_EDITOR
-        [UnityEditor.MenuItem("TextMeshDOTS/Text BackendMesh")]
+        //is now part of samples user has to import, omitting the need for dedicated menue for TextMeshDOTS (which was a user request)
+        //[UnityEditor.MenuItem("TextMeshDOTS/Text BackendMesh")]
         static void CreateMeshAsset()
         {
-            var glyphCounts = new NativeArray<int>(16, Allocator.Temp);
+            var glyphCounts = new NativeArray<int>(11, Allocator.Temp);
             glyphCounts[0] = 4;
             glyphCounts[1] = 8;
             glyphCounts[2] = 16;
@@ -28,17 +27,13 @@ namespace TextMeshDOTS.Rendering.Authoring
             glyphCounts[4] = 32;
             glyphCounts[5] = 48;
             glyphCounts[6] = 64;
-            glyphCounts[7] = 96;
-            glyphCounts[8] = 128;
-            glyphCounts[9] = 256;
-            glyphCounts[10] = 512;
-            glyphCounts[11] = 1024;
-            glyphCounts[12] = 2048;
-            glyphCounts[13] = 4096;
-            glyphCounts[14] = 8192;
-            glyphCounts[15] = 16384;
+            glyphCounts[7] = 256;
+            glyphCounts[8] = 1024;
+            glyphCounts[9] = 4096;
+            glyphCounts[10] = 8192;
+            //glyphCounts[10] = 16384;
 
-            var mesh = CreateMesh(16384, glyphCounts);
+            var mesh = CreateMesh(8192, glyphCounts);
             if(!UnityEditor.AssetDatabase.IsValidFolder(kResourcePath))
                 UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
             UnityEditor.AssetDatabase.CreateAsset(mesh, kTextBackendMeshPath);
@@ -83,7 +78,6 @@ namespace TextMeshDOTS.Rendering.Authoring
             }
 
             mesh.RecalculateNormals();
-            mesh.RecalculateTangents();
             mesh.UploadMeshData(true);
 
             return mesh;
@@ -103,48 +97,6 @@ namespace TextMeshDOTS.Rendering.Authoring
                 indices[dst + 3] = (ushort)(src + 2);
                 indices[dst + 4] = (ushort)(src + 3);
                 indices[dst + 5] = src;
-            }
-        }
-        public static void SetSubMesh(int glyphCount, ref MaterialMeshInfo mmi)
-        {
-            switch (glyphCount)
-            {
-                case int _ when glyphCount <= 4:
-                    mmi.SubMesh = 0; break;
-                case int _ when glyphCount <= 8:
-                    mmi.SubMesh = 1; break;
-                case int _ when glyphCount <= 16:
-                    mmi.SubMesh = 2; break;
-                case int _ when glyphCount <= 24:
-                    mmi.SubMesh = 3; break;
-                case int _ when glyphCount <= 32:
-                    mmi.SubMesh = 4; break;
-                case int _ when glyphCount <= 48:
-                    mmi.SubMesh = 5; break;
-                case int _ when glyphCount <= 64:
-                    mmi.SubMesh = 6; break;
-                case int _ when glyphCount <= 96:
-                    mmi.SubMesh = 7; break;
-                case int _ when glyphCount <= 128:
-                    mmi.SubMesh = 8; break;
-                case int _ when glyphCount <= 256:
-                    mmi.SubMesh = 9; break;
-                case int _ when glyphCount <= 512:
-                    mmi.SubMesh = 10; break;
-                case int _ when glyphCount <= 1024:
-                    mmi.SubMesh = 11; break;
-                case int _ when glyphCount <= 2048:
-                    mmi.SubMesh = 12; break;
-                case int _ when glyphCount <= 4096:
-                    mmi.SubMesh = 13; break;
-                case int _ when glyphCount <= 8192:
-                    mmi.SubMesh = 14; break;
-                case int _ when glyphCount <= 16384:
-                    mmi.SubMesh = 15; break;
-                default:
-                    mmi.SubMesh = 15;
-                    UnityEngine.Debug.LogWarning("Glyphs in RenderGlyph buffer exceeds max capacity of 16384 and will be truncated.");
-                    break;
             }
         }
         #endregion

@@ -1,9 +1,8 @@
+using System;
+using System.Collections.Generic;
 using Unity.Entities;
 using UnityEngine;
-using System.Collections.Generic;
 using UnityEngine.TextCore.Text;
-using UnityEngine.UIElements;
-using Unity.Collections;
 
 namespace TextMeshDOTS.Authoring
 { 
@@ -80,5 +79,25 @@ namespace TextMeshDOTS.Authoring
                 textColorGradients.Add(textColorGradient);
             }                
         }        
-    }    
+    }
+
+    /// <summary>
+    /// Definition of color gradients
+    /// </summary>
+    [Serializable]
+    public struct TextMeshDOTSColorGradient
+    {
+        [SerializeField]
+        public string name;
+        [SerializeField]
+        public ColorGradientMode colorMode;
+        [SerializeField]
+        public Color topLeft;
+        [SerializeField]
+        public Color topRight;
+        [SerializeField]
+        public Color bottomLeft;
+        [SerializeField]
+        public Color bottomRight;
+    }
 }

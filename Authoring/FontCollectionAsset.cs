@@ -1,6 +1,6 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
-using System.IO;
 using TextMeshDOTS.HarfBuzz;
 using Unity.Collections;
 using UnityEditor;
@@ -13,139 +13,55 @@ namespace TextMeshDOTS.Authoring
     [CreateAssetMenu(fileName = "FontCollectionAsset", menuName = "TextMeshDOTS/Font Collection Asset")]
     public class FontCollectionAsset : ScriptableObject
     {
-        [Tooltip("Supported types: .otf .ttf .ttc")]
+        [Tooltip("Drop here Unity Font assets of system font files (.otf .ttf .ttc). Disable \"Include Font Data\" option in these Unity Font assets to ensure fonts are NOT included in your build.")]
         public List<Object> systemFonts;
-        [Tooltip("Supported types: .otf .ttf .ttc")]
+        [Tooltip("Drop here .otf .ttf .ttc files located in Asset/StreamingAssets(/subfolder)")]
         public List<Object> streamingAssetFonts;
-        public List<FontInfo> fontInfos;
+        public List<FontReference> fontReferences;
         public List<string> fontFamilies;
         public void ProcessFonts()
         {
             Debug.Log("Process Fonts");
-            if (fontInfos == null)
-                fontInfos = new List<FontInfo>(streamingAssetFonts.Count);
+            if (this.fontReferences == null)
+                this.fontReferences = new List<FontReference>(streamingAssetFonts.Count + systemFonts.Count);
             else
-                fontInfos.Clear();
+                this.fontReferences.Clear();          
 
+            var tempFontReferences = new NativeList<FontReference>(streamingAssetFonts.Count + systemFonts.Count, Allocator.Temp);
+            var language = Language.English;
+            
             for (int i = 0, ii = systemFonts.Count; i < ii; i++)
             {
-                if (GetFontInfo(systemFonts[i], true, out FontInfo fontInfo))
-                    fontInfos.Add(fontInfo);
-                else
-                {
-                    fontInfos.Clear();
-                    return;
-                }
+                var fontItem = systemFonts[i];
+                var fontAssetPath = AssetDatabase.GetAssetPath(fontItem);
+                TextHelper.GetFontInfo(fontAssetPath, true, language, tempFontReferences);
             }
 
             for (int i = 0, ii = streamingAssetFonts.Count; i < ii; i++)
             {
-                if (GetFontInfo(streamingAssetFonts[i], false, out FontInfo fontInfo))
-                    fontInfos.Add(fontInfo);
-                else
-                {
-                    fontInfos.Clear();
-                    return;
-                }
+                var fontItem = streamingAssetFonts[i];
+                var fontAssetPath = AssetDatabase.GetAssetPath(fontItem);
+                TextHelper.GetFontInfo(fontAssetPath, false, language, tempFontReferences);                
             }
 
+            foreach (var fontItem in tempFontReferences)
+                fontReferences.Add(fontItem);
+
             if (fontFamilies == null)
-                fontFamilies = new List<string>(fontInfos.Count);
+                fontFamilies = new List<string>(this.fontReferences.Count);
             else
                 fontFamilies.Clear();
-            for (int i = 0, ii = fontInfos.Count; i < ii; i++)
+
+            for (int i = 0, ii = tempFontReferences.Length; i < ii; i++)
             {
-                var fontInfo = fontInfos[i];
-                var fontFamily = fontInfo.typographicFamily == String.Empty ? fontInfo.fontFamily : fontInfo.typographicFamily;
+                var fontReference = tempFontReferences[i];
+                var fontFamily = fontReference.typographicFamily == String.Empty ? fontReference.fontFamily.ToString() : fontReference.typographicFamily.ToString();
                 if (!fontFamilies.Contains(fontFamily))
                     fontFamilies.Add(fontFamily);
             }
             //ensure values are serialized
             EditorUtility.SetDirty(this);
         }
-        bool GetFontInfo(Object fontItem, bool systemFont, out FontInfo fontInfo)
-        {
-            var fontAssetPath = AssetDatabase.GetAssetPath(fontItem);
-            fontInfo = new FontInfo();
-            bool isTrueType = fontAssetPath.EndsWith("ttf", System.StringComparison.OrdinalIgnoreCase);
-            bool isOpentype = fontAssetPath.EndsWith("otf", System.StringComparison.OrdinalIgnoreCase);
-            fontInfo.fontAssetPath = systemFont ? "" : fontAssetPath;
-            if (isOpentype || isTrueType)
-            {
-                var fontBytes = File.ReadAllBytes(fontAssetPath);
-                Blob blob;
-                unsafe
-                {
-                    fixed (byte* bytes = fontBytes)
-                    {
-                        blob = new Blob(bytes, (uint)fontBytes.Length, MemoryMode.READONLY);
-                    }
-                }
-                var face = new Face(blob.ptr, 0);
-                var font = new Font(face.ptr);
-
-                //fetch name of fontFamily and subFamily, generate hash code from that used to lookup this font
-                var language = new Language(HB.HB_TAG('E', 'N', 'G', ' '));
-
-                var initialCapacity = 125u; //FixedString128Bytes.Capacity
-                var tmp = new FixedString128Bytes();
-                uint textSize = initialCapacity;
-                face.GetFaceInfo(NameID.FONT_FAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontInfo.fontFamily = tmp.ToString();
-
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.FONT_SUBFAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontInfo.fontSubFamily = tmp.ToString();
-
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.TYPOGRAPHIC_FAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontInfo.typographicFamily = tmp.ToString();
-
-                textSize = initialCapacity;
-                face.GetFaceInfo(NameID.TYPOGRAPHIC_SUBFAMILY, language, ref textSize, ref tmp);
-                tmp.Length = (int)textSize;
-                fontInfo.typographicSubfamily = tmp.ToString();
-
-                fontInfo.weight = (int)font.GetStyleTag(StyleTag.WEIGHT);
-                fontInfo.width = (int)font.GetStyleTag(StyleTag.WIDTH);
-                var italic = (byte)font.GetStyleTag(StyleTag.ITALIC);
-                fontInfo.isItalic = italic == 1 ? true : false;
-                fontInfo.slant = (int)font.GetStyleTag(StyleTag.SLANT_ANGLE);
-                font.Dispose();
-                face.Dispose();
-                blob.Dispose();
-                return true;
-            }
-            else
-            {
-                Debug.LogWarning("Ensure you only have files ending with 'ttf' or 'otf' (case insensitiv) in font list");
-                return false;
-            }
-        }
-    }
-    [Serializable]
-    public struct FontInfo
-    {
-        [SerializeField]
-        public string fontAssetPath;
-        [SerializeField]
-        public string fontFamily;
-        [SerializeField]
-        public string fontSubFamily;
-        [SerializeField]
-        public string typographicFamily;
-        [SerializeField]
-        public string typographicSubfamily;
-        [SerializeField]
-        public int weight;
-        [SerializeField]
-        public int width;
-        [SerializeField]
-        public bool isItalic;
-        [SerializeField]
-        public int slant;
     }
 }
+#endif
