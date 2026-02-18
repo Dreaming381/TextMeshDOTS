@@ -68,12 +68,13 @@ namespace TextMeshDOTS
                     var textBaseConfiguration = textBaseConfigurations[indexInChunk];
 
                     renderGlyphs.Clear();
+                    previousRenderGlyphBuffer.Clear();
                     var glyphCount = glyphOTFStream.BeginForEachIndex(entityIndex);
                     if (glyphCount == 0)
                         continue;
 
-                    previousRenderGlyphBuffer.Capacity = math.max(glyphCount, previousRenderGlyphBuffer.Length); //allocating here make this job 2x slower but UpdateChangedGlyphsJob 10x faster
-                    //renderGlyphs.Capacity = math.max(glyphCount, previousRenderGlyphBuffer.Length); //not needed when done via single threaded pre-allocationjob
+                    previousRenderGlyphBuffer.Capacity = glyphCount; //allocating here make this job 2x slower but UpdateChangedGlyphsJob 10x faster
+                    //renderGlyphs.Capacity = glyphCount; //not needed when done via single threaded pre-allocationjob
                     CreateRenderGlyphs(ref renderGlyphs,
                                        in calliBytes,
                                        ref glyphOTFStream,
