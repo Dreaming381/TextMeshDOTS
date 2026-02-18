@@ -41,7 +41,8 @@ namespace TextMeshDOTS
             [BurstCompile]
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
             {
-                if (!(chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion)))
+                if (!(chunk.DidChange(ref calliByteHandle, lastSystemVersion) ||
+                      chunk.DidChange(ref textBaseConfigurationHandle, lastSystemVersion)))
                     return;
 
                 if (!chunkMissingGlyphsSet.IsCreated)
