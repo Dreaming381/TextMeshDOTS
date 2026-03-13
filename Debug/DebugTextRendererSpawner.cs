@@ -50,7 +50,7 @@ namespace TextMeshDOTS
 
             if (frameCount == 50)
             {
-                textBaseConfiguration.color = Color.goldenRod;
+                textBaseConfiguration.color = Color.yellow;
                 SpawnText("AA", new float3(-10, 7, 0), ref textBaseConfiguration, ref renderFilterSettings, textRenderArchetype, ref runtimeFontMaterial, ref state);
             }
             if (frameCount == 100)

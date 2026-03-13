@@ -58,7 +58,7 @@ namespace TextMeshDOTS
             if (frameCount == 10)
             {
                 textBaseConfiguration.SetFamily("Noto Sans Display");
-                textBaseConfiguration.color = Color.goldenRod;
+                textBaseConfiguration.color = Color.yellow;
                 textBaseConfiguration.maxLineWidth = 30;
                 SpawnText(text3, new float3(-10, 7, 0), ref textBaseConfiguration, ref renderFilterSettings, textRenderArchetype, ref runtimeFontMaterial, ref state);
             }
