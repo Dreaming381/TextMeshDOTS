@@ -52,7 +52,7 @@ namespace TextMeshDOTS
                     {
                         TextureFormat.R8 => RenderTextureFormat.R8,
                         TextureFormat.R16 => RenderTextureFormat.R16,
-                        TextureFormat.RGBA32 => RenderTextureFormat.ARGB32,  // Shaders should swizzle this for us
+                        TextureFormat.RGBA32 => RenderTextureFormat.BGRA32,  // Shaders should swizzle this for us
                         _ => throw new NotImplementedException(),
                     };
                     var rtrw                               = linear ? RenderTextureReadWrite.Linear : RenderTextureReadWrite.sRGB;

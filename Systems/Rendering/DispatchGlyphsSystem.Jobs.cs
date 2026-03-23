@@ -426,11 +426,11 @@ namespace TextMeshDOTS
                     //    {
                     //        for (int x = 0; x < glyphEntry.width; x++)
                     //        {
-                    //            var argb = paintData.paintSurface[y * glyphEntry.width + x];
+                    //            var bgra = paintData.paintSurface[y * glyphEntry.width + x];
                     //            var dstY = y + offsetY;
                     //            var dstX = x + offsetX;
                     //            var dstIndex = dstY * dstWidth + dstX;
-                    //            bitmapTextureSlice[dstIndex] = new Color32(argb.r, argb.g, argb.b, argb.a);
+                    //            bitmapTextureSlice[dstIndex] = new Color32(bgra.r, bgra.g, bgra.b, bgra.a);
                     //        }
                     //    }
                     //}
@@ -473,11 +473,11 @@ namespace TextMeshDOTS
                         {
                             for (int x = 0; x < glyphEntry.width; x++)
                             {
-                                var argb = imageBGRA[y * glyphEntry.width + x];
+                                var bgra = imageBGRA[y * glyphEntry.width + x];
                                 var dstY = y + offsetY;
                                 var dstX = x + offsetX;
                                 var dstIndex = dstY * dstWidth + dstX;
-                                bitmapTextureSlice[dstIndex] = new Color32(argb.r, argb.g, argb.b, argb.a);
+                                bitmapTextureSlice[dstIndex] = new Color32(bgra.r, bgra.g, bgra.b, bgra.a);
                             }
                         }
                         image.Dispose();
