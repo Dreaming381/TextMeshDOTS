@@ -6,8 +6,8 @@ namespace TextMeshDOTS.HarfBuzz
 {
     internal struct SolidColor : IPattern
     {
-        ColorARGB m_colorARGB;
-        public SolidColor(ColorARGB colorARGB)
+        ColorBGRA m_colorARGB;
+        public SolidColor(ColorBGRA colorARGB)
         {
             m_colorARGB = colorARGB;
         }
@@ -16,7 +16,7 @@ namespace TextMeshDOTS.HarfBuzz
         /// a texture of the color gradient would have. 'Solid fill' has same color for for every UV, so can do shortcut here.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ColorARGB GetColor(float2 bitmapCoordinate)
+        public ColorBGRA GetColor(float2 bitmapCoordinate)
         {
             return m_colorARGB;
         }

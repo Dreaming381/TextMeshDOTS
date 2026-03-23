@@ -299,6 +299,10 @@ namespace TextMeshDOTS
             {
                 get { return new BBox(xBearing, yBearing - height, xBearing + width, yBearing); }
             }
+            public GlyphExtents GlyphExtents
+            {
+                get { return new GlyphExtents {width =width, height = height, x_bearing = xBearing, y_bearing = yBearing }; }
+            }
             // Todo:
         }
 
