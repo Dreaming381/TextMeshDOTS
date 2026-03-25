@@ -18,17 +18,17 @@ namespace TextMeshDOTS
         public override void Bake(FontCollectionAuthoring authoring)
         {
             int fontCount;
-            if (authoring.fontCollectionAsset == null || (fontCount = authoring.fontCollectionAsset.fontReferences.Count) == 0)
+            if (authoring.fontCollectionAsset == null || (fontCount = authoring.fontCollectionAsset.fontLoadDescriptions.Count) == 0)
                 return;
 
-            var fontRequests = new NativeArray<FontReference>(fontCount, Allocator.Temp);
+            var fontRequests = new NativeArray<FontLoadDescription>(fontCount, Allocator.Temp);
 
-            var sourceFontRequests = authoring.fontCollectionAsset.fontReferences;
+            var sourceFontRequests = authoring.fontCollectionAsset.fontLoadDescriptions;
             for (int i = 0, ii = sourceFontRequests.Count; i < ii; i++)
                 fontRequests[i] = sourceFontRequests[i];            
 
             var entity = GetEntity(TransformUsageFlags.None);
-            var fontRequestsBuffer = AddBuffer<FontReference>(entity);
+            var fontRequestsBuffer = AddBuffer<FontLoadDescription>(entity);
             fontRequestsBuffer.AddRange(fontRequests);
         }        
     }

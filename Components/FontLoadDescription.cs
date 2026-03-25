@@ -7,7 +7,7 @@ namespace TextMeshDOTS
 {
     [Serializable]
     [InternalBufferCapacity(0)]
-    public struct FontReference : IEquatable<FontReference>, IBufferElementData
+    public struct FontLoadDescription : IEquatable<FontLoadDescription>, IBufferElementData
     {
         public FixedString512Bytes filePath;
         public bool streamingAssetLocationValidated;
@@ -23,27 +23,27 @@ namespace TextMeshDOTS
         public float defaultWidth;
         public bool isItalic;
         public float slant;
-        public readonly FontAssetRef fontAssetRef => new FontAssetRef(fontFamily, typographicFamily, defaultWeight, defaultWidth, isItalic, slant);
+        public readonly FontLookupKey fontLookupKey => new FontLookupKey(fontFamily, typographicFamily, defaultWeight, defaultWidth, isItalic, slant);
 
         public override bool Equals(object obj)
         {
-            if (obj is FontReference item)
+            if (obj is FontLoadDescription item)
             {
                 return Equals(item);
             }
             return false;
         }
-        bool IEquatable<FontReference>.Equals(FontReference other)
+        bool IEquatable<FontLoadDescription>.Equals(FontLoadDescription other)
         {
-            return fontAssetRef == other.fontAssetRef;
+            return fontLookupKey == other.fontLookupKey;
         }
         public override int GetHashCode()
         {
-             return fontAssetRef.GetHashCode();
+             return fontLookupKey.GetHashCode();
         }
 
-        public static bool operator ==(FontReference target, FontReference other) { return target.Equals(other); }
-        public static bool operator !=(FontReference target, FontReference other) { return !target.Equals(other); }
+        public static bool operator ==(FontLoadDescription target, FontLoadDescription other) { return target.Equals(other); }
+        public static bool operator !=(FontLoadDescription target, FontLoadDescription other) { return !target.Equals(other); }
         public override string ToString()
         {
             if (typographicFamily != "")

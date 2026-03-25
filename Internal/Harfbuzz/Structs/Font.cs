@@ -33,16 +33,16 @@ namespace TextMeshDOTS.HarfBuzz
         /// <summary>
         /// Update font metadata, some of which depends on language and script direction..so watchout when to call this method
         /// </summary>
-        public void UpdateMetaData()
+        public void UpdateMetaData(Direction direction, Script script, Language language)
         {
-            this.GetBaseline(Direction.LTR, Script.LATIN, Language.English, out baseLine);
-            this.GetFontExtentsForDirection(Direction.LTR, out fontExtents);
+            this.GetBaseline(direction, script, language, out baseLine);
+            this.GetFontExtentsForDirection(direction, out fontExtents);
             this.GetMetrics(MetricTag.CAP_HEIGHT, out capHeight);
             this.GetMetrics(MetricTag.X_HEIGHT, out xHeight);
 
             // get width of space -->TO-DO: need to find an easier way to do this !!!
             // Why is this not accessible via a metric tag such as MetricTag.X_WIDTH?
-            var buffer = new Buffer(Direction.LTR, Script.LATIN, Language.English);
+            var buffer         = new Buffer(direction, script, language);
             buffer.ContentType = ContentType.UNICODE;
             buffer.Add(0x20, 0);
             this.Shape(buffer);

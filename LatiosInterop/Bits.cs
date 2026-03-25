@@ -1,7 +1,7 @@
 using Unity.Collections;
 using Unity.Mathematics;
 
-namespace TextMeshDOTS
+namespace TextMeshDOTS.LatiosInterop
 {
     internal static class Bits
     {

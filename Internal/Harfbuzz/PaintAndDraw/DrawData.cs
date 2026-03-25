@@ -2,7 +2,6 @@ using UnityEngine;
 using TextMeshDOTS.HarfBuzz.Bitmap;
 using Unity.Collections;
 using Unity.Mathematics;
-using Unity.Transforms;
 
 namespace TextMeshDOTS.HarfBuzz
 {
@@ -16,17 +15,27 @@ namespace TextMeshDOTS.HarfBuzz
         public DrawData(int edgeCapacity, int contourCapacity, float maxDeviation, Allocator allocator)
         {
             this.maxDeviation = maxDeviation;
-            edges= new NativeList<SDFEdge>(edgeCapacity, allocator);
+            edges = new NativeList<SDFEdge>(edgeCapacity, allocator);
             contourIDs = new NativeList<int>(contourCapacity, allocator);
             glyphRect = BBox.Empty;
-			contourIDs.Add(0);
+            contourIDs.Add(0);
         }
         public void Clear()
         {
             glyphRect = BBox.Empty;
             edges.Clear();
             contourIDs.Clear();
-			contourIDs.Add(0);
+            contourIDs.Add(0);
+        }
+        public void PrintOrientations()
+        {
+            for (int contourID = 0, end = contourIDs.Length - 1; contourID < end; contourID++)  //for each remaining contour
+            {
+                var startID = contourIDs[contourID];
+                var nextStartID = contourIDs[contourID + 1];
+                var contourOrientation = SDFCommon.GetPolyOrientation(SDFCommon.SignedArea(edges, startID, nextStartID));
+                Debug.Log($"{contourOrientation}");
+            }
         }
         public void Dispose()
         {

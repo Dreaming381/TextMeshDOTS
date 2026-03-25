@@ -3,7 +3,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 
-namespace TextMeshDOTS
+namespace TextMeshDOTS.LatiosInterop.Unsafe
 {
     /// <summary>
     /// A virtual allocator for large buffers (typically graphics buffers) which must be packed

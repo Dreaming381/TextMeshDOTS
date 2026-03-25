@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Jobs;
 
-namespace TextMeshDOTS
+namespace TextMeshDOTS.LatiosInterop
 {
     // This type is defined to help maintain consistency with Calligraphics.
     // TextMeshDOTS uses these as singletons.

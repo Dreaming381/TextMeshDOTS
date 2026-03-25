@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.HarfBuzz.Bitmap;
+using TextMeshDOTS.LatiosInterop.Unsafe;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
@@ -279,16 +280,12 @@ namespace TextMeshDOTS
             [ReadOnly] public GlyphTable                                                                  glyphTable;
             [ReadOnly] public FontTable                                                                   fontTable;
             [ReadOnly] public NativeArray<int>                                                            pixelUploadOffsetsInBytes;
-            [NativeDisableParallelForRestriction] public NativeArray<TextureAtlasArray<byte>.AtlasPtr>    sdf8Ptrs;
-            [NativeDisableParallelForRestriction] public NativeArray<TextureAtlasArray<ushort>.AtlasPtr>  sdf16Ptrs;
-            [NativeDisableParallelForRestriction] public NativeArray<TextureAtlasArray<Color32>.AtlasPtr> bitmapPtrs;
             [NativeDisableParallelForRestriction] public NativeArray<byte>                                uploadBuffer;
             [NativeDisableParallelForRestriction] public NativeArray<uint4>                               uploadMetaBuffer;  // Disable parallel in case compute upload is disabled
             [NativeDisableParallelForRestriction] public NativeReference<int>                             atomicPrioritizer;
 
             [NativeDisableUnsafePtrRestriction] public DrawDelegates  drawDelegates;
             [NativeDisableUnsafePtrRestriction] public PaintDelegates paintDelegates;
-            public bool                                               useComputeUpload;
 
             [NativeDisableContainerSafetyRestriction] DrawData drawData;
             [NativeSetThreadIndex] int                         threadIndex;
@@ -328,18 +325,17 @@ namespace TextMeshDOTS
                 {
                     font.DrawGlyph(glyphEntry.key.glyphIndex, drawDelegates, ref drawData);
                     var paddedAtlasRect  = glyphEntry.PaddedAtlasRect;
-                    var sdf8TextureSlice = useComputeUpload ? GetSdf8Upload(glyphIndex, paddedAtlasRect.width, paddedAtlasRect.height) : GetSdf8TextureSlice(glyphEntry.z);
-                    if (useComputeUpload)
-                    {
-                        uint x                        = (uint)glyphEntry.z;
-                        x                            |= ((uint)glyphEntry.key.format) << 30;
-                        uint y                        = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
-                        uint z                        = (uint)paddedAtlasRect.x;
-                        z                            |= ((uint)paddedAtlasRect.y) << 16;
-                        uint w                        = (uint)paddedAtlasRect.width;
-                        w                            |= ((uint)paddedAtlasRect.height) << 16;
-                        uploadMetaBuffer[glyphIndex]  = new uint4(x, y, z, w);
-                    }
+                    var sdf8TextureSlice = GetSdf8Upload(glyphIndex, paddedAtlasRect.width, paddedAtlasRect.height);
+
+                    uint x                        = (uint)glyphEntry.z;
+                    x                            |= ((uint)glyphEntry.key.format) << 30;
+                    uint y                        = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
+                    uint z                        = (uint)paddedAtlasRect.x;
+                    z                            |= ((uint)paddedAtlasRect.y) << 16;
+                    uint w                        = (uint)paddedAtlasRect.width;
+                    w                            |= ((uint)paddedAtlasRect.height) << 16;
+                    uploadMetaBuffer[glyphIndex]  = new uint4(x, y, z, w);
+
 
                     // remove overlaps using Clipper
                     // not needed for static postscript fonts which are not permitted to have overlaps
@@ -354,24 +350,22 @@ namespace TextMeshDOTS
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
                     }
-                    SdfRasterizer.RasterizeSdf8(drawData, sdf8TextureSlice, paddedAtlasRect, glyphEntry.padding, 8);
+                    SdfRasterizer.RasterizeSdf8(drawData, sdf8TextureSlice, paddedAtlasRect, glyphEntry.padding, glyphEntry.key.GetSpread());                    
                 }
                 else if (glyphEntry.key.format == RenderFormat.SDF16)
                 {
                     font.DrawGlyph(glyphEntry.key.glyphIndex, drawDelegates, ref drawData);
                     var paddedAtlasRect   = glyphEntry.PaddedAtlasRect;
-                    var sdf16TextureSlice = useComputeUpload ? GetSdf16Upload(glyphIndex, paddedAtlasRect.width, paddedAtlasRect.height) : GetSdf16TextureSlice(glyphEntry.z);
-                    if (useComputeUpload)
-                    {
-                        uint x                        = (uint)glyphEntry.z;
-                        x                            |= ((uint)glyphEntry.key.format) << 30;
-                        uint y                        = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
-                        uint z                        = (uint)paddedAtlasRect.x;
-                        z                            |= ((uint)paddedAtlasRect.y) << 16;
-                        uint w                        = (uint)paddedAtlasRect.width;
-                        w                            |= ((uint)paddedAtlasRect.height) << 16;
-                        uploadMetaBuffer[glyphIndex]  = new uint4(x, y, z, w);
-                    }
+                    var sdf16TextureSlice = GetSdf16Upload(glyphIndex, paddedAtlasRect.width, paddedAtlasRect.height);
+
+                    uint x                        = (uint)glyphEntry.z;
+                    x                            |= ((uint)glyphEntry.key.format) << 30;
+                    uint y                        = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
+                    uint z                        = (uint)paddedAtlasRect.x;
+                    z                            |= ((uint)paddedAtlasRect.y) << 16;
+                    uint w                        = (uint)paddedAtlasRect.width;
+                    w                            |= ((uint)paddedAtlasRect.height) << 16;
+                    uploadMetaBuffer[glyphIndex]  = new uint4(x, y, z, w);
 
                     // remove overlaps using Clipper
                     // not needed for static postscript fonts which are not permitted to have overlaps
@@ -386,7 +380,7 @@ namespace TextMeshDOTS
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
                     }
-                    SdfRasterizer.RasterizeSdf16(drawData, sdf16TextureSlice, paddedAtlasRect, glyphEntry.padding, 8);
+                    SdfRasterizer.RasterizeSdf16(drawData, sdf16TextureSlice, paddedAtlasRect, glyphEntry.padding, glyphEntry.key.GetSpread());                    
                 }
                 else if (glyphEntry.key.format == RenderFormat.Bitmap8888)
                 {
@@ -403,12 +397,10 @@ namespace TextMeshDOTS
                     //paintData.clipRect = glyphEntry.ClipRect;
                     //paintData.clipRect.Expand(1);  //prevents rendering artifacts that occur for outlines that strech from minX to maxX of clipRect, reason unknown
                     //paintData.paintSurface = new NativeArray<ColorBGRA>(paintData.clipRect.intWidth * paintData.clipRect.intHeight, Allocator.Temp);
-                    //font.PaintGlyph(glyphEntry.key.glyphIndex, ref paintData, paintDelegates, 0, new(0, 0, 0, 255));
-                    //kPaintMarker.End();
+                    //font.PaintGlyph(glyphEntry.key.glyphIndex, ref paintData, paintDelegates, 0, new(0, 0, 0, 255));                    
                     //if (paintData.paintSurface.Length > 0)
                     //{
-                    //    var bitmapTextureSlice = useComputeUpload ? GetBitmapUpload(glyphIndex, glyphEntry.width, glyphEntry.height) : GetBitmapTextureSlice(glyphEntry.z);
-                    //    if (useComputeUpload)
+                    //    var bitmapTextureSlice = GetBitmapUpload(glyphIndex, glyphEntry.width, glyphEntry.height);
                     //    {
                     //        uint x = (uint)glyphEntry.z;
                     //        x |= ((uint)glyphEntry.key.format) << 30;
@@ -419,9 +411,10 @@ namespace TextMeshDOTS
                     //        w |= ((uint)glyphEntry.height) << 16;
                     //        uploadMetaBuffer[glyphIndex] = new uint4(x, y, z, w);
                     //    }
-                    //    var offsetY = useComputeUpload ? 0 : glyphEntry.y;
-                    //    var offsetX = useComputeUpload ? 0 : glyphEntry.x;
-                    //    var dstWidth = useComputeUpload ? glyphEntry.width : kTextureDimension;
+
+                    //    var offsetY = 0;
+                    //    var offsetX = 0;
+                    //    var dstWidth = glyphEntry.width;
                     //    for (int y = 0; y < glyphEntry.height; y++)
                     //    {
                     //        for (int x = 0; x < glyphEntry.width; x++)
@@ -436,6 +429,7 @@ namespace TextMeshDOTS
                     //}
                     //else
                     //    uploadMetaBuffer[glyphIndex] = default;
+                    //kPaintMarker.End();
 
                     kPaintMarker.Begin();
                     var foreground = new ColorBGRA(255, 0, 0, 0);
@@ -454,32 +448,23 @@ namespace TextMeshDOTS
                         var image = paint.Render();
                         image.GetExtents(out RasterExtents rasterExtents);
                         var imageBGRA = image.GetColorBGRA(rasterExtents);
-                        var bitmapTextureSlice = useComputeUpload ? GetBitmapUpload(glyphIndex, glyphEntry.width, glyphEntry.height) : GetBitmapTextureSlice(glyphEntry.z);
-                        if (useComputeUpload)
+                        var bitmapTextureSlice = GetBitmapUpload(glyphIndex, glyphEntry.width, glyphEntry.height);
+
+                        uint x = (uint)glyphEntry.z;
+                        x |= ((uint)glyphEntry.key.format) << 30;
+                        uint y = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
+                        uint z = (uint)glyphEntry.x;
+                        z |= ((uint)glyphEntry.y) << 16;
+                        uint w = (uint)glyphEntry.width;
+                        w |= ((uint)glyphEntry.height) << 16;
+                        uploadMetaBuffer[glyphIndex] = new uint4(x, y, z, w);
+
+                        for (int i = 0; i < bitmapTextureSlice.Length; i++)
                         {
-                            uint x = (uint)glyphEntry.z;
-                            x |= ((uint)glyphEntry.key.format) << 30;
-                            uint y = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
-                            uint z = (uint)glyphEntry.x;
-                            z |= ((uint)glyphEntry.y) << 16;
-                            uint w = (uint)glyphEntry.width;
-                            w |= ((uint)glyphEntry.height) << 16;
-                            uploadMetaBuffer[glyphIndex] = new uint4(x, y, z, w);
+                            var bgra = imageBGRA[i];
+                            bitmapTextureSlice[i] = new Color32(bgra.r, bgra.g, bgra.b, bgra.a);
                         }
-                        var offsetY = useComputeUpload ? 0 : glyphEntry.y;
-                        var offsetX = useComputeUpload ? 0 : glyphEntry.x;
-                        var dstWidth = useComputeUpload ? glyphEntry.width : kTextureDimension;
-                        for (int y = 0; y < glyphEntry.height; y++)
-                        {
-                            for (int x = 0; x < glyphEntry.width; x++)
-                            {
-                                var bgra = imageBGRA[y * glyphEntry.width + x];
-                                var dstY = y + offsetY;
-                                var dstX = x + offsetX;
-                                var dstIndex = dstY * dstWidth + dstX;
-                                bitmapTextureSlice[dstIndex] = new Color32(bgra.r, bgra.g, bgra.b, bgra.a);
-                            }
-                        }
+
                         image.Dispose();
                     }
                     else
@@ -488,50 +473,8 @@ namespace TextMeshDOTS
                         //Debug.Log("Failed to paint");
                     }
                     kPaintMarker.End();
-
-                }
-                else
-                {
-                    UnityEngine.Debug.LogError("SDF16 is not supported yet.");
                 }
             }
-
-            unsafe NativeArray<byte> GetSdf8TextureSlice(short z)
-            {
-                foreach (var ptr in sdf8Ptrs)
-                {
-                    if (ptr.atlasIndex == z)
-                    {
-                        return CollectionHelper.ConvertExistingDataToNativeArray<byte>(ptr.ptr, ptr.dimension * ptr.dimension, Allocator.None, true);
-                    }
-                }
-                return default;
-            }
-
-            unsafe NativeArray<ushort> GetSdf16TextureSlice(short z)
-            {
-                foreach (var ptr in sdf16Ptrs)
-                {
-                    if (ptr.atlasIndex == z)
-                    {
-                        return CollectionHelper.ConvertExistingDataToNativeArray<ushort>(ptr.ptr, ptr.dimension * ptr.dimension, Allocator.None, true);
-                    }
-                }
-                return default;
-            }
-
-            unsafe NativeArray<Color32> GetBitmapTextureSlice(short z)
-            {
-                foreach (var ptr in bitmapPtrs)
-                {
-                    if (ptr.atlasIndex == z)
-                    {
-                        return CollectionHelper.ConvertExistingDataToNativeArray<Color32>(ptr.ptr, ptr.dimension * ptr.dimension, Allocator.None, true);
-                    }
-                }
-                return default;
-            }
-
             NativeArray<byte> GetSdf8Upload(int glyphIndex, int width, int height)
             {
                 int pixelCount = width * height;

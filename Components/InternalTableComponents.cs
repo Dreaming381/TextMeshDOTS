@@ -1,5 +1,7 @@
 using System;
 using TextMeshDOTS.HarfBuzz;
+using TextMeshDOTS.LatiosInterop;
+using TextMeshDOTS.LatiosInterop.Unsafe;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -16,11 +18,11 @@ namespace TextMeshDOTS
     {
         public NativeList<Face>                 faces;
         public NativeArray<UnsafeList<Font>>    perThreadFontCaches;
-        public NativeHashMap<FontAssetRef, int> fontAssetRefToFaceIndexMap;
+        public NativeHashMap<FontLookupKey, int> fontLookupKeyToFaceIndexMap;
         //variable fonts got names instances. create FontAssetRef for each instance,
         //and map it to index of named instance in face. Use this to lookup instance profile via FontAssetRef
-        public NativeHashMap<FontAssetRef, int> fontAssetRefToNamedVariationIndexMap;
-        public NativeList<FontAssetRef>         fontAssetRefs;
+        public NativeHashMap<FontLookupKey, int> fontLookupKeyToNamedVariationIndexMap;
+        public NativeList<FontLookupKey>         fontLookupKeys;
 
         public Font SetVariableProfile(int faceIndex, int threadIndex, int variableProfileIndex)
         {            
@@ -32,22 +34,22 @@ namespace TextMeshDOTS
             fonts[faceIndex] = font;
             return font;
         }
-        public bool GetNamedVariationLookup(FontAssetRef desiredFontAssetRef, out int namedVariationIndex)
+        public bool GetNamedVariationLookup(FontLookupKey desiredFontAssetRef, out int namedVariationIndex)
         {
-            if (fontAssetRefToNamedVariationIndexMap.ContainsKey(desiredFontAssetRef))
+            if (fontLookupKeyToNamedVariationIndexMap.ContainsKey(desiredFontAssetRef))
             {
-                namedVariationIndex = fontAssetRefToNamedVariationIndexMap[desiredFontAssetRef];
+                namedVariationIndex = fontLookupKeyToNamedVariationIndexMap[desiredFontAssetRef];
                 return true;
             }
 
             //fall back to matching at least family and normal/italic
-            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            for (int i = 0, lenght = fontLookupKeys.Length; i < lenght; i++)
             {
                 //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
-                if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash && fontAssetRefs[i].isItalic == desiredFontAssetRef.isItalic)
+                if (fontLookupKeys[i].familyHash == desiredFontAssetRef.familyHash && fontLookupKeys[i].isItalic == desiredFontAssetRef.isItalic)
                 {
                     //Debug.Log($"desired: {desiredFontAssetRef}, found fallback candidate: {fontAssetRefs[i]}");
-                    namedVariationIndex = fontAssetRefToFaceIndexMap[fontAssetRefs[i]];
+                    namedVariationIndex = fontLookupKeyToFaceIndexMap[fontLookupKeys[i]];
                     return false;
                 }
             }
@@ -55,34 +57,34 @@ namespace TextMeshDOTS
             return false;            
         }
 
-        public int GetFaceIndex(FontAssetRef desiredFontAssetRef)
+        public int GetFaceIndex(FontLookupKey desiredFontAssetRef)
         {
             //Debug.Log($"Search for: {desiredFontAssetRef}");
             //default: perfect match of family name, weight, width and italic/normal
-            var fontIndex = fontAssetRefs.IndexOf(desiredFontAssetRef);
+            var fontIndex = fontLookupKeys.IndexOf(desiredFontAssetRef);
             if(fontIndex != -1)
             {
                 //Debug.Log($"desired: {desiredFontAssetRef}, found candidate: {fontAssetRefs[fontIndex]}");
-                return fontAssetRefToFaceIndexMap[fontAssetRefs[fontIndex]];
+                return fontLookupKeyToFaceIndexMap[fontLookupKeys[fontIndex]];
             }
 
             //fall back to matching at least family and normal/italic
-            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            for (int i = 0, lenght = fontLookupKeys.Length; i < lenght; i++)
             {
                 //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
-                if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash && fontAssetRefs[i].isItalic == desiredFontAssetRef.isItalic)
+                if (fontLookupKeys[i].familyHash == desiredFontAssetRef.familyHash && fontLookupKeys[i].isItalic == desiredFontAssetRef.isItalic)
                 {
                     //Debug.Log($"desired: {desiredFontAssetRef}, found fallback candidate: {fontAssetRefs[i]}");
-                    return fontAssetRefToFaceIndexMap[fontAssetRefs[i]];
+                    return fontLookupKeyToFaceIndexMap[fontLookupKeys[i]];
                 }
             }
 
             //fall back to matching at least family
-            for (int i = 0, lenght = fontAssetRefs.Length; i < lenght; i++)
+            for (int i = 0, lenght = fontLookupKeys.Length; i < lenght; i++)
             {
                 //Debug.Log($"fallback candidate: {fontAssetRefs[i].ToString()}");
-                if (fontAssetRefs[i].familyHash == desiredFontAssetRef.familyHash)
-                    return fontAssetRefToFaceIndexMap[fontAssetRefs[i]];                
+                if (fontLookupKeys[i].familyHash == desiredFontAssetRef.familyHash)
+                    return fontLookupKeyToFaceIndexMap[fontLookupKeys[i]];                
             }
             //Debug.Log($"Requested font {desiredFontAssetRef} not found");
             return -1;
@@ -106,8 +108,8 @@ namespace TextMeshDOTS
             if (faces.IsCreated)
             {
                 var jh = new DisposeInnerJob { table = this }.Schedule(inputDeps);
-                jh = JobHandle.CombineDependencies(faces.Dispose(jh), fontAssetRefToNamedVariationIndexMap.Dispose(jh), perThreadFontCaches.Dispose(jh));
-                return JobHandle.CombineDependencies(jh, fontAssetRefs.Dispose(jh), fontAssetRefToFaceIndexMap.Dispose(jh));
+                jh = JobHandle.CombineDependencies(faces.Dispose(jh), fontLookupKeyToNamedVariationIndexMap.Dispose(jh), perThreadFontCaches.Dispose(jh));
+                return JobHandle.CombineDependencies(jh, fontLookupKeys.Dispose(jh), fontLookupKeyToFaceIndexMap.Dispose(jh));
             }
             return inputDeps;
         }

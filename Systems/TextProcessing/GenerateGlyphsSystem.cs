@@ -3,6 +3,7 @@ using Unity.Entities;
 using Unity.Profiling;
 using Unity.Jobs;
 using Unity.Collections;
+using UnityEngine;
 
 namespace TextMeshDOTS
 {
@@ -13,8 +14,8 @@ namespace TextMeshDOTS
     public partial struct GenerateGlyphsSystem : ISystem
     {
         EntityQuery textRendererQ;
-        static readonly ProfilerMarker marker = new ProfilerMarker("hb_shape");
-        static readonly ProfilerMarker marker2 = new ProfilerMarker("buffer");
+        static readonly ProfilerMarker shapeMarker = new ProfilerMarker("hb_shape");
+        static readonly ProfilerMarker bufferMarker = new ProfilerMarker("buffer");
 
         bool m_skipChangeFilter;
 
@@ -40,13 +41,10 @@ namespace TextMeshDOTS
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            //if (textRendererQ.IsEmpty)
-            //    return;
-            //Debug.Log($"Shape system {textRendererQ.CalculateEntityCount()}");
-
             if (!SystemAPI.TryGetSingleton<FontTable>(out FontTable fontTable))
                 return;
 
+            
             SystemAPI.TryGetSingletonEntity<TextColorGradient>(out Entity textColorGradientEntity);
             var glyphTable = SystemAPI.GetSingletonRW<GlyphTable>().ValueRW;
 
@@ -78,8 +76,8 @@ namespace TextMeshDOTS
             
             state.Dependency = new ShapeJob
             {
-                marker = marker,
-                marker2 = marker2,
+                shapeMarker = shapeMarker,
+                bufferMarker = bufferMarker,
 
                 firstEntityIndexInChunk = firstEntityIndexInChunk,                
                 glyphOTFStream = glyphOTFStream.AsWriter(),
