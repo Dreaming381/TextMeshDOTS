@@ -128,7 +128,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MonoPInvokeCallback(typeof(ColorDelegate))]
         public static void HB_paint_color_func_t(IntPtr harfBuzzPaintFunct, ref PaintData data, int is_foreground, uint color, IntPtr user_data)
         {
-            //Debug.Log($"Paint solid color ARGB {is_foreground} {(ColorBGRA)color}");
+            //Debug.Log($"Paint solid color BGRA {is_foreground} {(ColorBGRA)color}");
             SolidColor solidColor;
             if (is_foreground == 0)
                 solidColor = new SolidColor((ColorBGRA)color);
@@ -395,13 +395,13 @@ namespace TextMeshDOTS.HarfBuzz
                             data.paintSurface.Dispose();
                         data.paintSurface = new NativeArray<ColorBGRA>(imageTexture.Length, Allocator.Temp);
                         data.paintSurface.CopyFrom(imageTexture);
-                        Debug.Log($"Deserialized PNG to image (length: {imageTexture.Length}, width: {rasterExtents.width} height: {rasterExtents.height}");                       
+                        //Debug.Log($"Deserialized PNG to image (length: {imageTexture.Length}, width: {rasterExtents.width} height: {rasterExtents.height}");                       
                     }
                     rasterImage.Dispose();
                     break;
                 case PaintImageFormat.SVG:
                     //To-Do. see harfbuzz for how to decode SVG
-                    Debug.Log("Deserialization of SVG not implemented");
+                    //Debug.Log("Deserialization of SVG not implemented");
                     break;
             }
             return true;

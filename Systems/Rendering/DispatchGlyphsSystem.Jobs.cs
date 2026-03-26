@@ -424,7 +424,7 @@ namespace TextMeshDOTS
                     //kPaintMarker.End();
 
                     kPaintMarker.Begin();
-                    var foreground = new ColorBGRA(255, 0, 0, 0);
+                    var foreground = new ColorBGRA(0, 0, 0, 255);
                     var paint = new Paint(true);
                     paint.SetScaleFactor(1, 1);
                     paint.SetTransform(1f, 0f, 0f, 1f, 0f, 0f);
@@ -443,13 +443,14 @@ namespace TextMeshDOTS
                             image.GetExtents(out RasterExtents rasterExtents);
                             var imageBGRA = image.GetColorBGRA(rasterExtents);
                             var bitmapTextureSlice = GetBitmapUpload(glyphIndex, glyphEntry.width, glyphEntry.height);
-                            uint x = (uint)glyphEntry.z;
-                            x |= ((uint)glyphEntry.key.format) << 30;
-                            uint y = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
-                            uint z = (uint)glyphEntry.x;
-                            z |= ((uint)glyphEntry.y) << 16;
-                            uint w = (uint)glyphEntry.width;
-                            w |= ((uint)glyphEntry.height) << 16;
+
+                            uint x                       = (uint)glyphEntry.z;
+                            x                           |= ((uint)glyphEntry.key.format) << 30;
+                            uint y                       = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
+                            uint z                       = (uint)glyphEntry.x;
+                            z                           |= ((uint)glyphEntry.y) << 16;
+                            uint w                       = (uint)glyphEntry.width;
+                            w                           |= ((uint)glyphEntry.height) << 16;
                             uploadMetaBuffer[glyphIndex] = new uint4(x, y, z, w);
 
                             for (int i = 0; i < bitmapTextureSlice.Length; i++)
@@ -460,16 +461,10 @@ namespace TextMeshDOTS
                             image.Dispose();
                         }
                         else
-                        {
                             uploadMetaBuffer[glyphIndex] = default;
-                            Debug.LogError("Harfbuzz.hb_raster_paint_render failed");
-                        }
                     }
                     else
-                    {
                         uploadMetaBuffer[glyphIndex] = default;
-                        Debug.Log("Failed to paint");
-                    }
                     kPaintMarker.End();
                 }
             }

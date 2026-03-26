@@ -6,10 +6,10 @@ namespace TextMeshDOTS.HarfBuzz
 {
     internal struct SolidColor : IPattern
     {
-        ColorBGRA m_colorARGB;
-        public SolidColor(ColorBGRA colorARGB)
+        ColorBGRA m_colorBGRA;
+        public SolidColor(ColorBGRA colorBGRA)
         {
-            m_colorARGB = colorARGB;
+            m_colorBGRA = colorBGRA;
         }
         /// <summary>
         /// For a given pixel within the rendered glyph, this method calculates the UV coordinates that 
@@ -18,7 +18,7 @@ namespace TextMeshDOTS.HarfBuzz
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ColorBGRA GetColor(float2 bitmapCoordinate)
         {
-            return m_colorARGB;
+            return m_colorBGRA;
         }
     }
 }
