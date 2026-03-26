@@ -239,18 +239,21 @@ namespace TextMeshDOTS
 
             if (!collected.glyphEntryIDsToRasterize.IsEmpty)
             {
+                // atlasDirtyIDs are sorted, so extracting the upper 2 bit (encoding the GlyphEntryIDFlags enum) sorts atlas by type
                 int dirtySdf8Count;
                 for (dirtySdf8Count = 0; dirtySdf8Count < collected.atlasDirtyIDs.Length; dirtySdf8Count++)
                 {
                     var dirtyId = collected.atlasDirtyIDs[dirtySdf8Count];
-                    if (dirtyId >= 0x40000000u)
+                    var glyphEntryIDFlags = GlyphTable.DecodeGlyphEntryIDFlags(dirtyId);
+                    if (glyphEntryIDFlags >= GlyphEntryIDFlags.SDF16BigSize)
                         break;
                 }
                 int dirtySdf16Count;
                 for (dirtySdf16Count = dirtySdf8Count; dirtySdf16Count < collected.atlasDirtyIDs.Length; dirtySdf16Count++)
                 {
                     var dirtyId = collected.atlasDirtyIDs[dirtySdf16Count];
-                    if (dirtyId >= 0x80000000u)
+                    var glyphEntryIDFlags = GlyphTable.DecodeGlyphEntryIDFlags(dirtyId);
+                    if (glyphEntryIDFlags >= GlyphEntryIDFlags.Bitmap8888)
                         break;
                 }
                 dirtySdf16Count      -= dirtySdf8Count;

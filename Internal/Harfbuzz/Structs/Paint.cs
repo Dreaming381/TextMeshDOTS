@@ -86,7 +86,7 @@ internal struct Paint : IDisposable
     // then drives hb_font_paint_glyph_or_fail.
     // palette: CPAL palette index (pass 0 for default)
     public bool PaintGlyph(Font font, uint glyphID, float penX, float penY, uint palette, ColorBGRA foreground)
-        => Harfbuzz.hb_raster_paint_glyph(ptr, font.ptr, glyphID, penX, penY, palette, foreground.bgra);
+        => Harfbuzz.hb_raster_paint_glyph(ptr, font.ptr, glyphID, penX, penY, palette, foreground);
 
     /// <summary>
     /// Retrieve the rendered BGRA32 image (call after PaintGlyph). Caller must destroy or recycle the returned Image with RecycleImage when done.

@@ -26,7 +26,7 @@ namespace TextMeshDOTS
             public void Execute()
             {
                 // set 3x larger than needed because of https://discussions.unity.com/t/hashmap-is-full-error-before-hashmap-is-full/809238
-                glyphEntryIDsToRasterizeSet.Capacity = 3 * math.max(glyphTable.entries.Length, glyphEntryIDsToRasterizeSet.Capacity);
+                glyphEntryIDsToRasterizeSet.Capacity = 3 * math.max(glyphTable.glyphEntries.Length, glyphEntryIDsToRasterizeSet.Capacity);
             }
         }
 
@@ -198,29 +198,30 @@ namespace TextMeshDOTS
                 UnsafeHashSet<uint> dirtyAtlasIDSet = new UnsafeHashSet<uint>(32, Allocator.Temp);
                 int                 runningOffset   = 0;
 
-                foreach (var glyph in glyphEntryIDsToRasterize)
+                foreach (var glyphEntryID in glyphEntryIDsToRasterize)
                 {
-                    ref var glyphEntry    = ref glyphTable.GetEntryRW(glyph);
+                    ref var glyphEntry    = ref glyphTable.GetEntryRW(glyphEntryID);
                     var     doublePadding = 2 * glyphEntry.padding;
                     var     paddedWith    = glyphEntry.width + doublePadding;
                     var     paddedHeight  = glyphEntry.height + doublePadding;
                     if (enableAtlasGC)
                     {
-                        if (!atlasTable.TryAllocateNoNewSlice(glyph, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z))
+                        if (!atlasTable.TryAllocateNoNewSlice(glyphEntryID, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z))
                         {
                             atlasTable.Free(ref glyphTable); //dispose all glyphs with refCount 0
                             atlasTable.atlasRemovalCandidates.Clear();
-                            atlasTable.Allocate(glyph, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
+                            atlasTable.Allocate(glyphEntryID, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
                         }
                     }
                     else
-                        atlasTable.Allocate(glyph, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
+                        atlasTable.Allocate(glyphEntryID, (short)(paddedWith), (short)(paddedHeight), out glyphEntry.x, out glyphEntry.y, out glyphEntry.z);
 
                     //if (glyphEntry.key.format == RenderFormat.SDF8)
                     //    UnityEngine.Debug.Log($"Allocating {glyphEntry.x} {glyphEntry.y}, width {glyphEntry.width}");
                     uint id = (uint)glyphEntry.z;
-                    id      |= glyph & 0xc0000000;
+                    id      |= glyphEntryID & 0xc0000000;
                     dirtyAtlasIDSet.Add(id);
+
                     int pixelCount = paddedWith * paddedHeight;
                     pixelUploadOffsetsInBytes.Add(runningOffset);
                     switch (glyphEntry.key.format)
@@ -350,7 +351,7 @@ namespace TextMeshDOTS
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
                     }
-                    SdfRasterizer.RasterizeSdf8(drawData, sdf8TextureSlice, paddedAtlasRect, glyphEntry.padding, glyphEntry.key.GetSpread());                    
+                    SdfRasterizer.RasterizeSdf8(drawData, sdf8TextureSlice, paddedAtlasRect, glyphEntry.padding, glyphEntry.key.GetSpread());
                 }
                 else if (glyphEntry.key.format == RenderFormat.SDF16)
                 {
@@ -380,7 +381,7 @@ namespace TextMeshDOTS
                         face.sdfOrientation = SDFOrientation.POSTSCRIPT;
                         PaintUtils.removeOverlapsMarker.End();
                     }
-                    SdfRasterizer.RasterizeSdf16(drawData, sdf16TextureSlice, paddedAtlasRect, glyphEntry.padding, glyphEntry.key.GetSpread());                    
+                    SdfRasterizer.RasterizeSdf16(drawData, sdf16TextureSlice, paddedAtlasRect, glyphEntry.padding, glyphEntry.key.GetSpread());
                 }
                 else if (glyphEntry.key.format == RenderFormat.Bitmap8888)
                 {
@@ -397,35 +398,26 @@ namespace TextMeshDOTS
                     //paintData.clipRect = glyphEntry.ClipRect;
                     //paintData.clipRect.Expand(1);  //prevents rendering artifacts that occur for outlines that strech from minX to maxX of clipRect, reason unknown
                     //paintData.paintSurface = new NativeArray<ColorBGRA>(paintData.clipRect.intWidth * paintData.clipRect.intHeight, Allocator.Temp);
-                    //font.PaintGlyph(glyphEntry.key.glyphIndex, ref paintData, paintDelegates, 0, new(0, 0, 0, 255));                    
+                    //font.PaintGlyph(glyphEntry.key.glyphIndex, ref paintData, paintDelegates, 0, new(0, 0, 0, 255));
                     //if (paintData.paintSurface.Length > 0)
                     //{
                     //    var bitmapTextureSlice = GetBitmapUpload(glyphIndex, glyphEntry.width, glyphEntry.height);
-                    //    {
-                    //        uint x = (uint)glyphEntry.z;
-                    //        x |= ((uint)glyphEntry.key.format) << 30;
-                    //        uint y = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
-                    //        uint z = (uint)glyphEntry.x;
-                    //        z |= ((uint)glyphEntry.y) << 16;
-                    //        uint w = (uint)glyphEntry.width;
-                    //        w |= ((uint)glyphEntry.height) << 16;
-                    //        uploadMetaBuffer[glyphIndex] = new uint4(x, y, z, w);
-                    //    }
+                    //    Debug.Log($"Allocated {bitmapTextureSlice.Length} {glyphEntry.width} {glyphEntry.height}");
 
-                    //    var offsetY = 0;
-                    //    var offsetX = 0;
-                    //    var dstWidth = glyphEntry.width;
-                    //    for (int y = 0; y < glyphEntry.height; y++)
+                    //    uint x                        = (uint)glyphEntry.z;
+                    //    x                            |= ((uint)glyphEntry.key.format) << 30;
+                    //    uint y                        = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
+                    //    uint z                        = (uint)glyphEntry.x;
+                    //    z                            |= ((uint)glyphEntry.y) << 16;
+                    //    uint w                        = (uint)glyphEntry.width;
+                    //    w                            |= ((uint)glyphEntry.height) << 16;
+                    //    uploadMetaBuffer[glyphIndex]  = new uint4(x, y, z, w);
+
+                    //    for (int i = 0; i < bitmapTextureSlice.Length; i++)
                     //    {
-                    //        for (int x = 0; x < glyphEntry.width; x++)
-                    //        {
-                    //            var bgra = paintData.paintSurface[y * glyphEntry.width + x];
-                    //            var dstY = y + offsetY;
-                    //            var dstX = x + offsetX;
-                    //            var dstIndex = dstY * dstWidth + dstX;
-                    //            bitmapTextureSlice[dstIndex] = new Color32(bgra.r, bgra.g, bgra.b, bgra.a);
-                    //        }
-                    //    }
+                    //        var bgra = paintData.paintSurface[i];
+                    //        bitmapTextureSlice[i] = new Color32(bgra.r, bgra.g, bgra.b, bgra.a);
+                    //    }                        
                     //}
                     //else
                     //    uploadMetaBuffer[glyphIndex] = default;
@@ -444,33 +436,39 @@ namespace TextMeshDOTS
                     var pen_y = glyphExtents.height;
                     var painted = paint.PaintGlyph(font, glyphEntry.key.glyphIndex, pen_x, pen_y, 0, foreground);
                     if (painted)
-                    {
+                    { 
                         var image = paint.Render();
-                        image.GetExtents(out RasterExtents rasterExtents);
-                        var imageBGRA = image.GetColorBGRA(rasterExtents);
-                        var bitmapTextureSlice = GetBitmapUpload(glyphIndex, glyphEntry.width, glyphEntry.height);
-
-                        uint x = (uint)glyphEntry.z;
-                        x |= ((uint)glyphEntry.key.format) << 30;
-                        uint y = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
-                        uint z = (uint)glyphEntry.x;
-                        z |= ((uint)glyphEntry.y) << 16;
-                        uint w = (uint)glyphEntry.width;
-                        w |= ((uint)glyphEntry.height) << 16;
-                        uploadMetaBuffer[glyphIndex] = new uint4(x, y, z, w);
-
-                        for (int i = 0; i < bitmapTextureSlice.Length; i++)
+                        if (image.ptr != System.IntPtr.Zero)
                         {
-                            var bgra = imageBGRA[i];
-                            bitmapTextureSlice[i] = new Color32(bgra.r, bgra.g, bgra.b, bgra.a);
-                        }
+                            image.GetExtents(out RasterExtents rasterExtents);
+                            var imageBGRA = image.GetColorBGRA(rasterExtents);
+                            var bitmapTextureSlice = GetBitmapUpload(glyphIndex, glyphEntry.width, glyphEntry.height);
+                            uint x = (uint)glyphEntry.z;
+                            x |= ((uint)glyphEntry.key.format) << 30;
+                            uint y = (uint)pixelUploadOffsetsInBytes[glyphIndex] / 4;
+                            uint z = (uint)glyphEntry.x;
+                            z |= ((uint)glyphEntry.y) << 16;
+                            uint w = (uint)glyphEntry.width;
+                            w |= ((uint)glyphEntry.height) << 16;
+                            uploadMetaBuffer[glyphIndex] = new uint4(x, y, z, w);
 
-                        image.Dispose();
+                            for (int i = 0; i < bitmapTextureSlice.Length; i++)
+                            {
+                                var bgra = imageBGRA[i];
+                                bitmapTextureSlice[i] = new Color32(bgra.r, bgra.g, bgra.b, bgra.a);
+                            }
+                            image.Dispose();
+                        }
+                        else
+                        {
+                            uploadMetaBuffer[glyphIndex] = default;
+                            Debug.LogError("Harfbuzz.hb_raster_paint_render failed");
+                        }
                     }
                     else
                     {
                         uploadMetaBuffer[glyphIndex] = default;
-                        //Debug.Log("Failed to paint");
+                        Debug.Log("Failed to paint");
                     }
                     kPaintMarker.End();
                 }

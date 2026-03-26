@@ -230,10 +230,10 @@ namespace TextMeshDOTS
                 if (face.HasVarData && font.currentVariableProfileIndex != namedVariationIndex)
                     font = fontTable.SetVariableProfile(faceIndex, threadIndex, namedVariationIndex);
 
-                //var renderFormat = face.hasColor ? RenderFormat.Bitmap8888 : (fontConfig.m_fontTextureSize != FontTextureSize.Normal ? RenderFormat.SDF16 : RenderFormat.SDF8);
-                var renderFormat = face.hasColor ? RenderFormat.Bitmap8888 : RenderFormat.SDF8;
+                var renderFormat = face.hasColor ? RenderFormat.Bitmap8888 : (fontConfig.m_fontTextureSize != FontTextureSize.Normal ? RenderFormat.SDF16 : RenderFormat.SDF8);
                 var samplingSize = FontEnumerationExtensions.GetSamplingSize(renderFormat, fontConfig.m_fontTextureSize);
                 font.SetScale(samplingSize, samplingSize);
+                //Debug.Log($"renderFormat {renderFormat} samplingSize {samplingSize}");
 
                 //Debug.Log($"shape {text} {startIndex} {length}");
                 //if (face.HasVarData)
@@ -279,7 +279,7 @@ namespace TextMeshDOTS
                         xOffset = glyphPosition.xOffset,
                         yOffset = glyphPosition.yOffset,
                     };
-                    if (!glyphTable.glyphHashToIdMap.ContainsKey(glyphOTF.glyphKey))
+                    if (!glyphTable.glyphHashToGlyphEntryIDMap.ContainsKey(glyphOTF.glyphKey))
                     {
                         // We use the hashset to avoid redundantly adding the same glyph for this chunk.
                         // The missingGlyphsStream may still have redundancies between chunks, but this reduces

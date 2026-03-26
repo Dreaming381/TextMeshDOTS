@@ -1,8 +1,8 @@
-using TextMeshDOTS.LatiosInterop;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
+using UnityEngine;
 using Font = TextMeshDOTS.HarfBuzz.Font;
 
 namespace TextMeshDOTS
@@ -33,17 +33,16 @@ namespace TextMeshDOTS
                 }
 
                 missingGlyphsToAdd.Capacity = uniqueMissingGlyphSet.Count;
-                uint nextIndex = (uint)glyphTable.glyphHashToIdMap.Count;
+                uint nextIndex = (uint)glyphTable.glyphHashToGlyphEntryIDMap.Count;
                 foreach (var key in uniqueMissingGlyphSet)
                 {
                     missingGlyphsToAdd.AddNoResize(key);
-                    var nextId = nextIndex;
-                    uint topBits = key.format == RenderFormat.Bitmap8888 ? 3 : (uint)key.textureSize;
-                    Bits.SetBits(ref nextId, 30, 2, topBits);
-                    glyphTable.glyphHashToIdMap.Add(key, nextId);
+                    var nextGlyphEntryID = nextIndex;
+                    GlyphTable.EncodeGlyphEntryIDFlags(in key, ref nextGlyphEntryID);//decoded in shader by ExtractGlyphFlagsFromEntryID and in DispatchGlyphsSystem.Write
+                    glyphTable.glyphHashToGlyphEntryIDMap.Add(key, nextGlyphEntryID);
                     nextIndex++;
                 }
-                glyphTable.entries.AddReplicate(default, missingGlyphsToAdd.Length);
+                glyphTable.glyphEntries.AddReplicate(default, missingGlyphsToAdd.Length);
             }
         }
 

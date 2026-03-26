@@ -31,8 +31,8 @@ namespace TextMeshDOTS
 
             var glyphTable = new GlyphTable
             {
-                entries = new NativeList<GlyphTable.Entry>(1024, Allocator.Persistent),
-                glyphHashToIdMap = new NativeHashMap<GlyphTable.Key, uint>(1024, Allocator.Persistent)
+                glyphEntries = new NativeList<GlyphTable.Entry>(1024, Allocator.Persistent),
+                glyphHashToGlyphEntryIDMap = new NativeHashMap<GlyphTable.Key, uint>(1024, Allocator.Persistent)
             };
             state.EntityManager.CreateSingleton(glyphTable);
         }
@@ -117,7 +117,7 @@ namespace TextMeshDOTS
             state.Dependency = new PopulateNewGlyphsJob
             {
                 fontTable = fontTable,
-                glyphEntries = glyphTable.entries.AsDeferredJobArray(),
+                glyphEntries = glyphTable.glyphEntries.AsDeferredJobArray(),
                 missingGlyphs = missingGlyphsToAdd.AsDeferredJobArray()
             //}.Schedule(missingGlyphsToAdd, 4, state.Dependency);
             }.Schedule(state.Dependency);

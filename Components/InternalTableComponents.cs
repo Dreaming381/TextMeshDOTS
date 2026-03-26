@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using TextMeshDOTS.HarfBuzz;
 using TextMeshDOTS.LatiosInterop;
 using TextMeshDOTS.LatiosInterop.Unsafe;
@@ -234,6 +235,15 @@ namespace TextMeshDOTS
         Bitmap8888 = 2,
     }
 
+    //
+    internal enum GlyphEntryIDFlags : byte
+    {
+        SDF8NormalSize = 0,
+        SDF16BigSize = 1,
+        SDF16MassiveSize = 2,
+        Bitmap8888 = 3,
+    }
+
     internal partial struct GlyphTable : ICollectionComponent
     {
         public struct Key : IEquatable<Key>, IComparable<Key>
@@ -269,12 +279,11 @@ namespace TextMeshDOTS
                 get => (int)Bits.GetBits(packed, 40, 24);
                 set => Bits.SetBits(ref packed, 40, 24, (uint)value);
             }
-
+            
             public bool Equals(Key other) => packed.Equals(other.packed);
             public override int GetHashCode() => packed.GetHashCode();
             public int CompareTo(Key other) => packed.CompareTo(other.packed);
         }
-
         public struct Entry
         {
             public Key   key;
@@ -308,30 +317,55 @@ namespace TextMeshDOTS
             // Todo:
         }
 
-        public NativeHashMap<Key, uint> glyphHashToIdMap;
-        public NativeList<Entry>        entries;
+
+
+        /// <summary>
+        /// the upper 2 bit are used by AllocateNewGlyphsJob to store the glyph type: 
+        /// (00, 01, 10 = SDF, values of FontTextureSize enum for ultimate use in shader to calcualte SDR, 11 = Bitmap8888)
+        /// encode using EncodeGlyphEntryIDFlags and decode using DecodeGlyphEntryIDFlags
+        /// </summary>
+        public NativeHashMap<Key, uint> glyphHashToGlyphEntryIDMap;
+        public NativeList<Entry>        glyphEntries;
+
+        /// <summary>
+        /// Flags will be decoded in shader by ExtractGlyphFlagsFromEntryID and used there to determine if glyph is SDF or bitmap, 
+        /// and to determind the Signed Distance Ratio for SDF (keep in sync with TextConfigurationComponets.GetSpread()!)
+        /// Will also be used to determine which atlas is dirty in DispatchGlyphsSystem.Write
+        /// </summary>
+        /// <param name="glyphEntryID"></param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void EncodeGlyphEntryIDFlags(in Key key, ref uint glyphEntryID)
+        {
+            uint topBits = key.format == RenderFormat.Bitmap8888 ? 3 : (uint)key.textureSize;
+            Bits.SetBits(ref glyphEntryID, 30, 2, topBits);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static GlyphEntryIDFlags DecodeGlyphEntryIDFlags(uint glyphEntryID)
+        {
+            return (GlyphEntryIDFlags)(glyphEntryID >> 30);
+        }
 
         public JobHandle TryDispose(JobHandle inputDeps)
         {
-            if (glyphHashToIdMap.IsCreated)
+            if (glyphHashToGlyphEntryIDMap.IsCreated)
             {
-                return JobHandle.CombineDependencies(glyphHashToIdMap.Dispose(inputDeps), entries.Dispose(inputDeps));
+                return JobHandle.CombineDependencies(glyphHashToGlyphEntryIDMap.Dispose(inputDeps), glyphEntries.Dispose(inputDeps));
             }
             return inputDeps;
         }
 
         public ref Entry GetEntryRW(uint glyphEntryID)
         {
-            return ref entries.ElementAt((int)(glyphEntryID & 0x3fffffff));// Lower 30 bits contain the entry index; upper bits are flags.
+            return ref glyphEntries.ElementAt((int)(glyphEntryID & 0x3fffffff));// Lower 30 bits contain the entry index; upper bits are flags.
         }
 
         public Entry GetEntry(uint glyphEntryID)
         {
-            return entries[(int)(glyphEntryID & 0x3fffffff)]; // Lower 30 bits contain the entry index; upper bits are flags.
+            return glyphEntries[(int)(glyphEntryID & 0x3fffffff)]; // Lower 30 bits contain the entry index; upper bits are flags.
         }
         public readonly ref Entry GetEntryRef(uint glyphEntryID)
         {
-            return ref entries.ElementAt((int)(glyphEntryID & 0x3fffffff)); // Lower 30 bits contain the entry index; upper bits are flags. zero allocation access for IComparer
+            return ref glyphEntries.ElementAt((int)(glyphEntryID & 0x3fffffff)); // Lower 30 bits contain the entry index; upper bits are flags. zero allocation access for IComparer
         }
     }
 

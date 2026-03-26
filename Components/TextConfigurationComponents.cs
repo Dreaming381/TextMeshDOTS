@@ -272,12 +272,10 @@ namespace TextMeshDOTS
             {
                 case (RenderFormat.SDF8, FontTextureSize.Normal):
                     return 96;
-                //case (RenderFormat.SDF16, FontTextureSize.Big):
-                case (RenderFormat.SDF8, FontTextureSize.Big):
+                case (RenderFormat.SDF16, FontTextureSize.Big):
                 case (RenderFormat.Bitmap8888, FontTextureSize.Normal):
                     return 128;
-                //case (RenderFormat.SDF16, FontTextureSize.Massive):
-                case (RenderFormat.SDF8, FontTextureSize.Massive):
+                case (RenderFormat.SDF16, FontTextureSize.Massive):
                     return 256;
                 case (RenderFormat.Bitmap8888, FontTextureSize.Big):
                     return 512;
@@ -297,11 +295,9 @@ namespace TextMeshDOTS
             {
                 case (RenderFormat.SDF8, FontTextureSize.Normal):
                     return 9;
-                //case (RenderFormat.SDF16, FontTextureSize.Big):
-                case (RenderFormat.SDF8, FontTextureSize.Big):
+                case (RenderFormat.SDF16, FontTextureSize.Big):
                     return 12;
-                //case (RenderFormat.SDF16, FontTextureSize.Massive):
-                case (RenderFormat.SDF8, FontTextureSize.Massive):
+                case (RenderFormat.SDF16, FontTextureSize.Massive):
                     return 32;
                 case (RenderFormat.Bitmap8888, FontTextureSize.Normal):
                 case (RenderFormat.Bitmap8888, FontTextureSize.Big):
