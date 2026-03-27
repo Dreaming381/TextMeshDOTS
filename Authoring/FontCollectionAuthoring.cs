@@ -1,5 +1,4 @@
 #if UNITY_EDITOR
-using TextMeshDOTS;
 using TextMeshDOTS.Authoring;
 using Unity.Collections;
 using Unity.Entities;
@@ -21,15 +20,15 @@ namespace TextMeshDOTS
             if (authoring.fontCollectionAsset == null || (fontCount = authoring.fontCollectionAsset.fontLoadDescriptions.Count) == 0)
                 return;
 
-            var fontRequests = new NativeArray<FontLoadDescription>(fontCount, Allocator.Temp);
+            var fontLoadDescriptions = new NativeArray<FontLoadDescription>(fontCount, Allocator.Temp);
 
-            var sourceFontRequests = authoring.fontCollectionAsset.fontLoadDescriptions;
-            for (int i = 0, ii = sourceFontRequests.Count; i < ii; i++)
-                fontRequests[i] = sourceFontRequests[i];            
+            var sourceFontLoadDescriptions = authoring.fontCollectionAsset.fontLoadDescriptions;
+            for (int i = 0, ii = sourceFontLoadDescriptions.Count; i < ii; i++)
+                fontLoadDescriptions[i] = sourceFontLoadDescriptions[i];            
 
             var entity = GetEntity(TransformUsageFlags.None);
             var fontRequestsBuffer = AddBuffer<FontLoadDescription>(entity);
-            fontRequestsBuffer.AddRange(fontRequests);
+            fontRequestsBuffer.AddRange(fontLoadDescriptions);
         }        
     }
 }

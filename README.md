@@ -35,7 +35,7 @@ for rendering.
 for each font a static atlas textures, borrowed from the Unity `TextCore` `FontAsset`. As of version 0.9.0, TextMeshDOTS 
 generates all required glyph data and font textures dynamically using the [Harfbuzz](https://harfbuzz.github.io/) 
 library, was however limited to one 4k atlas texture per font. Handling multiple fonts remained challenging, 
-which prompted Dreaming381 to vastly simplify resource management by storing all SDF and color bitmaps in  
+which prompted Dreaming381 to vastly simplify resource management by storing all SDF and color bitmaps in 
 global atlas texture arrays. Dreaming381 also implemented a GPU resident representation of the glyph vertex data. 
 These GPU resident buffer are automatically and incrementally updated when changes occur. 
 
@@ -49,9 +49,8 @@ text label (`TextRenderer`) that makes use of different fonts and emoji, TextMes
 just one entity and one material.
 
 # Autoring workflow
- -	**Import essential backend mesh and shader** Open the package manager, select "Samples", and import the 
-    backend mesh. Also import either the UDR or HDRP shader. The resources will be imported to the folder 
-    `Assets/Samples/TextMeshDOTS/Version/Sample Name`. You can move them anywhere you like. 
+ -	**Import shader** Open the package manager, select "Samples", and import either the UDR or HDRP shader.
+	The resources will be imported to the folder `Assets/Samples/TextMeshDOTS/Version/Sample Name`. You can move them anywhere you like. 
     Generate a material as usual (right click on desired shader --> Create --> Material)
     ![plot](./Documentation/SampleImport.png)
 

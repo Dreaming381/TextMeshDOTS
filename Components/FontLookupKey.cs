@@ -3,10 +3,9 @@ using Unity.Collections;
 
 namespace TextMeshDOTS
 {
-    // Todo: This is used by FontRequest. Once we decide what to do with that, we can maybe internalize this.
-
     /// <summary>
-    /// FontLookupKey is THE link between any fonts request and font entities, and consists of a hash representing the 
+    /// FontLookupKey is a small key structure for a loaded font. It is used internally to lookup font face
+    /// resources, but you can also use it for your own logic. FontLookupKey consists of a hash representing the
     /// font family, and variation axis used during typesetting such as weight ("normal", "bold", semibold"), 
     /// width ("condensed", normal"), and italic. Slant is ignored in such font matching (see GetHashcode) 
     /// because slant value cannot be "guessed" and requested by user during typesetting 

@@ -7,102 +7,102 @@ using UnityEngine;
 
 namespace TextMeshDOTS.LatiosInterop.Kinemation
 {
-    public static class DeformationGraphicsBufferBrokerExtensions
-    {
-        #region Public Access
-        /// <summary>
-        /// Acquires the graphics buffer which contains the skinning transforms for Latios Vertex Skinning.
-        /// The buffer may change with each dispatch pass, but contains the contents of previous dispatch passes within the frame.
-        /// It is valid during DispatchRoundRobinLateExtensionsSuperSystem during the Dispatch phase.
-        /// </summary>
-        public static GraphicsBufferUnmanaged GetSkinningTransformsBuffer(this GraphicsBufferBroker broker) => broker.GetPersistentBufferNoResize(s_ids.Data.skinningTransformsID);
-        /// <summary>
-        /// Acquires the graphics buffer which contains the deformed vertices for Latios Deform.
-        /// The buffer may change with each dispatch pass, but contains the contents of previous dispatch passes within the frame.
-        /// It is valid during DispatchRoundRobinLateExtensionsSuperSystem during the Dispatch phase.
-        /// </summary>
-        public static GraphicsBufferUnmanaged GetDeformedVerticesBuffer(this GraphicsBufferBroker broker) => broker.GetPersistentBufferNoResize(s_ids.Data.deformedVerticesID);
-        /// <summary>
-        /// Acquires the graphics buffer which contains the undeformed shared mesh vertices.
-        /// The buffer is constant for a given frame, and is valid after KinemationPostRenderSuperSystem.
-        /// </summary>
-        public static GraphicsBufferUnmanaged GetMeshVerticesBuffer(this GraphicsBufferBroker broker) => broker.GetPersistentBufferNoResize(s_ids.Data.meshVerticesID);
+    //public static class DeformationGraphicsBufferBrokerExtensions
+    //{
+    //    #region Public Access
+    //    /// <summary>
+    //    /// Acquires the graphics buffer which contains the skinning transforms for Latios Vertex Skinning.
+    //    /// The buffer may change with each dispatch pass, but contains the contents of previous dispatch passes within the frame.
+    //    /// It is valid during DispatchRoundRobinLateExtensionsSuperSystem during the Dispatch phase.
+    //    /// </summary>
+    //    public static GraphicsBufferUnmanaged GetSkinningTransformsBuffer(this GraphicsBufferBroker broker) => broker.GetPersistentBufferNoResize(s_ids.Data.skinningTransformsID);
+    //    /// <summary>
+    //    /// Acquires the graphics buffer which contains the deformed vertices for Latios Deform.
+    //    /// The buffer may change with each dispatch pass, but contains the contents of previous dispatch passes within the frame.
+    //    /// It is valid during DispatchRoundRobinLateExtensionsSuperSystem during the Dispatch phase.
+    //    /// </summary>
+    //    public static GraphicsBufferUnmanaged GetDeformedVerticesBuffer(this GraphicsBufferBroker broker) => broker.GetPersistentBufferNoResize(s_ids.Data.deformedVerticesID);
+    //    /// <summary>
+    //    /// Acquires the graphics buffer which contains the undeformed shared mesh vertices.
+    //    /// The buffer is constant for a given frame, and is valid after KinemationPostRenderSuperSystem.
+    //    /// </summary>
+    //    public static GraphicsBufferUnmanaged GetMeshVerticesBuffer(this GraphicsBufferBroker broker) => broker.GetPersistentBufferNoResize(s_ids.Data.meshVerticesID);
 
-        /// <summary>
-        /// Acquires a pooled ByteAddressBuffer designed for locked CPU writes of uint3 values.
-        /// These are often used to specify a list of copy operations to a compute shader.
-        /// </summary>
-        /// <param name="requiredNumUint3s">The number of uint3 values the buffer should have</param>
-        /// <returns>A buffer at least the size required to store the required number of uint3 values</returns>
-        public static GraphicsBufferUnmanaged GetMetaUint3UploadBuffer(this GraphicsBufferBroker broker, uint requiredNumUint3s)
-        {
-            requiredNumUint3s = math.max(requiredNumUint3s, kMinUploadMetaSize);
-            return broker.GetUploadBuffer(s_ids.Data.metaUint3UploadID, requiredNumUint3s * 3);
-        }
-        /// <summary>
-        /// Acquires a pooled ByteAddressBuffer designed for locked CPU writes of uint4 values.
-        /// These are often used to specify a list of custom operations to a compute shader.
-        /// </summary>
-        /// <param name="requiredNumUint4s">The number of uint4 values the buffer should have</param>
-        /// <returns>A buffer at least the size required to store the required number of uint4 values</returns>
-        public static GraphicsBufferUnmanaged GetMetaUint4UploadBuffer(this GraphicsBufferBroker broker, uint requiredNumUint4s)
-        {
-            requiredNumUint4s = math.max(requiredNumUint4s, kMinUploadMetaSize);
-            return broker.GetUploadBuffer(s_ids.Data.metaUint4UploadID, requiredNumUint4s * 4);
-        }
-        #endregion
+    //    /// <summary>
+    //    /// Acquires a pooled ByteAddressBuffer designed for locked CPU writes of uint3 values.
+    //    /// These are often used to specify a list of copy operations to a compute shader.
+    //    /// </summary>
+    //    /// <param name="requiredNumUint3s">The number of uint3 values the buffer should have</param>
+    //    /// <returns>A buffer at least the size required to store the required number of uint3 values</returns>
+    //    public static GraphicsBufferUnmanaged GetMetaUint3UploadBuffer(this GraphicsBufferBroker broker, uint requiredNumUint3s)
+    //    {
+    //        requiredNumUint3s = math.max(requiredNumUint3s, kMinUploadMetaSize);
+    //        return broker.GetUploadBuffer(s_ids.Data.metaUint3UploadID, requiredNumUint3s * 3);
+    //    }
+    //    /// <summary>
+    //    /// Acquires a pooled ByteAddressBuffer designed for locked CPU writes of uint4 values.
+    //    /// These are often used to specify a list of custom operations to a compute shader.
+    //    /// </summary>
+    //    /// <param name="requiredNumUint4s">The number of uint4 values the buffer should have</param>
+    //    /// <returns>A buffer at least the size required to store the required number of uint4 values</returns>
+    //    public static GraphicsBufferUnmanaged GetMetaUint4UploadBuffer(this GraphicsBufferBroker broker, uint requiredNumUint4s)
+    //    {
+    //        requiredNumUint4s = math.max(requiredNumUint4s, kMinUploadMetaSize);
+    //        return broker.GetUploadBuffer(s_ids.Data.metaUint4UploadID, requiredNumUint4s * 4);
+    //    }
+    //    #endregion
 
-        #region Reservations
-        internal struct StaticIDs
-        {
-            public GraphicsBufferBroker.StaticID skinningTransformsID;
-            public GraphicsBufferBroker.StaticID deformedVerticesID;
-            public GraphicsBufferBroker.StaticID meshVerticesID;
-            public GraphicsBufferBroker.StaticID meshWeightsID;
-            public GraphicsBufferBroker.StaticID meshBindPosesID;
-            public GraphicsBufferBroker.StaticID meshBlendShapesID;
-            public GraphicsBufferBroker.StaticID boneOffsetsID;
+    //    #region Reservations
+    //    internal struct StaticIDs
+    //    {
+    //        public GraphicsBufferBroker.StaticID skinningTransformsID;
+    //        public GraphicsBufferBroker.StaticID deformedVerticesID;
+    //        public GraphicsBufferBroker.StaticID meshVerticesID;
+    //        public GraphicsBufferBroker.StaticID meshWeightsID;
+    //        public GraphicsBufferBroker.StaticID meshBindPosesID;
+    //        public GraphicsBufferBroker.StaticID meshBlendShapesID;
+    //        public GraphicsBufferBroker.StaticID boneOffsetsID;
 
-            public GraphicsBufferBroker.StaticID metaUint3UploadID;
-            public GraphicsBufferBroker.StaticID metaUint4UploadID;
+    //        public GraphicsBufferBroker.StaticID metaUint3UploadID;
+    //        public GraphicsBufferBroker.StaticID metaUint4UploadID;
 
-            public GraphicsBufferBroker.StaticID meshVerticesUploadID;
-            public GraphicsBufferBroker.StaticID meshWeightsUploadID;
-            public GraphicsBufferBroker.StaticID meshBindPosesUploadID;
-            public GraphicsBufferBroker.StaticID meshBlendShapesUploadID;
-            public GraphicsBufferBroker.StaticID boneOffsetsUploadID;
-            public GraphicsBufferBroker.StaticID bonesUploadID;
-        }
+    //        public GraphicsBufferBroker.StaticID meshVerticesUploadID;
+    //        public GraphicsBufferBroker.StaticID meshWeightsUploadID;
+    //        public GraphicsBufferBroker.StaticID meshBindPosesUploadID;
+    //        public GraphicsBufferBroker.StaticID meshBlendShapesUploadID;
+    //        public GraphicsBufferBroker.StaticID boneOffsetsUploadID;
+    //        public GraphicsBufferBroker.StaticID bonesUploadID;
+    //    }
 
-        internal static readonly SharedStatic<StaticIDs> s_ids = SharedStatic<StaticIDs>.GetOrCreate<StaticIDs>();
+    //    internal static readonly SharedStatic<StaticIDs> s_ids = SharedStatic<StaticIDs>.GetOrCreate<StaticIDs>();
 
-        internal static class BurstHider
-        {
-            internal static StaticIDs s_idsManaged = new StaticIDs
-            {
-                skinningTransformsID = GraphicsBufferBroker.ReservePersistentBuffer(),
-                deformedVerticesID   = GraphicsBufferBroker.ReservePersistentBuffer(),
-                meshVerticesID       = GraphicsBufferBroker.ReservePersistentBuffer(),
-                meshWeightsID        = GraphicsBufferBroker.ReservePersistentBuffer(),
-                meshBindPosesID      = GraphicsBufferBroker.ReservePersistentBuffer(),
-                meshBlendShapesID    = GraphicsBufferBroker.ReservePersistentBuffer(),
-                boneOffsetsID        = GraphicsBufferBroker.ReservePersistentBuffer(),
+    //    internal static class BurstHider
+    //    {
+    //        internal static StaticIDs s_idsManaged = new StaticIDs
+    //        {
+    //            skinningTransformsID = GraphicsBufferBroker.ReservePersistentBuffer(),
+    //            deformedVerticesID   = GraphicsBufferBroker.ReservePersistentBuffer(),
+    //            meshVerticesID       = GraphicsBufferBroker.ReservePersistentBuffer(),
+    //            meshWeightsID        = GraphicsBufferBroker.ReservePersistentBuffer(),
+    //            meshBindPosesID      = GraphicsBufferBroker.ReservePersistentBuffer(),
+    //            meshBlendShapesID    = GraphicsBufferBroker.ReservePersistentBuffer(),
+    //            boneOffsetsID        = GraphicsBufferBroker.ReservePersistentBuffer(),
 
-                metaUint3UploadID = GraphicsBufferBroker.ReserveUploadPool(),
-                metaUint4UploadID = GraphicsBufferBroker.ReserveUploadPool(),
+    //            metaUint3UploadID = GraphicsBufferBroker.ReserveUploadPool(),
+    //            metaUint4UploadID = GraphicsBufferBroker.ReserveUploadPool(),
 
-                meshVerticesUploadID    = GraphicsBufferBroker.ReserveUploadPool(),
-                meshWeightsUploadID     = GraphicsBufferBroker.ReserveUploadPool(),
-                meshBindPosesUploadID   = GraphicsBufferBroker.ReserveUploadPool(),
-                meshBlendShapesUploadID = GraphicsBufferBroker.ReserveUploadPool(),
-                boneOffsetsUploadID     = GraphicsBufferBroker.ReserveUploadPool(),
-                bonesUploadID           = GraphicsBufferBroker.ReserveUploadPool(),
-            };
-        }
+    //            meshVerticesUploadID    = GraphicsBufferBroker.ReserveUploadPool(),
+    //            meshWeightsUploadID     = GraphicsBufferBroker.ReserveUploadPool(),
+    //            meshBindPosesUploadID   = GraphicsBufferBroker.ReserveUploadPool(),
+    //            meshBlendShapesUploadID = GraphicsBufferBroker.ReserveUploadPool(),
+    //            boneOffsetsUploadID     = GraphicsBufferBroker.ReserveUploadPool(),
+    //            bonesUploadID           = GraphicsBufferBroker.ReserveUploadPool(),
+    //        };
+    //    }
 
-        const uint kMinUploadMetaSize = 128;
-        #endregion
-    }
+    //    const uint kMinUploadMetaSize = 128;
+    //    #endregion
+    //}
 
     /// <summary>
     /// A special object which manages the lifecycle of Graphics Buffers, automatically resizing them and pooling them.
@@ -444,7 +444,7 @@ namespace TextMeshDOTS.LatiosInterop.Kinemation
         {
             GraphicsUnmanaged.Initialize();
             PersistentBuffer.InitStatics();
-            DeformationGraphicsBufferBrokerExtensions.s_ids.Data = DeformationGraphicsBufferBrokerExtensions.BurstHider.s_idsManaged;
+            //DeformationGraphicsBufferBrokerExtensions.s_ids.Data = DeformationGraphicsBufferBrokerExtensions.BurstHider.s_idsManaged;
             m_persistentBuffers                                  = new NativeList<PersistentBuffer>(allocator);
             m_uploadPools                                        = new NativeList<UploadPool>(allocator);
             m_buffersToDelete                                    = new NativeList<BufferQueuedForDestruction>(allocator);

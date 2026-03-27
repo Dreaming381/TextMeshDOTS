@@ -329,7 +329,7 @@ namespace TextMeshDOTS
 
         /// <summary>
         /// Flags will be decoded in shader by ExtractGlyphFlagsFromEntryID and used there to determine if glyph is SDF or bitmap, 
-        /// and to determind the Signed Distance Ratio for SDF (keep in sync with TextConfigurationComponets.GetSpread()!)
+        /// and to determind the Signed Distance Ratio for SDF (keep in sync with FontEnumerationExtensions.GetSpread()!)
         /// Will also be used to determine which atlas is dirty in DispatchGlyphsSystem.Write
         /// </summary>
         /// <param name="glyphEntryID"></param>

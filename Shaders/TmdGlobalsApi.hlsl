@@ -171,12 +171,12 @@ void ExtractGlyphFlagsFromEntryID(uint glyphEntryID, out bool isSdf16, out bool 
     isBitmap = format == 3;
     switch (format)
     {
-    
+		//keep in sync with FontEnumerationExtensions.GetSpread
         case 0:
-            texelsInDilationDomain = 9.0;
+            texelsInDilationDomain = 12.0;
             break;
         case 1:
-            texelsInDilationDomain = 12.0;
+            texelsInDilationDomain = 16.0;
             break;
         case 2:
             texelsInDilationDomain = 32.0;

@@ -289,14 +289,15 @@ namespace TextMeshDOTS
         {
             return GetSpread(key.format, key.textureSize);
         }
+        //keep in sync with TmdGlobaslApi.ExtractGlyphFlagsFromEntryID
         internal static int GetSpread(RenderFormat format, FontTextureSize textureSize)
         {
             switch ((format, textureSize))
             {
                 case (RenderFormat.SDF8, FontTextureSize.Normal):
-                    return 9;
-                case (RenderFormat.SDF16, FontTextureSize.Big):
                     return 12;
+                case (RenderFormat.SDF16, FontTextureSize.Big):
+                    return 16;
                 case (RenderFormat.SDF16, FontTextureSize.Massive):
                     return 32;
                 case (RenderFormat.Bitmap8888, FontTextureSize.Normal):

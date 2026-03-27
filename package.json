@@ -14,12 +14,7 @@
   "author": {
     "name": "DOTS Community"
   },
-  "samples": [
-  {
-      "displayName": "Backend mesh",
-      "description": "TextMeshDOTS backend mesh. Essential for rendering SDF text.",
-      "path": "Samples~/Backend mesh"
-    },
+  "samples": [  
 	{
       "displayName": "Fonts",
       "description": "TextMeshDOTS sample fonts",
